@@ -4,7 +4,10 @@
 databases:
   - name: newenglandmusic
     databaseName: newenglandmusic
-    plan: 0.1c-256mb
+    # free: expires 30 days after creation and is deleted 14 days later, with no
+    # backups. upgrade it to a paid plan in place (data kept) before then, or
+    # restore a dump into a new one; see PRODUCTION.md
+    plan: free
     # closest region to the venues (the northeast)
     region: virginia
     postgresMajorVersion: "17"

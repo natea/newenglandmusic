@@ -76,7 +76,13 @@ gunicorn nycnoise.wsgi:application
 `render.yaml` is a Render Blueprint for the web service and its Postgres database, in the Virginia region. It doesn't include the scheduled jobs yet; see [Before the jobs can run on a server](#before-the-jobs-can-run-on-a-server).
 
 - **What deploys:** Render deploys `main` from the GitHub repo [natea/newenglandmusic](https://github.com/natea/newenglandmusic), and only once CI has passed on that commit (`autoDeployTrigger: checksPass`). `origin` is the upstream nyc noise repo; never deploy from or push to it.
-- **Plans:** the smallest paid ones. The web service is `0.5c-512mb` with two gunicorn workers, and the database is `0.1c-256mb`. Free databases are deleted after a while, so they aren't suitable for production data.
+- **Plans:** $7 a month in total while the site is unshared.
+  - **Web service:** `0.5c-512mb` ($7 a month), with two gunicorn workers.
+  - **Database:** `free`, with these limits:
+    - It expires 30 days after it's created, and Render deletes it 14 days after that.
+    - It has no backups and holds 1 GB (the data is about 20 MB).
+    - Only one free database is allowed per workspace.
+  - **Keeping the data:** before the 30 days are up, either upgrade the database to a paid plan in the dashboard (it keeps its data, and `0.1c-256mb` is $10.50 a month), or dump it and restore into a new one. Until then, take your own dumps: `pg_dump --format=custom "<External Database URL>" > prod-YYYY-MM-DD.dump`.
 - **Settings Render fills in:**
   - `DJANGO_SECRET_KEY` is generated.
   - `DATABASE_URL` comes from the database.
