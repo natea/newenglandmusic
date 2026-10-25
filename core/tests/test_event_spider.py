@@ -175,6 +175,10 @@ class PageTextTestCase(SimpleTestCase):
         self.assertFalse(is_ticketing_event_url("https://www.eventbrite.com/o/organizer"))
         self.assertFalse(is_ticketing_event_url("https://venue.example/events/1"))
 
+    def test_tixr_event_pages_are_not_crawled(self):
+        # tixr blocks crawlers by ip, which also locks out people buying tickets
+        self.assertFalse(is_ticketing_event_url("https://www.tixr.com/groups/venue/events/show-165144"))
+
 
 class CrawlSettingsTestCase(SimpleTestCase):
     def test_crawling_is_polite(self):

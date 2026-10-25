@@ -27,6 +27,8 @@ MAX_TICKETING_EVENT_PAGES = 10
 MAX_PAGE_TEXT_LENGTH = 150_000
 
 TICKETING_DOMAINS = tuple(d for domains in TICKETING_PLATFORMS.values() for d in domains)
+# platforms that refuse crawlers and then block the whole IP, ticket buyers included
+UNCRAWLABLE_DOMAINS = ("tixr.com",)
 # paths that look like a single event's page on a ticketing platform
 TICKETING_EVENT_PATH_RE = re.compile(r"/(e|events?|ticket)/", re.IGNORECASE)
 
@@ -45,6 +47,8 @@ SCRAPY_SETTINGS = {
 def is_ticketing_event_url(url):
     parts = urlparse(url)
     host = parts.netloc.lower().removeprefix("www.")
+    if any(host.endswith(d) for d in UNCRAWLABLE_DOMAINS):
+        return False
     return any(host.endswith(d) for d in TICKETING_DOMAINS) and bool(
         TICKETING_EVENT_PATH_RE.search(parts.path)
     )
