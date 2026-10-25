@@ -27,8 +27,8 @@ from .utils_datemath import (
     get_previous_current_next_month_start,
 )
 
-admin.site.site_title = "nyc noise"
-admin.site.site_header = "nyc noise"
+admin.site.site_title = "New England Music"
+admin.site.site_header = "New England Music"
 
 admin.site.register(IndexPageMessages, SingletonModelAdmin)
 

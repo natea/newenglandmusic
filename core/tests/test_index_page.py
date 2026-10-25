@@ -6,5 +6,5 @@ class IndexPageTestCase(TestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "core/index.html")
-        self.assertContains(response, "nyc noise")
-        self.assertContains(response, "always incomplete")
+        self.assertContains(response, "<h1>New England Music</h1>")
+        self.assertNotContains(response, "always incomplete")

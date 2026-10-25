@@ -11,13 +11,13 @@ class OpengraphTagsTestCase(TestCase):
             "NYC experimental live music calendar • noise, improv, jazz, new music,"
             " avant-electronics, weirdos • performance against corporate interests!"
         )
-        expected_title = "nyc noise"
+        expected_title = "New England Music"
         expected_image = (
             f"{expected_url}static/core/images/NYC-Noise-facebook-preview-TOO-BIG.png"
         )
 
         response = self.client.get("/")
-        self.assertContains(response, "<title>nyc noise</title>")
+        self.assertContains(response, "<title>New England Music</title>")
         self.assertContains(
             response, f'<meta name="description" content="{expected_description}">'
         )

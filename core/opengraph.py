@@ -2,7 +2,7 @@ from meta.views import Meta
 from django.templatetags.static import static
 from typing import Optional
 
-DEFAULT_TITLE = "nyc noise"
+DEFAULT_TITLE = "New England Music"
 DEFAULT_DESCRIPTION = (
     "NYC experimental live music calendar • noise, improv, jazz, new music,"
     " avant-electronics, weirdos • performance against corporate interests!"
@@ -21,7 +21,7 @@ def get_meta(
 
     Args:
         url (str, optional): The base URL for the page. Defaults to None.
-        title (str, optional): The title of the page. Defaults to "nyc noise".
+        title (str, optional): The title of the page. Defaults to "New England Music".
         description (str, optional): A brief description of the page content.
             Defaults to a description about NYC experimental live music.
         redirect (str): If provided, sets up a page redirect to the specified URL.

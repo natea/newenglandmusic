@@ -80,6 +80,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "core.context_processors.analytics",
             ],
         },
     },
@@ -183,6 +184,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 RC_DEVELOPER_INTERNAL_TOKEN = os.environ["RC_DEVELOPER_INTERNAL_TOKEN"]
 PROD_INTERNAL_API_SERVER = os.environ["PROD_INTERNAL_API_SERVER"]
+
+# analytics are off unless these are set, so local browsing isn't counted
+GOOGLE_ANALYTICS_ID = os.environ.get("GOOGLE_ANALYTICS_ID", "")
+GOATCOUNTER_CODE = os.environ.get("GOATCOUNTER_CODE", "")
 
 SITE_ID = 1
 
