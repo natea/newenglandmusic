@@ -93,11 +93,14 @@ gunicorn nycnoise.wsgi:application
 **Loading the local database.** Make a dump locally, then restore it into Render's database. The restore needs its **External Database URL**, from the database's page in the dashboard.
 
 ```sh
+# DATABASE_URL here is the local one, from .env
 pg_dump --format=custom --no-owner --no-privileges --exclude-table-data=django_session \
-  postgresql://localhost:5432/nycnoise > newenglandmusic.dump
+  "$DATABASE_URL" > newenglandmusic.dump
 pg_restore --no-owner --no-privileges --clean --if-exists \
   --dbname "<External Database URL>" newenglandmusic.dump
 ```
+
+Keep the dump out of the repo, since it holds admin password hashes.
 
 The dump includes admin accounts, with their password hashes, and the stored HTML of every event, so the events need no re-render. If it's older than the code, run `python manage.py resave_all_events` from the Shell tab after deploying.
 
