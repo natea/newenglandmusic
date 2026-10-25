@@ -1,0 +1,18 @@
+schema: spec-driven
+
+context: |
+  Local-only fork of nycnoise for a Northeast US music venue database; never push or open PRs upstream.
+  A feature is complete only when every spec scenario is covered by automated tests (Django TestCase,
+  run with `python manage.py test`). External services (Google Sheets via gog, venue websites,
+  Anthropic, Ticketmaster) must be mocked or replayed from fixtures in tests.
+
+rules:
+  tasks:
+    - Every task group that adds or changes behavior includes unchecked tasks for the automated tests covering its spec scenarios
+  design:
+    - State how each external service is mocked in tests
+
+operations:
+  archive:
+    guidance:
+      - Do not archive a change until every spec scenario has a passing automated test and all tasks are checked
