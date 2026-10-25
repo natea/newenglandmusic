@@ -1,6 +1,6 @@
 # Proposal
 
-> Retroactive: this documents behavior already built on `venue-db` in commits `780440d`, `8535366`, `d16c605`, `8ddf115`, `8779da2` and `001bd3f`, so later changes such as `add-ticketmaster-discovery-api` have a baseline. It stays open until the automated tests in tasks.md exist.
+> Retroactive: this documents behavior already built on `venue-db` in commits `780440d`, `8535366`, `d16c605`, `8ddf115`, `8779da2` and `001bd3f`, so later changes such as `add-ticketmaster-discovery-api` have a baseline. Automated tests were added before it was archived.
 
 ## Why
 

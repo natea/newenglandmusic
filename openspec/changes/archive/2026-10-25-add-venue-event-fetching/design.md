@@ -56,7 +56,7 @@ See proposal.md. Venues come from `venue-sheet-sync`. Sites range from WordPress
 - **[Rate limiting from repeated runs]** → bot-blocked venues rose from 21 to 40 between runs. Run detection rarely, and keep the import throttled.
 - **[AI misreads a page]** → Every event lands unapproved, the prompt forbids guessing, and output is validated (dates, placeholders).
 - **[Sites change and the CSV goes stale]** → Re-run detection periodically. The import reports failures per venue.
-- **[No automated tests for most of this]** → Only the calendar-link tests exist (commit `7260193`). The behavior was verified by pilot and full runs: 1,757 upcoming events from 154 venues. tasks.md adds the tests this change still needs before it can be archived.
+- **[Tests mock every outside service]** → Tests can drift from how real sites and APIs behave. The behavior was also verified by pilot and full runs: 1,757 upcoming events from 154 venues.
 
 ## Testing
 

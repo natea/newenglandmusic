@@ -24,7 +24,7 @@
 
 ### Modified Capabilities
 
-None. The project has no existing specs.
+- `event-import`: venues linked to Ticketmaster are fetched from the Discovery API in place of their ticketing or AI source, and are fetched even when the report gave them no usable source.
 
 ## Impact
 

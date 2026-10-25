@@ -35,7 +35,8 @@ def to_starttime(value):
     """returns (aware datetime, all_day) from a date, datetime or iso string"""
     if isinstance(value, str):
         value = value.strip()
-        parsed = parse_datetime(value)
+        # parse_datetime reads a bare date as midnight, so check for one first
+        parsed = parse_date(value) if len(value) == 10 else parse_datetime(value)
         if parsed is None:
             parsed = parse_date(value[:10]) if len(value) >= 10 else None
         value = parsed
