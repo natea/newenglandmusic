@@ -22,6 +22,7 @@ MAX_DESCRIPTION_LENGTH = 600
 
 # calendar entries that mark the absence of an event, e.g. "No Event Tonight"
 PLACEHOLDER_TITLE_RE = re.compile(r"^\s*(no (events?|shows?|music)\b|closed\b)", re.IGNORECASE)
+BLOCK_TAG_RE = re.compile(r"</?(p|div|h[1-6]|br|li|tr|td)\b", re.IGNORECASE)
 
 
 def make_aware(value):
@@ -49,7 +50,11 @@ def to_starttime(value):
 
 def clean_text(text):
     """plain text: html tags and entities (e.g. &#038;) removed, whitespace collapsed"""
-    return " ".join(html.unescape(strip_tags(str(text or ""))).split())
+    # some feeds escape their html (&lt;p&gt;), so unescape before stripping tags too
+    text = html.unescape(str(text or ""))
+    # block tags separate words, so "<h2>Show</h2><p>Doors" doesn't become "ShowDoors"
+    text = BLOCK_TAG_RE.sub(r" \g<0>", text)
+    return " ".join(html.unescape(strip_tags(text)).split())
 
 
 def is_placeholder(title):

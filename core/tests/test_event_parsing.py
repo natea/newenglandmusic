@@ -175,6 +175,12 @@ class CleaningTestCase(SimpleTestCase):
         self.assertEqual(clean_text("Rock &#038; Roll <b>Night</b>\n  live"), "Rock & Roll Night live")
         self.assertEqual(clean_text(None), "")
 
+    def test_clean_text_strips_escaped_html(self):
+        self.assertEqual(
+            clean_text("&lt;h2&gt;&lt;strong&gt;Show&lt;/strong&gt;&lt;/h2&gt;&lt;p&gt;Doors &amp;amp; more&lt;/p&gt;"),
+            "Show Doors & more",
+        )
+
     def test_clean_description_truncates_on_a_word(self):
         text = clean_description("word " * 200)
         self.assertLessEqual(len(text), MAX_DESCRIPTION_LENGTH + 1)
