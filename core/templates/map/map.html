@@ -119,9 +119,10 @@
 
         const map = new window.maplibregl.Map({
           container: `map-${date}`,
-          zoom: 10,
-          center: [-73.9, 40.72],
-          style: "https://api.protomaps.com/styles/v4/light/en.json?key=744c0d83a2202e0c",
+          // MAP_CENTER_* and MAP_ZOOM in .env; the map then fits itself to the day's venues
+          zoom: {{ map_zoom }},
+          center: {{ map_center }},
+          style: "https://api.protomaps.com/styles/v4/light/en.json?key={{ protomaps_api_key|urlencode }}",
           maxPitch: 0,
         });
         // fit bounds of all points

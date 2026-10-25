@@ -83,6 +83,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "core.context_processors.analytics",
                 "core.context_processors.contact",
+                "core.context_processors.maps",
             ],
         },
     },
@@ -190,6 +191,13 @@ PROD_INTERNAL_API_SERVER = os.environ["PROD_INTERNAL_API_SERVER"]
 # analytics are off unless these are set, so local browsing isn't counted
 GOOGLE_ANALYTICS_ID = os.environ.get("GOOGLE_ANALYTICS_ID", "")
 GOATCOUNTER_CODE = os.environ.get("GOATCOUNTER_CODE", "")
+
+# the home page's maps draw protomaps tiles; without a key the maps are hidden
+PROTOMAPS_API_KEY = os.environ.get("PROTOMAPS_API_KEY", "")
+# where a map starts before it fits itself to the day's venues; new england by default
+MAP_CENTER_LATITUDE = float(os.environ.get("MAP_CENTER_LATITUDE") or 43.2)
+MAP_CENTER_LONGITUDE = float(os.environ.get("MAP_CENTER_LONGITUDE") or -71.5)
+MAP_ZOOM = float(os.environ.get("MAP_ZOOM") or 6)
 
 SITE_ID = 1
 

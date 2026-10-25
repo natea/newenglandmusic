@@ -1,6 +1,6 @@
 from unittest import mock
 
-from core.models import Venue
+from core.models import Event, Venue
 from django.conf import settings
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -60,3 +60,34 @@ class SiteSettingsTestCase(TestCase):
         kwargs = sender.send_email.call_args.kwargs
         self.assertEqual(kwargs["source"], "events@example.org")
         self.assertEqual(kwargs["destination"], "hello@example.org")
+
+
+class MapsTestCase(TestCase):
+    def setUp(self):
+        venue = Venue.objects.create(name="The Venue", latitude=42.36, longitude=-71.06)
+        Event.objects.create(title="show", starttime=timezone.now(), venue=venue, is_approved=True)
+
+    @override_settings(PROTOMAPS_API_KEY="")
+    def test_maps_are_hidden_without_a_key(self):
+        response = self.client.get("/")
+        self.assertContains(response, "show")
+        self.assertNotContains(response, "SHOW MAP")
+        self.assertNotContains(response, "maplibre")
+        self.assertNotContains(response, "protomaps")
+
+    @override_settings(PROTOMAPS_API_KEY="testkey123")
+    def test_maps_use_the_configured_key_and_start_on_new_england_by_default(self):
+        response = self.client.get("/")
+        self.assertContains(response, "SHOW MAP")
+        self.assertContains(response, "api.protomaps.com/styles/v4/light/en.json?key=testkey123")
+        self.assertContains(response, "zoom: 6.0,")
+        self.assertContains(response, "center: [-71.5, 43.2],")
+        self.assertNotContains(response, "744c0d83a2202e0c")
+
+    @override_settings(
+        PROTOMAPS_API_KEY="testkey123", MAP_CENTER_LATITUDE=41.8, MAP_CENTER_LONGITUDE=-72.7, MAP_ZOOM=8
+    )
+    def test_starting_view_comes_from_settings(self):
+        response = self.client.get("/")
+        self.assertContains(response, "zoom: 8,")
+        self.assertContains(response, "center: [-72.7, 41.8],")

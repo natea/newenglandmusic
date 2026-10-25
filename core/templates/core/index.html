@@ -4,7 +4,9 @@
 {% load nyc_noise_date_formatting %}
 
 {% block head %}
-  {% include "map/map.html" %}
+  {% if protomaps_api_key %}
+    {% include "map/map.html" %}
+  {% endif %}
 {% endblock head %}
 
 {% block month_year_header %}
@@ -54,9 +56,11 @@
     <article>
       <h4><a name="{{ date_events.date|date:'mdy' }}" href="/{{ date_events.date|date:'Y-m' }}/#{{ date_events.date|date:'mdy' }}">{{ date_events.date|date:"M d"|lower }} {{ date_events.date|nyc_noise_day_with_parens }}</a></h4>
 
+      {% if protomaps_api_key %}
       <div class='maskYrSelf'>
         🌎 <a href="#" data-date="{{ date_events.date|date:'mdy' }}" style="color:white;background:green;">SHOW MAP</a>
       </div>
+      {% endif %}
 
       <div id="map-{{ date_events.date|date:'mdy' }}" style="display:none; height: 300px; margin-bottom: 10px;"></div>
       <div id="map-{{ date_events.date|date:'mdy' }}-info" style="background: #eeeeff; padding-left: 10px; padding-right: 10px; display:none; margin-bottom: 10px;"></div>
