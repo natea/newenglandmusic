@@ -4,6 +4,8 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
 from core.event_fetching.spider import SCRAPY_SETTINGS, VenueEventsSpider
+from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
+from core.event_fetching.ticketmaster import to_event_dict as ticketmaster_event
 from core.models import Event, Venue
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
@@ -16,7 +18,7 @@ for an admin to review.
 
 run as:
 
-python manage.py fetch_events [--report event_sources.csv] [--per-source 3 | --all] [--dry-run]
+python manage.py fetch_events [--report event_sources.csv] [--per-source 3 | --all] [--skip-ai] [--skip-ticketmaster] [--dry-run]
 
 venues and how to fetch their events come from the csv written by check_event_sources.
 by default, the first --per-source venues of each kind are fetched (a pilot); --all
@@ -27,6 +29,11 @@ fetches every venue whose events can be fetched in one of these ways:
 - ticketing: event pages on ticketing platforms that the venue's site links to
 - ai: the venue's events page, with events extracted by claude (needs ANTHROPIC_API_KEY;
   claude-haiku-5-5 by default, or pass --model)
+- ticketmaster: the ticketmaster discovery api, for venues linked to ticketmaster (see
+  match_ticketmaster_venues; needs TICKETMASTER_API_KEY). it replaces a linked venue's
+  ticketing or ai source -- but not its ical feed or json-ld -- and also covers linked
+  venues the report found no usable source for. pass --skip-ticketmaster to fetch linked
+  venues from their report source instead.
 
 events are matched on external_id, so re-running updates events instead of duplicating
 them. new events are saved unapproved; already-approved events stay approved.
@@ -64,7 +71,22 @@ def short(value, max_length=255):
     return value if len(value) <= max_length else ""
 
 
-def select_targets(report_path, per_source, sheet_ids, all_venues):
+def make_target(venue, source, row=None):
+    row = row or {}
+    return {
+        "venue_pk": venue.pk,
+        "sheet_id": venue.sheet_id,
+        "name": venue.name,
+        "location": venue.location,
+        "source": source,
+        "url": row.get("url", ""),
+        "events_page": row.get("events_page", ""),
+        "ical_url": row.get("ical_url", ""),
+        "ticketmaster_venue_id": venue.ticketmaster_venue_id or "",
+    }
+
+
+def select_targets(report_path, per_source, sheet_ids, all_venues, use_ticketmaster=True):
     try:
         with open(report_path) as f:
             rows = list(csv.DictReader(f))
@@ -93,21 +115,28 @@ def select_targets(report_path, per_source, sheet_ids, all_venues):
     targets = []
     for row in rows:
         venue = venues.get(row["sheet_id"])
-        source = REPORT_SOURCE_TO_TARGET_SOURCE.get(row["best_source"])
-        if venue is None or source is None:
+        if venue is None:
             continue
-        targets.append(
-            {
-                "venue_pk": venue.pk,
-                "sheet_id": row["sheet_id"],
-                "name": venue.name,
-                "location": venue.location,
-                "source": source,
-                "url": row["url"],
-                "events_page": row["events_page"],
-                "ical_url": row["ical_url"],
-            }
+        source = REPORT_SOURCE_TO_TARGET_SOURCE.get(row["best_source"])
+        # the ticketmaster api replaces scraping ticketing pages or ai extraction, but a
+        # venue's own feed or structured data is often more complete, so it keeps those
+        if use_ticketmaster and venue.ticketmaster_venue_id and source not in ("ical", "json-ld"):
+            source = "ticketmaster"
+        if source is not None:
+            targets.append(make_target(venue, source, row))
+
+    if use_ticketmaster and (sheet_ids or all_venues):
+        # linked venues the report gave no usable source, e.g. bot-blocked sites
+        linked = Venue.objects.exclude(ticketmaster_venue_id__isnull=True).exclude(
+            ticketmaster_venue_id=""
         )
+        if sheet_ids:
+            linked = linked.filter(sheet_id__in=sheet_ids)
+        else:
+            linked = linked.exclude(is_active=False)
+        seen = {target["sheet_id"] for target in targets}
+        for venue in linked.exclude(sheet_id__in=seen).order_by("sheet_id"):
+            targets.append(make_target(venue, "ticketmaster"))
     return targets
 
 
@@ -159,6 +188,11 @@ class Command(BaseCommand):
         )
         parser.add_argument("--skip-ai", action="store_true")
         parser.add_argument(
+            "--skip-ticketmaster",
+            action="store_true",
+            help="fetch venues linked to ticketmaster from their report source instead",
+        )
+        parser.add_argument(
             "--model",
             help="claude model for ai extraction (default: core.event_fetching.ai_extraction.MODEL)",
         )
@@ -169,19 +203,28 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         sheet_ids = set(options["sheet_ids"].split(",")) if options["sheet_ids"] else None
         targets = select_targets(
-            options["report"], options["per_source"], sheet_ids, options["all"]
+            options["report"],
+            options["per_source"],
+            sheet_ids,
+            options["all"],
+            use_ticketmaster=not options["skip_ticketmaster"],
         )
         if not targets:
             raise CommandError("no venues to fetch")
 
         self.stdout.write(f"fetching events for {len(targets)} venues...")
-        results = []
-        process = CrawlerProcess(settings=SCRAPY_SETTINGS)
-        process.crawl(VenueEventsSpider, targets=targets, results=results)
-        process.start()
-
         events_by_venue = defaultdict(list)
         notes_by_venue = defaultdict(list)
+        ticketmaster_targets = [t for t in targets if t["source"] == "ticketmaster"]
+        self.fetch_from_ticketmaster(ticketmaster_targets, events_by_venue, notes_by_venue)
+
+        results = []
+        crawl_targets = [t for t in targets if t["source"] != "ticketmaster"]
+        if crawl_targets:
+            process = CrawlerProcess(settings=SCRAPY_SETTINGS)
+            process.crawl(VenueEventsSpider, targets=crawl_targets, results=results)
+            process.start()
+
         for result in results:
             target = result["target"]
             if result["kind"] == "events":
@@ -197,6 +240,35 @@ class Command(BaseCommand):
         )
 
         self.save_and_report(targets, events_by_venue, notes_by_venue, options["dry_run"])
+
+    def fetch_from_ticketmaster(self, targets, events_by_venue, notes_by_venue):
+        if not targets:
+            return
+        api_key = os.environ.get("TICKETMASTER_API_KEY")
+        if not api_key:
+            for target in targets:
+                notes_by_venue[target["sheet_id"]].append(
+                    "ticketmaster skipped (no TICKETMASTER_API_KEY)"
+                )
+            return
+
+        self.stdout.write(f"fetching {len(targets)} venues from the ticketmaster api...")
+        client = TicketmasterClient(api_key)
+        for target in targets:
+            notes = notes_by_venue[target["sheet_id"]]
+            try:
+                raw_events = client.venue_events(target["ticketmaster_venue_id"])
+            except TicketmasterError as e:
+                notes.append(f"ticketmaster failed: {e}")
+                continue
+            events = [event for event in map(ticketmaster_event, raw_events) if event]
+            events_by_venue[target["sheet_id"]] += [
+                ("ticketmaster", event["hyperlink"], event) for event in events
+            ]
+            if len(events) < len(raw_events):
+                notes.append(
+                    f"ticketmaster: {len(raw_events) - len(events)} non-music or undated events left out"
+                )
 
     def extract_with_ai(self, pages, skip_ai, model, events_by_venue, notes_by_venue):
         if not pages:

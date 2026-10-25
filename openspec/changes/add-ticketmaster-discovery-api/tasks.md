@@ -16,22 +16,28 @@
 
 ## 3. Venue matching command
 
-- [ ] 3.1 Add `match_ticketmaster_venues` with `--sheet-ids`, `--all`, `--recheck` and `--dry-run`; by default select active venues whose report `platforms` includes ticketmaster; error clearly without `TICKETMASTER_API_KEY`; verify with a test for the missing-key error
-- [ ] 3.2 Implement name normalization, haversine distance and the unique-match-within-1 km rule, with a city-name fallback search; verify with unit tests for exact match, containment ("MGM Music Hall" vs "MGM Music Hall at Fenway"), two candidates (ambiguous), a distant name match and no candidates
-- [ ] 3.3 (Unblocked by `add-venue-place-lookup`. Against the exact locations, the dry run links 8 of 23; the other 15 fail on the loose name rule or on duplicate Ticketmaster listings. The name rule needs a decision before this task can be done.) Print a report grouped as linked / already linked / ambiguous (with candidate id, name, address, distance) / unmatched; verify a `--dry-run` over the 23 Ticketmaster-listing venues saves nothing and lists each venue once
-- [ ] 3.4 Document the command's usage in its module docstring, matching the style of `fetch_events`
+- [x] 3.1 Add `match_ticketmaster_venues` with `--sheet-ids`, `--all`, `--recheck` and `--dry-run`; by default select active venues whose report `platforms` includes ticketmaster; error clearly without `TICKETMASTER_API_KEY`; verify with a test for the missing-key error
+- [x] 3.2 Implement name normalization, haversine distance and the unique-match-within-1 km rule, with a city-name fallback search; verify with unit tests for exact match, containment ("MGM Music Hall" vs "MGM Music Hall at Fenway"), two candidates (ambiguous), a distant name match and no candidates
+- [x] 3.3 (Unblocked by `add-venue-place-lookup`. Against the exact locations, the dry run links 8 of 23; the other 15 fail on the loose name rule or on duplicate Ticketmaster listings. The name rule needs a decision before this task can be done.) Print a report grouped as linked / already linked / ambiguous (with candidate id, name, address, distance) / unmatched; verify a `--dry-run` over the 23 Ticketmaster-listing venues saves nothing and lists each venue once
+- [x] 3.4 Document the command's usage in its module docstring, matching the style of `fetch_events`
 
 ## 4. fetch_events integration
 
-- [ ] 4.1 Route linked venues to the Ticketmaster source per design decision 4 (keep ical/json-ld; replace ticketing/ai; include linked venues without a usable report row) and add `--skip-ticketmaster`; verify with tests on `select_targets` for each case
-- [ ] 4.2 Fetch Ticketmaster events before the Scrapy crawl, feed them into the existing `events_by_venue`/notes reporting and `save_event` path, and skip with a note when the key is missing; verify with a test that mocks the client and checks events are saved unapproved with source `ticketmaster` and external_id `tm:<id>`, that re-import keeps approval, and that `--dry-run` saves nothing
-- [ ] 4.3 Update the `fetch_events` docstring to list the ticketmaster source and `TICKETMASTER_API_KEY`; verify `python manage.py fetch_events --help` shows `--skip-ticketmaster`
+- [x] 4.1 Route linked venues to the Ticketmaster source per design decision 4 (keep ical/json-ld; replace ticketing/ai; include linked venues without a usable report row) and add `--skip-ticketmaster`; verify with tests on `select_targets` for each case
+- [x] 4.2 Fetch Ticketmaster events before the Scrapy crawl, feed them into the existing `events_by_venue`/notes reporting and `save_event` path, and skip with a note when the key is missing; verify with a test that mocks the client and checks events are saved unapproved with source `ticketmaster` and external_id `tm:<id>`, that re-import keeps approval, and that `--dry-run` saves nothing
+- [x] 4.3 Update the `fetch_events` docstring to list the ticketmaster source and `TICKETMASTER_API_KEY`; verify `python manage.py fetch_events --help` shows `--skip-ticketmaster`
 
 ## 5. End-to-end check
 
-- [ ] 5.1 Run `match_ticketmaster_venues --dry-run`, then for real; settle ambiguous venues in the admin; verify the number of linked venues
-- [ ] 5.2 Run `fetch_events --sheet-ids <linked ids> --dry-run`, then for real; verify upcoming events now exist for previously empty venues (e.g. Paradise Rock Club, MGM Music Hall, 9:30 Club) and that no venue has duplicate events from two sources
-- [ ] 5.3 Run the full test suite and verify it passes
+- [x] 5.1 Run `match_ticketmaster_venues --dry-run`, then for real; settle ambiguous venues in the admin; verify the number of linked venues
+  - Real run (2026-10-25), with the exact-name rule: 14 venues linked.
+  - 5 more set by hand where only one duplicate listing has upcoming events: House of Blues, Brighton Music Hall, The Fillmore, The Stone Pony, Funk 'n Waffles. That makes 19 of 23.
+  - Left unlinked: Merriweather (wrong town in the sheet), Club Passim and The State Theater (no listing), and Empire Live / Empire Underground (one sheet row, two Ticketmaster rooms).
+- [x] 5.2 Run `fetch_events --sheet-ids <linked ids> --dry-run`, then for real; verify upcoming events now exist for previously empty venues (e.g. Paradise Rock Club, MGM Music Hall, 9:30 Club) and that no venue has duplicate events from two sources
+  - Real run: 458 created, 123 updated (log: `logs/fetch_ticketmaster-2026-10-25.log`). Every linked venue has upcoming events, e.g. Paradise 50, MGM 46, 9:30 Club 46, Brighton 50, Mr. Smalls 23.
+  - The dry run exposed the TicketWeb gap in design decision 6, now fixed.
+  - No duplicates across sources. Aura's one leftover `ticketing` event is an Eventbrite show that isn't on Ticketmaster.
+- [x] 5.3 Run the full test suite and verify it passes Done: 255 tests pass with outbound network blocked.
 
 ## Workflow follow-up
 

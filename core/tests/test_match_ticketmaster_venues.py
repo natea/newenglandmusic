@@ -47,6 +47,40 @@ class FindMatchTestCase(SimpleTestCase):
         self.assertEqual((outcome, found["id"]), ("linked", "KovZpZA11JtA"))
         self.assertIsNone(scored[1]["distance_km"])
 
+    def test_same_name_preferred_over_a_longer_one(self):
+        venue = Venue(name="Big Night Live", latitude=42.3662, longitude=-71.0621)
+        outcome, found, _ = match.find_match(
+            venue,
+            [
+                candidate("play", "PLAY Boston at Big Night Live", 42.3663, -71.0622),
+                candidate("bnl", "Big Night Live", 42.3662, -71.0621),
+            ],
+        )
+        self.assertEqual((outcome, found["id"]), ("linked", "bnl"))
+
+    def test_same_name_after_dropping_filler_words(self):
+        # "Mr. Smalls Theatre" is mr smalls; the funhouse is a room inside it
+        venue = Venue(name="Mr. Smalls", latitude=40.4801, longitude=-79.9624)
+        outcome, found, _ = match.find_match(
+            venue,
+            [
+                candidate("funhouse", "The Funhouse at Mr. Smalls", 40.4801, -79.9624),
+                candidate("theatre", "Mr. Smalls Theatre", 40.4801, -79.9624),
+            ],
+        )
+        self.assertEqual((outcome, found["id"]), ("linked", "theatre"))
+
+    def test_several_merely_containing_the_name_are_ambiguous(self):
+        venue = Venue(name="House of Blues", latitude=42.3471, longitude=-71.0949)
+        outcome, _, _ = match.find_match(
+            venue,
+            [
+                candidate("a", "Citizens House of Blues Boston", 42.3471, -71.0949),
+                candidate("b", "Foundation Room at House of Blues Boston", 42.3471, -71.0949),
+            ],
+        )
+        self.assertEqual(outcome, "ambiguous")
+
     def test_two_matches_nearby_are_ambiguous(self):
         outcome, found, scored = match.find_match(
             self.venue,

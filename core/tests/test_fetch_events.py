@@ -6,6 +6,7 @@ from io import StringIO
 from unittest import mock
 
 from core.event_fetching.ai_extraction import ExtractionError
+from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.management.commands import fetch_events
 from core.models import Event, Venue
 from django.core.management import call_command
@@ -356,6 +357,171 @@ class FetchEventsTestCase(TestCase):
         self.assertEqual(saved.source_url, "https://v0007.example/calendar")
         self.assertIn("ai (claude-opus-5-5): 1000 input / 200 output tokens", output)
         self.assertIn("ai extraction used 1000 input / 200 output tokens", output)
+
+
+def tm_event(id, name="Show", days=7, segment="Music", **changes):
+    """a discovery api event, starting `days` from now"""
+    start = timezone.localtime(timezone.now() + datetime.timedelta(days=days))
+    event = {
+        "id": id,
+        "name": name,
+        "url": f"https://www.ticketmaster.com/event/{id}",
+        "dates": {
+            "start": {
+                "localDate": start.date().isoformat(),
+                "localTime": "20:00:00",
+            },
+            "status": {"code": "onsale"},
+        },
+        "classifications": [{"primary": True, "segment": {"name": segment}}],
+        "priceRanges": [{"min": 25.0}],
+        "_embedded": {"attractions": [{"name": name}, {"name": "Support Act"}]},
+    }
+    event.update(changes)
+    return event
+
+
+class FetchEventsTicketmasterTestCase(TestCase):
+    """fetch_events with venues linked to ticketmaster"""
+
+    def setUp(self):
+        FetchEventsTestCase.setUp(self)
+        # link a venue of every kind: ical, json-ld, ticketing, ai and bot-blocked
+        for sheet_id in ("V0001", "V0002", "V0003", "V0004", "V0005"):
+            Venue.objects.filter(sheet_id=sheet_id).update(ticketmaster_venue_id=f"tm-{sheet_id}")
+        self.venues = {v.sheet_id: v for v in Venue.objects.all()}
+        env = mock.patch.dict(os.environ, {"TICKETMASTER_API_KEY": "tm-key"})
+        env.start()
+        self.addCleanup(env.stop)
+        FakeCrawlerProcess.seen_targets = []
+        self.tm_events = {}
+        self.tm_requests = []
+
+        def venue_events(client, venue_id):
+            self.tm_requests.append(venue_id)
+            events = self.tm_events.get(venue_id, [])
+            if isinstance(events, Exception):
+                raise events
+            return events
+
+        patcher = mock.patch.object(TicketmasterClient, "venue_events", venue_events)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    # reuse the helpers of the other test case
+    write_report = FetchEventsTestCase.write_report
+    crawl_returns = FetchEventsTestCase.crawl_returns
+    fetch = FetchEventsTestCase.fetch
+    saved = FetchEventsTestCase.saved
+
+    def sources(self, *args):
+        return {
+            target["sheet_id"]: target["source"]
+            for target in fetch_events.select_targets(self.report, 3, *args)
+        }
+
+    def test_linked_venues_keep_feeds_and_replace_scraping(self):
+        self.assertEqual(
+            self.sources(None, True),
+            {
+                "V0001": "ical",
+                "V0002": "json-ld",
+                "V0003": "ticketmaster",
+                "V0004": "ticketmaster",
+                # bot-blocked in the report, but the api still works
+                "V0005": "ticketmaster",
+            },
+        )
+
+    def test_sheet_ids_include_linked_venues_missing_from_the_report(self):
+        Venue.objects.create(sheet_id="V0099", name="Unreported", ticketmaster_venue_id="tm-99")
+        self.assertEqual(self.sources({"V0099", "V0006"}, False), {"V0099": "ticketmaster"})
+
+    def test_inactive_linked_venues_are_left_out_of_all(self):
+        Venue.objects.create(
+            sheet_id="V0098", name="Closed", ticketmaster_venue_id="tm-98", is_active=False
+        )
+        self.assertNotIn("V0098", self.sources(None, True))
+
+    def test_skip_ticketmaster_uses_the_report_sources(self):
+        targets = fetch_events.select_targets(self.report, 3, None, True, use_ticketmaster=False)
+        self.assertEqual(
+            {t["sheet_id"]: t["source"] for t in targets},
+            {"V0001": "ical", "V0002": "json-ld", "V0003": "ticketing", "V0004": "ai"},
+        )
+
+    def test_pilot_switches_linked_venues_too(self):
+        self.assertEqual(self.sources(None, False)["V0003"], "ticketmaster")
+
+    def test_events_are_saved_unapproved_from_the_api(self):
+        self.tm_events["tm-V0003"] = [tm_event("ev1", "Samantha Fish")]
+        output = self.fetch("--sheet-ids", "V0003")
+        event = Event.all_objects.get(external_id="tm:ev1")
+        self.assertFalse(event.is_approved)
+        self.assertEqual(event.source, "ticketmaster")
+        self.assertEqual(event.source_url, "https://www.ticketmaster.com/event/ev1")
+        self.assertEqual(event.venue, self.venues["V0003"])
+        self.assertEqual((event.title, event.artists, event.price), ("Samantha Fish", "Support Act", "$"))
+        self.assertEqual(event.ticket_hyperlink, "https://www.ticketmaster.com/event/ev1")
+        self.assertEqual(self.tm_requests, ["tm-V0003"])
+        # nothing left to crawl
+        self.assertEqual(FakeCrawlerProcess.seen_targets, [])
+        self.assertIn("[ticketmaster]", output)
+        self.assertIn("1 created", output)
+
+    def test_reimport_updates_and_keeps_approval(self):
+        self.tm_events["tm-V0003"] = [tm_event("ev1", "Old Name")]
+        self.fetch("--sheet-ids", "V0003")
+        Event.all_objects.filter(external_id="tm:ev1").update(is_approved=True)
+        self.tm_events["tm-V0003"] = [tm_event("ev1", "New Name", days=9)]
+        self.fetch("--sheet-ids", "V0003")
+        event = Event.all_objects.get(external_id="tm:ev1")
+        self.assertEqual(event.title, "New Name")
+        self.assertTrue(event.is_approved)
+        self.assertEqual(Event.all_objects.filter(external_id="tm:ev1").count(), 1)
+
+    def test_cancelled_event(self):
+        event = tm_event("ev1")
+        event["dates"]["status"]["code"] = "canceled"
+        self.tm_events["tm-V0003"] = [event]
+        self.fetch("--sheet-ids", "V0003")
+        self.assertTrue(Event.all_objects.get(external_id="tm:ev1").is_cancelled)
+
+    def test_non_music_events_are_left_out_with_a_note(self):
+        self.tm_events["tm-V0003"] = [tm_event("ev1"), tm_event("ev2", segment="Sports")]
+        output = self.fetch("--sheet-ids", "V0003")
+        self.assertTrue(Event.all_objects.filter(external_id="tm:ev1").exists())
+        self.assertFalse(Event.all_objects.filter(external_id="tm:ev2").exists())
+        self.assertIn("ticketmaster: 1 non-music or undated events left out", output)
+
+    def test_dry_run_saves_nothing(self):
+        self.tm_events["tm-V0003"] = [tm_event("ev1")]
+        output = self.fetch("--sheet-ids", "V0003", "--dry-run")
+        self.assertFalse(Event.all_objects.filter(external_id="tm:ev1").exists())
+        self.assertIn("[dry run] 1 created", output)
+
+    def test_no_api_key(self):
+        with mock.patch.dict(os.environ, {"TICKETMASTER_API_KEY": ""}):
+            output = self.fetch("--sheet-ids", "V0001,V0003")
+        self.assertEqual(self.tm_requests, [])
+        self.assertIn("ticketmaster skipped (no TICKETMASTER_API_KEY)", output)
+        # the other venues are still crawled
+        self.assertEqual([t["sheet_id"] for t in FakeCrawlerProcess.seen_targets], ["V0001"])
+
+    def test_api_failure_for_one_venue_doesnt_stop_others(self):
+        self.tm_events["tm-V0003"] = TicketmasterError("events.json: HTTP 503")
+        self.tm_events["tm-V0004"] = [tm_event("ev4")]
+        output = self.fetch("--sheet-ids", "V0003,V0004")
+        self.assertIn("ticketmaster failed: events.json: HTTP 503", output)
+        self.assertTrue(Event.all_objects.filter(external_id="tm:ev4").exists())
+
+    def test_skip_ticketmaster_flag(self):
+        self.fetch("--sheet-ids", "V0003", "--skip-ticketmaster")
+        self.assertEqual(self.tm_requests, [])
+        self.assertEqual(
+            [(t["sheet_id"], t["source"]) for t in FakeCrawlerProcess.seen_targets],
+            [("V0003", "ticketing")],
+        )
 
 
 class PriceBucketTestCase(SimpleTestCase):

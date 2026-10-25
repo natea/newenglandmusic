@@ -35,7 +35,10 @@ The relevant Discovery API facts (v2, `https://app.ticketmaster.com/discovery/v2
 **2. Match venues automatically only when the match is certain, and report the rest.**
 - **Depends on `add-venue-place-lookup`.** The first real dry run (2026-10-25) linked only 3 of 23 venues. The sheet's coordinates turned out to be town centres: 537 of 729 venues share theirs with another venue. You chose to keep the 1 km rule and fix the coordinates first. Matching therefore uses `Venue.exact_location`, which is the confident Google Places location when there is one.
 - **How:** for each venue, search `/venues.json?keyword=<name>&stateCode=<state>`. Normalize both names: lowercase, drop "the", punctuation and words like "music hall", "club" and "theatre"/"theater", then compare. Compute the haversine distance from the venue's coordinates.
-- **Link** only when exactly one candidate's normalized name matches (equal, or one contains the other) and it lies within 1 km.
+- **Link** only among candidates within 1 km whose normalized names match (equal, or one contains the other):
+  - when exactly one has the venue's exact normalized name, link it;
+  - when none has the exact name, link the only candidate, if there's just one.
+- **Why the exact-name preference:** once exact locations were in place (`add-venue-place-lookup`), the dry run still left 15 of 23 venues ambiguous. The cause was listings that merely contain the name, such as "PLAY Boston at Big Night Live" and "Nightclub Reverb", not distance. You asked to finish the change with this rule. Duplicate listings with the same name, like Brighton Music Hall's three, stay ambiguous.
 - **Report everything else** with candidates for a person to decide. A wrong link would attach another venue's events, so false negatives are much cheaper than false positives.
 - **Fallback search:** Crossroads Presents names (e.g. "MGM Music Hall" vs Ticketmaster's "MGM Music Hall at Fenway") are why containment counts as a match. A second search by city name is the fallback when the name search returns nothing.
 
@@ -68,9 +71,10 @@ The relevant Discovery API facts (v2, `https://app.ticketmaster.com/discovery/v2
 - **Time zone:** every venue in the sheet is in US Eastern time, which is `TIME_ZONE`, so local-time fallback is safe.
 - **Skipped events:** those whose primary classification segment is not "Music" (including events with no classification), events flagged `test`, and postponed events with no date.
 
-**6. Restrict the API's `source` parameter to `ticketmaster,universe,frontgate`, excluding Ticketmaster Resale (`tmr`).**
+**6. Restrict the API's `source` parameter to `ticketmaster,universe,frontgate,ticketweb`, excluding Ticketmaster Resale (`tmr`).**
 - Resale listings are not the venue's primary listing and could repeat a show under another ID.
-- **Checked during implementation (task 2.4):** for Paradise Rock Club on 2026-10-25, the filtered and unfiltered responses had the same 50 events, so the filter drops no primary listings.
+- **Checked during implementation (task 2.4):** for Paradise Rock Club on 2026-10-25, the filtered and unfiltered responses had the same 50 events.
+- **Corrected in task 5.2:** that check missed TicketWeb. Without `ticketweb` in the filter, Funk 'n Waffles got 4 of its 53 events and Mr. Smalls 1 of 25. With it, the filter returns exactly everything except resale: 52 = 53 − 1 and 23 = 25 − 2.
 
 **7. Add `ticketmaster` to `Event.source` choices.** This is a migration that changes choices only.
 

@@ -3,7 +3,7 @@ import os
 
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.models import Venue
-from core.venue_matching import distance_km, names_match
+from core.venue_matching import distance_km, names_match, normalize_name
 from django.core.management.base import BaseCommand, CommandError
 
 """
@@ -19,9 +19,11 @@ ticketmaster or live nation are checked; --sheet-ids checks those venues and --a
 active venue. venues that are already linked are skipped unless --recheck is given.
 
 each venue's name is searched for in its state (and, when that finds nothing, its city).
-a venue is linked only when exactly one result has a matching name and lies within
-MAX_DISTANCE_KM of the venue -- anything less certain is reported for an admin to settle
-by setting the venue's ticketmaster venue id in the admin. needs TICKETMASTER_API_KEY.
+only results with a matching name within MAX_DISTANCE_KM of the venue count (its google
+places location when confident -- see lookup_venue_places). of those, the one with the
+venue's own name is linked, or the only one when none has it exactly -- anything less
+certain is reported for an admin to settle by setting the venue's ticketmaster venue id
+in the admin. needs TICKETMASTER_API_KEY.
 """
 
 MAX_DISTANCE_KM = 1.0
@@ -51,7 +53,12 @@ def find_match(venue, candidates):
         and c["distance_km"] is not None
         and c["distance_km"] <= MAX_DISTANCE_KM
     ]
-    if len(near) == 1:
+    # prefer a listing with the venue's own name over ones that merely contain it,
+    # e.g. "Big Night Live" over "PLAY Boston at Big Night Live"
+    exact = [c for c in near if normalize_name(c["name"]) == normalize_name(venue.name)]
+    if len(exact) == 1:
+        return "linked", exact[0], scored
+    if not exact and len(near) == 1:
         return "linked", near[0], scored
     return "ambiguous", None, scored
 

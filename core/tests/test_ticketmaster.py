@@ -101,7 +101,8 @@ class ClientTestCase(SimpleTestCase):
         self.assertEqual(params["venueId"], "KovZpZA11JtA")
         self.assertEqual(params["sort"], "date,asc")
         self.assertEqual(params["size"], 50)
-        self.assertEqual(params["source"], "ticketmaster,universe,frontgate")
+        # everything but resale ("tmr"); ticketweb is where some venues sell most shows
+        self.assertEqual(params["source"], "ticketmaster,universe,frontgate,ticketweb")
         self.assertRegex(params["startDateTime"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
 
     def test_venue_without_events(self):

@@ -20,8 +20,9 @@ BASE_URL = "https://app.ticketmaster.com/discovery/v2/"
 MIN_SECONDS_BETWEEN_REQUESTS = 0.25
 MAX_RETRIES = 2
 TIMEOUT_SECONDS = 20
-# leaves out ticketmaster resale ("tmr"), which isn't the venue's own listing
-EVENT_SOURCES = "ticketmaster,universe,frontgate"
+# every source but ticketmaster resale ("tmr"), which isn't the venue's own listing.
+# ticketweb matters: venues like mr. smalls sell almost all their shows through it
+EVENT_SOURCES = "ticketmaster,universe,frontgate,ticketweb"
 MAX_EVENTS_PER_VENUE = 50
 
 
