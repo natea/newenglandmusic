@@ -17,7 +17,12 @@ from core.event_fetching.parsing import (
     stable_id,
 )
 
-MODEL = "claude-opus-5-5"
+# haiku matched opus's extractions on the pilot pages at a fraction of the cost.
+# pages are capped well under 100k tokens, where haiku's pricing steps up.
+MODEL = "claude-haiku-5-5"
+
+# models that support the api's server-side fallback when they decline a request
+MODELS_WITH_FALLBACKS = {"claude-opus-5-5", "claude-sonnet-5-5"}
 
 SYSTEM_PROMPT = """\
 You extract upcoming events from the text of a music venue's web page, for a calendar \
@@ -29,8 +34,10 @@ at this venue. Leave out past events, events at other venues, recurring business
 and promotions that are not events.
 
 For each event:
-- title: the event or headliner name, as written on the page.
-- artists: other performers or support acts, comma-separated; empty if none are listed.
+- title: the event or headliner name, as written on the page. Leave support acts out \
+of the title: for "Samantha Fish w/ Sgt. Splendor", the title is "Samantha Fish".
+- artists: other performers or support acts, comma-separated (e.g. "Sgt. Splendor"); \
+empty if none are listed.
 - start_date: YYYY-MM-DD. When the page leaves out the year, use the first date on or \
 after today's date that matches.
 - start_time: HH:MM in 24-hour time, local to the venue; prefer the show time over the \
@@ -128,14 +135,16 @@ def to_event_dict(raw, page_url):
     }
 
 
-def extract_events(client, venue_name, venue_location, page_url, page_text):
+def extract_events(client, venue_name, venue_location, page_url, page_text, model=MODEL):
     today = timezone.localdate().isoformat()
-    response = client.beta.messages.create(
-        model=MODEL,
-        max_tokens=16000,
+    fallback_options = {}
+    if model in MODELS_WITH_FALLBACKS:
         # if the model declines a request, the api re-runs it on a fallback model
-        betas=["server-side-fallback-2026-07-01"],
-        fallbacks="default",
+        fallback_options = {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"}
+    response = client.beta.messages.create(
+        model=model,
+        max_tokens=16000,
+        **fallback_options,
         output_config={
             "effort": "low",
             "format": {"type": "json_schema", "schema": EVENTS_SCHEMA},

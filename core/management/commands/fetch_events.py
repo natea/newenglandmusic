@@ -23,7 +23,8 @@ by default, the first --per-source venues of each kind are fetched (a pilot):
 - ical: the venue's ical feed
 - json-ld: schema.org event data on the venue's site
 - ticketing: event pages on ticketing platforms that the venue's site links to
-- ai: the venue's events page, with events extracted by claude (needs ANTHROPIC_API_KEY)
+- ai: the venue's events page, with events extracted by claude (needs ANTHROPIC_API_KEY;
+  claude-haiku-5-5 by default, or pass --model)
 
 events are matched on external_id, so re-running updates events instead of duplicating
 them. new events are saved unapproved; already-approved events stay approved.
@@ -150,6 +151,10 @@ class Command(BaseCommand):
         )
         parser.add_argument("--skip-ai", action="store_true")
         parser.add_argument(
+            "--model",
+            help="claude model for ai extraction (default: core.event_fetching.ai_extraction.MODEL)",
+        )
+        parser.add_argument(
             "--dry-run", action="store_true", help="fetch and report, but save nothing"
         )
 
@@ -177,11 +182,13 @@ class Command(BaseCommand):
                 notes_by_venue[target["sheet_id"]].append(f"failed: {result['url']} {result['error']}")
 
         pages = [result for result in results if result["kind"] == "page"]
-        self.extract_with_ai(pages, options["skip_ai"], events_by_venue, notes_by_venue)
+        self.extract_with_ai(
+            pages, options["skip_ai"], options["model"], events_by_venue, notes_by_venue
+        )
 
         self.save_and_report(targets, events_by_venue, notes_by_venue, options["dry_run"])
 
-    def extract_with_ai(self, pages, skip_ai, events_by_venue, notes_by_venue):
+    def extract_with_ai(self, pages, skip_ai, model, events_by_venue, notes_by_venue):
         if not pages:
             return
         if skip_ai or not os.environ.get("ANTHROPIC_API_KEY"):
@@ -195,7 +202,7 @@ class Command(BaseCommand):
         # imported here so the rest of the command works without the sdk configured
         import anthropic
 
-        from core.event_fetching.ai_extraction import ExtractionError, extract_events
+        from core.event_fetching.ai_extraction import MODEL, ExtractionError, extract_events
 
         client = anthropic.Anthropic()
         for page in pages:
@@ -204,14 +211,19 @@ class Command(BaseCommand):
                 notes_by_venue[target["sheet_id"]].append("page text was truncated for ai extraction")
             try:
                 events, usage = extract_events(
-                    client, target["name"], target["location"], page["url"], page["text"]
+                    client,
+                    target["name"],
+                    target["location"],
+                    page["url"],
+                    page["text"],
+                    model=model or MODEL,
                 )
             except (anthropic.APIError, ExtractionError, ValueError) as e:
                 notes_by_venue[target["sheet_id"]].append(f"ai extraction failed: {e}"[:200])
                 continue
             events_by_venue[target["sheet_id"]] += [("ai", page["url"], event) for event in events]
             notes_by_venue[target["sheet_id"]].append(
-                f"ai: {usage.input_tokens} input / {usage.output_tokens} output tokens"
+                f"ai ({model or MODEL}): {usage.input_tokens} input / {usage.output_tokens} output tokens"
             )
 
     def save_and_report(self, targets, events_by_venue, notes_by_venue, dry_run):
