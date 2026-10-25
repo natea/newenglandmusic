@@ -12,11 +12,13 @@ from ordered_model.admin import OrderedModelAdmin
 from solo.admin import SingletonModelAdmin
 from tinymce.widgets import TinyMCE
 
+from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filter
 from .models import (
     AllEventProxy,
     DateMessage,
     EmailSubscriber,
     Event,
+    GeoArea,
     IndexPageMessages,
     MenuItem,
     StaticPage,
@@ -31,6 +33,48 @@ admin.site.site_title = "New England Music"
 admin.site.site_header = "New England Music"
 
 admin.site.register(IndexPageMessages, SingletonModelAdmin)
+
+
+class GeoAreaListFilter(SimpleListFilter):
+    """
+    filters by a region, state or metro area from the venue sheet, with the same
+    url parameters and rules as the public listing (see core/geo_filters.py)
+    """
+
+    kind = None
+    # how the filtered model reaches the venue: "venue__" for events, "" for venues
+    field_prefix = ""
+
+    def lookups(self, request, model_admin):
+        if self.kind == GeoArea.Kind.METRO:
+            # only the chosen state's metros, like the site's metro list
+            state = parse_geo_filter(request.GET).state
+            areas = [metro for metro in offered_areas(self.kind) if metro_fits_state(metro, state)]
+        else:
+            areas = offered_areas(self.kind)
+        return [(area.slug, area.label) for area in areas]
+
+    def queryset(self, request, queryset):
+        area = getattr(parse_geo_filter(request.GET), self.parameter_name)
+        if area is None:
+            return queryset
+        return queryset.filter(area_q(area, prefix=self.field_prefix))
+
+
+def geo_area_list_filters(field_prefix):
+    return [
+        type(
+            f"{kind.label}ListFilter",
+            (GeoAreaListFilter,),
+            {
+                "kind": kind,
+                "title": "metro area" if kind == GeoArea.Kind.METRO else kind.label.lower(),
+                "parameter_name": kind.value,
+                "field_prefix": field_prefix,
+            },
+        )
+        for kind in GeoArea.Kind
+    ]
 
 
 class StartTimeListFilter(SimpleListFilter):
@@ -183,6 +227,7 @@ class EventAdmin(admin.ModelAdmin):
     list_filter = [
         StartTimeListFilter,
         KindListFilter,
+        *geo_area_list_filters(field_prefix="venue__"),
         "is_approved",
         "user_submitted",
     ]
@@ -343,7 +388,7 @@ class VenueAdmin(admin.ModelAdmin):
     list_display_links = ("name",)
     list_filter = (
         "is_active",
-        "state",
+        *geo_area_list_filters(field_prefix=""),
         "size",
         "open_booking",
         "open_mic",

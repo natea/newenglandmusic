@@ -2,10 +2,17 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 from django.db.models.functions import TruncDate
-from django.http import HttpResponseNotFound
+from django.http import HttpResponseNotFound, HttpResponseRedirect
 from django.shortcuts import render
 
-from ..models import DateMessage, Event, IndexPageMessages, StaticPage
+from ..geo_filters import (
+    CookieAction,
+    apply_cookie_action,
+    geo_filter_for_request,
+    metro_groups,
+    offered_areas,
+)
+from ..models import DateMessage, Event, GeoArea, IndexPageMessages, StaticPage
 from ..opengraph import get_meta
 from ..utils_datemath import (
     NYCTZ,
@@ -55,7 +62,7 @@ def _get_calendar_dates(month_datetime):
 
 
 def _fetch_events_from_start_to_end_time_group_by_date_as_list(
-    events_start_time, events_end_time
+    events_start_time, events_end_time, geo_filter
 ):
     fetched_events = (
         # it is very very very important to do a select_related here
@@ -66,6 +73,7 @@ def _fetch_events_from_start_to_end_time_group_by_date_as_list(
         # anyway! select_related!! :-)
         Event.objects.select_related("venue")
         .filter(
+            geo_filter.q(prefix="venue__"),
             starttime__gte=events_start_time,
             starttime__lt=events_end_time,
         )
@@ -124,6 +132,12 @@ def _get_events_page_for_month(
     # assert that we're dealing with a new york timezone
     assert month_datetime.tzinfo == NYCTZ
 
+    geo_filter, cookie_action = geo_filter_for_request(request)
+    if cookie_action == CookieAction.REDIRECT:
+        # the redirect target has the filter in its url, so it can't redirect again
+        return HttpResponseRedirect(f"{request.path}?{geo_filter.query_string}")
+    geo_query = f"?{geo_filter.query_string}" if geo_filter else ""
+
     # these are used on both index and archive pages
     # to show links at the top and bottom to go to the previews,
     # current and next month.
@@ -147,7 +161,7 @@ def _get_events_page_for_month(
         grouped_events_as_list,
         all_event_dates,
     ) = _fetch_events_from_start_to_end_time_group_by_date_as_list(
-        events_start_time, events_end_time
+        events_start_time, events_end_time, geo_filter
     )
 
     (
@@ -157,11 +171,18 @@ def _get_events_page_for_month(
         events_start_time, events_end_time
     )
 
-    return render(
+    response = render(
         request,
         "core/index.html",
         {
             "is_index": is_index,
+            "geo_filter": geo_filter,
+            "geo_query": geo_query,
+            "region_options": offered_areas(GeoArea.Kind.REGION),
+            "state_options": offered_areas(GeoArea.Kind.STATE),
+            "metro_groups": metro_groups(geo_filter.state),
+            "no_matching_events": bool(geo_filter)
+            and not any(day["events"] for day in grouped_events_as_list),
             "month_year_header": month_datetime.strftime("%Y %B").lower(),
             # casting to dict since django doesn't deal with defaultdicts well
             # https://stackoverflow.com/a/64666307
@@ -179,6 +200,7 @@ def _get_events_page_for_month(
             "meta": get_meta(),
         },
     )
+    return apply_cookie_action(request, response, geo_filter, cookie_action)
 
 
 def past_month_archive(request, year, month):

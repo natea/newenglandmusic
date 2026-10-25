@@ -26,7 +26,7 @@
         {% if date.date.date in all_event_dates %}
           <a href="#{{ date.date|date:'mdy' }}">
         {% else %}
-          <a href="/{{ date.date|date:'Y-m' }}#{{ date.date|date:'mdy' }}">
+          <a href="/{{ date.date|date:'Y-m' }}/{{ geo_query }}#{{ date.date|date:'mdy' }}">
         {% endif %}
           {{ date.date.day }}</a>
     </td>

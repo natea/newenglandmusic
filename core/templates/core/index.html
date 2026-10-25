@@ -28,12 +28,14 @@
     </div>
   {% endif %}
 
-  {% include "calendar/calendar.html" with calendar_dates=calendar_dates all_event_dates=all_event_dates only %}
+  {% include "core/geo_filter_form.html" %}
+
+  {% include "calendar/calendar.html" with calendar_dates=calendar_dates all_event_dates=all_event_dates geo_query=geo_query only %}
 
   <div class='noCalMonthLinks'>
-    <a href="/{{ first_day_of_last_month|date:'Y-m' }}/">← {{ first_day_of_last_month|nyc_noise_navigation_bar_month }}</a>
-    <a href="/{{ first_day_of_this_month|date:'Y-m' }}/">🗓️ {{ first_day_of_this_month|nyc_noise_navigation_bar_month }}</a>
-    <a href="/{{ first_day_of_next_month|date:'Y-m' }}/">{{ first_day_of_next_month|nyc_noise_navigation_bar_month }} →</a>
+    <a href="/{{ first_day_of_last_month|date:'Y-m' }}/{{ geo_query }}">← {{ first_day_of_last_month|nyc_noise_navigation_bar_month }}</a>
+    <a href="/{{ first_day_of_this_month|date:'Y-m' }}/{{ geo_query }}">🗓️ {{ first_day_of_this_month|nyc_noise_navigation_bar_month }}</a>
+    <a href="/{{ first_day_of_next_month|date:'Y-m' }}/{{ geo_query }}">{{ first_day_of_next_month|nyc_noise_navigation_bar_month }} →</a>
   </div>
 
   {% if index_page_messages and index_page_messages.post_cal_msg %}
@@ -51,7 +53,13 @@
     </form>
   </div>
   -->
-  
+
+  {% if no_matching_events %}
+    <p class="noMatchingEvents">
+      no events match these filters. <a href="{{ request.path }}?clear=1">show all events</a>
+    </p>
+  {% endif %}
+
   {% for date_events in grouped_events_as_list %}
     <article>
       <h4><a name="{{ date_events.date|date:'mdy' }}" href="/{{ date_events.date|date:'Y-m' }}/#{{ date_events.date|date:'mdy' }}">{{ date_events.date|date:"M d"|lower }} {{ date_events.date|nyc_noise_day_with_parens }}</a></h4>
@@ -97,9 +105,9 @@
   {% endfor %}
 
   <div class='noCalMonthLinks' style="margin-top:30px;margin-bottom:30px;">
-    <a href="/{{ first_day_of_last_month|date:'Y-m' }}/">← {{ first_day_of_last_month|nyc_noise_navigation_bar_month }}</a>
-    <a href="/{{ first_day_of_this_month|date:'Y-m' }}/">🗓️ {{ first_day_of_this_month|nyc_noise_navigation_bar_month }}</a>
-    <a href="/{{ first_day_of_next_month|date:'Y-m' }}/">{{ first_day_of_next_month|nyc_noise_navigation_bar_month }} →</a>
+    <a href="/{{ first_day_of_last_month|date:'Y-m' }}/{{ geo_query }}">← {{ first_day_of_last_month|nyc_noise_navigation_bar_month }}</a>
+    <a href="/{{ first_day_of_this_month|date:'Y-m' }}/{{ geo_query }}">🗓️ {{ first_day_of_this_month|nyc_noise_navigation_bar_month }}</a>
+    <a href="/{{ first_day_of_next_month|date:'Y-m' }}/{{ geo_query }}">{{ first_day_of_next_month|nyc_noise_navigation_bar_month }} →</a>
   </div>
 
 {% endblock content %}

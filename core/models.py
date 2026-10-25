@@ -413,6 +413,45 @@ class Venue(models.Model):
         return self.name
 
 
+# a region, state or metro area from the sheet's geo-filters_json tab.
+# venues aren't linked to areas: membership is worked out from these rules at
+# query time (see core/geo_filters.py), so it never goes stale.
+class GeoArea(models.Model):
+    class Meta:
+        ordering = ["sort_order"]
+        constraints = [
+            models.UniqueConstraint(fields=["kind", "slug"], name="geoarea_kind_slug")
+        ]
+
+    class Kind(models.TextChoices):
+        REGION = "region"
+        STATE = "state"
+        METRO = "metro"
+
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    sheet_id = models.CharField(max_length=255, unique=True)
+    label = models.CharField(max_length=255)
+    # the sheet's STATE column, used to group metros under their state
+    home_state = models.CharField(max_length=2, blank=True, default="")
+    slug = models.SlugField(max_length=255)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    # the matching rules, lowercased: a venue belongs to the area when its state
+    # is in states and, if either list is set, its county or city is in it
+    states = ArrayField(models.CharField(max_length=2), blank=True, default=list)
+    counties = ArrayField(models.CharField(max_length=255), blank=True, default=list)
+    cities = ArrayField(models.CharField(max_length=255), blank=True, default=list)
+
+    @property
+    def short_label(self):
+        # "MA: Boston Metro Region" -> "Boston Metro Region", for metros grouped by state
+        prefix = f"{self.home_state}: "
+        return self.label[len(prefix) :] if self.label.startswith(prefix) else self.label
+
+    def __str__(self):
+        return self.label
+
+
 # custom manager that returns only public StaticPages by default
 # so that most code (except for the admin) will do the right thing
 # and show public pages only

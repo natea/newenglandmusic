@@ -1,12 +1,17 @@
 import json
 import subprocess
+from collections import Counter
 
-from core.models import Venue
+from core.geo_filters import area_q
+from core.models import GeoArea, Venue
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.db.models import Q
+from django.utils.text import slugify
 
 """
-syncs venues from the "Northeastern US Music Venues" google sheet into the db.
+syncs venues from the "Northeastern US Music Venues" google sheet into the db,
+along with the regions, states and metro areas the site filters events by.
 
 run as:
 
@@ -18,10 +23,18 @@ with the sheets service.
 every row must have a Venue_ID (e.g. V0042) -- venues are matched on it, so it
 must never change for a given row. rows are created or updated; venues that are
 no longer in the sheet are reported but never deleted.
+
+areas come from the geo-filters_json tab, one matching rule per row; rows that
+share an ID make up one area. unlike venues, areas are configuration: after a
+sync the stored areas are exactly the ones in the tab.
 """
 
 DEFAULT_SHEET_ID = "1QBzKHOUWOR0Fw0ODrwEep5eGfZg4SmTUq4PsaCbbnGQ"
 DEFAULT_TAB = "V3 - Flattened"
+DEFAULT_GEO_TAB = "geo-filters_json"
+
+# the geo-filters_json MATCH_TYPE values and the GeoArea list each one fills
+RULE_FIELDS = {"state": "states", "county": "counties", "city": "cities"}
 
 BOOKING_TYPES_BY_LABEL = {
     label.lower(): value for value, label in Venue.BookingType.choices
@@ -103,7 +116,7 @@ def get_rows_from_google_sheets(sheet_id, tab):
     except FileNotFoundError:
         raise CommandError("the gog cli is not installed")
     except subprocess.CalledProcessError as e:
-        raise CommandError(f"gog failed: {e.stderr.strip()}")
+        raise CommandError(f"gog failed reading tab {tab!r}: {e.stderr.strip()}")
 
     values = json.loads(result.stdout)
     header, *rows = values
@@ -111,10 +124,94 @@ def get_rows_from_google_sheets(sheet_id, tab):
     return [dict(zip(header, row + [""] * (len(header) - len(row)))) for row in rows]
 
 
+def split_values(value):
+    # "Brookline, Cambridge, Somerville" -> ["brookline", "cambridge", "somerville"]
+    return [part.strip().lower() for part in value.split(",") if part.strip()]
+
+
+def geo_areas_from_rows(rows):
+    """
+    groups geo-filters_json rows into GeoArea field dicts, in the order each
+    area first appears. returns (areas, warnings).
+    """
+    areas = {}
+    warnings = []
+    for row in rows:
+        kind = row["FILTER_TYPE"].strip()
+        sheet_id = row["ID"].strip()
+        match_type = row["MATCH_TYPE"].strip()
+        if not kind and not sheet_id:
+            continue
+        # the "ALL" row stands for no filter at all
+        if match_type == "any":
+            continue
+        if kind not in GeoArea.Kind.values:
+            warnings.append(f"{sheet_id}: unknown filter type {kind!r}, skipping")
+            continue
+        if match_type not in RULE_FIELDS:
+            warnings.append(f"{sheet_id}: unknown match type {match_type!r}, skipping")
+            continue
+
+        if sheet_id not in areas:
+            label = row["LABEL"].strip()
+            home_state = row["STATE"].strip().upper()
+            areas[sheet_id] = {
+                "kind": kind,
+                "label": label,
+                # regions list several states here; only a single state is a home
+                "home_state": home_state if len(home_state) == 2 else "",
+                "slug": slugify(label),
+                "sort_order": len(areas),
+                "states": [],
+                "counties": [],
+                "cities": [],
+            }
+        areas[sheet_id][RULE_FIELDS[match_type]] += split_values(row["VALUES"])
+
+    seen_slugs = set()
+    for sheet_id, fields in areas.items():
+        key = (fields["kind"], fields["slug"])
+        if key in seen_slugs:
+            raise CommandError(
+                f"{sheet_id}: another {fields['kind']} already has the url slug {fields['slug']!r}"
+            )
+        seen_slugs.add(key)
+    return areas, warnings
+
+
+def save_geo_areas(areas):
+    """replaces the stored areas with areas. returns (added, updated, removed)."""
+    nmb_added = nmb_updated = 0
+    existing = {area.sheet_id: area for area in GeoArea.objects.all()}
+    for sheet_id, fields in areas.items():
+        area = existing.get(sheet_id)
+        if area is None:
+            GeoArea.objects.create(sheet_id=sheet_id, **fields)
+            nmb_added += 1
+        else:
+            changed = {name for name, value in fields.items() if getattr(area, name) != value}
+            if changed:
+                GeoArea.objects.filter(pk=area.pk).update(**fields)
+            # adding or removing a row shifts the sort order of every area after it,
+            # which isn't worth reporting as an update
+            if changed - {"sort_order"}:
+                nmb_updated += 1
+    nmb_removed, _ = GeoArea.objects.exclude(sheet_id__in=areas).delete()
+    return nmb_added, nmb_updated, nmb_removed
+
+
+def venues_in_no_metro_by_state():
+    in_a_metro = Q(pk__in=[])
+    for metro in GeoArea.objects.filter(kind=GeoArea.Kind.METRO):
+        in_a_metro |= area_q(metro)
+    return Counter(Venue.objects.exclude(in_a_metro).values_list("state", flat=True))
+
+
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--sheet-id", default=DEFAULT_SHEET_ID)
         parser.add_argument("--tab", default=DEFAULT_TAB)
+        parser.add_argument("--geo-tab", default=DEFAULT_GEO_TAB)
         parser.add_argument(
             "--dry-run",
             action="store_true",
@@ -122,10 +219,16 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        # read both tabs before changing anything, so a missing tab changes nothing
         rows = get_rows_from_google_sheets(options["sheet_id"], options["tab"])
+        geo_rows = get_rows_from_google_sheets(options["sheet_id"], options["geo_tab"])
 
         if rows and "Venue_ID" not in rows[0]:
             raise CommandError("the sheet has no Venue_ID column")
+
+        geo_areas, geo_warnings = geo_areas_from_rows(geo_rows)
+        for warning in geo_warnings:
+            self.stdout.write(self.style.WARNING(warning))
 
         nmb_created = 0
         nmb_updated = 0
@@ -170,12 +273,19 @@ class Command(BaseCommand):
                     )
                 )
 
+            nmb_added, nmb_area_updated, nmb_removed = save_geo_areas(geo_areas)
+            no_metro = venues_in_no_metro_by_state()
+
             if options["dry_run"]:
                 transaction.set_rollback(True)
 
+        dry_run = "[dry run] " if options["dry_run"] else ""
+        if no_metro:
+            counts = ", ".join(f"{state or '?'} {count}" for state, count in sorted(no_metro.items()))
+            self.stdout.write(f"{dry_run}venues in no metro area: {counts}")
         self.stdout.write(
             self.style.SUCCESS(
-                f"{'[dry run] ' if options['dry_run'] else ''}"
-                f"created {nmb_created} venues, updated {nmb_updated} venues"
+                f"{dry_run}created {nmb_created} venues, updated {nmb_updated} venues; "
+                f"added {nmb_added} areas, updated {nmb_area_updated}, removed {nmb_removed}"
             )
         )

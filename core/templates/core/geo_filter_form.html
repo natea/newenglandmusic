@@ -1,0 +1,69 @@
+{% comment %}
+  region / state / metro filter for the listing pages. a plain GET form, so it
+  works without js; the script only submits it as soon as a select changes.
+  choosing "All" submits an empty value, which clears the remembered filter.
+{% endcomment %}
+{% if state_options %}
+  <form class="geoFilter" method="get" action="{{ request.path }}">
+    <label>
+      region
+      <select name="region">
+        <option value="">All</option>
+        {% for area in region_options %}
+          <option value="{{ area.slug }}" {% if area == geo_filter.region %}selected{% endif %}>{{ area.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      state
+      <select name="state">
+        <option value="">All</option>
+        {% for area in state_options %}
+          <option value="{{ area.slug }}" {% if area == geo_filter.state %}selected{% endif %}>{{ area.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% if metro_groups %}
+      <label>
+        metro area
+        <select name="metro">
+          <option value="">All</option>
+          {% for state_label, metros in metro_groups %}
+            <optgroup label="{{ state_label }}">
+              {% for area in metros %}
+                <option value="{{ area.slug }}" {% if area == geo_filter.metro %}selected{% endif %}>{{ area.short_label }}</option>
+              {% endfor %}
+            </optgroup>
+          {% endfor %}
+        </select>
+      </label>
+    {% else %}
+      {# a state with no metros (e.g. rhode island) still clears a stale metro #}
+      <input type="hidden" name="metro" value="">
+    {% endif %}
+    <button type="submit">filter</button>
+    {% if geo_filter %}
+      <a href="{{ request.path }}?clear=1">show all</a>
+    {% endif %}
+  </form>
+  <script>
+    (function () {
+      const form = document.currentScript.previousElementSibling;
+      form.querySelector('button[type="submit"]').hidden = true;
+      form.addEventListener('change', function (event) {
+        // the metro list belongs to the old state, so start over with the new one
+        const metro = form.querySelector('select[name="metro"]');
+        if (event.target.name === 'state' && metro) {
+          metro.value = '';
+        }
+        // leave "All" selects out of the url, unless all of them are "All":
+        // those empty values are what tells the server to forget the filter
+        const fields = [...form.querySelectorAll('select, input[type="hidden"]')];
+        if (fields.some(field => field.value)) {
+          fields.filter(field => !field.value).forEach(field => { field.disabled = true; });
+        }
+        form.submit();
+      });
+    })();
+  </script>
+{% endif %}

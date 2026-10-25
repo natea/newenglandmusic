@@ -1,0 +1,177 @@
+[
+ [
+  "FILTER_TYPE",
+  "ID",
+  "LABEL",
+  "STATE",
+  "MATCH_TYPE",
+  "VALUES"
+ ],
+ [
+  "region",
+  "all",
+  "ALL",
+  "any",
+  "any",
+  "any"
+ ],
+ [
+  "metro",
+  "metro_MA_Boston",
+  "MA: Boston",
+  "MA",
+  "state",
+  "MA"
+ ],
+ [
+  "metro",
+  "metro_MA_Boston",
+  "MA: Boston",
+  "MA",
+  "city",
+  "Brookline, Cambridge, Somerville"
+ ],
+ [
+  "metro",
+  "metro_MA_Boston",
+  "MA: Boston",
+  "MA",
+  "county",
+  "Suffolk"
+ ],
+ [
+  "metro",
+  "metro_MA_Boston_Metro_Region",
+  "MA: Boston Metro Region",
+  "MA",
+  "state",
+  "MA"
+ ],
+ [
+  "metro",
+  "metro_MA_Boston_Metro_Region",
+  "MA: Boston Metro Region",
+  "MA",
+  "city",
+  "Allston, Arlington, Belmont, Beverly, Boston, Braintree, Brighton, Brookline, Burlington, Cambridge, Charlestown, Chelsea, Dedham, Dorchester, East Boston, Everett, Lexington, Lincoln, Lynn, Lynnfield, Malden, Marblehead, Medford, Medway, Melrose, Milton, Nahant, Needham, Newton, Peabody, Quincy, Randolph, Reading, Salem, Saugus, Somerville, Swampscott, Waltham, Watertown, Wellesley, West Roxbury, Weston, Winchester, Winthrop"
+ ],
+ [
+  "metro",
+  "metro_MA_Cape_Cod",
+  "MA: Cape Cod",
+  "MA",
+  "state",
+  "MA"
+ ],
+ [
+  "metro",
+  "metro_MA_Cape_Cod",
+  "MA: Cape Cod",
+  "MA",
+  "county",
+  "Barnstable, Dukes, Nantucket"
+ ],
+ [
+  "metro",
+  "metro_MA_Central",
+  "MA: Central",
+  "MA",
+  "state",
+  "MA"
+ ],
+ [
+  "metro",
+  "metro_MA_Central",
+  "MA: Central",
+  "MA",
+  "county",
+  "Worcester"
+ ],
+ [
+  "metro",
+  "metro_MA_Central",
+  "MA: Central",
+  "MA",
+  "city",
+  "Acton, Ashby, Ashland, Ayer, Bedford, Boxborough, Carlisle, Chelmsford, Concord, Dracut, Dunstable, Framingham, Groton, Holliston, Hopkinton, Hudson, Lincoln, Littleton, Lowell, Marlborough, Maynard, Natick, Pepperell, Sherborn, Shirley, Stow, Sudbury, Tewsbury, Townsend, Tyngsborough, Wayland, Wellesley, Westford, Weston"
+ ],
+ [
+  "metro",
+  "metro_VT_North",
+  "VT: North",
+  "VT",
+  "state",
+  "VT"
+ ],
+ [
+  "metro",
+  "metro_VT_North",
+  "VT: North",
+  "VT",
+  "county",
+  "Addison, Caledonia, Chittenden, Essex, Franklin, Grand Isle, Lamoille, Orange, Orleans, Washington"
+ ],
+ [
+  "metro",
+  "metro_VT_South",
+  "VT: South",
+  "VT",
+  "state",
+  "VT"
+ ],
+ [
+  "metro",
+  "metro_VT_South",
+  "VT: South",
+  "VT",
+  "county",
+  "Bennington, Rutland, Windham, Windsor"
+ ],
+ [
+  "region",
+  "region_New_England_South",
+  "New England: South",
+  "CT, MA, RI",
+  "state",
+  "CT, MA, RI"
+ ],
+ [
+  "region",
+  "region_Northeast_Corridor",
+  "Northeast Corridor",
+  "",
+  "state"
+ ],
+ [
+  "region",
+  "region_Tri-State",
+  "Tri-State",
+  "CT, NJ, NY",
+  "state",
+  "CT, NJ, NY"
+ ],
+ [
+  "state",
+  "state_Massachusetts",
+  "Massachusetts",
+  "MA",
+  "state",
+  "MA"
+ ],
+ [
+  "state",
+  "state_Rhode_Island",
+  "Rhode Island",
+  "RI",
+  "state",
+  "RI"
+ ],
+ [
+  "state",
+  "state_Vermont",
+  "Vermont",
+  "VT",
+  "state",
+  "VT"
+ ]
+]

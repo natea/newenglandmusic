@@ -1,0 +1,22 @@
+/* the region / state / metro filter above the listing */
+.geoFilter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 6px;
+  background: #eeeeff;
+
+  label {
+    white-space: nowrap;
+  }
+
+  select {
+    max-width: 100%;
+  }
+}
+
+.noMatchingEvents {
+  padding: 10px;
+  background: #eeeeff;
+}
