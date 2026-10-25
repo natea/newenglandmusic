@@ -98,7 +98,30 @@ class VenueEventsSpider(scrapy.Spider):
         )
 
     def parse_ical(self, response, target):
-        events = parse_ical(response.body, response.url)
+        try:
+            events = parse_ical(response.body, response.url)
+        except Exception as e:
+            # some feeds are malformed in ways the icalendar library can't handle
+            # (e.g. a list where it expects a timezone id) -- fall back to ai extraction
+            # of the venue's events page
+            self.results.append(
+                {
+                    "kind": "error",
+                    "target": target,
+                    "url": response.url,
+                    "error": f"unparseable ical feed, falling back to ai: {e!r}"[:200],
+                }
+            )
+            page_url = target["events_page"] or target["url"]
+            if page_url:
+                yield scrapy.Request(
+                    page_url,
+                    callback=self.parse_page_for_ai,
+                    errback=self.on_error,
+                    cb_kwargs={"target": target},
+                    dont_filter=True,
+                )
+            return
         self.add_events(target, events, response.url, "ical")
 
     def parse_json_ld(self, response, target):
