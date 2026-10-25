@@ -3,7 +3,7 @@ import os
 
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.models import Venue
-from core.venue_matching import distance_km, names_match, normalize_name
+from core.venue_matching import distance_km, names_match, normalize_name, spelling_variants
 from django.core.management.base import BaseCommand, CommandError
 
 """
@@ -77,6 +77,15 @@ def ticketmaster_sheet_ids(report_path):
         )
 
 
+
+def search_names(client, venue):
+    """candidates for each spelling of the venue's name, without repeats"""
+    candidates = {}
+    for name in spelling_variants(venue.name):
+        for candidate in client.search_venues(name, venue.state):
+            candidates.setdefault(candidate["id"], candidate)
+    return list(candidates.values())
+
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--report", default="event_sources.csv")
@@ -109,7 +118,7 @@ class Command(BaseCommand):
                 groups["already linked"].append((venue, venue.ticketmaster_venue_id))
                 continue
             try:
-                candidates = client.search_venues(venue.name, venue.state)
+                candidates = search_names(client, venue)
                 if not candidates and venue.city_town:
                     candidates = client.search_venues(venue.city_town, venue.state)
             except TicketmasterError as e:

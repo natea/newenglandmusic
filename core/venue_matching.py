@@ -20,6 +20,18 @@ def normalize_name(name):
     return " ".join(words.split()) or " ".join(name.split())
 
 
+def spelling_variants(name):
+    """the name, plus its other spelling of theater/theatre: ticketmaster's search matches
+    words literally, so "The State Theater" doesn't find "State Theatre"."""
+    swapped = re.sub(
+        r"\b(theat)(er|re)\b",
+        lambda m: m.group(1) + ("re" if m.group(2).lower() == "er" else "er"),
+        name,
+        flags=re.IGNORECASE,
+    )
+    return [name] if swapped == name else [name, swapped]
+
+
 def names_match(a, b):
     """equal, or one's words appear in a row in the other's"""
     a, b = normalize_name(a), normalize_name(b)

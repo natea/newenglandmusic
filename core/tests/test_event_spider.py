@@ -179,6 +179,12 @@ class PageTextTestCase(SimpleTestCase):
         # tixr blocks crawlers by ip, which also locks out people buying tickets
         self.assertFalse(is_ticketing_event_url("https://www.tixr.com/groups/venue/events/show-165144"))
 
+    def test_ticketmaster_event_pages_are_not_crawled(self):
+        # ticketmaster refuses crawlers too; its events come from the discovery api
+        self.assertFalse(
+            is_ticketing_event_url("https://www.ticketmaster.com/punch-brothers-portland-maine-11-11-2026/event/0100649CC7356408")
+        )
+
 
 class CrawlSettingsTestCase(SimpleTestCase):
     def test_crawling_is_polite(self):

@@ -253,6 +253,22 @@ class MatchCommandTestCase(TestCase):
         self.assertEqual(self.searches, [("Paradise Rock Club", "MA"), ("Allston", "MA")])
         self.assertEqual(Venue.objects.get(pk=self.paradise.pk).ticketmaster_venue_id, "p")
 
+    def test_other_spelling_of_theater_is_searched_too(self):
+        state = Venue.objects.create(
+            sheet_id="V0404", name="The State Theater", city_town="Portland", state="ME",
+            latitude=43.6567, longitude=-70.2622,
+        )
+        self.run_match(
+            "--sheet-ids",
+            "V0404",
+            results={
+                "The State Theater": [candidate("b", "Maine State Music Theatre", 43.91, -69.96)],
+                "The State Theatre": [candidate("KovZpa3mee", "State Theatre", 43.6567, -70.2622)],
+            },
+        )
+        self.assertEqual(self.searches, [("The State Theater", "ME"), ("The State Theatre", "ME")])
+        self.assertEqual(Venue.objects.get(pk=state.pk).ticketmaster_venue_id, "KovZpa3mee")
+
     def test_ambiguous_venue_is_reported_with_candidates(self):
         output = self.run_match(
             results={

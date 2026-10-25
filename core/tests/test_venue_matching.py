@@ -1,6 +1,6 @@
 from core.management.commands.match_ticketmaster_venues import MAX_DISTANCE_KM, find_match
 from core.models import Venue
-from core.venue_matching import distance_km, names_match, normalize_name
+from core.venue_matching import distance_km, names_match, normalize_name, spelling_variants
 from django.test import SimpleTestCase
 
 PARADISE = (42.35183, -71.11954)
@@ -48,3 +48,11 @@ class NameMatchingTestCase(SimpleTestCase):
         self.assertAlmostEqual(distance_km(*PARADISE, 42.3558, -71.0610), 4.83, places=1)
         self.assertEqual(distance_km(*PARADISE, *PARADISE), 0)
         self.assertIsNone(distance_km(*PARADISE, None, None))
+
+
+class SpellingVariantsTestCase(SimpleTestCase):
+    def test_theater_and_theatre(self):
+        self.assertEqual(spelling_variants("The State Theater"), ["The State Theater", "The State Theatre"])
+        self.assertEqual(spelling_variants("Lincoln THEATRE"), ["Lincoln THEATRE", "Lincoln THEATer"])
+        self.assertEqual(spelling_variants("Theatrestuff Hall"), ["Theatrestuff Hall"])
+        self.assertEqual(spelling_variants("Paradise Rock Club"), ["Paradise Rock Club"])
