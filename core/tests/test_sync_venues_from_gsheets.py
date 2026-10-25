@@ -217,6 +217,26 @@ class SyncCommandTestCase(TestCase):
         self.assertEqual(venue.name, "After")
         self.assertEqual(venue.ticketmaster_venue_id, "KovZpZA11JtA")
 
+    def test_sync_leaves_the_place_lookup_alone(self):
+        Venue.objects.create(
+            sheet_id="V0001",
+            name="Before",
+            latitude=42.35,
+            place_lookup_status=Venue.PlaceLookupStatus.CONFIDENT,
+            place_id="ChIJparadise",
+            place_address="967 Commonwealth Ave, Boston, MA",
+            place_latitude=42.3519,
+            place_longitude=-71.1195,
+        )
+        self.sync([row("V0001", "After", Map_Latitude="42.36", Map_Longitude="-71.06")])
+        venue = Venue.objects.get(sheet_id="V0001")
+        # the sheet's own coordinates update, the looked-up ones don't
+        self.assertEqual(venue.latitude, 42.36)
+        self.assertEqual(venue.place_lookup_status, Venue.PlaceLookupStatus.CONFIDENT)
+        self.assertEqual(venue.place_id, "ChIJparadise")
+        self.assertEqual(venue.place_address, "967 Commonwealth Ave, Boston, MA")
+        self.assertEqual(venue.exact_location, (42.3519, -71.1195))
+
     def test_fields_not_in_the_sheet_are_preserved(self):
         venue = Venue.objects.create(
             sheet_id="V0001", name="Before", website="https://example.com", is_active=True

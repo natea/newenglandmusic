@@ -64,7 +64,11 @@ The relevant Places API (New) Text Search facts:
 - The field mask is built from the Pro fields, plus `websiteUri,nationalPhoneNumber` only with `--contact`, because Enterprise has 1,000 free calls a month against Pro's 5,000.
 - The key is sent in a header, never in the URL, so no error or log line can contain it.
 
-**6. Save results with `queryset.update()`, not `save()`.** `Venue.save()` rebakes every one of the venue's events.
+**6. Save results with `queryset.update()`, not `save()`, then re-render the stored event HTML of venues whose location changed.**
+- `Venue.save()` would rebake every one of the venue's events.
+- **Found during implementation:** each event's HTML, including its map pin and MAP link, is pre-rendered and stored on the event (`baked_html_template`). So when a lookup changes a venue's location or Maps link, its events must be rebaked, or the calendar keeps the old pin.
+- The command rebakes only the events of venues whose location or Maps link actually changed, and skips this on a dry run.
+- The admin actions call `save()`, which rebakes anyway.
 
 **7. Report closed venues; don't deactivate them.** Permanently closed venues are listed so the people who edit the sheet can mark them inactive. The next sync then carries that through.
 

@@ -29,46 +29,6 @@ def candidate(id, name, lat=None, lon=None, city="Boston"):
     }
 
 
-class NameMatchingTestCase(SimpleTestCase):
-    def test_matching_names(self):
-        for ours, theirs in (
-            ("Paradise Rock Club", "Paradise Rock Club presented by Citizens"),
-            ("MGM Music Hall", "MGM Music Hall at Fenway"),
-            ("The Orpheum Theatre", "Orpheum Theater"),
-            ("9:30 Club", "9:30 Club"),
-            ("Empire Live / Empire Underground", "Empire Live"),
-            ("Mr. Smalls", "Mr Smalls Theatre"),
-        ):
-            self.assertTrue(match.names_match(ours, theirs), (ours, theirs))
-
-    def test_different_names(self):
-        for ours, theirs in (
-            ("Paradise Rock Club", "Paradise City Bar"),
-            ("Big Night Live", "Big Nightclub"),
-            ("Reverb", "Reverberation Room"),
-        ):
-            self.assertFalse(match.names_match(ours, theirs), (ours, theirs))
-
-    def test_contained_name_matches_so_distance_decides(self):
-        # names are matched loosely; the distance check keeps this from linking
-        self.assertTrue(match.names_match("The Sinclair", "Sinclair Oil Arena"))
-        outcome, _, _ = match.find_match(
-            Venue(name="The Sinclair", latitude=42.3734, longitude=-71.1210),
-            [candidate("a", "Sinclair Oil Arena", 41.0, -73.0)],
-        )
-        self.assertEqual(outcome, "ambiguous")
-
-    def test_name_of_only_noise_words_still_compares(self):
-        self.assertEqual(match.normalize_name("The Club"), "the club")
-        self.assertTrue(match.names_match("The Club", "The Club"))
-
-    def test_distance_km(self):
-        # paradise rock club to the orpheum, about 4.5 km
-        self.assertAlmostEqual(match.distance_km(*PARADISE, 42.3558, -71.0610), 4.83, places=1)
-        self.assertEqual(match.distance_km(*PARADISE, *PARADISE), 0)
-        self.assertIsNone(match.distance_km(*PARADISE, None, None))
-
-
 class FindMatchTestCase(SimpleTestCase):
     def setUp(self):
         self.venue = Venue(name="Paradise Rock Club", latitude=PARADISE[0], longitude=PARADISE[1])
@@ -108,6 +68,35 @@ class FindMatchTestCase(SimpleTestCase):
     def test_nearby_venue_with_another_name_is_not_a_match(self):
         outcome, _, _ = match.find_match(
             self.venue, [candidate("a", "Agganis Arena", 42.3519, -71.1195)]
+        )
+        self.assertEqual(outcome, "ambiguous")
+
+    def test_confident_place_location_is_used(self):
+        # the sheet has the town centre, 3 km off; google places has the venue
+        venue = Venue(
+            name="House of Blues",
+            latitude=42.3605,
+            longitude=-71.0596,
+            place_lookup_status=Venue.PlaceLookupStatus.CONFIDENT,
+            place_latitude=42.3471,
+            place_longitude=-71.0949,
+        )
+        outcome, found, _ = match.find_match(
+            venue, [candidate("hob", "House of Blues", 42.3470, -71.0950)]
+        )
+        self.assertEqual((outcome, found["id"]), ("linked", "hob"))
+
+    def test_place_needing_review_is_not_used(self):
+        venue = Venue(
+            name="House of Blues",
+            latitude=42.3605,
+            longitude=-71.0596,
+            place_lookup_status=Venue.PlaceLookupStatus.REVIEW,
+            place_latitude=42.3471,
+            place_longitude=-71.0949,
+        )
+        outcome, _, _ = match.find_match(
+            venue, [candidate("hob", "House of Blues", 42.3470, -71.0950)]
         )
         self.assertEqual(outcome, "ambiguous")
 

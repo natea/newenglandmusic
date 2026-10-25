@@ -1,0 +1,89 @@
+{
+ "places": [
+  {
+   "id": "ChIJlU7L9hScskwRgSW3kvMKJKM",
+   "formattedAddress": "121 Center St, Portland, ME 04101, USA",
+   "addressComponents": [
+    {
+     "longText": "121",
+     "shortText": "121",
+     "types": [
+      "street_number"
+     ],
+     "languageCode": "en-US"
+    },
+    {
+     "longText": "Center Street",
+     "shortText": "Center St",
+     "types": [
+      "route"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "Downtown",
+     "shortText": "Downtown",
+     "types": [
+      "neighborhood",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "Portland",
+     "shortText": "Portland",
+     "types": [
+      "locality",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "Cumberland County",
+     "shortText": "Cumberland County",
+     "types": [
+      "administrative_area_level_2",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "Maine",
+     "shortText": "ME",
+     "types": [
+      "administrative_area_level_1",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "United States",
+     "shortText": "US",
+     "types": [
+      "country",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "04101",
+     "shortText": "04101",
+     "types": [
+      "postal_code"
+     ],
+     "languageCode": "en-US"
+    }
+   ],
+   "location": {
+    "latitude": 43.656560299999995,
+    "longitude": -70.25890319999999
+   },
+   "googleMapsUri": "https://maps.google.com/?cid=11755532968598644097&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+   "businessStatus": "OPERATIONAL",
+   "displayName": {
+    "text": "Aura",
+    "languageCode": "en"
+   }
+  }
+ ]
+}

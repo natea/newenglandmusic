@@ -1,9 +1,10 @@
 from core.admin import LinkedToTicketmasterFilter, VenueAdmin
-from core.models import Venue
+from core.models import Event, Venue
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from django.test import RequestFactory, TestCase
+from django.utils import timezone
 
 
 class VenueAdminTicketmasterTestCase(TestCase):
@@ -44,3 +45,71 @@ class VenueAdminTicketmasterTestCase(TestCase):
         self.assertEqual(self.filtered("yes"), {self.linked})
         self.assertEqual(self.filtered("no"), {self.unlinked, self.blank})
         self.assertEqual(len(self.filtered(None)), 3)
+
+
+class VenueAdminPlaceTestCase(TestCase):
+    def setUp(self):
+        self.admin = VenueAdmin(Venue, AdminSite())
+        self.request = RequestFactory().get("/admin/core/venue/")
+        self.request.user = User.objects.create_superuser("admin", "a@example.com", "pw")
+        self.review = Venue.objects.create(
+            name="Paradise Rock Club",
+            latitude=42.3529,
+            longitude=-71.1321,
+            place_lookup_status=Venue.PlaceLookupStatus.REVIEW,
+            place_id="ChIJparadise",
+            place_name="Paradise Rock Club",
+            place_latitude=42.3519,
+            place_longitude=-71.1195,
+            place_business_status="OPERATIONAL",
+        )
+        self.closed = Venue.objects.create(
+            name="Gone",
+            place_lookup_status=Venue.PlaceLookupStatus.CONFIDENT,
+            place_id="ChIJgone",
+            place_business_status="CLOSED_PERMANENTLY",
+        )
+        self.not_found = Venue.objects.create(
+            name="Nowhere", place_lookup_status=Venue.PlaceLookupStatus.NOT_FOUND
+        )
+
+    def changelist_ids(self, **params):
+        request = RequestFactory().get("/admin/core/venue/", params)
+        request.user = self.request.user
+        changelist = self.admin.get_changelist_instance(request)
+        return set(changelist.get_queryset(request).values_list("name", flat=True))
+
+    def test_filters(self):
+        self.assertEqual(self.changelist_ids(place_lookup_status__exact="review"), {"Paradise Rock Club"})
+        self.assertEqual(
+            self.changelist_ids(place_business_status__exact="CLOSED_PERMANENTLY"), {"Gone"}
+        )
+
+    def test_place_fields_are_in_the_admin_form(self):
+        fields = [f for _, options in self.admin.fieldsets for f in options["fields"]]
+        for field in ("place_lookup_status", "place_address", "place_latitude", "place_maps_url"):
+            self.assertIn(field, fields)
+
+    def test_confirming_a_match_puts_it_to_use(self):
+        event = Event.objects.create(title="show", starttime=timezone.now(), venue=self.review)
+        self.admin.mark_place_as_confident(self.request, Venue.objects.all())
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.place_lookup_status, Venue.PlaceLookupStatus.CONFIDENT)
+        self.assertEqual(self.review.exact_location, (42.3519, -71.1195))
+        # the event's stored html has the new pin
+        event = Event.all_objects.get(pk=event.pk)
+        self.assertIn('data-venue-lnglat="-71.1195,42.3519"', event.baked_html_template)
+        # a venue that was never found has nothing to confirm
+        self.assertEqual(
+            Venue.objects.get(pk=self.not_found.pk).place_lookup_status,
+            Venue.PlaceLookupStatus.NOT_FOUND,
+        )
+
+    def test_clearing_a_lookup(self):
+        self.admin.clear_place_lookup(self.request, Venue.objects.filter(pk=self.review.pk))
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.place_lookup_status, "")
+        self.assertEqual(self.review.place_id, "")
+        self.assertIsNone(self.review.place_latitude)
+        self.assertIsNone(self.review.place_looked_up_at)
+        self.assertEqual(self.review.exact_location, (42.3529, -71.1321))

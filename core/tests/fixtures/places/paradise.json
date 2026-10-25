@@ -1,0 +1,89 @@
+{
+ "places": [
+  {
+   "id": "ChIJ4U6oQOh544kROegfjmsLBCs",
+   "formattedAddress": "967 Commonwealth Ave, Boston, MA 02215, USA",
+   "addressComponents": [
+    {
+     "longText": "967",
+     "shortText": "967",
+     "types": [
+      "street_number"
+     ],
+     "languageCode": "en-US"
+    },
+    {
+     "longText": "Commonwealth Avenue",
+     "shortText": "Commonwealth Ave",
+     "types": [
+      "route"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "Allston",
+     "shortText": "Allston",
+     "types": [
+      "neighborhood",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "Boston",
+     "shortText": "Boston",
+     "types": [
+      "locality",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "Suffolk County",
+     "shortText": "Suffolk County",
+     "types": [
+      "administrative_area_level_2",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "Massachusetts",
+     "shortText": "MA",
+     "types": [
+      "administrative_area_level_1",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "United States",
+     "shortText": "US",
+     "types": [
+      "country",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "02215",
+     "shortText": "02215",
+     "types": [
+      "postal_code"
+     ],
+     "languageCode": "en-US"
+    }
+   ],
+   "location": {
+    "latitude": 42.3518386,
+    "longitude": -71.1194958
+   },
+   "googleMapsUri": "https://maps.google.com/?cid=3099615000111605817&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+   "businessStatus": "OPERATIONAL",
+   "displayName": {
+    "text": "Paradise Rock Club",
+    "languageCode": "en"
+   }
+  }
+ ]
+}

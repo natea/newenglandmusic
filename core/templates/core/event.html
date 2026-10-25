@@ -17,7 +17,7 @@
   class="event {% if event.is_cancelled %}cancelled{% endif %}"
   data-date="{{ event.starttime|date:'mdy' }}"
   data-starttime="{% if event.starttime_override %}{{ event.starttime_override }}{% else %}{{ event.starttime|date:'fA'|lower }}{% endif %}"
-  {% if event.venue.latitude and event.venue.longitude %}data-venue-lnglat="{{ event.venue.longitude }},{{event.venue.latitude }}"{% endif %}
+  {% if event.venue.exact_latitude is not None and event.venue.exact_longitude is not None %}data-venue-lnglat="{{ event.venue.exact_longitude }},{{ event.venue.exact_latitude }}"{% endif %}
   data-title-and-artists="{{ event.title_and_artists }}"
   data-venue-id="{{ event.venue.pk }}"
   data-is-cancelled="{{ event.is_cancelled }}"

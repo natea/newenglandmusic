@@ -1,10 +1,9 @@
 import csv
-import math
 import os
-import re
 
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.models import Venue
+from core.venue_matching import distance_km, names_match
 from django.core.management.base import BaseCommand, CommandError
 
 """
@@ -27,37 +26,6 @@ by setting the venue's ticketmaster venue id in the admin. needs TICKETMASTER_AP
 
 MAX_DISTANCE_KM = 1.0
 
-# words that venues' names often gain or lose between listings
-NAME_NOISE_RE = re.compile(
-    r"\b(the|music hall|hall|club|theatre|theater|live|and|at)\b|presented by .*$"
-)
-
-
-def normalize_name(name):
-    """lowercase words, without punctuation or words like "the" and "club" """
-    name = name.lower().replace("&", " and ")
-    name = re.sub(r"[^\w\s]", " ", name)
-    words = NAME_NOISE_RE.sub(" ", " ".join(name.split()))
-    return " ".join(words.split()) or " ".join(name.split())
-
-
-def names_match(a, b):
-    """equal, or one's words appear in a row in the other's"""
-    a, b = normalize_name(a), normalize_name(b)
-    return bool(a and b) and (f" {a} " in f" {b} " or f" {b} " in f" {a} ")
-
-
-def distance_km(lat1, lon1, lat2, lon2):
-    if None in (lat1, lon1, lat2, lon2):
-        return None
-    lat1, lon1, lat2, lon2 = map(math.radians, (lat1, lon1, lat2, lon2))
-    a = (
-        math.sin((lat2 - lat1) / 2) ** 2
-        + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
-    )
-    return 6371 * 2 * math.asin(math.sqrt(a))
-
-
 def find_match(venue, candidates):
     """
     returns (outcome, match, candidates with their distances) where outcome is
@@ -66,8 +34,10 @@ def find_match(venue, candidates):
     scored = [
         {
             **candidate,
+            # the google places location when it's a confident match; the sheet's own
+            # coordinates are only town centres
             "distance_km": distance_km(
-                venue.latitude, venue.longitude, candidate["latitude"], candidate["longitude"]
+                *venue.exact_location, candidate["latitude"], candidate["longitude"]
             ),
         }
         for candidate in candidates

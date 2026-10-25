@@ -279,6 +279,8 @@ class VenueAdmin(admin.ModelAdmin):
         "open_mic",
         "booking_type",
         LinkedToTicketmasterFilter,
+        "place_lookup_status",
+        "place_business_status",
     )
     search_fields = (
         "name",
@@ -290,7 +292,12 @@ class VenueAdmin(admin.ModelAdmin):
     )
     ordering = ("name",)
     save_on_top = True
-    actions = ["mark_as_inactive", "mark_as_active"]
+    actions = [
+        "mark_as_inactive",
+        "mark_as_active",
+        "mark_place_as_confident",
+        "clear_place_lookup",
+    ]
     fieldsets = (
         (None, {"fields": ("sheet_id", "name", "is_active", "venue_type", "size")}),
         (
@@ -325,6 +332,24 @@ class VenueAdmin(admin.ModelAdmin):
         ),
         ("Safety", {"fields": ("safety_flag", "safety_url", "safety_notes")}),
         # not synced from the sheet
+        (
+            "Place (from Google, not the sheet)",
+            {
+                "fields": (
+                    "place_lookup_status",
+                    "place_looked_up_at",
+                    "place_id",
+                    "place_name",
+                    "place_address",
+                    "place_latitude",
+                    "place_longitude",
+                    "place_business_status",
+                    "place_maps_url",
+                    "place_website",
+                    "place_phone",
+                )
+            },
+        ),
         ("Event sources", {"fields": ("ticketmaster_venue_id",)}),
     )
 
@@ -342,6 +367,24 @@ class VenueAdmin(admin.ModelAdmin):
     @admin.action(description="Mark as active")
     def mark_as_active(self, request, queryset):
         queryset.update(is_active=True)
+
+    @admin.action(description="Mark place match as confident")
+    def mark_place_as_confident(self, request, queryset):
+        # save() rather than update(), so events' baked html picks up the new location
+        for venue in queryset.exclude(place_id=""):
+            venue.place_lookup_status = Venue.PlaceLookupStatus.CONFIDENT
+            venue.save()
+
+    @admin.action(description="Clear place lookup")
+    def clear_place_lookup(self, request, queryset):
+        for venue in queryset:
+            venue.place_lookup_status = ""
+            venue.place_looked_up_at = None
+            venue.place_id = venue.place_name = venue.place_address = ""
+            venue.place_latitude = venue.place_longitude = None
+            venue.place_business_status = venue.place_maps_url = ""
+            venue.place_website = venue.place_phone = ""
+            venue.save()
 
 
 admin.site.register(Venue, VenueAdmin)

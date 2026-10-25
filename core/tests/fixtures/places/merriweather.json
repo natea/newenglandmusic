@@ -1,0 +1,89 @@
+{
+ "places": [
+  {
+   "id": "ChIJAx1lzOXgt4kR_eNxD1cLPxk",
+   "formattedAddress": "10475 Little Patuxent Pkwy, Columbia, MD 21044, USA",
+   "addressComponents": [
+    {
+     "longText": "10475",
+     "shortText": "10475",
+     "types": [
+      "street_number"
+     ],
+     "languageCode": "en-US"
+    },
+    {
+     "longText": "Little Patuxent Parkway",
+     "shortText": "Little Patuxent Pkwy",
+     "types": [
+      "route"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "Town Center",
+     "shortText": "Town Center",
+     "types": [
+      "neighborhood",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "Columbia",
+     "shortText": "Columbia",
+     "types": [
+      "locality",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "Howard County",
+     "shortText": "Howard County",
+     "types": [
+      "administrative_area_level_2",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "Maryland",
+     "shortText": "MD",
+     "types": [
+      "administrative_area_level_1",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "United States",
+     "shortText": "US",
+     "types": [
+      "country",
+      "political"
+     ],
+     "languageCode": "en"
+    },
+    {
+     "longText": "21044",
+     "shortText": "21044",
+     "types": [
+      "postal_code"
+     ],
+     "languageCode": "en-US"
+    }
+   ],
+   "location": {
+    "latitude": 39.2088816,
+    "longitude": -76.86269949999999
+   },
+   "googleMapsUri": "https://maps.google.com/?cid=1819185243030152189&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+   "businessStatus": "OPERATIONAL",
+   "displayName": {
+    "text": "Merriweather Post Pavilion",
+    "languageCode": "en"
+   }
+  }
+ ]
+}

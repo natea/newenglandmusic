@@ -278,6 +278,32 @@ class Venue(models.Model):
 
     name = models.CharField(max_length=255)
 
+    class PlaceLookupStatus(models.TextChoices):
+        CONFIDENT = "confident", "Confident match"
+        REVIEW = "review", "Needs review"
+        NOT_FOUND = "not_found", "Not found"
+
+    # not from the sheet: the venue as found on google places by the lookup_venue_places
+    # command. the sheet's coordinates are only town centres, so these are used instead
+    # when the match is confident (see exact_location)
+    place_lookup_status = models.CharField(
+        max_length=16, choices=PlaceLookupStatus.choices, blank=True, default=""
+    )
+    place_looked_up_at = models.DateTimeField(null=True, blank=True)
+    place_id = models.CharField(
+        max_length=255, blank=True, default="", verbose_name="Google place ID"
+    )
+    place_name = models.CharField(max_length=255, blank=True, default="")
+    place_address = models.CharField(max_length=500, blank=True, default="")
+    place_latitude = models.FloatField(null=True, blank=True)
+    place_longitude = models.FloatField(null=True, blank=True)
+    place_business_status = models.CharField(max_length=32, blank=True, default="")
+    place_maps_url = models.URLField(
+        max_length=1000, blank=True, default="", verbose_name="Google Maps link"
+    )
+    place_website = models.URLField(max_length=1000, blank=True, default="")
+    place_phone = models.CharField(max_length=64, blank=True, default="")
+
     state = models.CharField(max_length=2, blank=True, default="")
     city_town = models.CharField(max_length=255, blank=True, default="")
     county = models.CharField(max_length=255, blank=True, default="")
@@ -326,10 +352,35 @@ class Venue(models.Model):
         return ", ".join(part for part in [self.city_town, self.state] if part)
 
     @property
+    def has_confident_place(self):
+        return self.place_lookup_status == self.PlaceLookupStatus.CONFIDENT
+
+    @property
+    def exact_location(self):
+        """
+        (latitude, longitude): where the venue is on google places when that match is
+        confident, otherwise the sheet's coordinates (often just the town's centre)
+        """
+        if self.has_confident_place and None not in (self.place_latitude, self.place_longitude):
+            return self.place_latitude, self.place_longitude
+        return self.latitude, self.longitude
+
+    @property
+    def exact_latitude(self):
+        return self.exact_location[0]
+
+    @property
+    def exact_longitude(self):
+        return self.exact_location[1]
+
+    @property
     def google_maps_link(self):
-        if self.latitude is None or self.longitude is None:
+        if self.has_confident_place and self.place_maps_url:
+            return self.place_maps_url
+        latitude, longitude = self.exact_location
+        if latitude is None or longitude is None:
             return ""
-        return f"https://www.google.com/maps/search/?api=1&query={self.latitude},{self.longitude}"
+        return f"https://www.google.com/maps/search/?api=1&query={latitude},{longitude}"
 
     def __str__(self):
         return self.name

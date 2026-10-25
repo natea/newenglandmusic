@@ -18,7 +18,7 @@
 
 - [ ] 3.1 Add `match_ticketmaster_venues` with `--sheet-ids`, `--all`, `--recheck` and `--dry-run`; by default select active venues whose report `platforms` includes ticketmaster; error clearly without `TICKETMASTER_API_KEY`; verify with a test for the missing-key error
 - [ ] 3.2 Implement name normalization, haversine distance and the unique-match-within-1 km rule, with a city-name fallback search; verify with unit tests for exact match, containment ("MGM Music Hall" vs "MGM Music Hall at Fenway"), two candidates (ambiguous), a distant name match and no candidates
-- [ ] 3.3 (Blocked on `add-venue-place-lookup` task 4.2: the first dry run linked 3 of 23 venues against town-centre coordinates.) Print a report grouped as linked / already linked / ambiguous (with candidate id, name, address, distance) / unmatched; verify a `--dry-run` over the 23 Ticketmaster-listing venues saves nothing and lists each venue once
+- [ ] 3.3 (Unblocked by `add-venue-place-lookup`. Against the exact locations, the dry run links 8 of 23; the other 15 fail on the loose name rule or on duplicate Ticketmaster listings. The name rule needs a decision before this task can be done.) Print a report grouped as linked / already linked / ambiguous (with candidate id, name, address, distance) / unmatched; verify a `--dry-run` over the 23 Ticketmaster-listing venues saves nothing and lists each venue once
 - [ ] 3.4 Document the command's usage in its module docstring, matching the style of `fetch_events`
 
 ## 4. fetch_events integration
