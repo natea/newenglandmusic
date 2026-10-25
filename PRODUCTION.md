@@ -49,11 +49,13 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 
 ## The web process
 
+**Tests:** GitHub Actions (`.github/workflows/django.yml`) runs the suite on every push to `main`. The build doesn't run them, because on the host they'd have to create a test database on the production Postgres server.
+
 **Build** (`bin/build.sh`):
 - installs `requirements.txt`
-- runs the test suite and stops the build if it fails
 - compiles the SCSS and collects the static files
-- applies migrations
+
+**Migrations** run after the build and before the new code goes live: on Render, as the pre-deploy command, so a failed migration stops the deploy.
 
 **Start:**
 
@@ -63,12 +65,43 @@ gunicorn nycnoise.wsgi:application
 
 `bin/serve.sh` adds an access-log format and binds port 8000.
 
-**Hosting files from nyc noise.** The repo still has these; check them before relying on them:
-- **`render.yaml`:** a Render blueprint. It still names the service and database `nycnoise`, and pins Python 3.10.7.
+**Python version:** 3.11, the same as local development. `render.yaml` pins it with `PYTHON_VERSION`, and CI uses the same version.
+
+**Other hosting files from nyc noise:** check these before relying on them.
 - **`Dockerfile`:** builds on Python 3.12.1.
 - **`disco.json`:** a [Disco](https://disco.cloud) config, which runs `migrate` before each deploy.
 
-**Python version.** Local development uses Python 3.11, so set your host to 3.11 too.
+## Deploying to Render
+
+`render.yaml` is a Render Blueprint for the web service and its Postgres database, in the Virginia region. It doesn't include the scheduled jobs yet; see [Before the jobs can run on a server](#before-the-jobs-can-run-on-a-server).
+
+- **What deploys:** Render deploys `main` from the GitHub repo [natea/newenglandmusic](https://github.com/natea/newenglandmusic), and only once CI has passed on that commit (`autoDeployTrigger: checksPass`). `origin` is the upstream nyc noise repo; never deploy from or push to it.
+- **Plans:** the smallest paid ones. The web service is `0.5c-512mb` with two gunicorn workers, and the database is `0.1c-256mb`. Free databases are deleted after a while, so they aren't suitable for production data.
+- **Settings Render fills in:**
+  - `DJANGO_SECRET_KEY` is generated.
+  - `DATABASE_URL` comes from the database.
+  - The service's `onrender.com` hostname is added to `ALLOWED_HOSTS` automatically.
+  - Its URL is used as `SITE_URL` when that's blank.
+- **Settings you're asked for when creating the Blueprint:** `ALLOWED_HOSTS` and `SITE_URL` (leave both blank until there's a custom domain), `PROTOMAPS_API_KEY`, `CONTACT_EMAIL` and `GOATCOUNTER_CODE`. All are optional.
+
+**First deploy:**
+1. In the Render dashboard, choose **New > Blueprint**, connect the GitHub repo and apply `render.yaml`.
+2. Once the database exists, load the local data into it (see below), then trigger a deploy so the migrations run against it.
+3. Create an admin user from the service's **Shell** tab: `python manage.py createsuperuser`.
+4. Check the site at its `onrender.com` address, and log in to `/admin/`.
+
+**Loading the local database.** Make a dump locally, then restore it into Render's database. The restore needs its **External Database URL**, from the database's page in the dashboard.
+
+```sh
+pg_dump --format=custom --no-owner --no-privileges --exclude-table-data=django_session \
+  postgresql://localhost:5432/nycnoise > newenglandmusic.dump
+pg_restore --no-owner --no-privileges --clean --if-exists \
+  --dbname "<External Database URL>" newenglandmusic.dump
+```
+
+The dump includes admin accounts, with their password hashes, and the stored HTML of every event, so the events need no re-render. If it's older than the code, run `python manage.py resave_all_events` from the Shell tab after deploying.
+
+**A custom domain:** add it under the service's **Settings > Custom Domains**, then set `ALLOWED_HOSTS` to the domain and `SITE_URL` to `https://` plus the domain.
 
 ## Scheduled jobs
 
@@ -126,7 +159,8 @@ These need fixing first. Each is a code change, so each needs its own OpenSpec p
 
 - [ ] Postgres created, and `DATABASE_URL` set
 - [ ] the required variables set, with `DJANGO_SETTINGS_MODULE=nycnoise.settings.prod` and a fresh secret key
-- [ ] the build passes: tests, static files and migrations
+- [ ] CI passes on `main`, and the Render build (static files) and pre-deploy (migrations) succeed
+- [ ] the local database restored into Render's, and the site checked at its `onrender.com` address
 - [ ] an admin user created: `python manage.py createsuperuser`
 - [ ] the domain pointed at the host, and HTTPS working
 - [ ] `ALLOWED_HOSTS` and `SITE_URL` match the domain

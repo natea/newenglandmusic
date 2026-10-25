@@ -19,7 +19,8 @@ SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 # setting to False by default
 DEBUG = False
 
-ALLOWED_HOSTS = os.environ["ALLOWED_HOSTS"].split(",")
+# blank is fine on render, which adds its own hostname (see settings/prod.py)
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get("ALLOWED_HOSTS", "").split(",") if host.strip()]
 
 
 # Application definition
@@ -218,8 +219,11 @@ if PYINSTRUMENT_ENABLE:
 META_USE_OG_PROPERTIES = True
 META_USE_TWITTER_PROPERTIES = True
 META_USE_TITLE_TAG = True
-# the public address of the site, used in share links (og:url, og:image)
-SITE_URL = (os.environ.get("SITE_URL") or "http://localhost:8001").rstrip("/")
+# the public address of the site, used in share links (og:url, og:image).
+# render sets RENDER_EXTERNAL_URL to the service's onrender.com address
+SITE_URL = (
+    os.environ.get("SITE_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "http://localhost:8001"
+).rstrip("/")
 META_SITE_PROTOCOL = urlparse(SITE_URL).scheme
 META_SITE_DOMAIN = urlparse(SITE_URL).netloc
 META_SITE_TYPE = "website"

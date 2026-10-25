@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
+# builds the site on the host (render runs this as its build command).
 # exit on error
 set -o errexit
 
-# used to be necessary on render -- not anymore?
-# pip install --upgrade pippip install --force-reinstall -U setuptools
 pip install -r requirements.txt
 
-# run tests -- build should fail if they fail!
-DJANGO_SETTINGS_MODULE=nycnoise.settings.test python manage.py test --noinput
-
-# all good, proceed!
+# the tests run in github actions (.github/workflows/django.yml), and render
+# only deploys a commit once they pass -- so they don't run here, where they
+# would need to create a test database on the production postgres server.
+# migrations run as render's pre-deploy command, after a successful build.
 python manage.py compilescss
 python manage.py collectstatic --no-input
-python manage.py migrate
