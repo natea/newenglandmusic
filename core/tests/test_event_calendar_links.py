@@ -18,10 +18,13 @@ class EventCalendarLinksTestCase(TestCase):
     def test_gcal_link_includes_venue_location(self):
         response = self.client.get(f"/event/{self.event.pk}/gcal")
         self.assertEqual(response.status_code, 302)
-        location = parse_qs(urlparse(response["Location"]).query)["location"][0]
-        self.assertEqual(location, f"{self.venue.name}, Hartford, CT")
+        params = parse_qs(urlparse(response["Location"]).query)
+        self.assertEqual(params["location"][0], f"{self.venue.name}, Hartford, CT")
+        self.assertEqual(params["text"][0], f"{self.event.title} [New England Music]")
 
     def test_ics_download_includes_venue_location(self):
         response = self.client.get(f"/event/{self.event.pk}/ics")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(f"LOCATION:{self.venue.name}\\, Hartford\\, CT", response.content.decode())
+        content = response.content.decode()
+        self.assertIn(f"LOCATION:{self.venue.name}\\, Hartford\\, CT", content)
+        self.assertIn(f"SUMMARY:{self.event.title} [New England Music]", content)
