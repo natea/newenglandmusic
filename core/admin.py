@@ -5,6 +5,8 @@ from dateutil import relativedelta
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q
+from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from ordered_model.admin import OrderedModelAdmin
 from solo.admin import SingletonModelAdmin
@@ -92,12 +94,13 @@ class EventAdmin(admin.ModelAdmin):
         "get_preface_as_text",
         "title",
         "artists",
-        "venue",
+        "get_venue_link",
         "get_description_as_text",
         "price",
         "is_cancelled",
     )
     autocomplete_fields = ("venue",)
+    list_select_related = ("venue",)
     # define a custom order for the fields
     # TODO always keep in sync with the fields in the model..!
     fields = (
@@ -181,6 +184,15 @@ class EventAdmin(admin.ModelAdmin):
         return mark_safe(obj.preface) if obj.preface else ""
 
     get_preface_as_text.short_description = "Preface"
+
+    def get_venue_link(self, obj):
+        if obj.venue is None:
+            return ""
+        url = reverse("admin:core_venue_change", args=[obj.venue.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.venue.name)
+
+    get_venue_link.short_description = "Venue"
+    get_venue_link.admin_order_field = "venue__name"
 
     def get_description_as_text(self, obj):
         return mark_safe(obj.description) if obj.description else ""

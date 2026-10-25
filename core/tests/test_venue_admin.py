@@ -1,4 +1,4 @@
-from core.admin import LinkedToTicketmasterFilter, VenueAdmin
+from core.admin import EventAdmin, LinkedToTicketmasterFilter, VenueAdmin
 from core.models import Event, Venue
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
@@ -113,3 +113,24 @@ class VenueAdminPlaceTestCase(TestCase):
         self.assertIsNone(self.review.place_latitude)
         self.assertIsNone(self.review.place_looked_up_at)
         self.assertEqual(self.review.exact_location, (42.3529, -71.1321))
+
+
+class EventAdminVenueLinkTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_superuser("admin", "a@example.com", "pw")
+        self.client.force_login(self.user)
+        self.venue = Venue.objects.create(name="Paradise <Rock> Club")
+        Event.objects.create(title="with venue", starttime=timezone.now(), venue=self.venue)
+        Event.objects.create(title="no venue", starttime=timezone.now())
+
+    def test_venue_column_links_to_the_venue(self):
+        response = self.client.get("/admin/core/alleventproxy/", {"starttime": "all"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            f'<a href="/admin/core/venue/{self.venue.pk}/change/">Paradise &lt;Rock&gt; Club</a>',
+            html=True,
+        )
+
+    def test_venue_column_sorts_by_name(self):
+        self.assertEqual(EventAdmin.get_venue_link.admin_order_field, "venue__name")
