@@ -305,6 +305,10 @@ def check_venue_unsafe(venue):
         result["error"] = str(e)[:200]
         return result
 
+    # record the page that actually loaded (after redirects or the homepage fallback),
+    # as fetch_events fetches it again
+    result["url"] = r.url
+
     pages = [analyze_page(r.text, r.url)]
 
     events_page_url = find_events_page_url(pages[0]["soup"], r.url)
