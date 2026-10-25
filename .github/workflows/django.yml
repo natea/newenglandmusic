@@ -9,7 +9,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # pinned, so a new ubuntu-latest image (and its python builds) never blocks a deploy
+    runs-on: ubuntu-24.04
     env:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -32,9 +33,9 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           # same as PYTHON_VERSION in render.yaml
           python-version: "3.11.14"
