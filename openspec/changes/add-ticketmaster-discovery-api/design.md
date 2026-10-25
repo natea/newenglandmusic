@@ -47,10 +47,12 @@ The relevant Discovery API facts (v2, `https://app.ticketmaster.com/discovery/v2
 - A synchronous client with a minimum of 0.25s between calls and retry with back-off on 429/5xx (2 retries) is simpler than adding it to the Scrapy crawl. It can run before or after the crawl in the same process.
 - No new dependency: `requests` is already in `requirements.txt`.
 
-**4. Give each venue a single source: Ticketmaster replaces ticketing and AI, but not iCal or JSON-LD.**
-- Linked venues whose report source is `ticketing` or `ai-extraction`, or that are missing from usable report rows, go to the API. Venues with `ical` or `json-ld` keep it.
+**4. Give each venue a single source: Ticketmaster replaces iCal, ticketing and AI, but not JSON-LD.**
+- Linked venues whose report source is `ical`, `ticketing` or `ai-extraction`, or that are missing from usable report rows, go to the API. Venues with `json-ld` keep it.
+- **Changed after the first real run (2026-10-25):** the original rule also kept iCal feeds. But both linked iCal venues had far fewer events in their feed than on Ticketmaster: The Anthem 1 against 42 (its "feed" was a one-event download), and Blue Ocean 3 against 38. JSON-LD venues (House of Blues 36, Warsaw 35, The Fillmore 50) list about as many events as Ticketmaster, so they keep their source.
+- **Clean-up on switching:** fetching a venue from the API deletes its upcoming, unapproved iCal events, which would otherwise duplicate the Ticketmaster ones under other IDs. This is skipped on a dry run or a failed request. It's limited to iCal: other sources can hold real events that aren't on Ticketmaster, such as Aura's Eventbrite show.
 - **Why:**
-  - A venue's own feed is often more complete. Blue Ocean Music Hall's iCal, for example, includes shows Ticketmaster doesn't sell.
+  - A venue's own structured data (JSON-LD) is as complete as Ticketmaster at the venues measured.
   - One source per venue avoids duplicate events under two different external IDs.
 - `--sheet-ids` and `--all` keep their meaning. A new `--skip-ticketmaster` flag mirrors `--skip-ai`.
 

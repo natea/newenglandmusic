@@ -424,7 +424,8 @@ class FetchEventsTicketmasterTestCase(TestCase):
         self.assertEqual(
             self.sources(None, True),
             {
-                "V0001": "ical",
+                # ticketmaster replaces the ical feed, but not json-ld
+                "V0001": "ticketmaster",
                 "V0002": "json-ld",
                 "V0003": "ticketmaster",
                 "V0004": "ticketmaster",
@@ -502,11 +503,46 @@ class FetchEventsTicketmasterTestCase(TestCase):
 
     def test_no_api_key(self):
         with mock.patch.dict(os.environ, {"TICKETMASTER_API_KEY": ""}):
-            output = self.fetch("--sheet-ids", "V0001,V0003")
+            output = self.fetch("--sheet-ids", "V0002,V0003")
         self.assertEqual(self.tm_requests, [])
         self.assertIn("ticketmaster skipped (no TICKETMASTER_API_KEY)", output)
-        # the other venues are still crawled
-        self.assertEqual([t["sheet_id"] for t in FakeCrawlerProcess.seen_targets], ["V0001"])
+        # the json-ld venue is still crawled
+        self.assertEqual([t["sheet_id"] for t in FakeCrawlerProcess.seen_targets], ["V0002"])
+
+    def ical_event(self, title, days=7, approved=False, source="ical"):
+        return Event.all_objects.create(
+            title=title,
+            starttime=timezone.now() + datetime.timedelta(days=days),
+            venue=self.venues["V0001"],
+            source=source,
+            external_id=f"{source}:{title}",
+            is_approved=approved,
+        )
+
+    def test_switching_from_ical_removes_unapproved_feed_events(self):
+        stale = [self.ical_event(f"feed show {i}") for i in range(3)]
+        approved = self.ical_event("approved feed show", approved=True)
+        past = self.ical_event("last month", days=-30)
+        eventbrite = self.ical_event("eventbrite show", source="ticketing")
+        self.tm_events["tm-V0001"] = [tm_event("ev1")]
+
+        output = self.fetch("--sheet-ids", "V0001")
+
+        self.assertFalse(Event.all_objects.filter(pk__in=[e.pk for e in stale]).exists())
+        for kept in (approved, past, eventbrite):
+            self.assertTrue(Event.all_objects.filter(pk=kept.pk).exists(), kept.title)
+        self.assertTrue(Event.all_objects.filter(external_id="tm:ev1").exists())
+        self.assertIn("removed 3 unapproved events from the venue's ical feed", output)
+
+    def test_feed_events_kept_on_dry_run_and_api_failure(self):
+        stale = self.ical_event("feed show")
+        self.tm_events["tm-V0001"] = [tm_event("ev1")]
+        self.fetch("--sheet-ids", "V0001", "--dry-run")
+        self.assertTrue(Event.all_objects.filter(pk=stale.pk).exists())
+
+        self.tm_events["tm-V0001"] = TicketmasterError("events.json: HTTP 503")
+        self.fetch("--sheet-ids", "V0001")
+        self.assertTrue(Event.all_objects.filter(pk=stale.pk).exists())
 
     def test_api_failure_for_one_venue_doesnt_stop_others(self):
         self.tm_events["tm-V0003"] = TicketmasterError("events.json: HTTP 503")

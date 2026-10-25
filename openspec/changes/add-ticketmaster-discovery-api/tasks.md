@@ -39,6 +39,15 @@
   - No duplicates across sources. Aura's one leftover `ticketing` event is an Eventbrite show that isn't on Ticketmaster.
 - [x] 5.3 Run the full test suite and verify it passes Done: 255 tests pass with outbound network blocked.
 
+## 6. Ticketmaster replaces iCal (decided after the first real run)
+
+- [x] 6.1 Route linked iCal venues to Ticketmaster in `select_targets` (keep json-ld); update the routing tests so the ical venue goes to ticketmaster, and verify that they pass
+- [x] 6.2 After a successful API fetch, delete the venue's upcoming unapproved `ical` events (not on a dry run or a failed request) and report how many; test deletion, and that approved, past and other-source events are kept, on a dry run and on API failure. Verify that the tests pass
+- [x] 6.3 Run `fetch_events --sheet-ids V0078,V0272`, logging to `logs/`, and record the event counts for The Anthem and Blue Ocean; run the full suite with outbound network blocked
+  - Result (log: `logs/fetch_events-2026-10-25.log`): The Anthem went from 1 event to 35 from Ticketmaster; Blue Ocean from 3 to 31, and its 3 unapproved iCal events were removed.
+  - The Anthem's one iCal event (Tinashe, 2027-04-26) was approved earlier, so it was kept. Ticketmaster has the same show (event 2246, unapproved). Only one copy is on the site; an admin can delete the Ticketmaster copy.
+  - Full suite: 257 tests pass with outbound network blocked.
+
 ## Workflow follow-up
 
 - Review the Ticketmaster Partner API Terms (attribution, data retention) before any public deployment.

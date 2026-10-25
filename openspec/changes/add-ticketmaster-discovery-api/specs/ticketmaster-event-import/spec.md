@@ -7,15 +7,19 @@ Imports upcoming music events for venues linked to Ticketmaster from the Ticketm
 ## ADDED Requirements
 
 ### Requirement: Linked venues are fetched from the Discovery API
-When `fetch_events` runs, each venue that has a Ticketmaster venue ID and whose event-source report does not use iCal or JSON-LD SHALL get its events from the Discovery API instead of ticketing-page scraping or AI extraction.
+When `fetch_events` runs, each venue that has a Ticketmaster venue ID and whose event-source report does not use JSON-LD SHALL get its events from the Discovery API instead of its iCal feed, ticketing-page scraping or AI extraction.
 
 #### Scenario: Linked ticketing venue
 - **WHEN** `fetch_events` runs for a linked venue whose report source is ticketing or ai-extraction
 - **THEN** its events come from the Discovery API and its pages are not scraped or sent to AI extraction
 
-#### Scenario: Linked venue with a working feed
-- **WHEN** a linked venue's report source is ical or json-ld
+#### Scenario: Linked venue with structured data
+- **WHEN** a linked venue's report source is json-ld
 - **THEN** it keeps that source and is not also fetched from the Discovery API
+
+#### Scenario: Linked venue with an iCal feed
+- **WHEN** a linked venue's report source is ical
+- **THEN** its events come from the Discovery API and its feed is not fetched
 
 #### Scenario: Linked venue missing from the report
 - **WHEN** a linked venue has no usable source in the event-source report, e.g. it was bot-blocked
@@ -75,3 +79,18 @@ The import SHALL make at most 5 Discovery API requests per second. Without `TICK
 #### Scenario: Dry run
 - **WHEN** `fetch_events` runs with `--dry-run`
 - **THEN** Ticketmaster events are fetched and reported but nothing is saved
+
+### Requirement: Replaced iCal events are removed
+When a linked venue's events are fetched from the Discovery API, its upcoming, unapproved events from its iCal feed SHALL be deleted, so they don't duplicate the Ticketmaster events. Approved events, past events, events from other sources, and dry runs SHALL leave them untouched, and a failed API request SHALL delete nothing.
+
+#### Scenario: Venue switched from iCal
+- **WHEN** a linked venue with 3 upcoming unapproved iCal events is fetched from the Discovery API
+- **THEN** those 3 events are deleted and the report says so
+
+#### Scenario: Events that are kept
+- **WHEN** the venue also has an approved iCal event, a past iCal event and an unapproved Eventbrite event
+- **THEN** all three are kept
+
+#### Scenario: API failure
+- **WHEN** the Discovery API request for the venue fails
+- **THEN** none of its iCal events are deleted

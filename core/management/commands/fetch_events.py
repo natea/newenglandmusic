@@ -31,9 +31,10 @@ fetches every venue whose events can be fetched in one of these ways:
   claude-haiku-5-5 by default, or pass --model)
 - ticketmaster: the ticketmaster discovery api, for venues linked to ticketmaster (see
   match_ticketmaster_venues; needs TICKETMASTER_API_KEY). it replaces a linked venue's
-  ticketing or ai source -- but not its ical feed or json-ld -- and also covers linked
-  venues the report found no usable source for. pass --skip-ticketmaster to fetch linked
-  venues from their report source instead.
+  ical feed, ticketing or ai source -- but not its json-ld -- and also covers linked
+  venues the report found no usable source for. the venue's upcoming unapproved ical
+  events are then removed, as they'd duplicate ticketmaster's. pass --skip-ticketmaster
+  to fetch linked venues from their report source instead.
 
 events are matched on external_id, so re-running updates events instead of duplicating
 them. new events are saved unapproved; already-approved events stay approved.
@@ -118,9 +119,10 @@ def select_targets(report_path, per_source, sheet_ids, all_venues, use_ticketmas
         if venue is None:
             continue
         source = REPORT_SOURCE_TO_TARGET_SOURCE.get(row["best_source"])
-        # the ticketmaster api replaces scraping ticketing pages or ai extraction, but a
-        # venue's own feed or structured data is often more complete, so it keeps those
-        if use_ticketmaster and venue.ticketmaster_venue_id and source not in ("ical", "json-ld"):
+        # the ticketmaster api replaces a linked venue's ical feed, ticketing pages or ai
+        # extraction -- feeds turned out to list a fraction of a venue's shows (the anthem:
+        # 1 vs 42) -- but not its json-ld, which lists about as many
+        if use_ticketmaster and venue.ticketmaster_venue_id and source != "json-ld":
             source = "ticketmaster"
         if source is not None:
             targets.append(make_target(venue, source, row))
@@ -216,7 +218,9 @@ class Command(BaseCommand):
         events_by_venue = defaultdict(list)
         notes_by_venue = defaultdict(list)
         ticketmaster_targets = [t for t in targets if t["source"] == "ticketmaster"]
-        self.fetch_from_ticketmaster(ticketmaster_targets, events_by_venue, notes_by_venue)
+        self.fetch_from_ticketmaster(
+            ticketmaster_targets, events_by_venue, notes_by_venue, options["dry_run"]
+        )
 
         results = []
         crawl_targets = [t for t in targets if t["source"] != "ticketmaster"]
@@ -241,7 +245,7 @@ class Command(BaseCommand):
 
         self.save_and_report(targets, events_by_venue, notes_by_venue, options["dry_run"])
 
-    def fetch_from_ticketmaster(self, targets, events_by_venue, notes_by_venue):
+    def fetch_from_ticketmaster(self, targets, events_by_venue, notes_by_venue, dry_run):
         if not targets:
             return
         api_key = os.environ.get("TICKETMASTER_API_KEY")
@@ -269,6 +273,17 @@ class Command(BaseCommand):
                 notes.append(
                     f"ticketmaster: {len(raw_events) - len(events)} non-music or undated events left out"
                 )
+            if not dry_run:
+                # events from the venue's ical feed, which ticketmaster replaces, would
+                # duplicate these under other ids. approved ones are someone's decision
+                stale, _ = Event.all_objects.filter(
+                    venue_id=target["venue_pk"],
+                    source=Event.Source.ICAL,
+                    is_approved=False,
+                    starttime__gte=timezone.now(),
+                ).delete()
+                if stale:
+                    notes.append(f"removed {stale} unapproved events from the venue's ical feed")
 
     def extract_with_ai(self, pages, skip_ai, model, events_by_venue, notes_by_venue):
         if not pages:
