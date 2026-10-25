@@ -1,17 +1,19 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-
-# https://til.simonwillison.net/github/dependabot-python-setup
+# dependabot: security fixes only, no routine version bumps.
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# open-pull-requests-limit: 0 turns off version-update PRs. security-update PRs
+# don't count against it: they open when an advisory affects a pinned package
+# (repo settings > code security > dependabot security updates must be on),
+# grouped into one PR.
 version: 2
 updates:
-- package-ecosystem: pip
-  directory: "/"
-  schedule:
-    interval: daily
-    time: "13:00"
-  groups:
-    python-packages:
-      patterns:
-        - "*"
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      security-fixes:
+        applies-to: security-updates
+        patterns:
+          - "*"
