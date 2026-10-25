@@ -1,0 +1,135 @@
+# Deploying New England Music
+
+How to run this site in production. For running it locally, see `AGENTS.md`.
+
+A deployment has three parts:
+
+1. **A web process:** Django served by gunicorn, with static files served by WhiteNoise.
+2. **A Postgres database.**
+3. **Scheduled jobs** that refresh venues and fetch events, by running management commands on a timer.
+
+> **Status:** the web process works as it is. The scheduled jobs are not ready to run on a server yet; see [Before the jobs can run on a server](#before-the-jobs-can-run-on-a-server).
+
+## Configuration
+
+Everything is configured through environment variables. `.env.example` lists them all with notes. On a host, set them in its dashboard rather than uploading a `.env` file.
+
+**Required:**
+
+| Variable | Production value |
+|---|---|
+| `DJANGO_SETTINGS_MODULE` | `nycnoise.settings.prod` (turns `DEBUG` off) |
+| `DJANGO_SECRET_KEY` | a long random key; see below |
+| `DATABASE_URL` | the Postgres connection string from your host |
+| `ALLOWED_HOSTS` | your domain(s), comma-separated, e.g. `newenglandmusic.example,www.newenglandmusic.example` |
+| `SITE_URL` | `https://` plus your domain, used in share links |
+| `PROD_INTERNAL_API_SERVER`, `RC_DEVELOPER_INTERNAL_TOKEN` | inherited from nyc noise and not used by this fork; blank is fine, but they must be set |
+| `DEBUG_TOOLBAR_ENABLE`, `PYINSTRUMENT_ENABLE`, `ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION` | `false` unless you want them |
+
+**The secret key.** Locally a UUID is fine. In production, use Django's own generator, which makes a longer and more random key:
+
+```sh
+venv/bin/python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
+```
+
+Keep it only in the host's settings, never in git. Changing it logs everyone out of the admin. Some hosts can generate it for you (Render: `generateValue: true`).
+
+**For the scheduled jobs:**
+- `ANTHROPIC_API_KEY`: AI event extraction and labelling events by kind.
+- `TICKETMASTER_API_KEY`: the Consumer Key of a Ticketmaster app.
+- `GOOGLE_PLACES_API_KEY`: in Google Cloud, restrict it to the Places API (New) and cap its daily quota.
+
+**Optional:**
+- **`CONTACT_EMAIL`:** shown on the submit-event form.
+- **`DEFAULT_FROM_EMAIL`:** the sender of outgoing email.
+  - Submission emails go out through Amazon SES, so this must be an address verified in SES.
+  - They also need `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+- **`PROTOMAPS_API_KEY`:** the home page's maps. In your Protomaps account, restrict it to your domain. `MAP_CENTER_LATITUDE`, `MAP_CENTER_LONGITUDE` and `MAP_ZOOM` set where the maps start.
+- **`GOOGLE_ANALYTICS_ID`, `GOATCOUNTER_CODE`:** analytics. Each one loads only when it is set.
+
+## The web process
+
+**Build** (`bin/build.sh`):
+- installs `requirements.txt`
+- runs the test suite and stops the build if it fails
+- compiles the SCSS and collects the static files
+- applies migrations
+
+**Start:**
+
+```sh
+gunicorn nycnoise.wsgi:application
+```
+
+`bin/serve.sh` adds an access-log format and binds port 8000.
+
+**Hosting files from nyc noise.** The repo still has these; check them before relying on them:
+- **`render.yaml`:** a Render blueprint. It still names the service and database `nycnoise`, and pins Python 3.10.7.
+- **`Dockerfile`:** builds on Python 3.12.1.
+- **`disco.json`:** a [Disco](https://disco.cloud) config, which runs `migrate` before each deploy.
+
+**Python version.** Local development uses Python 3.11, so set your host to 3.11 too.
+
+## Scheduled jobs
+
+### Why not Celery?
+
+Celery is the wrong tool here.
+- **What it's for:** a task queue for work that a web request hands off. Sending an email after a form submission is the typical example.
+- **What it would cost:** running it means a message broker (Redis or RabbitMQ), a worker process and a `celery beat` scheduler. That's three more things to deploy and monitor.
+- **What we need:** a few long batch commands, run on a schedule, with nobody waiting on them.
+
+**Use the host's scheduler to run management commands.** The command starts, does its work and exits, which is how these commands already behave. Choose by host:
+
+| Host | Scheduler |
+|---|---|
+| Render | a **Cron Job** service: the same repo and environment variables, plus a `schedule` and a command |
+| Fly.io, Railway, Disco | their scheduled-machine or cron feature |
+| A plain server (VPS) | a **systemd timer**, or plain `cron`. Timers keep logs in the journal and don't start a run while the last one is still going |
+
+**If we later need in-app background work:** for example, fetching one venue's events from a button in the admin. At that point, add a small database-backed queue such as **django-q2** or **django-tasks**. Both keep their tasks in the Postgres we already have, so no broker is needed. Even then, Celery isn't required.
+
+### What to run, and how often
+
+These run in this order. Each one depends on the one before it:
+
+| Command | Suggested schedule | Cost per run |
+|---|---|---|
+| `sync_venues_from_gsheets` | daily | free |
+| `lookup_venue_places` | daily (it only looks up venues without a match yet, so most days it does nothing) | Places: about one call per new venue. 5,000 calls a month are free |
+| `check_event_sources --output <report path>` | weekly | free, but it crawls every venue's site, so don't run it more often |
+| `match_ticketmaster_venues --report <report path>` | weekly, after the source check | free (Ticketmaster allows 5,000 requests a day) |
+| `fetch_events --report <report path> --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster: a few hundred requests |
+
+**A single script would be simplest.** For example, `bin/refresh.sh` would run the daily commands in order and stop at the first failure, plus a weekly script for the crawl. Then the scheduler needs only two entries.
+
+**Logs.** On a server, the commands should print to the console, and the host keeps it. The `logs/` files are a local convenience.
+
+**Crawling.** The crawler identifies itself as `venue-db-event-check/1.0` and obeys robots.txt. It also skips Tixr, which blocks the crawling IP address. Keep the full crawl weekly. A data-centre IP gets blocked faster than a home one.
+
+## Before the jobs can run on a server
+
+These need fixing first. Each is a code change, so each needs its own OpenSpec proposal:
+
+1. **The sheet sync uses the `gog` CLI.** gog signs in to Google as you, through a browser, so it can't sign in on a server. Two options:
+   - Read the sheet with a **Google service account** instead, after sharing the sheet with the account's email address.
+   - Use the sheet's **published CSV link**, which needs no credentials but makes the sheet public.
+2. **The event-source report is a file.** `check_event_sources` writes `event_sources.csv`, and `match_ticketmaster_venues` and `fetch_events` read it. The file isn't in git, and most hosts give each run a fresh, empty disk. So the report has to live somewhere that persists:
+   - in the database (a model holding each venue's best source; the best option)
+   - on a mounted volume
+   - in object storage
+3. **Google Places terms.** The terms allow storing place IDs, but coordinates for only about 30 days. The venue-place-lookup design notes this. Before going public, either:
+   - refresh coordinates monthly (`lookup_venue_places --refresh`, which costs Places calls), or
+   - keep only the place IDs and look up coordinates when needed.
+
+## Launch checklist
+
+- [ ] Postgres created, and `DATABASE_URL` set
+- [ ] the required variables set, with `DJANGO_SETTINGS_MODULE=nycnoise.settings.prod` and a fresh secret key
+- [ ] the build passes: tests, static files and migrations
+- [ ] an admin user created: `python manage.py createsuperuser`
+- [ ] the domain pointed at the host, and HTTPS working
+- [ ] `ALLOWED_HOSTS` and `SITE_URL` match the domain
+- [ ] the API keys restricted: Places to its API, Protomaps to the domain
+- [ ] the three blockers above fixed, then the scheduled jobs added
+- [ ] the first `fetch_events` run checked in `/admin/core/alleventproxy/` before events are approved
