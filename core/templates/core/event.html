@@ -71,12 +71,12 @@
       {% elif event.venue %}
         @
 
-        {% if event.age_policy and event.venue.neighborhood_and_borough %}
-          <b>{{ event.venue }}</b> ({{ event.age_policy }}), {{ event.venue.neighborhood_and_borough }}
+        {% if event.age_policy and event.venue.location %}
+          <b>{{ event.venue }}</b> ({{ event.age_policy }}), {{ event.venue.location }}
         {% elif event.age_policy %}
           <b>{{ event.venue }}</b> ({{ event.age_policy }})
-        {% elif event.venue.neighborhood_and_borough %}
-          <b>{{ event.venue }}</b>, {{ event.venue.neighborhood_and_borough }}
+        {% elif event.venue.location %}
+          <b>{{ event.venue }}</b>, {{ event.venue.location }}
         {% else %}
           <b>{{ event.venue }}</b>
         {% endif %}
@@ -87,36 +87,20 @@
 
       //
 
-      {% if event.venue.is_pacbi %}
-        <span class='pacbi'>
-          🇵🇸 <span style="color: #ba372a;"><a style="color: #ba372a;" href="https://nyc-noise.com/pacbi/" target="_blank" rel="noopener"><strong>PACBI</strong></a></span>
-          {% if event.description %}
-            +++
-          {% endif %}
-        </span>
-        {% if not event.description %}
-          //
-        {% endif %}
-      {% endif %}
-
       {% if event.description %}
         <span class='eventDescription'>{{ event.description | safe }}</span> //
       {% endif %}
 
-      {% if event.venue.accessibility_link or event.age_policy_emoji or event.venue.accessibility_emoji or event.venue.accessibility_notes %}
+      {% if event.age_policy_emoji or event.venue.accessibility_notes %}
       <span class='accessibility'>
-        {% if event.venue.accessibility_link %}<a href="{{ event.venue.accessibility_link }}" target="_blank">ACCESS</a>{% else %}ACCESS{% endif %}:
+        ACCESS:
 
         {% if event.age_policy_emoji %}
           {{ event.age_policy_emoji }}
         {% endif %}
 
-        {% if event.venue.accessibility_emoji %}
-          {{ event.venue.accessibility_emoji }}
-        {% endif %}
-
         {% if event.venue.accessibility_notes %}
-          {{ event.venue.accessibility_notes|safe }}
+          {{ event.venue.accessibility_notes }}
         {% endif %}
       </span>
       {% endif %}

@@ -161,9 +161,9 @@ class UserSubmittedEventTestCase(TestCase):
         assert event.user_submitted is True
         assert event.is_approved is False
 
-    def test_closed_venues_not_shown_in_list(self):
+    def test_inactive_venues_not_shown_in_list(self):
         open_venue = Venue(name=uuid.uuid4().hex)
-        closed_venue = Venue(name=uuid.uuid4().hex, is_open=False)
+        closed_venue = Venue(name=uuid.uuid4().hex, is_active=False)
         open_venue.save()
         closed_venue.save()
 

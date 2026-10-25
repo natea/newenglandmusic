@@ -242,22 +242,57 @@ admin.site.register(StaticPage, StaticPageAdmin)
 
 class VenueAdmin(admin.ModelAdmin):
     list_display = (
-        "is_open",
-        "name_the_string",
         "name",
-        "address",
-        "capacity",
-        "house_fees",
+        "is_active",
+        "city_town",
+        "state",
+        "venue_type",
+        "size",
+        "open_booking",
+        "open_mic",
         "age_policy",
-        "accessibility_emoji",
-        "neighborhood_and_borough",
+        "sheet_id",
     )
     list_display_links = ("name",)
-    list_filter = ("is_open",)
-    search_fields = ("name",)
+    list_filter = ("is_active", "state", "size", "open_booking", "open_mic", "booking_type")
+    search_fields = ("name", "city_town", "county", "venue_type", "sheet_id")
     ordering = ("name",)
     save_on_top = True
-    actions = ["mark_as_closed", "mark_as_open"]
+    actions = ["mark_as_inactive", "mark_as_active"]
+    fieldsets = (
+        (None, {"fields": ("sheet_id", "name", "is_active", "venue_type", "size")}),
+        (
+            "Location",
+            {"fields": ("state", "city_town", "county", "latitude", "longitude")},
+        ),
+        ("Music", {"fields": ("genres", "genre_notes", "niche_notes")}),
+        (
+            "Booking",
+            {
+                "fields": (
+                    "open_booking",
+                    "booking_type",
+                    "open_mic",
+                    "website",
+                    "booking_url",
+                    "booking_notes",
+                )
+            },
+        ),
+        (
+            "Access",
+            {
+                "fields": (
+                    "age_policy",
+                    "accessibility_notes",
+                    "family_friendly",
+                    "lgbtq_friendly",
+                    "diverse",
+                )
+            },
+        ),
+        ("Safety", {"fields": ("safety_flag", "safety_url", "safety_notes")}),
+    )
 
     # remove default bulk delete action - it's scary!
     def get_actions(self, request):
@@ -266,23 +301,13 @@ class VenueAdmin(admin.ModelAdmin):
             del actions["delete_selected"]
         return actions
 
-    def name_the_string(self, obj):
-        return "the" if obj.name_the else ""
+    @admin.action(description="Mark as inactive")
+    def mark_as_inactive(self, request, queryset):
+        queryset.update(is_active=False)
 
-    name_the_string.short_description = "The"
-
-    def formfield_for_dbfield(self, db_field, **kwargs):
-        if db_field.name in ["wage_information", "accessibility_notes"]:
-            return db_field.formfield(widget=TinyMCE(mce_attrs={"height": "200"}))
-        return super().formfield_for_dbfield(db_field, **kwargs)
-
-    @admin.action(description="Mark as closed")
-    def mark_as_closed(self, request, queryset):
-        queryset.update(is_open=False)
-
-    @admin.action(description="Mark as open")
-    def mark_as_open(self, request, queryset):
-        queryset.update(is_open=True)
+    @admin.action(description="Mark as active")
+    def mark_as_active(self, request, queryset):
+        queryset.update(is_active=True)
 
 
 admin.site.register(Venue, VenueAdmin)

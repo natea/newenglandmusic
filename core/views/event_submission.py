@@ -18,7 +18,7 @@ class UserSubmittedEventForm(forms.ModelForm):
 
     venue = forms.models.ModelChoiceField(
         label="venue",
-        queryset=Venue.objects.filter(is_open=True),
+        queryset=Venue.objects.exclude(is_active=False),
         required=False,
         widget=autocomplete.ModelSelect2(url="venue-autocomplete/"),
     )

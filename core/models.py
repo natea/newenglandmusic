@@ -1,3 +1,4 @@
+from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVectorField
 from django.db import models
@@ -227,50 +228,72 @@ class AllEventProxy(Event):
 
 
 class Venue(models.Model):
+    """
+    a venue, as listed in the "Northeastern US Music Venues" google sheet.
+    fields mirror the sheet's columns -- see the sync_venues_from_gsheets command.
+    """
+
     class Meta:
         # declare default ordering to be case insensitive name ascending
         # case insensitive trick: https://stackoverflow.com/a/52501004
         ordering = [Upper("name")]
 
+    class Size(models.TextChoices):
+        SMALL = "small", "Small (<100)"
+        MEDIUM = "medium", "Medium (<500)"
+        LARGE = "large", "Large (500+)"
+
+    # values come from the sheet's "New Booking Types" tab
+    class BookingType(models.TextChoices):
+        SUBMIT_ARTIST = "submit_artist", "Submit an Artist"
+        SUBMIT_SHOW = "submit_show", "Submit a Show"
+        LOCALS_ONLY = "locals_only", "Locals Only"
+        DART_THROW = "dart_throw", "Dart Throw"
+        TOURING_ONLY = "touring_only", "Touring Acts Only"
+        MUST_INCLUDE_LOCAL = "must_include_local", "Must Include a Local"
+        UNKNOWN = "unknown", "Unknown"
+
+    # the sheet's Venue_ID column (e.g. V0042). this is what the sync matches on,
+    # as venue names (and even name + city + state) are not unique in the sheet
+    sheet_id = models.CharField(max_length=32, unique=True, null=True, blank=True)
+
     name = models.CharField(max_length=255)
-    # does the event have a 'the' as a prefix?
-    # this is useful to keep separate for when we want to have an alphabetized list of venues
-    # i.e. not have all of the 'the ...' venues all together
-    name_the = models.BooleanField(default=False, verbose_name="the")
-    address = models.CharField(max_length=255, null=True, blank=True)
-    age_policy = models.CharField(max_length=255, null=True, blank=True)
-    age_policy_emoji = models.CharField(max_length=255, null=True, blank=True)
-    neighborhood_and_borough = models.CharField(max_length=255, null=True, blank=True)
-    # convert this to urlfield for a bit more validation?
-    # would have to check all existing values to be valid first..!
-    google_maps_link = models.CharField(max_length=255, null=True, blank=True)
-    accessibility_emoji = models.CharField(
-        max_length=255, null=True, blank=True, verbose_name="♿️"
-    )
-    accessibility_notes = tinymce_models.HTMLField(null=True, blank=True)
-    accessibility_link = models.CharField(max_length=255, null=True, blank=True)
 
-    website = models.URLField(null=True, blank=True)
-    phone = models.CharField(max_length=255, null=True, blank=True)
-    email = models.EmailField(null=True, blank=True)
-
-    is_open = models.BooleanField(default=True)
-
-    capacity = models.CharField(
-        max_length=255, null=True, blank=True, verbose_name="cap"
-    )
-    house_fees = models.CharField(
-        max_length=255, null=True, blank=True, verbose_name="fees"
-    )
-    booking_link = models.URLField(null=True, blank=True)
-    backline_link = models.URLField(null=True, blank=True)
-
-    wage_information = tinymce_models.HTMLField(null=True, blank=True)
-
+    state = models.CharField(max_length=2, blank=True, default="")
+    city_town = models.CharField(max_length=255, blank=True, default="")
+    county = models.CharField(max_length=255, blank=True, default="")
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
 
-    is_pacbi = models.BooleanField(default=False, verbose_name="🇵🇸 PACBI")
+    # None means unknown (blank or "Maybe?" in the sheet)
+    is_active = models.BooleanField(null=True, blank=True)
+    venue_type = models.CharField(max_length=255, blank=True, default="")
+    size = models.CharField(max_length=16, choices=Size.choices, blank=True, default="")
+
+    genre_notes = models.TextField(blank=True, default="")
+    # from the semicolon-separated Venue_Genre_Search column, e.g. ["Funk", "Jazz"] or ["ALL"]
+    genres = ArrayField(models.CharField(max_length=255), blank=True, default=list)
+    niche_notes = models.TextField(blank=True, default="")
+
+    open_booking = models.BooleanField(null=True, blank=True)
+    booking_type = models.CharField(
+        max_length=32, choices=BookingType.choices, blank=True, default=""
+    )
+    open_mic = models.BooleanField(null=True, blank=True)
+
+    website = models.URLField(max_length=1000, blank=True, default="")
+    booking_url = models.URLField(max_length=1000, blank=True, default="")
+    booking_notes = models.TextField(blank=True, default="")
+
+    age_policy = models.CharField(max_length=255, blank=True, default="")
+    accessibility_notes = models.TextField(blank=True, default="")
+    family_friendly = models.BooleanField(null=True, blank=True)
+    lgbtq_friendly = models.BooleanField(null=True, blank=True, verbose_name="LGBTQ+")
+    diverse = models.BooleanField(null=True, blank=True)
+
+    safety_flag = models.CharField(max_length=255, blank=True, default="")
+    safety_url = models.URLField(max_length=1000, blank=True, default="")
+    safety_notes = models.TextField(blank=True, default="")
 
     def save(self, *args, **kwargs):
         # actually save data to db
@@ -279,8 +302,18 @@ class Venue(models.Model):
         for event in self.event_set.all():
             event.rebake_html()
 
+    @property
+    def location(self):
+        return ", ".join(part for part in [self.city_town, self.state] if part)
+
+    @property
+    def google_maps_link(self):
+        if self.latitude is None or self.longitude is None:
+            return ""
+        return f"https://www.google.com/maps/search/?api=1&query={self.latitude},{self.longitude}"
+
     def __str__(self):
-        return f"{'the ' if self.name_the else ''}{self.name}"
+        return self.name
 
 
 # custom manager that returns only public StaticPages by default
