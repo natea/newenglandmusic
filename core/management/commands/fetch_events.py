@@ -1,6 +1,7 @@
 import csv
 import os
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 
 from core.event_fetching.spider import SCRAPY_SETTINGS, VenueEventsSpider
 from core.models import Event, Venue
@@ -15,10 +16,11 @@ for an admin to review.
 
 run as:
 
-python manage.py fetch_events [--report event_sources.csv] [--per-source 3] [--dry-run]
+python manage.py fetch_events [--report event_sources.csv] [--per-source 3 | --all] [--dry-run]
 
 venues and how to fetch their events come from the csv written by check_event_sources.
-by default, the first --per-source venues of each kind are fetched (a pilot):
+by default, the first --per-source venues of each kind are fetched (a pilot); --all
+fetches every venue whose events can be fetched in one of these ways:
 
 - ical: the venue's ical feed
 - json-ld: schema.org event data on the venue's site
@@ -31,6 +33,7 @@ them. new events are saved unapproved; already-approved events stay approved.
 """
 
 MAX_EVENTS_PER_VENUE = 50
+AI_EXTRACTION_WORKERS = 8
 
 REPORT_SOURCE_TO_TARGET_SOURCE = {
     "ical": "ical",
@@ -61,7 +64,7 @@ def short(value, max_length=255):
     return value if len(value) <= max_length else ""
 
 
-def select_targets(report_path, per_source, sheet_ids):
+def select_targets(report_path, per_source, sheet_ids, all_venues):
     try:
         with open(report_path) as f:
             rows = list(csv.DictReader(f))
@@ -70,6 +73,8 @@ def select_targets(report_path, per_source, sheet_ids):
 
     if sheet_ids:
         rows = [row for row in rows if row["sheet_id"] in sheet_ids]
+    elif all_venues:
+        rows = [row for row in rows if row["best_source"] in REPORT_SOURCE_TO_TARGET_SOURCE]
     else:
         picked = defaultdict(list)
         for row in rows:
@@ -149,6 +154,9 @@ class Command(BaseCommand):
             "--sheet-ids",
             help="comma-separated Venue_IDs to fetch, instead of picking per source",
         )
+        parser.add_argument(
+            "--all", action="store_true", help="fetch every venue in the report"
+        )
         parser.add_argument("--skip-ai", action="store_true")
         parser.add_argument(
             "--model",
@@ -160,7 +168,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         sheet_ids = set(options["sheet_ids"].split(",")) if options["sheet_ids"] else None
-        targets = select_targets(options["report"], options["per_source"], sheet_ids)
+        targets = select_targets(
+            options["report"], options["per_source"], sheet_ids, options["all"]
+        )
         if not targets:
             raise CommandError("no venues to fetch")
 
@@ -205,10 +215,10 @@ class Command(BaseCommand):
         from core.event_fetching.ai_extraction import MODEL, ExtractionError, extract_events
 
         client = anthropic.Anthropic()
-        for page in pages:
+        model = model or MODEL
+
+        def extract(page):
             target = page["target"]
-            if page["truncated"]:
-                notes_by_venue[target["sheet_id"]].append("page text was truncated for ai extraction")
             try:
                 events, usage = extract_events(
                     client,
@@ -216,15 +226,33 @@ class Command(BaseCommand):
                     target["location"],
                     page["url"],
                     page["text"],
-                    model=model or MODEL,
+                    model=model,
                 )
             except (anthropic.APIError, ExtractionError, ValueError) as e:
-                notes_by_venue[target["sheet_id"]].append(f"ai extraction failed: {e}"[:200])
-                continue
-            events_by_venue[target["sheet_id"]] += [("ai", page["url"], event) for event in events]
-            notes_by_venue[target["sheet_id"]].append(
-                f"ai ({model or MODEL}): {usage.input_tokens} input / {usage.output_tokens} output tokens"
-            )
+                return page, [], None, e
+            return page, events, usage, None
+
+        self.stdout.write(f"extracting events from {len(pages)} pages with {model}...")
+        input_tokens = output_tokens = 0
+        with ThreadPoolExecutor(max_workers=AI_EXTRACTION_WORKERS) as executor:
+            for page, events, usage, error in executor.map(extract, pages):
+                notes = notes_by_venue[page["target"]["sheet_id"]]
+                if page["truncated"]:
+                    notes.append("page text was truncated for ai extraction")
+                if error:
+                    notes.append(f"ai extraction failed: {error}"[:200])
+                    continue
+                events_by_venue[page["target"]["sheet_id"]] += [
+                    ("ai", page["url"], event) for event in events
+                ]
+                notes.append(
+                    f"ai ({model}): {usage.input_tokens} input / {usage.output_tokens} output tokens"
+                )
+                input_tokens += usage.input_tokens
+                output_tokens += usage.output_tokens
+        self.stdout.write(
+            f"ai extraction used {input_tokens} input / {output_tokens} output tokens"
+        )
 
     def save_and_report(self, targets, events_by_venue, notes_by_venue, dry_run):
         now = timezone.now()

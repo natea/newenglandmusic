@@ -62,6 +62,25 @@ EVENTS_PAGE_LINK_RE = re.compile(
     re.IGNORECASE,
 )
 
+# link text of a site's events listing in its navigation
+EVENTS_NAV_TEXT_RE = re.compile(
+    r"^(upcoming |live |all )?(events?|shows?|calendar|concerts?|music|line-?up|schedule|gigs)"
+    r"( calendar| & tickets| schedule)?$",
+    re.IGNORECASE,
+)
+
+# a date in a url path: 10-24-2026, 2026-10-24, /2026/10/24
+SINGLE_EVENT_DATE_RE = re.compile(
+    r"\b\d{1,2}-\d{1,2}-\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b|/\d{4}/\d{1,2}/\d{1,2}\b"
+)
+
+# venues often use "events" for renting out the space, not for shows
+PRIVATE_EVENTS_RE = re.compile(
+    r"private|rental|rent\b|our-?spaces|book(ing)?-?(the|your|a|an)?-?(venue|space|party|event)"
+    r"|wedding|parties|party-?packages|catering|hire|corporate",
+    re.IGNORECASE,
+)
+
 FILE_LINK_RE = re.compile(
     r"\.(jpe?g|png|gif|webp|svg|pdf|mp3|mp4|zip|docx?)$", re.IGNORECASE
 )
@@ -143,24 +162,49 @@ def find_platforms(html):
     )
 
 
+def looks_like_single_event_page(path):
+    """e.g. /products/events/jazz-jam-saturday-10-24-2026-4-00-pm-53552652 or /events/12345"""
+    last_segment = path.rstrip("/").rsplit("/", 1)[-1]
+    return bool(
+        SINGLE_EVENT_DATE_RE.search(path)
+        or re.search(r"\d{5,}", last_segment)
+        or len(last_segment) > 40
+    )
+
+
 def find_events_page_url(soup, page_url):
+    """
+    the site's events listing page, or None when there isn't a separate one (e.g. the
+    homepage lists the events itself and links to one page per event)
+    """
     site_domain = domain_of(page_url)
     candidates = []
     for a in soup.find_all("a", href=True):
         href = urljoin(page_url, a["href"]).split("#")[0]
-        path = urlparse(href).path
+        parts = urlparse(href)
+        path = parts.path
         if domain_of(href) != site_domain or href.rstrip("/") == page_url.rstrip("/"):
             continue
-        if FILE_LINK_RE.search(path):
+        if FILE_LINK_RE.search(path) or looks_like_single_event_page(path):
             continue
-        text_matches = EVENTS_PAGE_LINK_RE.search(a.get_text(" ", strip=True))
+        text = a.get_text(" ", strip=True)
+        if PRIVATE_EVENTS_RE.search(path) or PRIVATE_EVENTS_RE.search(text):
+            continue
+        text_matches = EVENTS_PAGE_LINK_RE.search(text)
         path_matches = EVENTS_PAGE_LINK_RE.search(path.replace("/", " "))
-        if text_matches or path_matches:
-            # prefer a nav link that says "events"/"shows", then the shortest path --
-            # i.e. the events listing rather than a single event's page
-            depth = len([segment for segment in path.split("/") if segment])
-            candidates.append((0 if text_matches else 1, depth, len(path), href))
-    return min(candidates)[3] if candidates else None
+        if not (text_matches or path_matches):
+            continue
+        # the more of these agree, the likelier it's the listing: a link that just says
+        # "Events"/"Calendar", whose text mentions events, and whose path does too
+        score = (
+            bool(EVENTS_NAV_TEXT_RE.match(text)) + bool(text_matches) + bool(path_matches)
+        )
+        in_nav = a.find_parent(["nav", "header"]) is not None
+        depth = len([segment for segment in path.split("/") if segment])
+        candidates.append(
+            (-score, 0 if in_nav else 1, bool(parts.query), depth, len(path), href)
+        )
+    return min(candidates)[-1] if candidates else None
 
 
 def count_ical_events(session, url):
