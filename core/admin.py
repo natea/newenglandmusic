@@ -4,6 +4,7 @@ from datetime import date
 from dateutil import relativedelta
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
+from django.db.models import Q
 from django.utils.safestring import mark_safe
 from ordered_model.admin import OrderedModelAdmin
 from solo.admin import SingletonModelAdmin
@@ -240,6 +241,22 @@ class StaticPageAdmin(admin.ModelAdmin):
 admin.site.register(StaticPage, StaticPageAdmin)
 
 
+class LinkedToTicketmasterFilter(SimpleListFilter):
+    title = "linked to Ticketmaster"
+    parameter_name = "ticketmaster"
+
+    def lookups(self, request, model_admin):
+        return (("yes", "Yes"), ("no", "No"))
+
+    def queryset(self, request, queryset):
+        linked = Q(ticketmaster_venue_id__isnull=False) & ~Q(ticketmaster_venue_id="")
+        if self.value() == "yes":
+            return queryset.filter(linked)
+        if self.value() == "no":
+            return queryset.exclude(linked)
+        return queryset
+
+
 class VenueAdmin(admin.ModelAdmin):
     list_display = (
         "name",
@@ -254,8 +271,23 @@ class VenueAdmin(admin.ModelAdmin):
         "sheet_id",
     )
     list_display_links = ("name",)
-    list_filter = ("is_active", "state", "size", "open_booking", "open_mic", "booking_type")
-    search_fields = ("name", "city_town", "county", "venue_type", "sheet_id")
+    list_filter = (
+        "is_active",
+        "state",
+        "size",
+        "open_booking",
+        "open_mic",
+        "booking_type",
+        LinkedToTicketmasterFilter,
+    )
+    search_fields = (
+        "name",
+        "city_town",
+        "county",
+        "venue_type",
+        "sheet_id",
+        "ticketmaster_venue_id",
+    )
     ordering = ("name",)
     save_on_top = True
     actions = ["mark_as_inactive", "mark_as_active"]
@@ -292,6 +324,8 @@ class VenueAdmin(admin.ModelAdmin):
             },
         ),
         ("Safety", {"fields": ("safety_flag", "safety_url", "safety_notes")}),
+        # not synced from the sheet
+        ("Event sources", {"fields": ("ticketmaster_venue_id",)}),
     )
 
     # remove default bulk delete action - it's scary!

@@ -1,0 +1,255 @@
+{
+ "_embedded": {
+  "events": [
+   {
+    "name": "Holywatr: Deo Gratias Tour",
+    "type": "event",
+    "id": "vvG17Z_G29M9oz",
+    "test": false,
+    "url": "https://www.ticketmaster.com/holywatr-deo-gratias-tour-boston-massachusetts-10-25-2026/event/010064C3D7DD7478",
+    "locale": "en-us",
+    "dates": {
+     "start": {
+      "localDate": "2026-10-25",
+      "localTime": "19:00:00",
+      "dateTime": "2026-10-25T23:00:00Z",
+      "dateTBD": false,
+      "dateTBA": false,
+      "timeTBA": false,
+      "noSpecificTime": false
+     },
+     "timezone": "America/New_York",
+     "status": {
+      "code": "onsale"
+     },
+     "spanMultipleDays": false
+    },
+    "classifications": [
+     {
+      "primary": true,
+      "segment": {
+       "id": "KZFzniwnSyZfZ7v7nJ",
+       "name": "Music"
+      },
+      "genre": {
+       "id": "KnvZfZ7vAeA",
+       "name": "Rock"
+      },
+      "subGenre": {
+       "id": "KZazBEonSMnZfZ7v6dt",
+       "name": "Alternative Rock"
+      },
+      "type": {
+       "id": "KZAyXgnZfZ7v7nI",
+       "name": "Undefined"
+      },
+      "subType": {
+       "id": "KZFzBErXgnZfZ7v7lJ",
+       "name": "Undefined"
+      },
+      "family": false
+     }
+    ],
+    "info": "THIS EVENT IS ALL AGES. DOORS: 7:00 PM SHOW: 8:00 PM ALL TIMES AND SUPPORT BANDS ARE SUBJECT TO CHANGE WITHOUT NOTICE OR REFUND. Tickets purchased from third-party outlets CANNOT be verified by our Box Office. If you sell/purchase your tickets from a third-party, we are not liable for any entry issues you may have. Any disputes involving third-party ticket purchases must be settled with the third-party outlet directly. The Paradise Rock Club Box Office is open for ticket purchases from 12 PM to 6 PM, Monday through Friday. If traveling from out of town, please call the customer line at 617-562-8801 to verify hours. There is a seating area available for those with mobility limitations. If you require accommodation, we encourage you to reach out to information@crossroadspresents.com as soon as you have purchased your GA ticket.",
+    "pleaseNote": "THIS EVENT IS ALL AGES.",
+    "_embedded": {
+     "venues": [
+      {
+       "name": "Paradise Rock Club presented by Citizens",
+       "id": "KovZpZA11JtA",
+       "city": {
+        "name": "Boston"
+       },
+       "state": {
+        "name": "Massachusetts",
+        "stateCode": "MA"
+       },
+       "location": {
+        "longitude": "-71.11953790",
+        "latitude": "42.35183320"
+       }
+      }
+     ],
+     "attractions": [
+      {
+       "name": "Holywatr",
+       "id": "K8vZ917qVef"
+      },
+      {
+       "name": "Mercury",
+       "id": "K8vZ917GvZ0"
+      }
+     ]
+    }
+   },
+   {
+    "name": "THE ARMY, THE NAVY: THE FAKE BRAVE TOUR 2026",
+    "type": "event",
+    "id": "vvG17Z_GRO939x",
+    "test": false,
+    "url": "https://www.ticketmaster.com/the-army-the-navy-the-fake-boston-massachusetts-10-27-2026/event/010064CBE05D25E2",
+    "locale": "en-us",
+    "dates": {
+     "start": {
+      "localDate": "2026-10-27",
+      "localTime": "19:00:00",
+      "dateTime": "2026-10-27T23:00:00Z",
+      "dateTBD": false,
+      "dateTBA": false,
+      "timeTBA": false,
+      "noSpecificTime": false
+     },
+     "timezone": "America/New_York",
+     "status": {
+      "code": "onsale"
+     },
+     "spanMultipleDays": false
+    },
+    "classifications": [
+     {
+      "primary": true,
+      "segment": {
+       "id": "KZFzniwnSyZfZ7v7nJ",
+       "name": "Music"
+      },
+      "genre": {
+       "id": "KnvZfZ7vAev",
+       "name": "Pop"
+      },
+      "subGenre": {
+       "id": "KZazBEonSMnZfZ7vaEl",
+       "name": "Electro Pop"
+      },
+      "type": {
+       "id": "KZAyXgnZfZ7v7nI",
+       "name": "Undefined"
+      },
+      "subType": {
+       "id": "KZFzBErXgnZfZ7v7lJ",
+       "name": "Undefined"
+      },
+      "family": false
+     }
+    ],
+    "info": "THIS EVENT IS ALL AGES. DOORS: 7:00 PM SHOW: 8:00 PM ALL TIMES AND SUPPORT BANDS ARE SUBJECT TO CHANGE WITHOUT NOTICE OR REFUND. Tickets purchased from third-party outlets CANNOT be verified by our Box Office. If you sell/purchase your tickets from a third-party, we are not liable for any entry issues you may have. Any disputes involving third-party ticket purchases must be settled with the third-party outlet directly. The Paradise Rock Club Box Office is open for ticket purchases from 12 PM to 6 PM, Monday through Friday. If traveling from out of town, please call the customer line at 617-562-8801 to verify hours. There is a seating area available for those with mobility limitations. If you require accommodation, we encourage you to reach out to information@crossroadspresents.com as soon as you have purchased your GA ticket.",
+    "pleaseNote": "THIS EVENT IS ALL AGES.",
+    "_embedded": {
+     "venues": [
+      {
+       "name": "Paradise Rock Club presented by Citizens",
+       "id": "KovZpZA11JtA",
+       "city": {
+        "name": "Boston"
+       },
+       "state": {
+        "name": "Massachusetts",
+        "stateCode": "MA"
+       },
+       "location": {
+        "longitude": "-71.11953790",
+        "latitude": "42.35183320"
+       }
+      }
+     ],
+     "attractions": [
+      {
+       "name": "The Army, The Navy",
+       "id": "K8vZ917j3q7"
+      },
+      {
+       "name": "Ella Woolsey",
+       "id": "K8vZ917q2cV"
+      }
+     ]
+    }
+   },
+   {
+    "name": "HARBOUR",
+    "type": "event",
+    "id": "vvG17Z_u7GIQrl",
+    "test": false,
+    "url": "https://www.ticketmaster.com/harbour-boston-massachusetts-10-28-2026/event/010064D10CA1A7AB",
+    "locale": "en-us",
+    "dates": {
+     "start": {
+      "localDate": "2026-10-28",
+      "localTime": "19:00:00",
+      "dateTime": "2026-10-28T23:00:00Z",
+      "dateTBD": false,
+      "dateTBA": false,
+      "timeTBA": false,
+      "noSpecificTime": false
+     },
+     "timezone": "America/New_York",
+     "status": {
+      "code": "onsale"
+     },
+     "spanMultipleDays": false
+    },
+    "classifications": [
+     {
+      "primary": true,
+      "segment": {
+       "id": "KZFzniwnSyZfZ7v7nJ",
+       "name": "Music"
+      },
+      "genre": {
+       "id": "KnvZfZ7vAeA",
+       "name": "Rock"
+      },
+      "subGenre": {
+       "id": "KZazBEonSMnZfZ7v6F1",
+       "name": "Pop"
+      },
+      "type": {
+       "id": "KZAyXgnZfZ7v7nI",
+       "name": "Undefined"
+      },
+      "subType": {
+       "id": "KZFzBErXgnZfZ7v7lJ",
+       "name": "Undefined"
+      },
+      "family": false
+     }
+    ],
+    "info": "THIS EVENT IS ALL AGES. DOORS: 7:00 PM SHOW: 8:00 PM ALL TIMES AND SUPPORT BANDS ARE SUBJECT TO CHANGE WITHOUT NOTICE OR REFUND. Tickets purchased from third-party outlets CANNOT be verified by our Box Office. If you sell/purchase your tickets from a third-party, we are not liable for any entry issues you may have. Any disputes involving third-party ticket purchases must be settled with the third-party outlet directly. The Paradise Rock Club Box Office is open for ticket purchases from 12 PM to 6 PM, Monday through Friday. If traveling from out of town, please call the customer line at 617-562-8801 to verify hours. There is a seating area available for those with mobility limitations. If you require accommodation, we encourage you to reach out to information@crossroadspresents.com as soon as you have purchased your GA ticket.",
+    "pleaseNote": "THIS EVENT IS ALL AGES.",
+    "_embedded": {
+     "venues": [
+      {
+       "name": "Paradise Rock Club presented by Citizens",
+       "id": "KovZpZA11JtA",
+       "city": {
+        "name": "Boston"
+       },
+       "state": {
+        "name": "Massachusetts",
+        "stateCode": "MA"
+       },
+       "location": {
+        "longitude": "-71.11953790",
+        "latitude": "42.35183320"
+       }
+      }
+     ],
+     "attractions": [
+      {
+       "name": "HARBOUR",
+       "id": "K8vZ917pvdV"
+      },
+      {
+       "name": "Coral Moons",
+       "id": "K8vZ917_REf"
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "page": {
+  "size": 50,
+  "totalElements": 58,
+  "totalPages": 2,
+  "number": 0
+ }
+}

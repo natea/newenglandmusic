@@ -33,6 +33,7 @@ The relevant Discovery API facts (v2, `https://app.ticketmaster.com/discovery/v2
 - **Why the field is safe:** the sheet sync never touches unmapped fields, so a DB field survives re-syncs. It can be promoted to a sheet column later.
 
 **2. Match venues automatically only when the match is certain, and report the rest.**
+- **Depends on `add-venue-place-lookup`.** The first real dry run (2026-10-25) linked only 3 of 23 venues. The sheet's coordinates turned out to be town centres: 537 of 729 venues share theirs with another venue. You chose to keep the 1 km rule and fix the coordinates first. Matching therefore uses `Venue.exact_location`, which is the confident Google Places location when there is one.
 - **How:** for each venue, search `/venues.json?keyword=<name>&stateCode=<state>`. Normalize both names: lowercase, drop "the", punctuation and words like "music hall", "club" and "theatre"/"theater", then compare. Compute the haversine distance from the venue's coordinates.
 - **Link** only when exactly one candidate's normalized name matches (equal, or one contains the other) and it lies within 1 km.
 - **Report everything else** with candidates for a person to decide. A wrong link would attach another venue's events, so false negatives are much cheaper than false positives.
@@ -56,7 +57,7 @@ The relevant Discovery API facts (v2, `https://app.ticketmaster.com/discovery/v2
 |---|---|
 | `external_id` | `tm:<id>` |
 | `title` | `name` |
-| `artists` | attraction names, except one whose name equals the title (case-insensitive), joined with ", " |
+| `artists` | attraction names, except those whose name appears in the title (case-insensitive), joined with ", ". Real titles often add a tour name, as in "Holywatr: Deo Gratias Tour" with attractions Holywatr and Mercury, so an exact-match rule would repeat the headliner |
 | `starttime` | `dates.start.dateTime` (UTC, ISO) when present; otherwise `localDate` + `localTime` made aware in `settings.TIME_ZONE` |
 | `all_day` | true when `timeTBA` or `noSpecificTime` is set, or there is no time |
 | `hyperlink` and `ticket_hyperlink` | `url` |
@@ -65,10 +66,11 @@ The relevant Discovery API facts (v2, `https://app.ticketmaster.com/discovery/v2
 | `is_cancelled` | `dates.status.code == "canceled"` |
 
 - **Time zone:** every venue in the sheet is in US Eastern time, which is `TIME_ZONE`, so local-time fallback is safe.
-- **Skipped events:** those whose primary classification segment is not "Music", and postponed events with no date.
+- **Skipped events:** those whose primary classification segment is not "Music" (including events with no classification), events flagged `test`, and postponed events with no date.
 
 **6. Restrict the API's `source` parameter to `ticketmaster,universe,frontgate`, excluding Ticketmaster Resale (`tmr`).**
-- Resale listings are not the venue's primary listing and could repeat a show under another ID. This needs a check against real responses during implementation (task 2.4).
+- Resale listings are not the venue's primary listing and could repeat a show under another ID.
+- **Checked during implementation (task 2.4):** for Paradise Rock Club on 2026-10-25, the filtered and unfiltered responses had the same 50 events, so the filter drops no primary listings.
 
 **7. Add `ticketmaster` to `Event.source` choices.** This is a migration that changes choices only.
 

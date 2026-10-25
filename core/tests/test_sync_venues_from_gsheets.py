@@ -210,6 +210,13 @@ class SyncCommandTestCase(TestCase):
         self.assertEqual(Venue.objects.get(sheet_id="V0001").name, "Before")
         self.assertFalse(Venue.objects.filter(sheet_id="V0002").exists())
 
+    def test_sync_leaves_the_ticketmaster_link_alone(self):
+        Venue.objects.create(sheet_id="V0001", name="Before", ticketmaster_venue_id="KovZpZA11JtA")
+        self.sync([row("V0001", "After")])
+        venue = Venue.objects.get(sheet_id="V0001")
+        self.assertEqual(venue.name, "After")
+        self.assertEqual(venue.ticketmaster_venue_id, "KovZpZA11JtA")
+
     def test_fields_not_in_the_sheet_are_preserved(self):
         venue = Venue.objects.create(
             sheet_id="V0001", name="Before", website="https://example.com", is_active=True

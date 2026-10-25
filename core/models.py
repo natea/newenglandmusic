@@ -132,6 +132,7 @@ class Event(models.Model):
         JSON_LD = "json-ld", "Structured data (JSON-LD)"
         TICKETING = "ticketing", "Ticketing platform"
         AI = "ai", "AI extraction"
+        TICKETMASTER = "ticketmaster", "Ticketmaster Discovery API"
 
     source = models.CharField(
         max_length=16, choices=Source.choices, blank=True, default=""
@@ -268,6 +269,12 @@ class Venue(models.Model):
     # the sheet's Venue_ID column (e.g. V0042). this is what the sync matches on,
     # as venue names (and even name + city + state) are not unique in the sheet
     sheet_id = models.CharField(max_length=32, unique=True, null=True, blank=True)
+
+    # not from the sheet: set by the match_ticketmaster_venues command or by hand, so
+    # the venue's events can be fetched from the ticketmaster discovery api
+    ticketmaster_venue_id = models.CharField(
+        max_length=64, null=True, blank=True, db_index=True, verbose_name="Ticketmaster venue ID"
+    )
 
     name = models.CharField(max_length=255)
 

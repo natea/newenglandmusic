@@ -1,0 +1,45 @@
+{
+ "_embedded": {
+  "venues": [
+   {
+    "name": "Paradise Rock Club presented by Citizens",
+    "id": "KovZpZA11JtA",
+    "address": {
+     "line1": "967 Commonwealth Avenue"
+    },
+    "city": {
+     "name": "Boston"
+    },
+    "state": {
+     "name": "Massachusetts",
+     "stateCode": "MA"
+    },
+    "location": {
+     "longitude": "-71.11953790",
+     "latitude": "42.35183320"
+    }
+   },
+   {
+    "name": "The Paradise Rock Club",
+    "id": "Za5ju3rKuqZBnGN6QUVouRbTvq3T7dOnF",
+    "address": {
+     "line1": "bu11",
+     "line2": "3112"
+    },
+    "city": {
+     "name": "Boston"
+    },
+    "state": {
+     "name": "Massachusetts",
+     "stateCode": "MA"
+    }
+   }
+  ]
+ },
+ "page": {
+  "size": 20,
+  "totalElements": 2,
+  "totalPages": 1,
+  "number": 0
+ }
+}

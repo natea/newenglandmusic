@@ -18,14 +18,18 @@ Each venue SHALL be able to hold at most one Ticketmaster venue ID. The link SHA
 - **THEN** its Ticketmaster venue ID is unchanged
 
 ### Requirement: Matching links only confident matches
-The matching command SHALL search Ticketmaster venues by each venue's name and state. It SHALL link a venue automatically only when exactly one candidate has a matching name and lies within 1 km of the venue's coordinates.
+The matching command SHALL search Ticketmaster venues by each venue's name and state. It SHALL link a venue automatically only when exactly one candidate has a matching name and lies within 1 km of the venue's location (its confident looked-up coordinates, else its sheet coordinates).
 
 #### Scenario: One clear match
 - **WHEN** a single Ticketmaster venue in the same state has a matching name and is within 1 km of the venue
 - **THEN** the venue is linked to that Ticketmaster venue ID
 
+#### Scenario: Duplicate listing without coordinates
+- **WHEN** Ticketmaster lists the venue twice, once with coordinates within 1 km and once without coordinates
+- **THEN** the venue is linked to the listing within 1 km
+
 #### Scenario: Ambiguous or distant candidates
-- **WHEN** several candidates match, or the only name match is more than 1 km away, or the venue has no coordinates
+- **WHEN** several name-matching candidates lie within 1 km, or no name match lies within 1 km, or the venue has no coordinates
 - **THEN** the venue is not linked and the report lists it with its candidates' IDs, names, addresses and distances
 
 #### Scenario: No candidates
