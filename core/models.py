@@ -198,7 +198,8 @@ class Event(models.Model):
         # and the second super().save call also tries to initialize the pk...?))
         # https://stackoverflow.com/questions/31187359/django-save-method-needs-to-update-model-instance-twice#comment50382190_31187599
         baked_html_template = bake_event_html(self)
-        Event.objects.filter(pk=self.pk).update(baked_html_template=baked_html_template)
+        # all_objects: Event.objects hides unapproved events, which would skip them here
+        Event.all_objects.filter(pk=self.pk).update(baked_html_template=baked_html_template)
 
     # make age policy attribute that attempts to fetch its own
     # age policy by default, then tries to get venue's age policy if a venue is set,

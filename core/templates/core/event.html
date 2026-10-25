@@ -16,7 +16,7 @@
   id="event-{{ event.pk }}"
   class="event {% if event.is_cancelled %}cancelled{% endif %}"
   data-date="{{ event.starttime|date:'mdy' }}"
-  data-starttime="{% if event.starttime_override %}{{ event.starttime_override }}{% else %}{{ event.starttime|date:'fA'|lower }}{% endif %}"
+  data-starttime="{% if event.starttime_override %}{{ event.starttime_override }}{% else %}{{ event.starttime|date:'g:iA'|lower }}{% endif %}"
   {% if event.venue.exact_latitude is not None and event.venue.exact_longitude is not None %}data-venue-lnglat="{{ event.venue.exact_longitude }},{{ event.venue.exact_latitude }}"{% endif %}
   data-title-and-artists="{{ event.title_and_artists }}"
   data-venue-id="{{ event.venue.pk }}"
@@ -28,7 +28,7 @@
       {% if event.starttime_override %}
         {{ event.starttime_override }}:
       {% else %}
-        {{ event.starttime|date:"fA"|lower }}:
+        {{ event.starttime|date:"g:iA"|lower }}:
       {% endif %}
     </span>
     <span class="event-content">

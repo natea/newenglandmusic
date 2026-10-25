@@ -140,8 +140,6 @@ article {
 .event {
   display: flex;
 
-  text-indent: -3em;
-  padding-left: 3em;
   padding-top: 10px;
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.3);
@@ -162,8 +160,29 @@ article {
     font-weight: bold;
   }
 
+  // the time is its own column, so the event's text starts at the same place
+  // for 8:00pm and 12:30pm, and wrapped lines line up under the first one
   .event-time-and-content {
     flex: 1;
+    // without this a long url in a description pushes the tix box off narrow screens
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+  }
+
+  .event-time {
+    flex: 0 0 auto;
+    // fits "• 12:30pm:"; a longer starttime_override just pushes its own text over
+    min-width: 5.6em;
+    padding-right: 0.3em;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .event-content {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .event-ticket {

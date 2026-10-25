@@ -7,7 +7,8 @@ from django.test import TestCase
 
 
 class EventOrderingTestCase(TestCase):
-    def test_that_event_at_hour_is_printed_without_minutes(self):
+    def test_that_event_at_hour_is_printed_with_minutes(self):
+        # "7:00pm" rather than "7pm", so on-the-hour and half-hour times line up
         nyctz = tz.gettz("America/New_York")
 
         now_datetime = datetime.now().astimezone(nyctz)
@@ -20,13 +21,13 @@ class EventOrderingTestCase(TestCase):
         # getting the homepage i.e. the current/now month
         response = self.client.get("/")
 
-        with open("/tmp/response.html", "wb") as f:
-            f.write(response.content)
-
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "core/index.html")
         self.assertContains(response, event_title)
-        self.assertContains(response, "7pm:")
+        self.assertContains(response, "7:00pm:")
+        self.assertNotContains(response, "7pm:")
+        # the day map's popup reads the same time
+        self.assertContains(response, 'data-starttime="7:00pm"')
 
     def test_that_event_at_half_hour_is_printed_with_minutes(self):
         nyctz = tz.gettz("America/New_York")

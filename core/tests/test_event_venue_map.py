@@ -1,6 +1,6 @@
 from core.models import Event, Venue
 from core.utils_event_caching import bake_event_html
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 
@@ -33,3 +33,13 @@ class EventVenueMapTestCase(TestCase):
         venue = Venue.objects.create(name="Nowhere")
         event = Event.objects.create(title="show", starttime=timezone.now(), venue=venue)
         self.assertNotIn("data-venue-lnglat", bake_event_html(event))
+
+
+@override_settings(PROTOMAPS_API_KEY="test-key")
+class MapInfoPanelTestCase(TestCase):
+    def test_clicked_pin_events_keep_the_listing_layout(self):
+        # the panel under the map shows clones of the listing's events; restyling
+        # them (the old hanging indent) made them line up differently from the list
+        response = self.client.get("/")
+        self.assertContains(response, "cloneNode(true)")
+        self.assertNotContains(response, "clonedEventDiv.style")

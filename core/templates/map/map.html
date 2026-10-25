@@ -231,12 +231,10 @@
             .join(', ');
           const eventDivs = document.querySelectorAll(eventsQuerySelector);
           eventDivs.forEach(eventDiv => {
-            // clone the whole eventDiv
-            // and insert it into the map-<date>-info div
+            // clone the whole eventDiv and insert it into the map-<date>-info div.
+            // the clone keeps the .event layout (time column + text column), so it
+            // lines up exactly like the listing below -- don't restyle it here
             const clonedEventDiv = eventDiv.cloneNode(true);
-            // change the styling on the CHILD
-            clonedEventDiv.style.textIndent = '-30px';
-            clonedEventDiv.style.paddingLeft = '34px';
             document.getElementById(`map-${date}-info`).appendChild(clonedEventDiv);
           })
           document.getElementById(`map-${date}-info`).style.display = 'block';

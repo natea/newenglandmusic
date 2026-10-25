@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        for event in tqdm(Event.objects.all()):
+        # all_objects, not objects: unapproved events need fresh html for when they are approved
+        for event in tqdm(Event.all_objects.all()):
             event.save()
         print("done")
