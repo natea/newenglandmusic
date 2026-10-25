@@ -170,3 +170,6 @@ These need fixing first. Each is a code change, so each needs its own OpenSpec p
 - [ ] the API keys restricted: Places to its API, Protomaps to the domain
 - [ ] the three blockers above fixed, then the scheduled jobs added
 - [ ] the first `fetch_events` run checked in `/admin/core/alleventproxy/` before events are approved
+- [ ] **before announcing or sharing the site:** Google Places terms met. Until then, keep the site unshared. As of 2026-10-25 it was deployed but kept private for this reason.
+  - **Stored content:** Google allows storing only place IDs indefinitely, and coordinates for up to 30 days. The `refresh-place-coordinates` change removes the other stored Places fields and expires old coordinates.
+  - **Maps:** "Places API results displayed on a map must be shown on a Google Map". The day maps use Protomaps, so either switch to Google Maps or pin venues from a geocoder whose results may be stored. Either one is a separate change.
