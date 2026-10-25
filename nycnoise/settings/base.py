@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 import dj_database_url
 from django.utils.log import DEFAULT_LOGGING
@@ -81,6 +82,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "core.context_processors.analytics",
+                "core.context_processors.contact",
             ],
         },
     },
@@ -208,8 +210,10 @@ if PYINSTRUMENT_ENABLE:
 META_USE_OG_PROPERTIES = True
 META_USE_TWITTER_PROPERTIES = True
 META_USE_TITLE_TAG = True
-META_SITE_PROTOCOL = "https"
-META_SITE_DOMAIN = "nyc-noise.com"
+# the public address of the site, used in share links (og:url, og:image)
+SITE_URL = (os.environ.get("SITE_URL") or "http://localhost:8001").rstrip("/")
+META_SITE_PROTOCOL = urlparse(SITE_URL).scheme
+META_SITE_DOMAIN = urlparse(SITE_URL).netloc
 META_SITE_TYPE = "website"
 META_TWITTER_TYPE = "summary_large_image"
 
@@ -239,5 +243,8 @@ SECURE_REFERRER_POLICY = (
 ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION = (
     os.environ["ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION"] == "True"
 )
-DEFAULT_FROM_EMAIL = "hi@greg.technology"
-JESSICA_EMAIL = "contact+submissions@nyc-noise.com"
+# the sender of outgoing email; it must be an address the mail service has verified
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL") or "webmaster@localhost"
+# shown on the submit-event form, and where event submissions are emailed
+CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", "")
+JESSICA_EMAIL = CONTACT_EMAIL

@@ -1,19 +1,21 @@
+from django.conf import settings
 from django.test import TestCase
 from core.tests.test_utils import create_static_test_page
 
-expected_domain = "nyc-noise.com"
-expected_url = f"https://{expected_domain}/"
+# share links use SITE_URL from .env
+expected_url = f"{settings.SITE_URL}/"
+expected_domain = settings.META_SITE_DOMAIN
 
 
 class OpengraphTagsTestCase(TestCase):
     def test_opengraph_tags_index(self):
         expected_description = (
-            "NYC experimental live music calendar • noise, improv, jazz, new music,"
-            " avant-electronics, weirdos • performance against corporate interests!"
+            "Live music calendar for New England and the Northeast: concerts, DJ nights"
+            " and open mics at venues across the region."
         )
         expected_title = "New England Music"
         expected_image = (
-            f"{expected_url}static/core/images/NYC-Noise-facebook-preview-TOO-BIG.png"
+            f"{expected_url}static/core/images/share-preview.png"
         )
 
         response = self.client.get("/")
