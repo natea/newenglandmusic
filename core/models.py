@@ -186,12 +186,8 @@ class Event(models.Model):
 
     @property
     def age_policy_emoji(self):
-        if self.age_policy_emoji_override:
-            return self.age_policy_emoji_override
-        if self.venue:
-            return self.venue.age_policy_emoji
-        # should not happen
-        return ""
+        # venues have no age emoji, so only events that set one show one
+        return self.age_policy_emoji_override or ""
 
     @property
     def title_and_artists(self):
@@ -209,8 +205,10 @@ class Event(models.Model):
         if self.venue_override:
             return self.venue_override
         if self.venue:
-            if self.venue.address:
-                return f"{self.venue.name} ({self.venue.address})"
+            # venues have no street address -- "name, city, state" is enough
+            # for calendar apps and maps to find them
+            if self.venue.location:
+                return f"{self.venue.name}, {self.venue.location}"
             return self.venue.name
         # should not happen
         return ""
