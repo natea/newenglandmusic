@@ -126,6 +126,20 @@ class Event(models.Model):
     )
 
     # will strikethrough most of the event information, except for the preface
+    # for events fetched from venue websites -- see the fetch_events command
+    class Source(models.TextChoices):
+        ICAL = "ical", "iCal feed"
+        JSON_LD = "json-ld", "Structured data (JSON-LD)"
+        TICKETING = "ticketing", "Ticketing platform"
+        AI = "ai", "AI extraction"
+
+    source = models.CharField(
+        max_length=16, choices=Source.choices, blank=True, default=""
+    )
+    source_url = models.URLField(max_length=1000, blank=True, default="")
+    # identifies the event at its source, so re-fetching updates it instead of duplicating it
+    external_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
+
     is_cancelled = models.BooleanField(default=False)
 
     same_time_order_override = models.IntegerField(verbose_name="Order", default=0)
