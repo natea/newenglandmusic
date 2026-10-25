@@ -16,19 +16,21 @@ services:
   - type: web
     name: newenglandmusic
     runtime: python
-    plan: 0.5c-512mb
+    # free: sleeps after 15 idle minutes (about a minute to wake), no shell tab
+    # and no pre-deploy command; 0.5c-512mb ($7/month) removes those limits
+    plan: free
     region: virginia
     branch: main
     # deploy a commit only after github actions has run the tests on it
     autoDeployTrigger: checksPass
+    # also runs the migrations: free services have no pre-deploy command
     buildCommand: ./bin/build.sh
-    preDeployCommand: python manage.py migrate --no-input
     startCommand: 'gunicorn --access-logformat ''%(h)s %(l)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" reqtime: %(M)s ms'' nycnoise.wsgi:application'
     healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.14
-      # gunicorn workers; each takes ~100mb, so 2 fits the 512mb plan
+      # gunicorn workers; each takes ~100mb, so 2 fits in 512mb
       - key: WEB_CONCURRENCY
         value: 2
       - key: DJANGO_SETTINGS_MODULE

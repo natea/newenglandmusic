@@ -55,7 +55,7 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 - installs `requirements.txt`
 - compiles the SCSS and collects the static files
 
-**Migrations** run after the build and before the new code goes live: on Render, as the pre-deploy command, so a failed migration stops the deploy.
+**Migrations** run at the end of the build (Render's free plan has no pre-deploy command), so a failed migration fails the build and the new code isn't deployed. On a paid plan they can move to `preDeployCommand` in `render.yaml`.
 
 **Start:**
 
@@ -76,8 +76,11 @@ gunicorn nycnoise.wsgi:application
 `render.yaml` is a Render Blueprint for the web service and its Postgres database, in the Virginia region. It doesn't include the scheduled jobs yet; see [Before the jobs can run on a server](#before-the-jobs-can-run-on-a-server).
 
 - **What deploys:** Render deploys `main` from the GitHub repo [natea/newenglandmusic](https://github.com/natea/newenglandmusic), and only once CI has passed on that commit (`autoDeployTrigger: checksPass`). `origin` is the upstream nyc noise repo; never deploy from or push to it.
-- **Plans:** $7 a month in total while the site is unshared.
-  - **Web service:** `0.5c-512mb` ($7 a month), with two gunicorn workers.
+- **Plans:** both free, so $0 a month while the site is unshared.
+  - **Web service:** `free`, with two gunicorn workers.
+    - It sleeps after 15 minutes without visitors and takes about a minute to wake.
+    - It has no Shell tab, so one-off commands run from your machine (see below).
+    - Before launch, switch it to `0.5c-512mb` ($7 a month) to remove these limits.
   - **Database:** `free`, with these limits:
     - It expires 30 days after it's created, and Render deletes it 14 days after that.
     - It has no backups and holds 1 GB (the data is about 20 MB).
@@ -92,8 +95,8 @@ gunicorn nycnoise.wsgi:application
 
 **First deploy:**
 1. In the Render dashboard, choose **New > Blueprint**, connect the GitHub repo and apply `render.yaml`.
-2. Once the database exists, load the local data into it (see below), then trigger a deploy so the migrations run against it.
-3. Create an admin user from the service's **Shell** tab: `python manage.py createsuperuser`.
+2. Once the database exists, load the local data into it (see below). The first build has already migrated the empty database, and the restore replaces it with the local data, which has the same migrations.
+3. The local admin account comes with the dump. For a separate production account, run `createsuperuser` against Render's database (see below).
 4. Check the site at its `onrender.com` address, and log in to `/admin/`.
 
 **Loading the local database.** Make a dump locally, then restore it into Render's database. The restore needs its **External Database URL**, from the database's page in the dashboard.
@@ -108,7 +111,14 @@ pg_restore --no-owner --no-privileges --clean --if-exists \
 
 Keep the dump out of the repo, since it holds admin password hashes.
 
-The dump includes admin accounts, with their password hashes, and the stored HTML of every event, so the events need no re-render. If it's older than the code, run `python manage.py resave_all_events` from the Shell tab after deploying.
+The dump includes admin accounts, with their password hashes, and the stored HTML of every event, so the events need no re-render. If it's older than the code, run `resave_all_events` against Render's database after deploying.
+
+**One-off commands.** The free web service has no Shell tab. Run management commands from your machine instead, with `DATABASE_URL` set to Render's **External Database URL**:
+
+```sh
+DATABASE_URL="<External Database URL>" DJANGO_SETTINGS_MODULE=nycnoise.settings.prod \
+  venv/bin/python manage.py createsuperuser
+```
 
 **A custom domain:** add it under the service's **Settings > Custom Domains**, then set `ALLOWED_HOSTS` to the domain and `SITE_URL` to `https://` plus the domain.
 
