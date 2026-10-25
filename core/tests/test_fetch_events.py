@@ -3,9 +3,11 @@ import datetime
 import os
 import tempfile
 from io import StringIO
+from pathlib import Path
 from unittest import mock
 
 from core.event_fetching.ai_extraction import ExtractionError
+from core.event_fetching.spider import VenueEventsSpider
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.management.commands import fetch_events
 from core.models import Event, Venue
@@ -13,6 +15,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
+from scrapy.http import HtmlResponse
 
 REPORT_COLUMNS = [
     "sheet_id",
@@ -228,6 +231,35 @@ class FetchEventsTestCase(TestCase):
         self.assertEqual(show.description, "new")
         self.assertTrue(show.is_approved)
         self.assertEqual(self.saved().count(), 1)
+        self.assertIn("1 updated", output)
+
+    def test_opendate_time_filled_in_on_a_refetch(self):
+        # the real opendate page, moved a month ahead so the event is always upcoming
+        page = (Path(__file__).parent / "fixtures" / "opendate_event.html").read_text()
+        day = timezone.localdate() + datetime.timedelta(days=30)
+        page = page.replace("2026-11-06", day.isoformat())
+        url = "https://app.opendate.io/e/emo-night-brooklyn-november-06-2026-754254"
+
+        def parsed(body):
+            results = []
+            spider = VenueEventsSpider(targets=[], results=results)
+            response = HtmlResponse(url=url, body=body.encode(), encoding="utf-8")
+            spider.parse_ticketing_event(response, {"sheet_id": "V0001"})
+            return results[0]["events"]
+
+        self.events_for("V0001", parsed(page.replace("js-react-on-rails-component", "x")), source="ticketing")
+        self.fetch("--sheet-ids", "V0001")
+        [before] = self.saved()
+        self.assertEqual(before.starttime_override, "time TBA")
+
+        self.events_for("V0001", parsed(page), source="ticketing")
+        output = self.fetch("--sheet-ids", "V0001")
+        [after] = self.saved()
+        self.assertEqual(after.pk, before.pk)
+        self.assertEqual(after.external_id, before.external_id)
+        self.assertIsNone(after.starttime_override)
+        self.assertEqual(timezone.localtime(after.starttime).date(), day)
+        self.assertNotEqual(timezone.localtime(after.starttime).hour, 0)
         self.assertIn("1 updated", output)
 
     def test_events_without_title_or_artists_are_skipped(self):

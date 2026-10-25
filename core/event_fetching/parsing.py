@@ -12,6 +12,7 @@ import hashlib
 import html
 import json
 import re
+from urllib.parse import urlparse
 
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
@@ -23,6 +24,10 @@ MAX_DESCRIPTION_LENGTH = 600
 # calendar entries that mark the absence of an event, e.g. "No Event Tonight"
 PLACEHOLDER_TITLE_RE = re.compile(r"^\s*(no (events?|shows?|music)\b|closed\b)", re.IGNORECASE)
 BLOCK_TAG_RE = re.compile(r"</?(p|div|h[1-6]|br|li|tr|td)\b", re.IGNORECASE)
+# the json data blocks a react-on-rails page (e.g. opendate's) hands to its components
+REACT_ON_RAILS_DATA_RE = re.compile(
+    r"<script[^>]*\bjs-react-on-rails-component\b[^>]*>(.*?)</script>", re.DOTALL
+)
 
 
 def make_aware(value):
@@ -71,6 +76,52 @@ def clean_description(text):
 def stable_id(*parts):
     return hashlib.sha1("|".join(str(p) for p in parts).encode()).hexdigest()[:16]
 
+
+def is_opendate_url(url):
+    host = urlparse(url or "").netloc.lower()
+    return host == "opendate.io" or host.endswith(".opendate.io")
+
+
+def is_opendate_event_url(url):
+    return is_opendate_url(url) and urlparse(url).path.startswith("/e/")
+
+
+def is_placeholder_midnight(event):
+    """a start that stands in for "no time": midnight eastern, either local (00:00) or
+    standard time (05:00 utc, which shows as 1am in summer), on an event whose ticket link
+    is an opendate event page -- e.g. a venue site listing opendate's date-only events"""
+    if event["all_day"] or not is_opendate_event_url(event["ticket_hyperlink"]):
+        return False
+    local = timezone.localtime(event["starttime"]).time()
+    utc = event["starttime"].astimezone(datetime.timezone.utc).time()
+    return local == datetime.time(0, 0) or utc == datetime.time(5, 0)
+
+def opendate_start_time(page_html):
+    """the start time on an opendate event page, or None. its json-ld gives only the date,
+    but the data its "add to calendar" button reads has the full time and utc offset"""
+    for block in REACT_ON_RAILS_DATA_RE.findall(page_html or ""):
+        try:
+            data = json.loads(block)
+        except ValueError:
+            continue
+        confirm = data.get("confirm") if isinstance(data, dict) else None
+        start = confirm.get("start_time") if isinstance(confirm, dict) else None
+        try:
+            parsed = parse_datetime(start) if isinstance(start, str) else None
+        except ValueError:
+            parsed = None
+        if parsed:
+            return make_aware(parsed)
+    return None
+
+def with_opendate_time(event, page_html):
+    """the event at its opendate page's start time when that's on the event's date;
+    otherwise the event as all-day ("time TBA"). the event's external_id is left as it
+    was, so filling in the time updates the saved event rather than adding another."""
+    start = opendate_start_time(page_html)
+    if start and timezone.localdate(start) == timezone.localdate(event["starttime"]):
+        return {**event, "starttime": start, "all_day": False}
+    return {**event, "all_day": True}
 
 def parse_ical(body, source_url):
     events = []

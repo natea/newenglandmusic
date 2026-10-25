@@ -6,12 +6,18 @@ from core.event_fetching.parsing import (
     clean_description,
     clean_text,
     is_placeholder,
+    is_placeholder_midnight,
+    opendate_start_time,
     parse_ical,
     parse_json_ld,
     stable_id,
 )
+from pathlib import Path
+
 from django.test import SimpleTestCase
 from django.utils import timezone
+
+OPENDATE_PAGE = (Path(__file__).parent / "fixtures" / "opendate_event.html").read_text()
 
 
 def ical(*events):
@@ -132,6 +138,12 @@ class ParseJsonLdTestCase(SimpleTestCase):
         # no url of its own, so the page is the link
         self.assertEqual(event["hyperlink"], "https://venue.example/")
 
+    def test_date_only_start_is_all_day_on_that_date(self):
+        script = json.dumps({"@type": "Event", "name": "Show", "startDate": "2026-11-06"})
+        [event] = parse_json_ld([script], "https://venue.example/")
+        self.assertTrue(event["all_day"])
+        self.assertEqual(event["starttime"], local(2026, 11, 6, 0, 0))
+
     def test_invalid_block_is_ignored(self):
         good = json.dumps({"@type": "Event", "name": "Show", "startDate": "2026-11-05"})
         events = parse_json_ld(["{not json", good], "u")
@@ -197,3 +209,54 @@ class CleaningTestCase(SimpleTestCase):
         self.assertEqual(stable_id("a", 1), stable_id("a", 1))
         self.assertNotEqual(stable_id("a", 1), stable_id("a", 2))
         self.assertEqual(len(stable_id("x")), 16)
+
+
+class OpendateStartTimeTestCase(SimpleTestCase):
+    def test_reads_the_start_time_from_the_page_data(self):
+        start = opendate_start_time(OPENDATE_PAGE)
+        self.assertEqual(start, local(2026, 11, 6, 22, 0))
+        self.assertEqual(timezone.localtime(start).hour, 22)
+
+    def test_no_usable_start_time(self):
+        block = '<script type="application/json" class="js-react-on-rails-component">{}</script>'
+        for page in [
+            "<html><body>no data</body></html>",
+            block.format("{not json"),
+            block.replace("{}", '{"confirm": {"id": 1}}'),
+            block.replace("{}", '{"confirm": {"start_time": "soon"}}'),
+            block.replace("{}", '["not", "an", "object"]'),
+            "",
+            None,
+        ]:
+            with self.subTest(page=page):
+                self.assertIsNone(opendate_start_time(page))
+
+
+class PlaceholderMidnightTestCase(SimpleTestCase):
+    OPENDATE = "https://app.opendate.io/e/roomful-of-blues-november-06-2026-1"
+
+    def event(self, starttime, ticket=OPENDATE, all_day=False):
+        return {"starttime": starttime, "ticket_hyperlink": ticket, "all_day": all_day}
+
+    def test_placeholders(self):
+        utc = datetime.timezone.utc
+        for starttime in [
+            datetime.datetime(2026, 11, 6, 5, 0, tzinfo=utc),  # midnight est
+            datetime.datetime(2026, 10, 28, 5, 0, tzinfo=utc),  # shows as 1am edt
+            local(2026, 10, 28, 0, 0),  # local midnight in summer
+        ]:
+            with self.subTest(starttime=starttime):
+                self.assertTrue(is_placeholder_midnight(self.event(starttime)))
+
+    def test_not_placeholders(self):
+        utc = datetime.timezone.utc
+        five_utc = datetime.datetime(2026, 11, 6, 5, 0, tzinfo=utc)
+        for name, event in {
+            "a real time": self.event(local(2026, 11, 6, 20, 0)),
+            "no opendate link": self.event(five_utc, ticket="https://tix.example/1"),
+            "opendate but not an event page": self.event(five_utc, ticket="https://app.opendate.io/v/venue"),
+            "no ticket link": self.event(five_utc, ticket=""),
+            "already all-day": self.event(local(2026, 11, 6, 0, 0), all_day=True),
+        }.items():
+            with self.subTest(name):
+                self.assertFalse(is_placeholder_midnight(event))

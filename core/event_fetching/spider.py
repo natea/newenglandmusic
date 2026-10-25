@@ -21,9 +21,18 @@ from core.management.commands.check_event_sources import (
     USER_AGENT,
 )
 
-from core.event_fetching.parsing import parse_ical, parse_json_ld
+from core.event_fetching.parsing import (
+    is_opendate_url,
+    is_placeholder_midnight,
+    parse_ical,
+    parse_json_ld,
+    with_opendate_time,
+)
 
 MAX_TICKETING_EVENT_PAGES = 10
+# opendate pages to check for real start times, per venue page; the import keeps at most
+# 50 events per venue anyway
+MAX_OPENDATE_TIME_CHECKS = 50
 MAX_PAGE_TEXT_LENGTH = 150_000
 
 TICKETING_DOMAINS = tuple(d for domains in TICKETING_PLATFORMS.values() for d in domains)
@@ -131,7 +140,33 @@ class VenueEventsSpider(scrapy.Spider):
 
     def parse_json_ld(self, response, target):
         scripts = response.xpath('//script[@type="application/ld+json"]/text()').getall()
-        self.add_events(target, parse_json_ld(scripts, response.url), response.url, "json-ld")
+        events = parse_json_ld(scripts, response.url)
+        # venue sites listing opendate's events may give "midnight" for "no time"; the
+        # opendate page has the real time, so those events wait for it
+        placeholders = [event for event in events if is_placeholder_midnight(event)]
+        to_check = placeholders[:MAX_OPENDATE_TIME_CHECKS]
+        ready = [event for event in events if not is_placeholder_midnight(event)]
+        ready += [{**event, "all_day": True} for event in placeholders[MAX_OPENDATE_TIME_CHECKS:]]
+        self.add_events(target, ready, response.url, "json-ld")
+        for event in to_check:
+            yield scrapy.Request(
+                event["ticket_hyperlink"],
+                callback=self.parse_opendate_time,
+                errback=self.on_opendate_time_error,
+                cb_kwargs={"target": target, "event": event, "page_url": response.url},
+                dont_filter=True,
+            )
+
+    def parse_opendate_time(self, response, target, event, page_url):
+        self.add_events(target, [with_opendate_time(event, response.text)], page_url, "json-ld")
+
+    def on_opendate_time_error(self, failure):
+        # the event is still saved, as "time TBA"; the failed request is reported too
+        kwargs = failure.request.cb_kwargs
+        self.add_events(
+            kwargs["target"], [{**kwargs["event"], "all_day": True}], kwargs["page_url"], "json-ld"
+        )
+        self.on_error(failure)
 
     def parse_ticketing_listing(self, response, target):
         event_urls = []
@@ -150,6 +185,9 @@ class VenueEventsSpider(scrapy.Spider):
     def parse_ticketing_event(self, response, target):
         scripts = response.xpath('//script[@type="application/ld+json"]/text()').getall()
         events = parse_json_ld(scripts, response.url)
+        if is_opendate_url(response.url) and len(events) == 1 and events[0]["all_day"]:
+            # opendate's json-ld gives only the date; the page's own data has the time
+            events = [with_opendate_time(events[0], response.text)]
         if events:
             self.add_events(target, events, response.url, "ticketing")
         else:
