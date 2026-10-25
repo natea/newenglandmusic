@@ -141,6 +141,33 @@ class Event(models.Model):
     # identifies the event at its source, so re-fetching updates it instead of duplicating it
     external_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
 
+    # what kind of event an imported event is, so the review list can leave out the
+    # trivia nights and comedy shows venues also list. blank means not labelled yet
+    class Kind(models.TextChoices):
+        LIVE_MUSIC = "live_music", "Live music"
+        DJ_DANCE = "dj_dance", "DJ / dance night"
+        OPEN_MIC = "open_mic", "Open mic"
+        KARAOKE = "karaoke", "Karaoke"
+        COMEDY = "comedy", "Comedy"
+        OTHER = "other", "Other (not music)"
+
+    MUSIC_KINDS = {Kind.LIVE_MUSIC, Kind.DJ_DANCE, Kind.OPEN_MIC}
+
+    class KindSetBy(models.TextChoices):
+        AI = "ai", "AI"
+        ADMIN = "admin", "Admin"
+
+    kind = models.CharField(max_length=16, choices=Kind.choices, blank=True, default="")
+    # an admin's label is never overwritten by an import
+    kind_set_by = models.CharField(
+        max_length=8, choices=KindSetBy.choices, blank=True, default=""
+    )
+
+    @property
+    def is_music_kind(self):
+        """unlabelled events count as music, so nothing is hidden without a label"""
+        return not self.kind or self.kind in self.MUSIC_KINDS
+
     is_cancelled = models.BooleanField(default=False)
 
     same_time_order_override = models.IntegerField(verbose_name="Order", default=0)

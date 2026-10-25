@@ -560,6 +560,139 @@ class FetchEventsTicketmasterTestCase(TestCase):
         )
 
 
+class FetchEventsLabellingTestCase(TestCase):
+    """fetch_events labelling events by kind before saving them"""
+
+    write_report = FetchEventsTestCase.write_report
+    crawl_returns = FetchEventsTestCase.crawl_returns
+    events_for = FetchEventsTestCase.events_for
+    fetch = FetchEventsTestCase.fetch
+    saved = FetchEventsTestCase.saved
+
+    def setUp(self):
+        FetchEventsTestCase.setUp(self)
+        env = mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test"})
+        env.start()
+        self.addCleanup(env.stop)
+        anthropic_client = mock.patch("anthropic.Anthropic")
+        anthropic_client.start()
+        self.addCleanup(anthropic_client.stop)
+        self.labelled = []
+        self.labels = {}
+        self.errors = []
+
+        def classify(client, items, model):
+            self.labelled.append([item["title"] for item in items])
+            kinds = [self.labels.get(item["title"], "live_music") for item in items]
+            return kinds, self.errors, (len(items) * 50, len(items) * 5)
+
+        patcher = mock.patch.object(fetch_events, "classify", classify)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_new_events_are_labelled_before_saving(self):
+        self.labels = {"Trivia Night": "other", "DJ Night": "dj_dance"}
+        self.events_for(
+            "V0001", [event("Band"), event("Trivia Night"), event("DJ Night")]
+        )
+        output = self.fetch("--sheet-ids", "V0001")
+        self.assertEqual(self.labelled, [["Band", "Trivia Night", "DJ Night"]])
+        saved = {e.title: (e.kind, e.kind_set_by) for e in self.saved()}
+        self.assertEqual(
+            saved,
+            {
+                "Band": ("live_music", "ai"),
+                "Trivia Night": ("other", "ai"),
+                "DJ Night": ("dj_dance", "ai"),
+            },
+        )
+        self.assertIn("not music, hidden from review (1): Trivia Night [other]", output)
+        self.assertIn("kinds: 1 dj_dance, 1 live_music, 1 other (1 not music, hidden from review)", output)
+        self.assertIn("labelling used 150 input / 15 output tokens", output)
+
+    def test_venue_is_given_to_the_labeller(self):
+        captured = []
+        with mock.patch.object(
+            fetch_events, "classify", lambda client, items, model: captured.extend(items) or (["live_music"] * len(items), [], (0, 0))
+        ):
+            self.events_for("V0001", [event("Band")])
+            self.fetch("--sheet-ids", "V0001")
+        self.assertEqual(captured[0]["venue"], "Venue V0001 (VT)")
+
+    def test_reimport_makes_no_labelling_request(self):
+        self.events_for("V0001", [event("Band", external_id="ical:band")])
+        self.fetch("--sheet-ids", "V0001")
+        self.labelled.clear()
+        self.fetch("--sheet-ids", "V0001")
+        self.assertEqual(self.labelled, [])
+        self.assertEqual(Event.all_objects.get(external_id="ical:band").kind, "live_music")
+
+    def test_unlabelled_existing_event_gets_labelled(self):
+        self.events_for("V0001", [event("Band", external_id="ical:band")])
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""}):
+            self.fetch("--sheet-ids", "V0001")
+        self.assertEqual(Event.all_objects.get(external_id="ical:band").kind, "")
+        self.fetch("--sheet-ids", "V0001")
+        self.assertEqual(self.labelled, [["Band"]])
+        self.assertEqual(Event.all_objects.get(external_id="ical:band").kind, "live_music")
+
+    def test_admin_label_survives(self):
+        self.events_for("V0001", [event("Band", external_id="ical:band")])
+        self.fetch("--sheet-ids", "V0001")
+        Event.all_objects.filter(external_id="ical:band").update(kind="other", kind_set_by="admin")
+        self.labelled.clear()
+        self.fetch("--sheet-ids", "V0001")
+        self.assertEqual(self.labelled, [])
+        event_ = Event.all_objects.get(external_id="ical:band")
+        self.assertEqual((event_.kind, event_.kind_set_by), ("other", "admin"))
+
+    def test_no_api_key_saves_unlabelled(self):
+        self.events_for("V0001", [event("Band"), event("Trivia")])
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""}):
+            output = self.fetch("--sheet-ids", "V0001")
+        self.assertEqual(self.labelled, [])
+        self.assertEqual({e.kind for e in self.saved()}, {""})
+        self.assertIn("2 events left unlabelled (no ANTHROPIC_API_KEY)", output)
+        self.assertIn("kinds: 2 unlabelled (0 not music, hidden from review)", output)
+
+    def test_skip_ai_saves_unlabelled(self):
+        self.events_for("V0001", [event("Band")])
+        output = self.fetch("--sheet-ids", "V0001", "--skip-ai")
+        self.assertEqual(self.labelled, [])
+        self.assertIn("1 events left unlabelled (--skip-ai)", output)
+
+    def test_ai_extracted_events_keep_their_own_kind(self):
+        self.events_for(
+            "V0004",
+            [event("Improv Night", external_id="ai:1", kind="comedy"), event("Mystery", external_id="ai:2")],
+            source="ai",
+        )
+        self.fetch("--sheet-ids", "V0004")
+        self.assertEqual(self.labelled, [])
+        self.assertEqual(Event.all_objects.get(external_id="ai:1").kind, "comedy")
+        self.assertEqual(Event.all_objects.get(external_id="ai:2").kind, "")
+
+    def test_admin_label_survives_an_extracted_kind(self):
+        self.events_for("V0004", [event("Improv Night", external_id="ai:1", kind="comedy")], source="ai")
+        self.fetch("--sheet-ids", "V0004")
+        Event.all_objects.filter(external_id="ai:1").update(kind="live_music", kind_set_by="admin")
+        self.fetch("--sheet-ids", "V0004")
+        self.assertEqual(Event.all_objects.get(external_id="ai:1").kind, "live_music")
+
+    def test_failed_labelling_is_reported(self):
+        self.errors = ["labelling events 1-1 failed: overloaded"]
+        self.events_for("V0001", [event("Band")])
+        output = self.fetch("--sheet-ids", "V0001")
+        self.assertIn("labelling events 1-1 failed: overloaded", output)
+
+    def test_dry_run_labels_but_saves_nothing(self):
+        self.labels = {"Trivia": "other"}
+        self.events_for("V0001", [event("Trivia")])
+        output = self.fetch("--sheet-ids", "V0001", "--dry-run")
+        self.assertFalse(self.saved().exists())
+        self.assertIn("not music, hidden from review (1): Trivia [other]", output)
+
+
 class PriceBucketTestCase(SimpleTestCase):
     def test_boundaries(self):
         cases = {

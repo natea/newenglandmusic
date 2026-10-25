@@ -16,6 +16,7 @@ from .models import (
     AllEventProxy,
     DateMessage,
     EmailSubscriber,
+    Event,
     IndexPageMessages,
     MenuItem,
     StaticPage,
@@ -85,6 +86,45 @@ class StartTimeListFilter(SimpleListFilter):
         return queryset
 
 
+class KindListFilter(SimpleListFilter):
+    """
+    by default, leaves out events labelled as not music (trivia, comedy, karaoke, ...)
+    -- unlabelled events are shown, so nothing is hidden without a label
+    """
+
+    title = "Kind"
+    parameter_name = "kind"
+
+    def lookups(self, _request, _model_admin):
+        return (
+            (None, "Music + unlabelled"),
+            *Event.Kind.choices,
+            ("unlabelled", "Unlabelled"),
+            ("not_music", "All not music"),
+            ("all", "All"),
+        )
+
+    def choices(self, changelist):
+        for lookup, title in self.lookup_choices:
+            yield {
+                "selected": self.value() == lookup,
+                "query_string": changelist.get_query_string({self.parameter_name: lookup}, []),
+                "display": title,
+            }
+
+    def queryset(self, request, queryset):
+        music_or_unlabelled = Q(kind__in=Event.MUSIC_KINDS) | Q(kind="")
+        if self.value() is None:
+            return queryset.filter(music_or_unlabelled)
+        if self.value() == "unlabelled":
+            return queryset.filter(kind="")
+        if self.value() == "not_music":
+            return queryset.exclude(music_or_unlabelled)
+        if self.value() in Event.Kind.values:
+            return queryset.filter(kind=self.value())
+        return queryset
+
+
 class EventAdmin(admin.ModelAdmin):
     list_per_page = 500
     list_display = (
@@ -95,6 +135,7 @@ class EventAdmin(admin.ModelAdmin):
         "title",
         "artists",
         "get_venue_link",
+        "kind",
         "get_description_as_text",
         "price",
         "is_cancelled",
@@ -119,6 +160,7 @@ class EventAdmin(admin.ModelAdmin):
         "age_policy_emoji_override",
         "price",
         "is_cancelled",
+        "kind",
         "same_time_order_override",
         "user_submitted",
         "user_submission_email",
@@ -140,11 +182,12 @@ class EventAdmin(admin.ModelAdmin):
     )
     list_filter = [
         StartTimeListFilter,
+        KindListFilter,
         "is_approved",
         "user_submitted",
     ]
     list_editable = ("same_time_order_override",)
-    actions = ["mark_as_approved"]
+    actions = ["mark_as_approved", "mark_as_live_music", "mark_as_not_music"]
 
     class Media:
         js = [
@@ -199,9 +242,24 @@ class EventAdmin(admin.ModelAdmin):
 
     get_description_as_text.short_description = "Description"
 
+    def save_model(self, request, obj, form, change):
+        # a kind chosen in the form is an admin's label, which imports never overwrite
+        if "kind" in form.changed_data:
+            obj.kind_set_by = Event.KindSetBy.ADMIN if obj.kind else ""
+        super().save_model(request, obj, form, change)
+
     @admin.action(description="Mark as approved")
     def mark_as_approved(self, request, queryset):
         queryset.update(is_approved=True)
+
+    # an admin's label is never overwritten by later imports
+    @admin.action(description="Mark as live music")
+    def mark_as_live_music(self, request, queryset):
+        queryset.update(kind=Event.Kind.LIVE_MUSIC, kind_set_by=Event.KindSetBy.ADMIN)
+
+    @admin.action(description="Mark as not music (other)")
+    def mark_as_not_music(self, request, queryset):
+        queryset.update(kind=Event.Kind.OTHER, kind_set_by=Event.KindSetBy.ADMIN)
 
     # disable the "delete" button on the venue field
     # without implementing a whole `has_delete_permission` which always

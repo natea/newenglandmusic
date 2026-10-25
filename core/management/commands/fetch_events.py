@@ -3,6 +3,7 @@ import os
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
+from core.event_fetching.classification import classify
 from core.event_fetching.spider import SCRAPY_SETTINGS, VenueEventsSpider
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.event_fetching.ticketmaster import to_event_dict as ticketmaster_event
@@ -143,10 +144,10 @@ def select_targets(report_path, per_source, sheet_ids, all_venues, use_ticketmas
 
 
 def save_event(venue_pk, source, source_url, data, dry_run):
-    """returns "created", "updated" or "skipped" """
+    """returns ("created", "updated" or "skipped"; the event's kind)"""
     external_id = data["external_id"][:255]
     if not data["title"] and not data["artists"]:
-        return "skipped"
+        return "skipped", ""
 
     event = Event.all_objects.filter(external_id=external_id).first()
     created = event is None
@@ -166,10 +167,15 @@ def save_event(venue_pk, source, source_url, data, dry_run):
     event.ticket_hyperlink = short(data["ticket_hyperlink"]) or None
     event.price = price_bucket(data["price_amount"])
     event.is_cancelled = data["is_cancelled"]
+    # an admin's label always stands; otherwise keep the label the event already has
+    # unless there's a new one
+    if event.kind_set_by != Event.KindSetBy.ADMIN and data.get("kind"):
+        event.kind = data["kind"]
+        event.kind_set_by = Event.KindSetBy.AI
 
     if not dry_run:
         event.save()
-    return "created" if created else "updated"
+    return ("created" if created else "updated"), event.kind
 
 
 class Command(BaseCommand):
@@ -243,7 +249,14 @@ class Command(BaseCommand):
             pages, options["skip_ai"], options["model"], events_by_venue, notes_by_venue
         )
 
-        self.save_and_report(targets, events_by_venue, notes_by_venue, options["dry_run"])
+        self.save_and_report(
+            targets,
+            events_by_venue,
+            notes_by_venue,
+            options["dry_run"],
+            options["skip_ai"],
+            options["model"],
+        )
 
     def fetch_from_ticketmaster(self, targets, events_by_venue, notes_by_venue, dry_run):
         if not targets:
@@ -341,9 +354,66 @@ class Command(BaseCommand):
             f"ai extraction used {input_tokens} input / {output_tokens} output tokens"
         )
 
-    def save_and_report(self, targets, events_by_venue, notes_by_venue, dry_run):
+    def label_events(self, chosen, skip_ai, model, notes_by_venue):
+        """
+        sets the kind of events that need one: new or unlabelled events, other than
+        ones an admin labelled or ai extraction already labelled
+        """
+        external_ids = [data["external_id"][:255] for _, items in chosen for _, _, data in items]
+        labelled = {
+            external_id
+            for external_id, kind, set_by in Event.all_objects.filter(
+                external_id__in=external_ids
+            ).values_list("external_id", "kind", "kind_set_by")
+            if kind or set_by == Event.KindSetBy.ADMIN
+        }
+        needing = [
+            (target, data)
+            for target, items in chosen
+            for source, _, data in items
+            if source != "ai" and not data.get("kind") and data["external_id"][:255] not in labelled
+        ]
+        if not needing:
+            return
+        if skip_ai or not os.environ.get("ANTHROPIC_API_KEY"):
+            reason = "--skip-ai" if skip_ai else "no ANTHROPIC_API_KEY"
+            counts = defaultdict(int)
+            for target, _ in needing:
+                counts[target["sheet_id"]] += 1
+            for sheet_id, count in counts.items():
+                notes_by_venue[sheet_id].append(f"{count} events left unlabelled ({reason})")
+            return
+
+        # imported here so the rest of the command works without the sdk configured
+        import anthropic
+
+        from core.event_fetching.ai_extraction import MODEL
+
+        model = model or MODEL
+        self.stdout.write(f"labelling {len(needing)} events with {model}...")
+        items = [
+            {
+                "title": data["title"],
+                "artists": data["artists"],
+                "description": data["description"],
+                "venue": f"{target['name']} ({target['location']})",
+            }
+            for target, data in needing
+        ]
+        kinds, errors, (input_tokens, output_tokens) = classify(
+            anthropic.Anthropic(), items, model=model
+        )
+        for (_, data), kind in zip(needing, kinds):
+            data["kind"] = kind
+        for error in errors:
+            self.stdout.write(self.style.WARNING(error))
+        self.stdout.write(
+            f"labelling used {input_tokens} input / {output_tokens} output tokens"
+        )
+
+    def save_and_report(self, targets, events_by_venue, notes_by_venue, dry_run, skip_ai, model):
         now = timezone.now()
-        totals = defaultdict(int)
+        chosen = []
         for target in targets:
             found = events_by_venue[target["sheet_id"]]
             upcoming = sorted(
@@ -352,11 +422,23 @@ class Command(BaseCommand):
             )
             # the same event can show up on more than one page
             unique = list({item[2]["external_id"]: item for item in upcoming}.values())
-            unique = unique[:MAX_EVENTS_PER_VENUE]
+            chosen.append((target, unique[:MAX_EVENTS_PER_VENUE]))
 
+        self.label_events(chosen, skip_ai, model, notes_by_venue)
+
+        totals = defaultdict(int)
+        kind_totals = defaultdict(int)
+        for target, unique in chosen:
+            found = events_by_venue[target["sheet_id"]]
             outcomes = defaultdict(int)
+            hidden = []
             for source, source_url, data in unique:
-                outcomes[save_event(target["venue_pk"], source, source_url, data, dry_run)] += 1
+                outcome, kind = save_event(target["venue_pk"], source, source_url, data, dry_run)
+                outcomes[outcome] += 1
+                if outcome != "skipped":
+                    kind_totals[kind or "unlabelled"] += 1
+                    if kind and kind not in Event.MUSIC_KINDS:
+                        hidden.append(f"{data['title']} [{kind}]")
             for outcome, count in outcomes.items():
                 totals[outcome] += count
 
@@ -375,6 +457,8 @@ class Command(BaseCommand):
                 artists = f" -- {data['artists']}" if data["artists"] else ""
                 price = f" [{price_bucket(data['price_amount'])}]" if data["price_amount"] is not None else ""
                 self.stdout.write(f"    {when}  {data['title']}{artists}{price}")
+            if hidden:
+                self.stdout.write(f"  not music, hidden from review ({len(hidden)}): " + "; ".join(hidden))
             for note in notes_by_venue[target["sheet_id"]]:
                 self.stdout.write(self.style.WARNING(f"  {note}"))
 
@@ -382,3 +466,13 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(f"\n{'[dry run] ' if dry_run else ''}{summary}")
         )
+        if kind_totals:
+            hidden_count = sum(
+                count for kind, count in kind_totals.items()
+                if kind != "unlabelled" and kind not in Event.MUSIC_KINDS
+            )
+            self.stdout.write(
+                "kinds: "
+                + ", ".join(f"{count} {kind}" for kind, count in sorted(kind_totals.items()))
+                + f" ({hidden_count} not music, hidden from review)"
+            )

@@ -56,7 +56,7 @@ See proposal.md. Every source produces the same event dict (`core/event_fetching
 
 - **[A real show gets labelled non-music]** → It's hidden, not deleted, and the "all non-music" filter makes misses easy to scan. The admin relabel is permanent. Run the backfill's dry run first and check it against the examples in the proposal.
 - **[Borderline kinds change their mind later]** → Kinds are stored, and only `MUSIC_KINDS` decides visibility, so including karaoke later is a one-line change, not a relabelling.
-- **[Prompt drift between the two labelling paths]** → Both read their kind definitions from one constant, `classification.KIND_DEFINITIONS`.
+- **[Prompt drift between the two labelling paths]** → Both read their kind definitions from one constant, `KIND_DEFINITIONS`. It lives in `core/event_fetching/kinds.py` rather than `classification.py`, because `classification` imports `ai_extraction`, so `ai_extraction` importing from `classification` would be circular (found during implementation).
 - **[Cost]** → About $0.01 per 50 events with Haiku. The backfill of ~2,200 events is about 45 calls. Daily runs label only new events.
 
 ## Testing

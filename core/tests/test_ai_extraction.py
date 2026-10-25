@@ -10,6 +10,7 @@ from core.event_fetching.ai_extraction import (
     extract_events,
     parse_price,
 )
+from core.event_fetching.kinds import KINDS
 from django.test import SimpleTestCase
 from django.utils import timezone
 
@@ -18,7 +19,7 @@ PAGE_URL = "https://venue.example/calendar"
 
 def raw_event(**fields):
     event = dict.fromkeys(
-        ["title", "artists", "start_date", "start_time", "url", "ticket_url", "price", "description"],
+        ["title", "artists", "start_date", "start_time", "url", "ticket_url", "price", "description", "kind"],
         "",
     )
     event.update(fields)
@@ -136,6 +137,29 @@ class ExtractEventsTestCase(SimpleTestCase):
         self.assertIn("on or after today", SYSTEM_PROMPT)
         self.assertIn("rather than guessing", SYSTEM_PROMPT)
         self.assertIn("Leave out past events", SYSTEM_PROMPT)
+
+
+class ExtractedKindTestCase(SimpleTestCase):
+    run_extraction = ExtractEventsTestCase.run_extraction
+
+    def test_events_carry_their_kind(self):
+        (events, _), request = self.run_extraction(
+            [
+                raw_event(title="IMPROV COMEDY: an evening of laughs", start_date="2026-11-05", kind="comedy"),
+                raw_event(title="Samantha Fish", artists="Sgt. Splendor", start_date="2026-11-06", kind="live_music"),
+            ]
+        )
+        self.assertEqual([e["kind"] for e in events], ["comedy", "live_music"])
+        item = request["output_config"]["format"]["schema"]["properties"]["events"]["items"]
+        self.assertEqual(item["properties"]["kind"]["enum"], KINDS)
+        self.assertIn("kind", item["required"])
+        self.assertIn("only when a band, artist or DJ is named", request["system"])
+
+    def test_unknown_kind_leaves_the_event_unlabelled(self):
+        (events, _), _ = self.run_extraction(
+            [raw_event(title="Show", start_date="2026-11-05", kind="polka"), raw_event(title="Other", start_date="2026-11-06")]
+        )
+        self.assertEqual([e["kind"] for e in events], ["", ""])
 
 
 class ParsePriceTestCase(SimpleTestCase):

@@ -9,6 +9,7 @@ import json
 import anthropic
 from django.utils import timezone
 
+from core.event_fetching.kinds import KIND_DEFINITIONS, KINDS
 from core.event_fetching.parsing import (
     clean_description,
     clean_text,
@@ -48,7 +49,9 @@ doors time; empty if the page gives no time.
 - description: one or two sentences from the page about the event; empty if there is none.
 
 Use only what the page says. When a field isn't on the page, leave it empty rather than \
-guessing. If the page lists no upcoming events, return an empty list."""
+guessing. If the page lists no upcoming events, return an empty list.
+
+""" + KIND_DEFINITIONS
 
 EVENTS_SCHEMA = {
     "type": "object",
@@ -66,6 +69,7 @@ EVENTS_SCHEMA = {
                     "ticket_url": {"type": "string"},
                     "price": {"type": "string"},
                     "description": {"type": "string"},
+                    "kind": {"type": "string", "enum": KINDS},
                 },
                 "required": [
                     "title",
@@ -76,6 +80,7 @@ EVENTS_SCHEMA = {
                     "ticket_url",
                     "price",
                     "description",
+                    "kind",
                 ],
                 "additionalProperties": False,
             },
@@ -129,6 +134,7 @@ def to_event_dict(raw, page_url):
         "ticket_hyperlink": raw["ticket_url"],
         "price_amount": parse_price(raw["price"]),
         "is_cancelled": False,
+        "kind": raw.get("kind") if raw.get("kind") in KINDS else "",
         # recurring events often share one url, so include the start time
         "external_id": "ai:"
         + stable_id(raw["url"] or page_url, raw["title"] if not raw["url"] else "", starttime.isoformat()),
