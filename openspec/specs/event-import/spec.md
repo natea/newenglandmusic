@@ -6,7 +6,7 @@ Fetches venues' upcoming events from the source chosen by event-source detection
 ## Requirements
 
 ### Requirement: Venues are fetched according to the report
-The import SHALL read the event-source report and fetch each selected venue from its best source. By default it SHALL fetch a small pilot per source. It SHALL fetch every usable venue with `--all`, or named venues with `--sheet-ids`. It SHALL fail clearly when the report is missing.
+The import SHALL read the event-source report and fetch each selected venue from its best source, except that venues linked to Ticketmaster are fetched as `ticketmaster-event-import` describes. By default it SHALL fetch a small pilot per source. It SHALL fetch every usable venue with `--all`, or named venues with `--sheet-ids`. It SHALL fail clearly when the report is missing.
 
 #### Scenario: Missing report
 - **WHEN** the import runs and the report file doesn't exist
@@ -14,8 +14,11 @@ The import SHALL read the event-source report and fetch each selected venue from
 
 #### Scenario: Fetch everything
 - **WHEN** the import runs with `--all`
-- **THEN** every venue whose best source is ical, json-ld, ticketing or ai-extraction is fetched, and venues with other classifications are not
+- **THEN** every venue whose best source is ical, json-ld, ticketing or ai-extraction is fetched, and venues with other classifications are not, unless they are linked to Ticketmaster
 
+#### Scenario: Linked venue with a scrapeable source
+- **WHEN** a venue linked to Ticketmaster has best source ical, ticketing or ai-extraction
+- **THEN** it is fetched from the Ticketmaster Discovery API only, not also from its report source
 ### Requirement: iCal feeds are parsed into events
 The import SHALL turn each VEVENT in a venue's feed into an event. It SHALL use its summary, start, description, URL and cancelled status, and SHALL treat date-only starts as all-day events with the time shown as "time TBA".
 
