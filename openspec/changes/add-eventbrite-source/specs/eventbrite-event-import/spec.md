@@ -15,7 +15,7 @@ A venue SHALL be able to store an Eventbrite organizer ID, which admins can set,
 
 ### Requirement: Organizers are found from the venue's own Eventbrite links
 
-The organizer matching command SHALL read the Eventbrite links on a venue's site and events page. A link to an organizer page SHALL give the organizer directly; otherwise the command SHALL look up the linked events' organizers through the Eventbrite API, and SHALL link the venue when every event it found has the same organizer. When the links name more than one organizer, the venue SHALL NOT be linked and the report SHALL list the organizers. Venues that are already linked SHALL be skipped unless a re-check is asked for. A dry run SHALL save nothing.
+The organizer matching command SHALL read the Eventbrite links on a venue's site and events page. An organizer page link SHALL give the organizer directly; otherwise the linked events' organizers SHALL be looked up through the API. The venue SHALL be linked only when the links name a single organizer; otherwise the report SHALL list the organizers. Already-linked venues SHALL be skipped unless a re-check is asked for, and a dry run SHALL save nothing.
 
 #### Scenario: One organizer
 
