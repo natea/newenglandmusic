@@ -78,3 +78,13 @@ class AdminGeoFilterTestCase(TestCase):
         titles = [spec.title for spec in changelist.filter_specs]
         for title in ("region", "state", "metro area"):
             self.assertIn(title, titles)
+
+    def test_sidebar_counts_each_area(self):
+        admin = VenueAdmin(Venue, AdminSite())
+        request, changelist = self.changelist(admin, "/admin/core/venue/", {"_facets": "True"})
+        state_filter = next(spec for spec in changelist.filter_specs if spec.title == "state")
+        counts = {
+            choice["display"] for choice in state_filter.choices(changelist)
+        }
+        self.assertIn("Massachusetts (2)", counts)
+        self.assertIn("Vermont (1)", counts)

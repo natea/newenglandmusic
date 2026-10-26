@@ -59,7 +59,12 @@ class GeoAreaListFilter(SimpleListFilter):
         return [(area.slug, area.label) for area in areas]
 
     def queryset(self, request, queryset):
-        area = getattr(parse_geo_filter(request.GET), self.parameter_name)
+        # self.value(), not the url: the sidebar's counts set it to each choice in turn
+        params = request.GET.copy()
+        params.pop(self.parameter_name, None)
+        if self.value() is not None:
+            params[self.parameter_name] = self.value()
+        area = getattr(parse_geo_filter(params), self.parameter_name)
         if area is None:
             return queryset
         return queryset.filter(area_q(area, prefix=self.field_prefix))

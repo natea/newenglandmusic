@@ -11,6 +11,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv()
 
+# tests run without the api keys .env holds (see core/test_runner.py)
+TEST_RUNNER = "core.test_runner.TestRunner"
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
