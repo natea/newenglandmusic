@@ -83,4 +83,6 @@ Each API's events get an `external_id` prefix (`eventbrite:` or `seatgeek:`), so
 ## Open Questions
 
 - **Coverage:** how many failing venues each API covers. Answered by task group 1, and it decides whether groups 2 to 4 are built for each API.
+  - **Eventbrite (measured 2026-10-26, `logs/measure_api_coverage-2026-10-26.log`):** of 83 venues (problem venues from the last full fetch, plus every venue linking Eventbrite, Etix or AXS), an organizer was found for 44, and 32 of those have upcoming events at the venue: 456 events in all. 32 venues have no Eventbrite links in their page HTML, 5 link several organizers, and 2 lookups failed. Some organizers' events don't match the venue by name or within 1 km (Thirsty Robot: 51 events, 0 matched; Bleacher's Bar: 9, 0 matched), which the import's matching should look at.
+  - **SeatGeek:** not measured yet; waiting for a client ID.
 - **Terms:** do Eventbrite's and SeatGeek's API terms require attribution or limit caching? These are checked before launch, and they affect only the launch checklist, not this change's code.
