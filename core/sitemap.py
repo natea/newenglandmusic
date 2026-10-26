@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.sitemaps import Sitemap
 from django.db.models.functions import TruncMonth
 
@@ -29,3 +30,11 @@ class SiteSitemap(Sitemap):
     # need to do that.
     def location(self, item):
         return item
+
+    # use the site's own address (SITE_URL) rather than the sites framework's record,
+    # which still says example.com
+    def get_domain(self, site=None):
+        return settings.META_SITE_DOMAIN
+
+    def get_protocol(self, protocol=None):
+        return settings.META_SITE_PROTOCOL
