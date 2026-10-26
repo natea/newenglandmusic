@@ -16,6 +16,7 @@ BIN = ROOT / "bin"
 STUB_PYTHON = """#!/usr/bin/env bash
 echo "$*" >> "$CALLS"
 echo "$MALLOC_ARENA_MAX" > "$CALLS.arenas"
+echo "$PYTHONUNBUFFERED" > "$CALLS.unbuffered"
 if [ -n "$FAIL_STEP" ] && [ "$*" = "$FAIL_STEP" ]; then
   exit 3
 fi
@@ -52,6 +53,7 @@ class JobScriptsTestCase(SimpleTestCase):
                 ["bash", str(BIN / script)], env=env, capture_output=True, text=True, timeout=30
             )
             self.arenas = Path(f"{calls}.arenas").read_text().strip() if Path(f"{calls}.arenas").exists() else None
+            self.unbuffered = Path(f"{calls}.unbuffered").read_text().strip() if Path(f"{calls}.unbuffered").exists() else None
             return result, calls.read_text().splitlines()
 
     def test_daily_run(self):
@@ -64,6 +66,11 @@ class JobScriptsTestCase(SimpleTestCase):
         # threads on linux otherwise run the jobs out of memory
         self.run_job("weekly.sh")
         self.assertEqual(self.arenas, "2")
+
+    def test_output_is_unbuffered(self):
+        # so the host's log shows each command's report as it runs
+        self.run_job("daily.sh")
+        self.assertEqual(self.unbuffered, "1")
 
     def test_weekly_run(self):
         result, calls = self.run_job("weekly.sh")

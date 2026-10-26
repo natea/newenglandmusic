@@ -7,6 +7,9 @@ cd "$(dirname "$0")/.." || exit 1
 # linux's allocator gives each thread its own memory pool and returns little of it, so
 # the crawl's threads used over 512mb on render where macos peaks at about 330mb
 export MALLOC_ARENA_MAX="${MALLOC_ARENA_MAX:-2}"
+# python holds its output back when it isn't writing to a terminal, so the host's log
+# showed nothing from a command until it exited. write each line as it's printed
+export PYTHONUNBUFFERED=1
 failed=()
 
 step() {
