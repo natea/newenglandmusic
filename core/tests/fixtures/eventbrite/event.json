@@ -1,0 +1,22 @@
+{
+ "name": {
+  "text": "7 Below - Tribute to Phish",
+  "html": "7 Below - Tribute to Phish"
+ },
+ "description": {
+  "text": "All 4 original members will be performing for this special ticketed event at The Main Pub"
+ },
+ "url": "https://www.eventbrite.com/e/7-below-tribute-to-phish-tickets-707179501927",
+ "start": {
+  "timezone": "America/New_York",
+  "utc": "2023-09-23T01:00:00Z",
+  "local": "2023-09-22T21:00:00"
+ },
+ "status": "completed",
+ "online_event": false,
+ "is_free": false,
+ "summary": "All 4 original members will be performing for this special ticketed event at The Main Pub",
+ "organizer_id": "20010471604",
+ "category_id": "103",
+ "id": "707179501927"
+}

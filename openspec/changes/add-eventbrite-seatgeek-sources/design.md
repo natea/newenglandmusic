@@ -17,6 +17,8 @@
   - **Eventbrite:** a private token, from the account's API Keys page, is sent as a bearer token. The public event search is retired, so events are reached through known IDs: an event's details give its `organizer_id`, and an organizer's events can be listed.
   - **SeatGeek:** a free client ID, passed as a query parameter. It offers `/2/venues` (search by name and location) and `/2/events?venue.id=…`, with taxonomies that tell concerts apart from other events.
 
+**Checked against the real Eventbrite API (2026-10-26):** the private token works as a bearer token. `/v3/events/<id>/` returns `organizer_id`, even for past events. `/v3/organizers/<id>/events/?status=live&expand=venue&order_by=start_asc` lists an organizer's live events, with each venue's name, address and coordinates, `category_id` (103 is music) and `online_event`. Venue pages sometimes link the organizer directly (`eventbrite.com/o/<name>-<id>`), which needs no lookup. Some venues load their Eventbrite links with JavaScript, so the links aren't in the page HTML.
+
 ## Goals / Non-Goals
 
 **Goals:**
