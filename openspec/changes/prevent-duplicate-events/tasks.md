@@ -5,4 +5,4 @@
 ## 2. Merge existing duplicates
 
 - [x] 2.1 Add `dedupe_events` (`--dry-run`), recorded as a job run, choosing and merging copies as specified. Verify: tests for "Eventbrite and scraped copies", "Equal copies", "Admin label carried over" and "Dry run".
-- [ ] 2.2 Run the full suite with outbound network blocked, release, then run `dedupe_events --dry-run` on Render and give the user the list. Run it for real only with their go-ahead, then check no duplicate groups remain.
+- [x] 2.2 Run the full suite with outbound network blocked, release, then run `dedupe_events --dry-run` on Render and give the user the list. Run it for real only with their go-ahead, then check no duplicate groups remain. (2026-10-26: 167 copies of 166 shows deleted on Render after the user checked the list; none remain.)
