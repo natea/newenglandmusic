@@ -55,7 +55,7 @@ The matching command SHALL skip venues that already have a Ticketmaster venue ID
 - **THEN** it reports what it would link and saves nothing
 
 ### Requirement: Matching can be limited to chosen venues
-The matching command SHALL by default check active venues whose event-source report lists Ticketmaster or Live Nation. It SHALL accept a list of venue sheet IDs, or an option to check every active venue.
+The matching command SHALL by default check active venues whose saved event-source result lists Ticketmaster or Live Nation among its ticketing platforms. It SHALL accept a list of venue sheet IDs, or an option to check every active venue. With no venue options and no saved results, it SHALL fail with an error telling the user to run the source check first, or to pass sheet IDs or the option to check every venue.
 
 #### Scenario: Default selection
 - **WHEN** the matching command runs with no venue options
@@ -64,6 +64,10 @@ The matching command SHALL by default check active venues whose event-source rep
 #### Scenario: Explicit venues
 - **WHEN** the matching command is given sheet IDs
 - **THEN** it checks only those venues
+
+#### Scenario: No saved results
+- **WHEN** the matching command runs with no venue options and no event-source results have been saved
+- **THEN** it exits with an error telling the user to run the source check first, or to pass `--sheet-ids` or `--all`
 
 ### Requirement: Matching needs an API key
 The matching command SHALL stop with a clear error when no Ticketmaster API key is configured.

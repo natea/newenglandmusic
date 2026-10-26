@@ -6,10 +6,10 @@ Fetches venues' upcoming events from the source chosen by event-source detection
 ## Requirements
 
 ### Requirement: Venues are fetched according to the report
-The import SHALL read the event-source report and fetch each selected venue from its best source, except that venues linked to Ticketmaster are fetched as `ticketmaster-event-import` describes. By default it SHALL fetch a small pilot per source. It SHALL fetch every usable venue with `--all`, or named venues with `--sheet-ids`. It SHALL fail clearly when the report is missing.
+The import SHALL read the saved event-source results and fetch each selected venue from its best source, except that venues linked to Ticketmaster are fetched as `ticketmaster-event-import` describes. A venue with no saved result SHALL be treated as having no usable source. By default it SHALL fetch a small pilot per source. It SHALL fetch every usable venue with `--all`, or named venues with `--sheet-ids`. It SHALL fail clearly when no results have been saved.
 
 #### Scenario: Missing report
-- **WHEN** the import runs and the report file doesn't exist
+- **WHEN** the import runs and no event-source results have been saved
 - **THEN** it exits with an error telling the user to run the source check first
 
 #### Scenario: Fetch everything
@@ -19,6 +19,11 @@ The import SHALL read the event-source report and fetch each selected venue from
 #### Scenario: Linked venue with a scrapeable source
 - **WHEN** a venue linked to Ticketmaster has best source ical, ticketing or ai-extraction
 - **THEN** it is fetched from the Ticketmaster Discovery API only, not also from its report source
+
+#### Scenario: Venue never checked
+- **WHEN** the import runs with `--all` and a venue has no saved result and no Ticketmaster link
+- **THEN** that venue is not fetched, and the other venues are
+
 ### Requirement: iCal feeds are parsed into events
 The import SHALL turn each VEVENT in a venue's feed into an event. It SHALL use its summary, start, description, URL and cancelled status, and SHALL treat date-only starts as all-day events with the time shown as "time TBA".
 
@@ -52,6 +57,7 @@ The import SHALL read schema.org Event nodes anywhere in a page's JSON-LD, inclu
 #### Scenario: Date-only start
 - **WHEN** an Event node's `startDate` is "2026-11-06", with no time
 - **THEN** the event is saved on November 6 as all-day, with the time shown as "time TBA"
+
 ### Requirement: Ticketing-platform event pages are followed
 For ticketing venues, the import SHALL follow up to 10 event links per page that point to known ticketing platforms. It SHALL read their JSON-LD and send pages without structured data for AI extraction. On an OpenDate event page whose JSON-LD gives only a date, it SHALL take the start time from the page's own event data when that time falls on the same local date. Filling in the time SHALL NOT change the event's identity.
 
@@ -70,6 +76,7 @@ For ticketing venues, the import SHALL follow up to 10 event links per page that
 #### Scenario: Time filled in on a re-fetch
 - **WHEN** an OpenDate event was saved earlier as "time TBA", and a later fetch finds its start time
 - **THEN** that same event is updated with the time, and no second event is created
+
 ### Requirement: Placeholder entries are not events
 The import SHALL skip entries whose title marks the absence of an event, such as "No Event Tonight", "No Shows" or "Closed".
 
