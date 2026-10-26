@@ -7,4 +7,4 @@
 ## 2. Docs and a real run
 
 - [x] 2.1 Update `fetch_events`'s module docstring and the AGENTS.md pipeline note. Verify by reading both.
-- [ ] 2.2 Run the full suite with outbound network blocked. After release, refetch The Main Pub (V0026) on Render. Verify: every test passes, and the venue gets its events from Eventbrite with no problems listed.
+- [x] 2.2 Run the full suite with outbound network blocked. After release, refetch The Main Pub (V0026) on Render. Verify: every test passes, and the venue gets its events from Eventbrite with no problems listed. (2026-10-26: 534 tests pass offline. On Render, V0026's two JSON-LD pages returned 403 and it fell back to Eventbrite: 12 events created, no problems, fetch status source "eventbrite".)
