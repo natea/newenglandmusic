@@ -8,6 +8,7 @@ from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterErr
 from core.event_fetching.ticketmaster import to_event_dict as ticketmaster_event
 from core.event_sources import event_source_row
 from core.models import Event, Venue, VenueEventSource
+from core.job_runs import RecordedCommand
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django.utils.html import escape
@@ -179,7 +180,7 @@ def save_event(venue_pk, source, source_url, data, dry_run):
     return ("created" if created else "updated"), event.kind
 
 
-class Command(BaseCommand):
+class Command(RecordedCommand, BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             "--per-source",
@@ -461,6 +462,17 @@ class Command(BaseCommand):
             for note in notes_by_venue[target["sheet_id"]]:
                 self.stdout.write(self.style.WARNING(f"  {note}"))
 
+        failed_venues = sum(
+            1
+            for target in targets
+            if any("failed" in note for note in notes_by_venue[target["sheet_id"]])
+        )
+        self.job_summary = [
+            ("venues", len(targets)),
+            ("events created", totals["created"]),
+            ("events updated", totals["updated"]),
+            ("venues with failures", failed_venues),
+        ]
         summary = ", ".join(f"{count} {outcome}" for outcome, count in totals.items()) or "no events"
         self.stdout.write(
             self.style.SUCCESS(f"\n{'[dry run] ' if dry_run else ''}{summary}")

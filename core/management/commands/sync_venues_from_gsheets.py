@@ -4,6 +4,7 @@ from collections import Counter
 
 from core.geo_filters import area_q
 from core.models import GeoArea, Venue
+from core.job_runs import RecordedCommand
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Q
@@ -207,7 +208,7 @@ def venues_in_no_metro_by_state():
     return Counter(Venue.objects.exclude(in_a_metro).values_list("state", flat=True))
 
 
-class Command(BaseCommand):
+class Command(RecordedCommand, BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--sheet-id", default=DEFAULT_SHEET_ID)
         parser.add_argument("--tab", default=DEFAULT_TAB)
@@ -283,6 +284,13 @@ class Command(BaseCommand):
         if no_metro:
             counts = ", ".join(f"{state or '?'} {count}" for state, count in sorted(no_metro.items()))
             self.stdout.write(f"{dry_run}venues in no metro area: {counts}")
+        self.job_summary = [
+            ("venues created", nmb_created),
+            ("venues updated", nmb_updated),
+            ("areas added", nmb_added),
+            ("areas updated", nmb_area_updated),
+            ("areas removed", nmb_removed),
+        ]
         self.stdout.write(
             self.style.SUCCESS(
                 f"{dry_run}created {nmb_created} venues, updated {nmb_updated} venues; "

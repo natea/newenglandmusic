@@ -7,7 +7,7 @@ from unittest import mock
 from core.event_fetching.ticketmaster import TicketmasterError, to_venue_dict
 from core.management.commands import match_ticketmaster_venues as match
 from core.event_sources import save_event_source
-from core.models import Venue, VenueEventSource
+from core.models import JobRun, Venue, VenueEventSource
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase
@@ -201,6 +201,10 @@ class MatchCommandTestCase(TestCase):
             with self.assertRaisesMessage(CommandError, "TICKETMASTER_API_KEY is not set"):
                 call_command("match_ticketmaster_venues", stdout=StringIO())
         self.assertIsNone(Venue.objects.get(pk=self.paradise.pk).ticketmaster_venue_id)
+        run = JobRun.objects.get()
+        self.assertEqual(run.command, "match_ticketmaster_venues")
+        self.assertEqual(run.status, JobRun.Status.FAILED)
+        self.assertIn("TICKETMASTER_API_KEY is not set", run.error)
 
     def test_default_selection_is_active_ticketmaster_venues(self):
         output = self.run_match(results=self.paradise_results)

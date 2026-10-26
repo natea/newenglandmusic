@@ -3,6 +3,7 @@ import os
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.models import Venue, VenueEventSource
 from core.venue_matching import distance_km, names_match, normalize_name, spelling_variants
+from core.job_runs import RecordedCommand
 from django.core.management.base import BaseCommand, CommandError
 
 """
@@ -80,7 +81,7 @@ def search_names(client, venue):
             candidates.setdefault(candidate["id"], candidate)
     return list(candidates.values())
 
-class Command(BaseCommand):
+class Command(RecordedCommand, BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--sheet-ids", help="comma-separated Venue_IDs to check")
         parser.add_argument("--all", action="store_true", help="check every active venue")
@@ -127,6 +128,7 @@ class Command(BaseCommand):
             else:
                 groups[outcome].append((venue, scored))
 
+        self.job_summary = [(group, len(items)) for group, items in groups.items()]
         self.report(groups, options["dry_run"])
 
     def report(self, groups, dry_run):

@@ -163,7 +163,12 @@ These run in this order. Each one depends on the one before it:
 
 **A single script would be simplest.** For example, `bin/refresh.sh` would run the daily commands in order and stop at the first failure, plus a weekly script for the crawl. Then the scheduler needs only two entries.
 
-**Logs.** On a server, the commands should print to the console, and the host keeps it. The `logs/` files are a local convenience.
+**Reviewing runs.** Each run of these five commands is recorded in the database, wherever it runs, and listed newest first in the admin at `/admin/core/jobrun/`:
+- **What a run shows:** its arguments, start time and duration, its outcome, a short summary of counts, the report it printed, and the error if it failed.
+- **Outcome:** succeeded, failed, running, or "didn't finish", for a run still marked running six hours after it started (for example, one the host killed).
+- **Pruning:** runs older than 90 days are deleted automatically.
+
+**Logs.** The commands still print to the console as well, and the host keeps that output for a while: on Render, in each cron job's Logs tab. Scrapy's own logging appears only there, not in the recorded runs. The `logs/` files are a local convenience.
 
 **Crawling.** The crawler identifies itself as `venue-db-event-check/1.0` and obeys robots.txt. It also skips Tixr, which blocks the crawling IP address. Keep the full crawl weekly. A data-centre IP gets blocked faster than a home one.
 

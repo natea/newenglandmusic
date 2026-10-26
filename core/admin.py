@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q, URLField
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from ordered_model.admin import OrderedModelAdmin
@@ -13,6 +14,7 @@ from solo.admin import SingletonModelAdmin
 from tinymce.widgets import TinyMCE
 
 from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filter
+from .job_runs import DIDNT_FINISH, STALE_AFTER, outcome
 from .models import (
     AllEventProxy,
     DateMessage,
@@ -20,6 +22,7 @@ from .models import (
     Event,
     GeoArea,
     IndexPageMessages,
+    JobRun,
     MenuItem,
     StaticPage,
     Venue,
@@ -535,3 +538,83 @@ class MenuItemAdmin(OrderedModelAdmin):
 
 
 admin.site.register(MenuItem, MenuItemAdmin)
+
+
+class JobRunOutcomeFilter(SimpleListFilter):
+    title = "outcome"
+    parameter_name = "outcome"
+
+    def lookups(self, request, model_admin):
+        return [*JobRun.Status.choices, (DIDNT_FINISH, "Didn't finish")]
+
+    def queryset(self, request, queryset):
+        stale = Q(status=JobRun.Status.RUNNING, started_at__lt=timezone.now() - STALE_AFTER)
+        if self.value() == DIDNT_FINISH:
+            return queryset.filter(stale)
+        if self.value() == JobRun.Status.RUNNING:
+            return queryset.filter(status=JobRun.Status.RUNNING).exclude(stale)
+        if self.value():
+            return queryset.filter(status=self.value())
+        return queryset
+
+
+# runs of the pipeline commands, recorded by core/job_runs.py; read-only
+class JobRunAdmin(admin.ModelAdmin):
+    list_display = ("command", "started_at", "duration", "outcome_label", "dry_run", "summary_text")
+    list_filter = ("command", JobRunOutcomeFilter, "dry_run")
+    ordering = ("-started_at",)
+    fields = (
+        "command",
+        "arguments",
+        "started_at",
+        "finished_at",
+        "duration",
+        "outcome_label",
+        "dry_run",
+        "summary_text",
+        "error_text",
+        "output_text",
+    )
+    readonly_fields = fields
+
+    OUTCOME_COLOURS = {
+        JobRun.Status.SUCCEEDED: "#1a7f37",
+        JobRun.Status.RUNNING: "#9a6700",
+        JobRun.Status.FAILED: "#cf222e",
+        DIDNT_FINISH: "#cf222e",
+    }
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="outcome")
+    def outcome_label(self, run):
+        label = outcome(run)
+        return format_html(
+            '<strong style="color: {}">{}</strong>', self.OUTCOME_COLOURS[label], label
+        )
+
+    @admin.display(description="duration")
+    def duration(self, run):
+        if not run.finished_at:
+            return "-"
+        seconds = int((run.finished_at - run.started_at).total_seconds())
+        return f"{seconds // 60}m {seconds % 60}s" if seconds >= 60 else f"{seconds}s"
+
+    @admin.display(description="summary")
+    def summary_text(self, run):
+        return " · ".join(f"{label} {count}" for label, count in run.summary)
+
+    @admin.display(description="error")
+    def error_text(self, run):
+        return format_html('<pre style="white-space: pre-wrap">{}</pre>', run.error) if run.error else "-"
+
+    @admin.display(description="output")
+    def output_text(self, run):
+        return format_html('<pre style="white-space: pre-wrap">{}</pre>', run.output or "-")
+
+
+admin.site.register(JobRun, JobRunAdmin)

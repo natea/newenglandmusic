@@ -15,7 +15,8 @@ def submit_row(context):
     """
 
     ctx = original_submit_row(context)
-    if context.get("show_save", True):
+    # only where saving is allowed: read-only pages (e.g. job runs) get no save buttons
+    if ctx["show_save"]:
         ctx.update(
             {
                 # show all the save buttons!

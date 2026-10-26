@@ -4,6 +4,7 @@ from core.models import Event, Venue
 from core.places import PlacesClient, PlacesError
 from core.utils_event_caching import bake_event_html
 from core.venue_matching import distance_km, names_match
+from core.job_runs import RecordedCommand
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
@@ -74,7 +75,7 @@ def rebake_events(venue):
         Event.all_objects.filter(pk=event.pk).update(baked_html_template=bake_event_html(event))
 
 
-class Command(BaseCommand):
+class Command(RecordedCommand, BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--sheet-ids", help="comma-separated Venue_IDs to look up")
         parser.add_argument("--state", help="only look up venues in this state, e.g. MA")
@@ -140,6 +141,7 @@ class Command(BaseCommand):
                 if (venue.exact_location, venue.google_maps_link) != before:
                     rebake_events(venue)
 
+        self.job_summary = [(group, len(items)) for group, items in groups.items()]
         self.report(groups, options["dry_run"])
 
     def report(self, groups, dry_run):

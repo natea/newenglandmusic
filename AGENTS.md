@@ -44,6 +44,8 @@ These are management commands, run in this order:
 4. **`match_ticketmaster_venues`:** links venues to Ticketmaster venues.
 5. **`fetch_events`:** fetches upcoming events and saves new ones **unapproved**, for review at `/admin/core/alleventproxy/`. `Event.objects` returns approved events only; use `Event.all_objects` for everything.
 
+Each run of these five commands is recorded as a `JobRun` (`core/job_runs.py`) and listed at `/admin/core/jobrun/`. A new pipeline command should subclass `RecordedCommand` and set `self.job_summary`.
+
 ### Logs
 
 Write the output of long command runs to `logs/`, never to a temporary or scratch directory, because the user tails these files.

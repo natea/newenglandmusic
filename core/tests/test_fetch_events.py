@@ -9,9 +9,10 @@ from core.event_fetching.spider import VenueEventsSpider
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.management.commands import fetch_events
 from core.event_sources import CSV_COLUMNS, save_event_source
-from core.models import Event, Venue, VenueEventSource
+from core.job_runs import RecordedCommand
+from core.models import Event, JobRun, Venue, VenueEventSource
 from django.core.management import call_command
-from django.core.management.base import CommandError
+from django.core.management.base import BaseCommand, CommandError
 from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 from scrapy.http import HtmlResponse
@@ -280,6 +281,58 @@ class FetchEventsTestCase(TestCase):
         self.assertIsNone(show.hyperlink)
         self.assertTrue(show.is_cancelled)
         self.assertEqual(show.price, "$$")
+
+    # job runs (record-job-runs)
+
+    def test_run_is_recorded_with_its_summary(self):
+        def results(targets):
+            by_id = {t["sheet_id"]: t for t in targets}
+            return [
+                {
+                    "kind": "error",
+                    "target": by_id["V0001"],
+                    "url": "https://v0001.example/cal.ics",
+                    "error": "TimeoutError()",
+                },
+                {
+                    "kind": "events",
+                    "target": by_id["V0002"],
+                    "events": [event("One"), event("Two", days=8)],
+                    "url": "https://v0002.example/",
+                    "source": "json-ld",
+                },
+            ]
+
+        self.crawl_returns(results)
+        output = self.fetch("--all")
+        run = JobRun.objects.get()
+        self.assertEqual(run.command, "fetch_events")
+        self.assertEqual(run.arguments, {"all": True})
+        self.assertEqual(run.status, JobRun.Status.SUCCEEDED)
+        self.assertFalse(run.dry_run)
+        self.assertIsNotNone(run.finished_at)
+        summary = dict(run.summary)
+        self.assertEqual(summary["events created"], 2)
+        self.assertEqual(summary["events updated"], 0)
+        self.assertEqual(summary["venues with failures"], 1)
+        self.assertEqual(run.output, output)
+
+    def test_dry_run_is_recorded_as_such(self):
+        self.fetch("--dry-run", "--per-source", "1")
+        run = JobRun.objects.get()
+        self.assertTrue(run.dry_run)
+        self.assertEqual(run.arguments, {"dry_run": True, "per_source": 1})
+
+    def test_output_unchanged_by_recording(self):
+        recorded = self.fetch("--all")
+        with mock.patch.object(
+            RecordedCommand,
+            "execute",
+            lambda command, *args, **options: BaseCommand.execute(command, *args, **options),
+        ):
+            plain = self.fetch("--all")
+        self.assertEqual(recorded, plain)
+        self.assertEqual(JobRun.objects.count(), 1)
 
     def test_failed_request_is_reported_and_others_still_saved(self):
         def results(targets):

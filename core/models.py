@@ -4,6 +4,7 @@ from django.contrib.postgres.search import SearchVectorField
 from django.db import models
 from django.db.models.functions import Upper
 from django.urls import reverse
+from django.utils import timezone
 from ordered_model.models import OrderedModel
 from solo.models import SingletonModel
 from tinymce import models as tinymce_models
@@ -583,3 +584,30 @@ class MenuItem(OrderedModel):
 
     def __str__(self):
         return self.name
+
+
+# one run of a pipeline command (see core/job_runs.py), kept so scheduled runs can be
+# reviewed in the admin after the host's own logs are gone
+class JobRun(models.Model):
+    class Status(models.TextChoices):
+        RUNNING = "running"
+        SUCCEEDED = "succeeded"
+        FAILED = "failed"
+
+    command = models.CharField(max_length=64, db_index=True)
+    # the options given, minus django's standard ones
+    arguments = models.JSONField(default=dict, blank=True)
+    started_at = models.DateTimeField(db_index=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.RUNNING)
+    dry_run = models.BooleanField(default=False)
+    # [[label, count], ...], in the order the command gave them
+    summary = models.JSONField(default=list, blank=True)
+    output = models.TextField(blank=True, default="")
+    error = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"{self.command} {timezone.localtime(self.started_at):%Y-%m-%d %H:%M}"

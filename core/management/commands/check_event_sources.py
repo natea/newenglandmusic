@@ -9,6 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 from core.event_sources import CSV_COLUMNS, event_source_csv_row, save_event_source
 from core.models import Venue
+from core.job_runs import RecordedCommand
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -357,7 +358,7 @@ def check_venue_unsafe(venue):
     return result
 
 
-class Command(BaseCommand):
+class Command(RecordedCommand, BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--csv", help="also write this run's results to this csv file")
         parser.add_argument("--state", help="only check venues in this state, e.g. NY")
@@ -408,6 +409,9 @@ class Command(BaseCommand):
             counts[result["best_source"]] = counts.get(result["best_source"], 0) + 1
         for source, count in sorted(counts.items(), key=lambda item: -item[1]):
             self.stdout.write(f"{source:16} {count}")
+        self.job_summary = [("venues checked", len(results))] + sorted(
+            counts.items(), key=lambda item: -item[1]
+        )
         self.stdout.write(self.style.SUCCESS(f"saved {len(sources)} results"))
         if options["csv"]:
             self.stdout.write(self.style.SUCCESS(f"wrote {options['csv']}"))
