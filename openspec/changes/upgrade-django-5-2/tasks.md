@@ -18,8 +18,8 @@
 ## 3. Release
 
 - [x] 3.1 With the user's go-ahead, push `django5` to `github` and open a pull request to `main`. Verify: CI passes on the pull request. (PR #4; CI passed, 394 tests)
-- [ ] 3.2 Merge and watch the Render deploy. Verify: the build log shows "No migrations to apply" and the home page, an event link and the admin load on the live site.
-- [ ] 3.3 Rebuild the local `venv/` from `requirements.txt` and remove the `../nycnoise-django5` checkout and its `venv-django5/`. Verify: `venv/bin/python -c "import django; print(django.__version__)"` prints 5.2.x and the suite passes.
+- [x] 3.2 Merge and watch the Render deploy. Verify: the build log shows "No migrations to apply" and the home page, an event link and the admin load on the live site. (merged as 1ed009a; live 2026-10-26, pages checked; the build log is visible only in the Render dashboard)
+- [x] 3.3 Rebuild the local `venv/` from `requirements.txt` and remove the `../nycnoise-django5` checkout and its `venv-django5/`. Verify: `venv/bin/python -c "import django; print(django.__version__)"` prints 5.2.x and the suite passes. (venv/ updated in place to 5.2.17; 394 tests pass)
 
 ## Workflow follow-up
 
