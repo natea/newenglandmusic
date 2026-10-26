@@ -100,6 +100,15 @@ class ServiceAccountTestCase(SimpleTestCase):
                 "venue-sync@newenglandmusic.iam.gserviceaccount.com as a Viewer",
             )
 
+    def test_sheets_api_disabled(self):
+        disabled = {"error": {
+            "status": "PERMISSION_DENIED",
+            "message": "Google Sheets API has not been used in project 123 before or it is disabled.",
+            "details": [{"reason": "SERVICE_DISABLED"}],
+        }}
+        with self.assertRaisesMessage(CommandError, "the google sheets api isn't enabled"):
+            self.read(response(403, disabled))
+
     def test_missing_tab(self):
         with self.assertRaisesMessage(CommandError, "tab 'geo-filters_json' doesn't exist"):
             self.read(response(400, {"error": {"message": "Unable to parse range: 'geo-filters_json'!A1:ZZ"}}))

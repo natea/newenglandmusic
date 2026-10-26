@@ -54,9 +54,17 @@ def read_values(sheet_id, a1_range, tab):
     if response.status_code == 200:
         return response.json().get("values", [])
     try:
-        message = (response.json().get("error") or {}).get("message", "")
+        error = response.json().get("error") or {}
     except ValueError:
-        message = ""
+        error = {}
+    message = error.get("message", "")
+    # a 403 also means the sheets api is off in the account's google cloud project
+    reasons = {detail.get("reason") for detail in error.get("details") or [] if isinstance(detail, dict)}
+    if response.status_code == 403 and "SERVICE_DISABLED" in reasons:
+        raise CommandError(
+            "the google sheets api isn't enabled in the service account's google cloud "
+            "project: enable it in the cloud console (apis & services), then retry"
+        )
     if response.status_code in (403, 404):
         raise CommandError(
             f"can't read tab {tab!r}: share the sheet with {info['client_email']} as a Viewer"
