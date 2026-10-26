@@ -3,6 +3,8 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
 from core.event_fetching.classification import classify
+from core.event_fetching.eventbrite import EventbriteClient, EventbriteError, is_at_venue
+from core.event_fetching.eventbrite import to_event_dict as eventbrite_event
 from core.event_fetching.spider import SCRAPY_SETTINGS, VenueEventsSpider
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.event_fetching.ticketmaster import to_event_dict as ticketmaster_event
@@ -21,11 +23,11 @@ for an admin to review.
 
 run as:
 
-python manage.py fetch_events [--per-source 3 | --all] [--skip-ai] [--skip-ticketmaster] [--dry-run]
+python manage.py fetch_events [--per-source 3 | --all] [--skip-ai] [--skip-ticketmaster] [--skip-eventbrite] [--dry-run]
 
 venues and how to fetch their events come from the results check_event_sources saved
 (VenueEventSource); a venue that has never been checked is skipped, unless it's linked to
-ticketmaster.
+ticketmaster or eventbrite.
 by default, the first --per-source venues of each kind are fetched (a pilot); --all
 fetches every venue whose events can be fetched in one of these ways:
 
@@ -40,6 +42,12 @@ fetches every venue whose events can be fetched in one of these ways:
   venues the source check found no usable source for. the venue's upcoming unapproved ical
   events are then removed, as they'd duplicate ticketmaster's. pass --skip-ticketmaster
   to fetch linked venues from their saved source instead.
+- eventbrite: the eventbrite api, for venues linked to their eventbrite organizer (see
+  match_eventbrite_organizers; needs EVENTBRITE_API_KEY), keeping only the organizer's
+  events at the venue. it comes after ticketmaster, and replaces a linked venue's ticketing
+  or ai source -- but not its ical feed or json-ld. events left over from the old source
+  aren't removed, but counted in the report. pass --skip-eventbrite to fetch linked
+  venues from their saved source instead.
 
 events are matched on external_id, so re-running updates events instead of duplicating
 them. new events are saved unapproved; already-approved events stay approved.
@@ -79,7 +87,12 @@ def short(value, max_length=255):
 
 # notes that mean something went wrong, as opposed to informational ones (a truncated
 # page, events hidden as not music). every failure note starts with one of these
-PROBLEM_PREFIXES = ("failed:", "ticketmaster failed:", "ai extraction failed:")
+PROBLEM_PREFIXES = (
+    "failed:",
+    "ticketmaster failed:",
+    "eventbrite failed:",
+    "ai extraction failed:",
+)
 
 
 def is_problem(note):
@@ -98,10 +111,11 @@ def make_target(venue, source, row=None):
         "events_page": row.get("events_page", ""),
         "ical_url": row.get("ical_url", ""),
         "ticketmaster_venue_id": venue.ticketmaster_venue_id or "",
+        "eventbrite_organizer_id": venue.eventbrite_organizer_id or "",
     }
 
 
-def select_targets(per_source, sheet_ids, all_venues, use_ticketmaster=True):
+def select_targets(per_source, sheet_ids, all_venues, use_ticketmaster=True, use_eventbrite=True):
     sources = VenueEventSource.objects.select_related("venue").order_by("venue__sheet_id")
     if not sources.exists():
         raise CommandError("no event sources saved -- run check_event_sources first")
@@ -137,21 +151,32 @@ def select_targets(per_source, sheet_ids, all_venues, use_ticketmaster=True):
         # 1 vs 42) -- but not its json-ld, which lists about as many
         if use_ticketmaster and venue.ticketmaster_venue_id and source != "json-ld":
             source = "ticketmaster"
+        # an eventbrite organizer is the venue selling its own shows, but a feed or json-ld
+        # covers more than its eventbrite listings
+        elif use_eventbrite and venue.eventbrite_organizer_id and source not in ("ical", "json-ld"):
+            source = "eventbrite"
         if source is not None:
             targets.append(make_target(venue, source, row))
 
-    if use_ticketmaster and (sheet_ids or all_venues):
-        # linked venues with no usable saved source, e.g. bot-blocked sites or never checked
-        linked = Venue.objects.exclude(ticketmaster_venue_id__isnull=True).exclude(
-            ticketmaster_venue_id=""
-        )
-        if sheet_ids:
-            linked = linked.filter(sheet_id__in=sheet_ids)
-        else:
-            linked = linked.exclude(is_active=False)
+    if sheet_ids or all_venues:
+        # linked venues with no usable saved source, e.g. bot-blocked sites or never
+        # checked. ticketmaster first, so a venue linked to both is fetched from it
+        api_links = [
+            ("ticketmaster", "ticketmaster_venue_id", use_ticketmaster),
+            ("eventbrite", "eventbrite_organizer_id", use_eventbrite),
+        ]
         seen = {target["sheet_id"] for target in targets}
-        for venue in linked.exclude(sheet_id__in=seen).order_by("sheet_id"):
-            targets.append(make_target(venue, "ticketmaster"))
+        for source, field, use in api_links:
+            if not use:
+                continue
+            linked = Venue.objects.exclude(**{f"{field}__isnull": True}).exclude(**{field: ""})
+            if sheet_ids:
+                linked = linked.filter(sheet_id__in=sheet_ids)
+            else:
+                linked = linked.exclude(is_active=False)
+            for venue in linked.exclude(sheet_id__in=seen).order_by("sheet_id"):
+                targets.append(make_target(venue, source))
+                seen.add(venue.sheet_id)
     return targets
 
 
@@ -212,6 +237,11 @@ class Command(RecordedCommand, BaseCommand):
             help="fetch venues linked to ticketmaster from their saved source instead",
         )
         parser.add_argument(
+            "--skip-eventbrite",
+            action="store_true",
+            help="fetch venues linked to eventbrite from their saved source instead",
+        )
+        parser.add_argument(
             "--model",
             help="claude model for ai extraction (default: core.event_fetching.ai_extraction.MODEL)",
         )
@@ -226,6 +256,7 @@ class Command(RecordedCommand, BaseCommand):
             sheet_ids,
             options["all"],
             use_ticketmaster=not options["skip_ticketmaster"],
+            use_eventbrite=not options["skip_eventbrite"],
         )
         if not targets:
             raise CommandError("no venues to fetch")
@@ -238,8 +269,11 @@ class Command(RecordedCommand, BaseCommand):
             ticketmaster_targets, events_by_venue, notes_by_venue, options["dry_run"]
         )
 
+        eventbrite_targets = [t for t in targets if t["source"] == "eventbrite"]
+        self.fetch_from_eventbrite(eventbrite_targets, events_by_venue, notes_by_venue)
+
         results = []
-        crawl_targets = [t for t in targets if t["source"] != "ticketmaster"]
+        crawl_targets = [t for t in targets if t["source"] not in ("ticketmaster", "eventbrite")]
         if crawl_targets:
             process = CrawlerProcess(settings=SCRAPY_SETTINGS)
             process.crawl(VenueEventsSpider, targets=crawl_targets, results=results)
@@ -307,6 +341,52 @@ class Command(RecordedCommand, BaseCommand):
                 ).delete()
                 if stale:
                     notes.append(f"removed {stale} unapproved events from the venue's ical feed")
+
+    def fetch_from_eventbrite(self, targets, events_by_venue, notes_by_venue):
+        if not targets:
+            return
+        api_key = os.environ.get("EVENTBRITE_API_KEY")
+        if not api_key:
+            for target in targets:
+                notes_by_venue[target["sheet_id"]].append(
+                    "eventbrite skipped (no EVENTBRITE_API_KEY)"
+                )
+            return
+
+        self.stdout.write(f"fetching {len(targets)} venues from the eventbrite api...")
+        client = EventbriteClient(api_key)
+        venues = Venue.objects.in_bulk([target["venue_pk"] for target in targets])
+        for target in targets:
+            notes = notes_by_venue[target["sheet_id"]]
+            venue = venues[target["venue_pk"]]
+            try:
+                raw_events = client.organizer_events(target["eventbrite_organizer_id"])
+            except EventbriteError as e:
+                notes.append(f"eventbrite failed: {e}")
+                continue
+            # an organizer can be a promoter with shows at other venues too
+            here = [event for event in raw_events if is_at_venue(event, venue)]
+            events = [event for event in map(eventbrite_event, here) if event]
+            events_by_venue[target["sheet_id"]] += [
+                ("eventbrite", event["hyperlink"], event) for event in events
+            ]
+            if len(here) < len(raw_events):
+                notes.append(f"eventbrite: {len(raw_events) - len(here)} events at other venues left out")
+            if len(events) < len(here):
+                notes.append(f"eventbrite: {len(here) - len(events)} online or undated events left out")
+            # unlike an ical feed, scraped events can't safely be matched to these, so
+            # they're left for an admin
+            leftover = Event.all_objects.filter(
+                venue_id=target["venue_pk"],
+                source__in=[Event.Source.TICKETING, Event.Source.AI],
+                is_approved=False,
+                starttime__gte=timezone.now(),
+            ).count()
+            if leftover:
+                notes.append(
+                    f"{leftover} unapproved events from the venue's earlier ticketing or ai "
+                    "source remain; remove any that duplicate these"
+                )
 
     def extract_with_ai(self, pages, skip_ai, model, events_by_venue, notes_by_venue):
         if not pages:

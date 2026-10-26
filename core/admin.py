@@ -365,17 +365,24 @@ admin.site.register(StaticPage, StaticPageAdmin)
 class LinkedToTicketmasterFilter(SimpleListFilter):
     title = "linked to Ticketmaster"
     parameter_name = "ticketmaster"
+    field = "ticketmaster_venue_id"
 
     def lookups(self, request, model_admin):
         return (("yes", "Yes"), ("no", "No"))
 
     def queryset(self, request, queryset):
-        linked = Q(ticketmaster_venue_id__isnull=False) & ~Q(ticketmaster_venue_id="")
+        linked = Q(**{f"{self.field}__isnull": False}) & ~Q(**{self.field: ""})
         if self.value() == "yes":
             return queryset.filter(linked)
         if self.value() == "no":
             return queryset.exclude(linked)
         return queryset
+
+
+class LinkedToEventbriteFilter(LinkedToTicketmasterFilter):
+    title = "linked to Eventbrite"
+    parameter_name = "eventbrite"
+    field = "eventbrite_organizer_id"
 
 
 class FetchStatusFilter(SimpleListFilter):
@@ -430,6 +437,7 @@ class VenueAdmin(admin.ModelAdmin):
         "open_mic",
         "booking_type",
         LinkedToTicketmasterFilter,
+        LinkedToEventbriteFilter,
         FetchStatusFilter,
         "place_lookup_status",
     )
@@ -440,6 +448,7 @@ class VenueAdmin(admin.ModelAdmin):
         "venue_type",
         "sheet_id",
         "ticketmaster_venue_id",
+        "eventbrite_organizer_id",
     )
     ordering = ("name",)
     save_on_top = True
@@ -496,7 +505,7 @@ class VenueAdmin(admin.ModelAdmin):
                 )
             },
         ),
-        ("Event sources", {"fields": ("ticketmaster_venue_id",)}),
+        ("Event sources", {"fields": ("ticketmaster_venue_id", "eventbrite_organizer_id")}),
         ("Event fetching", {"fields": ("fetch_status_details",)}),
     )
     readonly_fields = ("fetch_status_details", "place_on_google_maps")

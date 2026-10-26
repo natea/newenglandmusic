@@ -61,6 +61,44 @@ class VenueAdminTicketmasterTestCase(TestCase):
         self.assertEqual(len(self.filtered(None)), 3)
 
 
+class VenueAdminEventbriteTestCase(TestCase):
+    def setUp(self):
+        self.admin = VenueAdmin(Venue, AdminSite())
+        self.request = RequestFactory().get("/admin/core/venue/")
+        self.request.user = User.objects.create_superuser("admin", "a@example.com", "pw")
+        self.linked = Venue.objects.create(name="Linked", eventbrite_organizer_id="14327783302")
+        self.unlinked = Venue.objects.create(name="Unlinked")
+        self.blank = Venue.objects.create(name="Blank", eventbrite_organizer_id="")
+
+    def test_admin_sets_the_organizer(self):
+        form_class = self.admin.get_form(self.request, self.unlinked)
+        data = {k: v for k, v in model_to_dict(self.unlinked).items() if v is not None}
+        data["genres"] = ""
+        data["eventbrite_organizer_id"] = "14327783302"
+        form = form_class(data, instance=self.unlinked)
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.assertEqual(
+            Venue.objects.get(pk=self.unlinked.pk).eventbrite_organizer_id, "14327783302"
+        )
+
+    def test_field_is_in_the_admin_form(self):
+        fields = [f for _, options in self.admin.fieldsets for f in options["fields"]]
+        self.assertIn("eventbrite_organizer_id", fields)
+        self.assertIn("eventbrite_organizer_id", self.admin.search_fields)
+
+    def filtered(self, value):
+        request = RequestFactory().get("/admin/core/venue/", {"eventbrite": value} if value else {})
+        request.user = self.request.user
+        changelist = self.admin.get_changelist_instance(request)
+        return set(changelist.get_queryset(request))
+
+    def test_linked_filter(self):
+        self.assertEqual(self.filtered("yes"), {self.linked})
+        self.assertEqual(self.filtered("no"), {self.unlinked, self.blank})
+        self.assertEqual(len(self.filtered(None)), 3)
+
+
 class VenueAdminPlaceTestCase(TestCase):
     def setUp(self):
         self.admin = VenueAdmin(Venue, AdminSite())

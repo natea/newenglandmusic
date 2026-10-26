@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest import mock
 
 from core.event_fetching.ai_extraction import ExtractionError
+from core.event_fetching.eventbrite import EventbriteClient, EventbriteError
 from core.event_fetching.spider import VenueEventsSpider
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.management.commands import fetch_events
@@ -695,6 +696,196 @@ class FetchEventsTicketmasterTestCase(TestCase):
     def test_skip_ticketmaster_flag(self):
         self.fetch("--sheet-ids", "V0003", "--skip-ticketmaster")
         self.assertEqual(self.tm_requests, [])
+        self.assertEqual(
+            [(t["sheet_id"], t["source"]) for t in FakeCrawlerProcess.seen_targets],
+            [("V0003", "ticketing")],
+        )
+
+
+def eb_event(id, name="Show", venue="Venue V0003", days=7, **changes):
+    """an eventbrite api event, starting `days` from now, at a venue with that name"""
+    start = timezone.now() + datetime.timedelta(days=days)
+    event = {
+        "id": id,
+        "name": {"text": name},
+        "description": {"text": ""},
+        "url": f"https://www.eventbrite.com/e/show-tickets-{id}",
+        "start": {"utc": start.strftime("%Y-%m-%dT%H:%M:%SZ")},
+        "status": "live",
+        "online_event": False,
+        "is_free": False,
+        "ticket_availability": {"minimum_ticket_price": {"major_value": "18.47"}},
+        "venue": {"name": venue, "latitude": "44.0", "longitude": "-73.0"},
+    }
+    event.update(changes)
+    return event
+
+
+class FetchEventsEventbriteTestCase(TestCase):
+    """fetch_events with venues linked to their eventbrite organizers"""
+
+    def setUp(self):
+        FetchEventsTestCase.setUp(self)
+        # link a venue of every kind: ical, json-ld, ticketing, ai and bot-blocked
+        for sheet_id in ("V0001", "V0002", "V0003", "V0004", "V0005"):
+            Venue.objects.filter(sheet_id=sheet_id).update(eventbrite_organizer_id=f"eb-{sheet_id}")
+        self.venues = {v.sheet_id: v for v in Venue.objects.all()}
+        env = mock.patch.dict(os.environ, {"EVENTBRITE_API_KEY": "eb-key"})
+        env.start()
+        self.addCleanup(env.stop)
+        FakeCrawlerProcess.seen_targets = []
+        self.eb_events = {}
+        self.eb_requests = []
+
+        def organizer_events(client, organizer_id):
+            self.eb_requests.append(organizer_id)
+            events = self.eb_events.get(organizer_id, [])
+            if isinstance(events, Exception):
+                raise events
+            return events
+
+        patcher = mock.patch.object(EventbriteClient, "organizer_events", organizer_events)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    save_sources = FetchEventsTestCase.save_sources
+    crawl_returns = FetchEventsTestCase.crawl_returns
+    fetch = FetchEventsTestCase.fetch
+    saved = FetchEventsTestCase.saved
+
+    def sources(self, *args, **kwargs):
+        return {
+            target["sheet_id"]: target["source"]
+            for target in fetch_events.select_targets(3, *args, **kwargs)
+        }
+
+    def test_linked_venues_keep_feeds_and_replace_scraping(self):
+        self.assertEqual(
+            self.sources(None, True),
+            {
+                # unlike ticketmaster, eventbrite doesn't replace the ical feed
+                "V0001": "ical",
+                "V0002": "json-ld",
+                "V0003": "eventbrite",
+                "V0004": "eventbrite",
+                # bot-blocked in the report, but the api still works
+                "V0005": "eventbrite",
+            },
+        )
+
+    def test_linked_to_ticketmaster_and_eventbrite(self):
+        Venue.objects.filter(sheet_id__in=["V0003", "V0005"]).update(ticketmaster_venue_id="tm-1")
+        sources = self.sources(None, True)
+        self.assertEqual((sources["V0003"], sources["V0005"]), ("ticketmaster", "ticketmaster"))
+        # without ticketmaster, eventbrite takes over
+        sources = self.sources(None, True, use_ticketmaster=False)
+        self.assertEqual((sources["V0003"], sources["V0005"]), ("eventbrite", "eventbrite"))
+
+    def test_skip_eventbrite_uses_the_report_sources(self):
+        self.assertEqual(
+            self.sources(None, True, use_eventbrite=False),
+            {"V0001": "ical", "V0002": "json-ld", "V0003": "ticketing", "V0004": "ai"},
+        )
+
+    def test_events_are_saved_unapproved_from_the_api(self):
+        self.eb_events["eb-V0003"] = [eb_event("101", "Samantha Fish")]
+        output = self.fetch("--sheet-ids", "V0003")
+        event = Event.all_objects.get(external_id="eventbrite:101")
+        self.assertFalse(event.is_approved)
+        self.assertEqual(event.source, "eventbrite")
+        self.assertEqual(event.venue, self.venues["V0003"])
+        self.assertEqual((event.title, event.price), ("Samantha Fish", "$"))
+        self.assertEqual(event.ticket_hyperlink, "https://www.eventbrite.com/e/show-tickets-101")
+        self.assertEqual(self.eb_requests, ["eb-V0003"])
+        self.assertEqual(FakeCrawlerProcess.seen_targets, [])
+        self.assertIn("[eventbrite]", output)
+        self.assertIn("1 created", output)
+
+    def test_organizer_with_events_elsewhere(self):
+        self.eb_events["eb-V0003"] = [
+            eb_event("101"),
+            eb_event("102"),
+            # a listing whose name contains the venue's
+            eb_event("103", venue="Venue V0003 Back Room"),
+            eb_event("104", venue="The Other Club"),
+        ]
+        output = self.fetch("--sheet-ids", "V0003")
+        self.assertEqual(
+            set(Event.all_objects.values_list("external_id", flat=True)),
+            {"eventbrite:101", "eventbrite:102", "eventbrite:103"},
+        )
+        self.assertIn("eventbrite: 1 events at other venues left out", output)
+
+    def test_events_within_1_km_count_as_at_the_venue(self):
+        Venue.objects.filter(sheet_id="V0003").update(latitude=44.0, longitude=-73.0)
+        self.eb_events["eb-V0003"] = [
+            eb_event("101", venue="Upstairs"),
+            eb_event("102", venue="Downtown Hall"),
+        ]
+        self.eb_events["eb-V0003"][1]["venue"].update(latitude="44.5", longitude="-73.0")
+        self.fetch("--sheet-ids", "V0003")
+        self.assertEqual(list(Event.all_objects.values_list("external_id", flat=True)), ["eventbrite:101"])
+
+    def test_refetch_updates_instead_of_duplicating(self):
+        self.eb_events["eb-V0003"] = [eb_event("101", "Old Name")]
+        self.fetch("--sheet-ids", "V0003")
+        Event.all_objects.filter(external_id="eventbrite:101").update(is_approved=True)
+        self.eb_events["eb-V0003"] = [eb_event("101", "New Name", days=9)]
+        self.fetch("--sheet-ids", "V0003")
+        event = Event.all_objects.get(external_id="eventbrite:101")
+        self.assertEqual(event.title, "New Name")
+        self.assertEqual(event.starttime.date(), (timezone.now() + datetime.timedelta(days=9)).date())
+        self.assertTrue(event.is_approved)
+        self.assertEqual(Event.all_objects.filter(external_id="eventbrite:101").count(), 1)
+
+    def test_online_events_are_left_out(self):
+        self.eb_events["eb-V0003"] = [eb_event("101"), eb_event("102", online_event=True)]
+        output = self.fetch("--sheet-ids", "V0003")
+        self.assertFalse(Event.all_objects.filter(external_id="eventbrite:102").exists())
+        self.assertIn("eventbrite: 1 online or undated events left out", output)
+
+    def test_leftover_scraped_events_are_counted_not_removed(self):
+        scraped = Event.all_objects.create(
+            title="scraped show",
+            starttime=timezone.now() + datetime.timedelta(days=3),
+            venue=self.venues["V0003"],
+            source="ticketing",
+            external_id="ticketing:scraped",
+            is_approved=False,
+        )
+        self.eb_events["eb-V0003"] = [eb_event("101")]
+        output = self.fetch("--sheet-ids", "V0003")
+        self.assertTrue(Event.all_objects.filter(pk=scraped.pk).exists())
+        self.assertIn(
+            "1 unapproved events from the venue's earlier ticketing or ai source remain", output
+        )
+
+    def test_api_error(self):
+        self.eb_events["eb-V0003"] = EventbriteError("organizers/eb-V0003/events/: HTTP 503")
+        self.eb_events["eb-V0004"] = [eb_event("104", venue="Venue V0004")]
+        output = self.fetch("--sheet-ids", "V0003,V0004")
+        self.assertIn("eventbrite failed: organizers/eb-V0003/events/: HTTP 503", output)
+        self.assertTrue(Event.all_objects.filter(external_id="eventbrite:104").exists())
+        run = JobRun.objects.get()
+        self.assertEqual(
+            [(p["sheet_id"], p["problems"]) for p in run.problems],
+            [("V0003", ["eventbrite failed: organizers/eb-V0003/events/: HTTP 503"])],
+        )
+        status = VenueFetchStatus.objects.get(venue=self.venues["V0003"])
+        self.assertEqual(status.problems, ["eventbrite failed: organizers/eb-V0003/events/: HTTP 503"])
+
+    def test_no_token(self):
+        with mock.patch.dict(os.environ, {"EVENTBRITE_API_KEY": ""}):
+            output = self.fetch("--sheet-ids", "V0002,V0003")
+        self.assertEqual(self.eb_requests, [])
+        self.assertIn("eventbrite skipped (no EVENTBRITE_API_KEY)", output)
+        # the json-ld venue is still crawled
+        self.assertEqual([t["sheet_id"] for t in FakeCrawlerProcess.seen_targets], ["V0002"])
+        self.assertFalse(JobRun.objects.get().problems)
+
+    def test_skip_eventbrite_flag(self):
+        self.fetch("--sheet-ids", "V0003", "--skip-eventbrite")
+        self.assertEqual(self.eb_requests, [])
         self.assertEqual(
             [(t["sheet_id"], t["source"]) for t in FakeCrawlerProcess.seen_targets],
             [("V0003", "ticketing")],

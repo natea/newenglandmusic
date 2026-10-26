@@ -7,7 +7,7 @@ from unittest import mock
 
 from core.event_fetching.eventbrite import EventbriteClient
 from core.event_sources import save_event_source
-from core.management.commands import measure_api_coverage as coverage
+from core.management.commands import match_eventbrite_organizers as match
 from core.models import JobRun, Venue, VenueEventSource
 from django.core.management import call_command
 from django.test import TestCase
@@ -42,7 +42,7 @@ class MeasureCoverageTestCase(TestCase):
         })
         patches = [
             mock.patch.dict(os.environ, {"EVENTBRITE_API_KEY": "test", "SEATGEEK_CLIENT_ID": ""}),
-            mock.patch.object(coverage, "robots_allows", return_value=True),
+            mock.patch.object(match, "robots_allows", return_value=True),
             mock.patch("requests.Session.get", side_effect=lambda url, timeout=None: SimpleNamespace(
                 ok=url in PAGES, text=PAGES.get(url, ""))),
             mock.patch.object(EventbriteClient, "event", return_value={"organizer_id": "20010471604"}),

@@ -223,12 +223,18 @@ class SyncCommandTestCase(TestCase):
         self.assertEqual(Venue.objects.get(sheet_id="V0001").name, "Before")
         self.assertFalse(Venue.objects.filter(sheet_id="V0002").exists())
 
-    def test_sync_leaves_the_ticketmaster_link_alone(self):
-        Venue.objects.create(sheet_id="V0001", name="Before", ticketmaster_venue_id="KovZpZA11JtA")
+    def test_sync_leaves_the_api_links_alone(self):
+        Venue.objects.create(
+            sheet_id="V0001",
+            name="Before",
+            ticketmaster_venue_id="KovZpZA11JtA",
+            eventbrite_organizer_id="14327783302",
+        )
         self.sync([row("V0001", "After")])
         venue = Venue.objects.get(sheet_id="V0001")
         self.assertEqual(venue.name, "After")
         self.assertEqual(venue.ticketmaster_venue_id, "KovZpZA11JtA")
+        self.assertEqual(venue.eventbrite_organizer_id, "14327783302")
 
     def test_sync_leaves_the_place_lookup_alone(self):
         Venue.objects.create(

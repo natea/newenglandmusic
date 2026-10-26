@@ -37,6 +37,7 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 **For the scheduled jobs:**
 - `ANTHROPIC_API_KEY`: AI event extraction and labelling events by kind.
 - `TICKETMASTER_API_KEY`: the Consumer Key of a Ticketmaster app.
+- `EVENTBRITE_API_KEY`: the private token of an Eventbrite account, from eventbrite.com/platform/api-keys.
 - `GOOGLE_PLACES_API_KEY`: in Google Cloud, restrict it to the Places API (New) and cap its daily quota.
 
 **Optional:**
@@ -160,11 +161,12 @@ These run in this order. Each one depends on the one before it:
 | `lookup_venue_places --refresh-stale` | daily, after the lookup | Places: refreshes coordinates more than 25 days old by place ID, so each venue about every 25 days: roughly 880 Place Details Pro calls a month, inside the 5,000 free. Every run also deletes coordinates older than 30 days, as Google's terms require |
 | `check_event_sources` | weekly | free, but it crawls every venue's site, so don't run it more often |
 | `match_ticketmaster_venues` | weekly, after the source check | free (Ticketmaster allows 5,000 requests a day) |
-| `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster: a few hundred requests |
+| `match_eventbrite_organizers` | weekly, after the source check | free (Eventbrite allows 2,000 requests an hour). It fetches the pages of venues that link Eventbrite, politely, and links only new venues unless given `--recheck` |
+| `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster and Eventbrite: a few hundred requests each |
 
 **A single script would be simplest.** For example, `bin/refresh.sh` would run the daily commands in order and stop at the first failure, plus a weekly script for the crawl. Then the scheduler needs only two entries.
 
-**Reviewing runs.** Each run of these five commands is recorded in the database, wherever it runs, and listed newest first in the admin at `/admin/core/jobrun/`:
+**Reviewing runs.** Each run of these commands is recorded in the database, wherever it runs, and listed newest first in the admin at `/admin/core/jobrun/`:
 - **What a run shows:** its arguments, start time and duration, its outcome, a short summary of counts, the report it printed, and the error if it failed.
 - **Outcome:** succeeded, failed, running, or "didn't finish", for a run still marked running six hours after it started (for example, one the host killed).
 - **Pruning:** runs older than 90 days are deleted automatically.
@@ -205,6 +207,7 @@ If the key ever leaks, delete it on the account's **Keys** tab and create a new 
 - [ ] `ALLOWED_HOSTS` and `SITE_URL` match the domain
 - [ ] the API keys restricted: Places to its API, Protomaps to the domain
 - [ ] the scheduled jobs added (the sheet's service account set up first)
+- [ ] Eventbrite's API terms checked for attribution and caching rules, since events imported from it are shown on the site
 - [ ] the first `fetch_events` run checked in `/admin/core/alleventproxy/` before events are approved
 - [ ] **before announcing or sharing the site:** Google Places terms met. Until then, keep the site unshared. As of 2026-10-25 it was deployed but kept private for this reason.
   - **Stored content:** done. Only place IDs and coordinates are stored, and coordinates are refreshed or deleted within 30 days (see Google Places terms above). The daily `--refresh-stale` job has to be running for pins to stay exact.

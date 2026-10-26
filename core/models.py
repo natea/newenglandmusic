@@ -134,6 +134,7 @@ class Event(models.Model):
         TICKETING = "ticketing", "Ticketing platform"
         AI = "ai", "AI extraction"
         TICKETMASTER = "ticketmaster", "Ticketmaster Discovery API"
+        EVENTBRITE = "eventbrite", "Eventbrite API"
 
     source = models.CharField(
         max_length=16, choices=Source.choices, blank=True, default=""
@@ -303,6 +304,11 @@ class Venue(models.Model):
     # the venue's events can be fetched from the ticketmaster discovery api
     ticketmaster_venue_id = models.CharField(
         max_length=64, null=True, blank=True, db_index=True, verbose_name="Ticketmaster venue ID"
+    )
+    # not from the sheet either: set by the match_eventbrite_organizers command or by hand,
+    # for venues that sell their own shows on eventbrite
+    eventbrite_organizer_id = models.CharField(
+        max_length=64, null=True, blank=True, db_index=True, verbose_name="Eventbrite organizer ID"
     )
 
     name = models.CharField(max_length=255)
@@ -617,7 +623,7 @@ class JobRun(models.Model):
 class VenueFetchStatus(models.Model):
     venue = models.OneToOneField(Venue, on_delete=models.CASCADE, related_name="fetch_status")
     fetched_at = models.DateTimeField()
-    # ical, json-ld, ticketing, ai or ticketmaster
+    # ical, json-ld, ticketing, ai, ticketmaster or eventbrite
     source = models.CharField(max_length=32)
     found = models.PositiveIntegerField(default=0)
     upcoming = models.PositiveIntegerField(default=0)

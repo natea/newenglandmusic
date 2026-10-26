@@ -16,6 +16,7 @@ import requests
 from django.utils.dateparse import parse_datetime
 
 from core.event_fetching.parsing import clean_description, clean_text
+from core.venue_matching import distance_km, names_match
 
 BASE_URL = "https://www.eventbriteapi.com/v3/"
 # eventbrite allows 2000 requests an hour per token; this stays well under it
@@ -23,6 +24,8 @@ MIN_SECONDS_BETWEEN_REQUESTS = 0.5
 MAX_RETRIES = 2
 TIMEOUT_SECONDS = 20
 MAX_PAGES = 5
+# an organizer's event is at our venue when it's this close, if the names differ
+MAX_DISTANCE_KM = 1.0
 
 # links and widgets on a venue's own pages. event ids are long; organizer ids a little shorter
 EVENT_ID_RES = (
@@ -116,6 +119,18 @@ def event_venue(event):
         "latitude": to_float(venue.get("latitude")),
         "longitude": to_float(venue.get("longitude")),
     }
+
+
+def is_at_venue(event, venue):
+    """
+    whether an eventbrite event is at our venue: the same name, or within MAX_DISTANCE_KM
+    of its location. organizers can be promoters with shows all over
+    """
+    where = event_venue(event)
+    if where["name"] and names_match(venue.name, where["name"]):
+        return True
+    distance = distance_km(*venue.exact_location, where["latitude"], where["longitude"])
+    return distance is not None and distance <= MAX_DISTANCE_KM
 
 
 def price_amount(event):
