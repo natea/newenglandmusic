@@ -49,6 +49,11 @@ fetches every venue whose events can be fetched in one of these ways:
   aren't removed, but counted in the report. pass --skip-eventbrite to fetch linked
   venues from their saved source instead.
 
+when a linked venue's ical feed or json-ld fails on a run (no events and an error, as when
+its site blocks the server), it's fetched from its api in that run instead: ticketmaster,
+then eventbrite. the failure is then only noted, not counted as a problem, and the
+venue's ical events are kept, as the feed should work again.
+
 events are matched on external_id, so re-running updates events instead of duplicating
 them. new events are saved unapproved; already-approved events stay approved.
 """
@@ -93,6 +98,11 @@ PROBLEM_PREFIXES = (
     "eventbrite failed:",
     "ai extraction failed:",
 )
+
+
+# the saved sources whose failure falls back to the venue's linked api (a linked api
+# already replaces ticketing and ai sources)
+FALLBACK_SOURCES = ("ical", "json-ld")
 
 
 def is_problem(note):
@@ -288,7 +298,21 @@ class Command(RecordedCommand, BaseCommand):
             elif result["kind"] == "error":
                 notes_by_venue[target["sheet_id"]].append(f"failed: {result['url']} {result['error']}")
 
-        pages = [result for result in results if result["kind"] == "page"]
+        fallen_back = self.fall_back_to_apis(
+            crawl_targets,
+            results,
+            events_by_venue,
+            notes_by_venue,
+            options["dry_run"],
+            use_ticketmaster=not options["skip_ticketmaster"],
+            use_eventbrite=not options["skip_eventbrite"],
+        )
+        # a venue fetched from its api instead needs no ai extraction too
+        pages = [
+            result
+            for result in results
+            if result["kind"] == "page" and result["target"]["sheet_id"] not in fallen_back
+        ]
         self.extract_with_ai(
             pages, options["skip_ai"], options["model"], events_by_venue, notes_by_venue
         )
@@ -302,16 +326,69 @@ class Command(RecordedCommand, BaseCommand):
             options["model"],
         )
 
-    def fetch_from_ticketmaster(self, targets, events_by_venue, notes_by_venue, dry_run):
+    def fall_back_to_apis(
+        self, crawl_targets, results, events_by_venue, notes_by_venue, dry_run,
+        use_ticketmaster=True, use_eventbrite=True,
+    ):
+        """
+        fetches linked venues whose ical feed or json-ld failed this run -- no events and
+        at least one error, as when a site blocks the server -- from their api instead.
+        returns the sheet ids of the venues that fell back, whether or not the api worked
+        """
+        got_events = {r["target"]["sheet_id"] for r in results if r["kind"] == "events" and r["events"]}
+        errored = {r["target"]["sheet_id"] for r in results if r["kind"] == "error"}
+        by_api = defaultdict(list)
+        for target in crawl_targets:
+            sheet_id = target["sheet_id"]
+            if target["source"] not in FALLBACK_SOURCES or sheet_id in got_events or sheet_id not in errored:
+                continue
+            # the same order as select_targets. an ical venue linked to ticketmaster
+            # only gets here with --skip-ticketmaster, which turns its fallback off too
+            if use_ticketmaster and target["ticketmaster_venue_id"]:
+                by_api["ticketmaster"].append(target)
+            elif use_eventbrite and target["eventbrite_organizer_id"]:
+                by_api["eventbrite"].append(target)
+
+        fetched = {}
+        if by_api["ticketmaster"]:
+            # only for this run: the feed should work again, so its events stay
+            for sheet_id in self.fetch_from_ticketmaster(
+                by_api["ticketmaster"], events_by_venue, notes_by_venue, dry_run, replace_ical=False
+            ):
+                fetched[sheet_id] = "ticketmaster"
+        for sheet_id in self.fetch_from_eventbrite(by_api["eventbrite"], events_by_venue, notes_by_venue):
+            fetched[sheet_id] = "eventbrite"
+
+        for target in by_api["ticketmaster"] + by_api["eventbrite"]:
+            api = fetched.get(target["sheet_id"])
+            if api is None:
+                # the api failed too: both failures stay problems
+                continue
+            notes = notes_by_venue[target["sheet_id"]]
+            # the fallback worked, so the source's failure is a note, not a problem
+            notes[:] = [
+                f"{target['source']} failed, fetched from {api} instead: {note.removeprefix('failed: ')}"
+                if note.startswith("failed: ")
+                else note
+                for note in notes
+            ]
+            target["source"] = api
+        return {target["sheet_id"] for targets in by_api.values() for target in targets}
+
+    def fetch_from_ticketmaster(
+        self, targets, events_by_venue, notes_by_venue, dry_run, replace_ical=True
+    ):
+        """fetches targets from the ticketmaster api; returns the sheet ids it fetched"""
+        fetched = set()
         if not targets:
-            return
+            return fetched
         api_key = os.environ.get("TICKETMASTER_API_KEY")
         if not api_key:
             for target in targets:
                 notes_by_venue[target["sheet_id"]].append(
                     "ticketmaster skipped (no TICKETMASTER_API_KEY)"
                 )
-            return
+            return fetched
 
         self.stdout.write(f"fetching {len(targets)} venues from the ticketmaster api...")
         client = TicketmasterClient(api_key)
@@ -322,6 +399,7 @@ class Command(RecordedCommand, BaseCommand):
             except TicketmasterError as e:
                 notes.append(f"ticketmaster failed: {e}")
                 continue
+            fetched.add(target["sheet_id"])
             events = [event for event in map(ticketmaster_event, raw_events) if event]
             events_by_venue[target["sheet_id"]] += [
                 ("ticketmaster", event["hyperlink"], event) for event in events
@@ -330,7 +408,7 @@ class Command(RecordedCommand, BaseCommand):
                 notes.append(
                     f"ticketmaster: {len(raw_events) - len(events)} non-music or undated events left out"
                 )
-            if not dry_run:
+            if replace_ical and not dry_run:
                 # events from the venue's ical feed, which ticketmaster replaces, would
                 # duplicate these under other ids. approved ones are someone's decision
                 stale, _ = Event.all_objects.filter(
@@ -341,17 +419,20 @@ class Command(RecordedCommand, BaseCommand):
                 ).delete()
                 if stale:
                     notes.append(f"removed {stale} unapproved events from the venue's ical feed")
+        return fetched
 
     def fetch_from_eventbrite(self, targets, events_by_venue, notes_by_venue):
+        """fetches targets from the eventbrite api; returns the sheet ids it fetched"""
+        fetched = set()
         if not targets:
-            return
+            return fetched
         api_key = os.environ.get("EVENTBRITE_API_KEY")
         if not api_key:
             for target in targets:
                 notes_by_venue[target["sheet_id"]].append(
                     "eventbrite skipped (no EVENTBRITE_API_KEY)"
                 )
-            return
+            return fetched
 
         self.stdout.write(f"fetching {len(targets)} venues from the eventbrite api...")
         client = EventbriteClient(api_key)
@@ -364,6 +445,7 @@ class Command(RecordedCommand, BaseCommand):
             except EventbriteError as e:
                 notes.append(f"eventbrite failed: {e}")
                 continue
+            fetched.add(target["sheet_id"])
             # an organizer can be a promoter with shows at other venues too
             here = [event for event in raw_events if is_at_venue(event, venue)]
             events = [event for event in map(eventbrite_event, here) if event]
@@ -387,6 +469,7 @@ class Command(RecordedCommand, BaseCommand):
                     f"{leftover} unapproved events from the venue's earlier ticketing or ai "
                     "source remain; remove any that duplicate these"
                 )
+        return fetched
 
     def extract_with_ai(self, pages, skip_ai, model, events_by_venue, notes_by_venue):
         if not pages:

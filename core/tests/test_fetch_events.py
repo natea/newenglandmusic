@@ -892,6 +892,139 @@ class FetchEventsEventbriteTestCase(TestCase):
         )
 
 
+class FetchEventsFallbackTestCase(TestCase):
+    """fetch_events falling back to a venue's linked api when its feed or json-ld fails"""
+
+    def setUp(self):
+        FetchEventsTestCase.setUp(self)
+        self.venues = {v.sheet_id: v for v in Venue.objects.all()}
+        env = mock.patch.dict(
+            os.environ, {"EVENTBRITE_API_KEY": "eb-key", "TICKETMASTER_API_KEY": "tm-key"}
+        )
+        env.start()
+        self.addCleanup(env.stop)
+        FakeCrawlerProcess.seen_targets = []
+        self.api_events = {}
+        self.api_requests = []
+
+        def fetch(client, api_id):
+            self.api_requests.append(api_id)
+            events = self.api_events.get(api_id, [])
+            if isinstance(events, Exception):
+                raise events
+            return events
+
+        for patch in (
+            mock.patch.object(EventbriteClient, "organizer_events", fetch),
+            mock.patch.object(TicketmasterClient, "venue_events", fetch),
+        ):
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    save_sources = FetchEventsTestCase.save_sources
+    crawl_returns = FetchEventsTestCase.crawl_returns
+    events_for = FetchEventsTestCase.events_for
+    fetch = FetchEventsTestCase.fetch
+
+    def link(self, sheet_id, **fields):
+        Venue.objects.filter(sheet_id=sheet_id).update(**fields)
+
+    def crawl_fails(self, sheet_id, error="HTTP 403 HttpError('Ignoring non-200 response')", page=False):
+        """the crawl of this venue's source fails, and maybe queues its page for ai"""
+        def results(targets):
+            target = next(t for t in targets if t["sheet_id"] == sheet_id)
+            found = [{"kind": "error", "target": target, "url": target["events_page"], "error": error}]
+            if page:
+                found.append({"kind": "page", "target": target, "url": target["events_page"],
+                              "text": "the calendar", "truncated": False})
+            return found
+
+        self.crawl_returns(results)
+
+    def test_json_ld_blocked_linked_to_eventbrite(self):
+        self.link("V0002", eventbrite_organizer_id="eb-2")
+        self.api_events["eb-2"] = [eb_event("201", venue="Venue V0002")]
+        self.crawl_fails("V0002")
+        output = self.fetch("--sheet-ids", "V0002")
+        event = Event.all_objects.get(external_id="eventbrite:201")
+        self.assertEqual((event.source, event.venue), ("eventbrite", self.venues["V0002"]))
+        self.assertEqual(self.api_requests, ["eb-2"])
+        # its json-ld was crawled first
+        self.assertEqual([t["sheet_id"] for t in FakeCrawlerProcess.seen_targets], ["V0002"])
+        self.assertIn("[eventbrite]", output)
+
+    def test_saved_source_works(self):
+        self.link("V0002", eventbrite_organizer_id="eb-2")
+        self.events_for("V0002", [event("Feed show", external_id="json-ld:1")], source="json-ld")
+        self.fetch("--sheet-ids", "V0002")
+        self.assertEqual(self.api_requests, [])
+        self.assertTrue(Event.all_objects.filter(external_id="json-ld:1").exists())
+
+    def test_unparseable_ical_linked_to_eventbrite(self):
+        self.link("V0001", eventbrite_organizer_id="eb-1")
+        self.api_events["eb-1"] = [eb_event("101", venue="Venue V0001")]
+        self.crawl_fails("V0001", error="unparseable ical feed, falling back to ai: ValueError()", page=True)
+        with mock.patch.object(fetch_events.Command, "extract_with_ai") as extract:
+            self.fetch("--sheet-ids", "V0001")
+        self.assertEqual(extract.call_args.args[0], [])
+        self.assertTrue(Event.all_objects.filter(external_id="eventbrite:101", source="eventbrite").exists())
+
+    def test_ticketmaster_fallback_keeps_ical_events(self):
+        # json-ld falls back to ticketmaster before eventbrite
+        self.link("V0002", ticketmaster_venue_id="tm-2", eventbrite_organizer_id="eb-2")
+        self.api_events["tm-2"] = [tm_event("ev2")]
+        feed_event = Event.all_objects.create(
+            title="feed show", starttime=timezone.now() + datetime.timedelta(days=3),
+            venue=self.venues["V0002"], source="ical", external_id="ical:feed show", is_approved=False,
+        )
+        self.crawl_fails("V0002")
+        self.fetch("--sheet-ids", "V0002", "--skip-eventbrite")
+        self.assertEqual(self.api_requests, ["tm-2"])
+        self.assertTrue(Event.all_objects.filter(external_id="tm:ev2", source="ticketmaster").exists())
+        self.assertTrue(Event.all_objects.filter(pk=feed_event.pk).exists())
+
+    def test_not_linked(self):
+        self.crawl_fails("V0002")
+        output = self.fetch("--sheet-ids", "V0002")
+        self.assertEqual(self.api_requests, [])
+        self.assertIn("failed: https://v0002.example/calendar HTTP 403", output)
+        self.assertEqual(len(JobRun.objects.get().problems), 1)
+
+    def test_api_skipped(self):
+        self.link("V0002", eventbrite_organizer_id="eb-2")
+        self.crawl_fails("V0002")
+        self.fetch("--sheet-ids", "V0002", "--skip-eventbrite")
+        self.assertEqual(self.api_requests, [])
+        self.assertEqual(len(JobRun.objects.get().problems), 1)
+
+    def test_fallback_works(self):
+        self.link("V0002", eventbrite_organizer_id="eb-2")
+        self.api_events["eb-2"] = [eb_event("201", venue="Venue V0002")]
+        self.crawl_fails("V0002")
+        output = self.fetch("--sheet-ids", "V0002")
+        self.assertIn(
+            "json-ld failed, fetched from eventbrite instead: https://v0002.example/calendar HTTP 403", output
+        )
+        self.assertEqual(JobRun.objects.get().problems, [])
+        status = VenueFetchStatus.objects.get(venue=self.venues["V0002"])
+        self.assertEqual((status.source, status.problems, status.upcoming), ("eventbrite", [], 1))
+
+    def test_fallback_fails_too(self):
+        self.link("V0002", eventbrite_organizer_id="eb-2")
+        self.api_events["eb-2"] = EventbriteError("organizers/eb-2/events/: HTTP 500")
+        self.crawl_fails("V0002")
+        self.fetch("--sheet-ids", "V0002")
+        problems = JobRun.objects.get().problems[0]["problems"]
+        self.assertEqual(
+            problems,
+            [
+                "failed: https://v0002.example/calendar HTTP 403 HttpError('Ignoring non-200 response')",
+                "eventbrite failed: organizers/eb-2/events/: HTTP 500",
+            ],
+        )
+        self.assertEqual(VenueFetchStatus.objects.get(venue=self.venues["V0002"]).problems, problems)
+
+
 class FetchEventsLabellingTestCase(TestCase):
     """fetch_events labelling events by kind before saving them"""
 

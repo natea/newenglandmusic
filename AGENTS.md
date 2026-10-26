@@ -44,7 +44,7 @@ These are management commands, run in this order:
 2. **`lookup_venue_places`:** finds each venue on Google Places and records its place ID and exact coordinates. Google's terms allow storing nothing else, and the coordinates for only 30 days: `--refresh-stale` refreshes them by place ID, and every run deletes any older than 30 days.
 3. **`check_event_sources`:** works out how each venue's events can be fetched (iCal, JSON-LD, ticketing pages, AI extraction) and saves the answer per venue in the database (`VenueEventSource`), which the next two commands read. `--csv <path>` also writes a file to read; `import_event_sources <path>` loads an old one.
 4. **`match_ticketmaster_venues`** and **`match_eventbrite_organizers`:** link venues to Ticketmaster venues and to their Eventbrite organizers, found from the Eventbrite links on their own pages.
-5. **`fetch_events`:** fetches upcoming events, from a linked API (Ticketmaster first, then Eventbrite) or else the saved source, and saves new ones **unapproved**, for review at `/admin/core/alleventproxy/`. `Event.objects` returns approved events only; use `Event.all_objects` for everything.
+5. **`fetch_events`:** fetches upcoming events, from a linked API (Ticketmaster first, then Eventbrite) or else the saved source, falling back to a linked API when a feed or JSON-LD page fails, and saves new ones **unapproved**, for review at `/admin/core/alleventproxy/`. `Event.objects` returns approved events only; use `Event.all_objects` for everything.
 
 Each run of these commands is recorded as a `JobRun` (`core/job_runs.py`) and listed at `/admin/core/jobrun/`. A new pipeline command should subclass `RecordedCommand` and set `self.job_summary`.
 
