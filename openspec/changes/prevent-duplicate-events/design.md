@@ -20,7 +20,7 @@
 
 **Adopting a copy in `save_event`:** on an ID miss, the venue's imported events at that start time are fetched and compared by title in Python. The first match, oldest first, is updated and given the new `external_id` and `source`. A copy already saved earlier in the same run isn't adopted, so two events with the same title and time in one feed can't overwrite each other. When the adopted event already has a kind, it keeps it, so a relabel can't flip it.
 
-**Cleanup choice:** among a group's copies, those whose source is the venue's latest fetch source are preferred, because the daily fetch keeps them current. The oldest preferred copy is kept, or the oldest copy if none is preferred. It's approved if any copy was. If it has no admin label and another copy does, it takes the most recent admin label. The rest are deleted.
+**Cleanup choice:** among a group's copies, those whose source is the venue's latest fetch source are preferred, because the daily fetch keeps them current. The oldest preferred copy is kept, or the oldest copy if none is preferred. It's approved if any copy was, unless its kind isn't music: Zoltan Kaszas's comedy tour had been approved as live music when scraped, and its Eventbrite copy is labelled comedy, so passing the approval on would list a comedy show. If it has no admin label and another copy does, it takes the most recent admin label. The rest are deleted.
 
 **The cleanup is a command, not a migration,** so it can be run, and dry-run, against whichever database, and it's recorded as a job run with its full list.
 

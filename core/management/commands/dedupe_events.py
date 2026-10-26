@@ -17,9 +17,9 @@ run as:
 python manage.py dedupe_events [--dry-run]
 
 in each group of copies, the one kept is the oldest whose source is the venue's latest
-fetch source -- the daily fetch keeps that one current -- or else the oldest. it's
-approved if any copy was, and takes an admin's label from another copy when it has none
-of its own. the other copies are deleted. hand-entered events are never touched.
+fetch source -- the daily fetch keeps that one current -- or else the oldest. it takes
+an admin's label from another copy when it has none of its own, and is approved if any
+copy was, unless its label isn't music. the other copies are deleted. hand-entered events are never touched.
 """
 
 
@@ -44,14 +44,21 @@ def plan_merge(copies, fetch_source):
     keep = (current or copies)[0]
     others = [event for event in copies if event is not keep]
     changes = {}
-    if not keep.is_approved and any(event.is_approved for event in others):
-        changes["is_approved"] = True
     if keep.kind_set_by != Event.KindSetBy.ADMIN:
         labelled = [event for event in others if event.kind_set_by == Event.KindSetBy.ADMIN]
         if labelled:
             latest = max(labelled, key=lambda event: (event.created_at, event.pk))
             changes["kind"] = latest.kind
             changes["kind_set_by"] = Event.KindSetBy.ADMIN
+    # an approval carries over only to a music (or unlabelled) copy: a show approved as
+    # music whose better copy is labelled comedy shouldn't go on the site
+    kind = changes.get("kind", keep.kind)
+    if (
+        not keep.is_approved
+        and any(event.is_approved for event in others)
+        and (not kind or kind in Event.MUSIC_KINDS)
+    ):
+        changes["is_approved"] = True
     return keep, others, changes
 
 

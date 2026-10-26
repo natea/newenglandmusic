@@ -22,11 +22,15 @@ Each event SHALL get an external ID from its source. A new event SHALL be saved 
 ## ADDED Requirements
 
 ### Requirement: Existing duplicates can be merged
-The `dedupe_events` command SHALL find upcoming imported events that share a venue, start time and normalised title. In each group it SHALL keep the oldest copy whose source is the venue's latest fetch source, or the oldest copy when none is. The kept copy SHALL be approved if any copy was, and SHALL take an admin-set kind from another copy when it has none of its own. The other copies SHALL be deleted. With `--dry-run` it SHALL list each group's kept and deleted copies and change nothing.
+The `dedupe_events` command SHALL merge upcoming imported events that share a venue, start time and normalised title. It SHALL keep the oldest copy from the venue's latest fetch source, or else the oldest copy, and delete the rest. The kept copy SHALL take another copy's admin-set kind when it has none, and SHALL be approved if any copy was, unless its kind is not music. `--dry-run` SHALL list each group and change nothing.
 
 #### Scenario: Eventbrite and scraped copies
 - **WHEN** a venue last fetched from Eventbrite has an approved scraped copy and an unapproved Eventbrite copy of the same show
 - **THEN** the Eventbrite copy is kept and approved, and the scraped copy is deleted
+
+#### Scenario: Better copy isn't music
+- **WHEN** an approved scraped copy is labelled live music, and the Eventbrite copy to keep is labelled comedy
+- **THEN** the Eventbrite copy is kept unapproved, and the scraped copy is deleted
 
 #### Scenario: Equal copies
 - **WHEN** two AI copies of a show exist and neither is from the venue's latest fetch source

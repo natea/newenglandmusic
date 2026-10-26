@@ -73,6 +73,22 @@ class DedupeEventsTestCase(TestCase):
         self.dedupe()
         self.assertEqual(self.remaining()[0].kind, "live_music")
 
+    def test_approval_not_carried_to_a_non_music_copy(self):
+        # zoltan kaszas: approved as live music when scraped, labelled comedy by eventbrite
+        self.fetched_from("eventbrite")
+        self.copy("json-ld:64c7", "ticketing", is_approved=True, kind="live_music", title="Zoltan Kaszas")
+        self.copy("eventbrite:1988919247008", "eventbrite", age_days=1, kind="comedy", title="ZOLTAN KASZAS")
+        self.dedupe()
+        [kept] = self.remaining()
+        self.assertEqual((kept.source, kept.kind, kept.is_approved), ("eventbrite", "comedy", False))
+
+    def test_approval_carried_to_an_unlabelled_copy(self):
+        self.fetched_from("eventbrite")
+        self.copy("json-ld:7c91", "ticketing", is_approved=True, kind="live_music")
+        self.copy("eventbrite:1", "eventbrite", age_days=1, kind="")
+        self.dedupe()
+        self.assertTrue(self.remaining()[0].is_approved)
+
     def test_dry_run(self):
         self.fetched_from("eventbrite")
         self.copy("json-ld:7c91", "ticketing", is_approved=True)
