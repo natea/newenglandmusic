@@ -7,6 +7,8 @@
 - [x] 1.3 Tests for the "Event submitted with scheme-less links" and "Venue website entered in the admin without a scheme" scenarios (`test_links_without_a_scheme_get_https` and `test_website_without_a_scheme_gets_https`, done in `dec5139`).
 - [x] 1.4 Tests for the "Explicit http is kept" scenario, on the submission form and in the venue admin. Verify: the new tests pass.
 - [x] 1.5 Merge `main` into `django5` and run the full suite on 5.2, network-blocked, with `-W error::django.utils.deprecation.RemovedInDjango60Warning`. Verify: every test passes.
+- [x] 1.6 Make the submission form's link and ticket link fields plain text boxes with the url keyboard (`inputmode="url"`), still validated as links on the server. Verify: typing `nateaune.com` at localhost:8002/submit-event submits and saves `https://nateaune.com`.
+- [x] 1.7 Tests for the "Link fields are plain text boxes" and "Something that isn't a link is rejected" scenarios. Verify: the new tests pass and the full suite passes on 5.2.
 
 ## 2. Checks the tests can't make
 

@@ -24,3 +24,17 @@ When a person enters a web address without a scheme (`http://` or `https://`) in
 
 - **WHEN** someone enters a link that starts with `http://`, on the submission form or in the admin
 - **THEN** the link is stored with `http://`, unchanged
+
+### Requirement: The submission form accepts links without a scheme
+
+The public event submission form SHALL let a person type a link without a scheme, such as `example.com`, and submit it; the browser SHALL NOT block it for lacking `http://` or `https://`. The system SHALL still check each link when the form is submitted, and SHALL reject one that isn't a web address, showing an error and saving nothing.
+
+#### Scenario: Link fields are plain text boxes
+
+- **WHEN** someone opens the event submission form
+- **THEN** its link and ticket link fields accept text without a scheme, and phones show their web-address keyboard for them
+
+#### Scenario: Something that isn't a link is rejected
+
+- **WHEN** someone submits the form with `not a link` as the event's link
+- **THEN** the form is shown again with an error on that field, and no event is saved
