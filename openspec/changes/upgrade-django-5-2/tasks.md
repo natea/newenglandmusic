@@ -12,7 +12,7 @@
 
 ## 2. Checks the tests can't make
 
-- [ ] 2.1 In the 5.2 admin at localhost:8002, logged in, check each interactive widget: TinyMCE on an event and a static page, the venue autocomplete on an event, the date and time pickers, sortable menu items, and the event and venue list filters. Verify: each works, and the browser console shows no errors. Note any broken widget and upgrade only that package.
+- [x] 2.1 In the 5.2 admin at localhost:8002, logged in, check each interactive widget: TinyMCE on an event and a static page, the venue autocomplete on an event, the date and time pickers, sortable menu items, and the event and venue list filters. Verify: each works, and the browser console shows no errors. Note any broken widget and upgrade only that package. (checked by Nate on 2026-10-26: the widgets work)
 - [x] 2.2 Update the comment on the Django rule in `.github/dependabot.yml`: major versions stay skipped, so Django 6 arrives as its own change. Verify: the file still parses as YAML.
 
 ## 3. Release
