@@ -5,7 +5,7 @@
 - [x] 1.1 Pin `Django==5.2.17` in `requirements.txt`. Verify: `makemigrations --check` reports no changes and `showmigrations` shows nothing unapplied against the local database (done in `dec5139`).
 - [x] 1.2 Set `assume_scheme="https"` on the submission form's link fields and through `formfield_overrides` on `EventAdmin` and `VenueAdmin` (done in `dec5139`).
 - [x] 1.3 Tests for the "Event submitted with scheme-less links" and "Venue website entered in the admin without a scheme" scenarios (`test_links_without_a_scheme_get_https` and `test_website_without_a_scheme_gets_https`, done in `dec5139`).
-- [ ] 1.4 Tests for the "Explicit http is kept" scenario, on the submission form and in the venue admin. Verify: the new tests pass.
+- [x] 1.4 Tests for the "Explicit http is kept" scenario, on the submission form and in the venue admin. Verify: the new tests pass.
 - [ ] 1.5 Merge `main` into `django5` and run the full suite on 5.2, network-blocked, with `-W error::django.utils.deprecation.RemovedInDjango60Warning`. Verify: every test passes.
 
 ## 2. Checks the tests can't make

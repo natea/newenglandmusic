@@ -42,6 +42,12 @@ class VenueAdminTicketmasterTestCase(TestCase):
         venue = self.save_through_admin_form(venue, "")
         self.assertEqual(Venue.objects.get(pk=venue.pk).website, "https://example.com")
 
+    def test_explicit_http_website_is_kept(self):
+        venue = Venue.objects.get(pk=self.unlinked.pk)
+        venue.website = "http://example.com"
+        venue = self.save_through_admin_form(venue, "")
+        self.assertEqual(Venue.objects.get(pk=venue.pk).website, "http://example.com")
+
     def filtered(self, value):
         # go through the changelist, since django 5 passes filters lists where 4.2 passed strings
         request = RequestFactory().get("/admin/core/venue/", {"ticketmaster": value} if value else {})

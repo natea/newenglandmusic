@@ -52,6 +52,18 @@ class UserSubmittedEventTestCase(TestCase):
             form.cleaned_data["ticket_hyperlink"], "https://tickets.example.com/123"
         )
 
+    def test_explicit_http_link_is_kept(self):
+        form = UserSubmittedEventForm(
+            dict(
+                starttime=timezone.now(),
+                title="brutal prog matinée",
+                venue=self.venue.pk,
+                hyperlink="http://example.com/show",
+            )
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["hyperlink"], "http://example.com/show")
+
     def test_unapproved_events_are_hidden(self):
         admin_event = Event(title=uuid.uuid4(), starttime=timezone.now())
         admin_event.save()
