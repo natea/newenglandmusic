@@ -34,6 +34,10 @@ The import SHALL turn each VEVENT in a venue's feed into an event. It SHALL use 
 - **WHEN** a venue's feed can't be parsed
 - **THEN** the venue's events page is sent for AI extraction instead and the fallback is reported
 
+#### Scenario: Feed with several timezones in one block
+- **WHEN** a feed puts two timezones in one VTIMEZONE block, as the WordPress Events Calendar does
+- **THEN** the feed's events are still parsed, with their start times in the timezone each names
+
 ### Requirement: JSON-LD events are parsed into events
 The import SHALL read schema.org Event nodes anywhere in a page's JSON-LD, including nested and list nodes. It SHALL take performers other than the title as artists, the first offer price as the price, and the offer URL as the ticket link. It SHALL treat a date-only `startDate` as an all-day event with the time shown as "time TBA".
 

@@ -10,6 +10,7 @@ from core.event_fetching.parsing import (
     opendate_start_time,
     parse_ical,
     parse_json_ld,
+    split_merged_timezones,
     stable_id,
 )
 from pathlib import Path
@@ -30,6 +31,55 @@ def ical(*events):
 
 def local(*args):
     return timezone.make_aware(datetime.datetime(*args))
+
+
+# as luthier's co-op's events calendar feed sends it: two timezones in one block
+MERGED_TIMEZONES = [
+    "BEGIN:VTIMEZONE",
+    "TZID:America/New_York",
+    "BEGIN:STANDARD",
+    "TZOFFSETFROM:-0400",
+    "TZOFFSETTO:-0500",
+    "TZNAME:EST",
+    "DTSTART:20261101T060000",
+    "END:STANDARD",
+    "TZID:America/Halifax",
+    "BEGIN:STANDARD",
+    "TZOFFSETFROM:-0300",
+    "TZOFFSETTO:-0400",
+    "TZNAME:AST",
+    "DTSTART:20261101T050000",
+    "END:STANDARD",
+    "END:VTIMEZONE",
+]
+
+
+class MergedTimezonesTestCase(SimpleTestCase):
+    def feed(self):
+        lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//test//EN", *MERGED_TIMEZONES]
+        lines += [
+            "BEGIN:VEVENT",
+            "UID:open-mic",
+            "SUMMARY:Open Mic",
+            "DTSTART;TZID=America/New_York:20261127T190000",
+            "END:VEVENT",
+            "END:VCALENDAR",
+        ]
+        return "\r\n".join(lines).encode()
+
+    def test_feed_with_merged_timezones_parses(self):
+        [event] = parse_ical(self.feed(), "u")
+        self.assertEqual(event["title"], "Open Mic")
+        self.assertEqual(event["starttime"], local(2026, 11, 27, 19, 0))
+
+    def test_merged_block_is_split_per_timezone(self):
+        text = split_merged_timezones(self.feed().decode())
+        self.assertEqual(text.count("BEGIN:VTIMEZONE"), 2)
+        self.assertEqual(text.count("END:VTIMEZONE"), 2)
+
+    def test_well_formed_timezones_are_untouched(self):
+        text = "BEGIN:VTIMEZONE\r\nTZID:America/New_York\r\nEND:VTIMEZONE\r\n"
+        self.assertEqual(split_merged_timezones(text), text)
 
 
 class ParseIcalTestCase(SimpleTestCase):

@@ -23,6 +23,10 @@ MAX_DESCRIPTION_LENGTH = 600
 
 # calendar entries that mark the absence of an event, e.g. "No Event Tonight"
 PLACEHOLDER_TITLE_RE = re.compile(r"^\s*(no (events?|shows?|music)\b|closed\b)", re.IGNORECASE)
+# the wordpress events calendar puts every timezone in one VTIMEZONE block, which the
+# icalendar library can't read; each TZID line starts a timezone of its own
+VTIMEZONE_RE = re.compile(r"BEGIN:VTIMEZONE\r?\n(.*?)END:VTIMEZONE", re.DOTALL)
+TZID_LINE_RE = re.compile(r"^TZID:", re.MULTILINE)
 BLOCK_TAG_RE = re.compile(r"</?(p|div|h[1-6]|br|li|tr|td)\b", re.IGNORECASE)
 # the json data blocks a react-on-rails page (e.g. opendate's) hands to its components
 REACT_ON_RAILS_DATA_RE = re.compile(
@@ -123,9 +127,26 @@ def with_opendate_time(event, page_html):
         return {**event, "starttime": start, "all_day": False}
     return {**event, "all_day": True}
 
+def split_merged_timezones(text):
+    """one VTIMEZONE block per TZID, for feeds that merge several into one"""
+
+    def split(match):
+        inner = match.group(1)
+        starts = [line.start() for line in TZID_LINE_RE.finditer(inner)]
+        if len(starts) < 2:
+            return match.group(0)
+        newline = "\r\n" if "\r\n" in match.group(0) else "\n"
+        parts = [inner[a:b] for a, b in zip(starts, starts[1:] + [len(inner)])]
+        return newline.join(f"BEGIN:VTIMEZONE{newline}{part}END:VTIMEZONE" for part in parts)
+
+    return VTIMEZONE_RE.sub(split, text)
+
+
 def parse_ical(body, source_url):
     events = []
-    calendar = Calendar.from_ical(body)
+    if isinstance(body, bytes):
+        body = body.decode("utf-8", errors="replace")
+    calendar = Calendar.from_ical(split_merged_timezones(body))
     for component in calendar.walk("VEVENT"):
         starttime, all_day = to_starttime(component.decoded("DTSTART", None))
         if starttime is None:
