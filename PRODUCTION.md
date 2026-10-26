@@ -76,11 +76,10 @@ gunicorn nycnoise.wsgi:application
 `render.yaml` is a Render Blueprint for the web service and its Postgres database, in the Virginia region. It doesn't include the scheduled jobs yet; see [Before the jobs can run on a server](#before-the-jobs-can-run-on-a-server).
 
 - **What deploys:** Render deploys `main` from the GitHub repo [natea/newenglandmusic](https://github.com/natea/newenglandmusic), and only once CI has passed on that commit (`autoDeployTrigger: checksPass`). `origin` is the upstream nyc noise repo; never deploy from or push to it.
-- **Plans:** both free, so $0 a month while the site is unshared.
-  - **Web service:** `free`, with two gunicorn workers.
-    - It sleeps after 15 minutes without visitors and takes about a minute to wake.
-    - It has no Shell tab, so one-off commands run from your machine (see below).
-    - Before launch, switch it to `0.5c-512mb` ($7 a month) to remove these limits.
+- **Plans:** $7 a month for the web service; the database is still free.
+  - **Web service:** `0.5c-512mb` ($7 a month), with two gunicorn workers.
+    - It stays awake. The `free` plan slept after 15 minutes without visitors and took about a minute to wake.
+    - It has a Shell tab for one-off commands, which can also run from your machine (see below).
   - **Database:** `free`, with these limits:
     - It expires 30 days after it's created, and Render deletes it 14 days after that.
     - It has no backups and holds 1 GB (the data is about 20 MB).
@@ -113,7 +112,7 @@ Keep the dump out of the repo, since it holds admin password hashes.
 
 The dump includes admin accounts, with their password hashes, and the stored HTML of every event, so the events need no re-render. If it's older than the code, run `resave_all_events` against Render's database after deploying.
 
-**One-off commands.** The free web service has no Shell tab. Run management commands from your machine instead, with `DATABASE_URL` set to Render's **External Database URL**:
+**One-off commands.** Run them in the web service's Shell tab, or from your machine with `DATABASE_URL` set to Render's **External Database URL**:
 
 ```sh
 DATABASE_URL="<External Database URL>" DJANGO_SETTINGS_MODULE=nycnoise.settings.prod \
