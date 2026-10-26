@@ -101,6 +101,8 @@ def to_venue_dict(venue):
         "state": (venue.get("state") or {}).get("stateCode", ""),
         "latitude": to_float(location.get("latitude")),
         "longitude": to_float(location.get("longitude")),
+        # every listing's own count, across ticketmaster, ticketweb and the rest
+        "upcoming_events": int((venue.get("upcomingEvents") or {}).get("_total") or 0),
     }
 
 

@@ -53,6 +53,11 @@ def find_match(venue, candidates):
         and c["distance_km"] is not None
         and c["distance_km"] <= MAX_DISTANCE_KM
     ]
+    # a venue often has a second listing that actually sells its shows (ticketweb's
+    # "Off The Rails Music Venue" vs an empty "Off The Rails"): prefer listings with events
+    with_events = [c for c in near if c.get("upcoming_events")]
+    if with_events:
+        near = with_events
     # prefer a listing with the venue's own name over ones that merely contain it,
     # e.g. "Big Night Live" over "PLAY Boston at Big Night Live"
     exact = [c for c in near if normalize_name(c["name"]) == normalize_name(venue.name)]
@@ -140,7 +145,8 @@ class Command(RecordedCommand, BaseCommand):
 
         def describe_candidate(c):
             distance = "no coordinates" if c["distance_km"] is None else f"{c['distance_km']:.2f} km"
-            return f"{c['id']}  {c['name']}, {c['address']}, {c['city']} [{distance}]"
+            events = f", {c['upcoming_events']} upcoming events" if "upcoming_events" in c else ""
+            return f"{c['id']}  {c['name']}, {c['address']}, {c['city']} [{distance}{events}]"
 
         heading("linked" + (" [dry run, not saved]" if dry_run else ""), groups["linked"])
         for venue, match in groups["linked"]:

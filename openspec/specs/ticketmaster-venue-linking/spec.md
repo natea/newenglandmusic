@@ -17,7 +17,7 @@ Each venue SHALL be able to hold at most one Ticketmaster venue ID. The link SHA
 - **THEN** its Ticketmaster venue ID is unchanged
 
 ### Requirement: Matching links only confident matches
-The matching command SHALL search Ticketmaster venues by each venue's name and state. It SHALL consider only candidates with a matching name within 1 km of the venue's location (its confident looked-up coordinates, else its sheet coordinates). It SHALL link the one whose name is the same as the venue's when exactly one is; otherwise the only candidate, when there is just one.
+The matching command SHALL search Ticketmaster venues by each venue's name and state. It SHALL consider only candidates with a matching name within 1 km of the venue's location (its confident looked-up coordinates, else its sheet coordinates). When any of those candidates has upcoming events, it SHALL consider only the ones that do. It SHALL link the one whose name is the same as the venue's when exactly one is; otherwise the only candidate, when there is just one.
 
 #### Scenario: One clear match
 - **WHEN** a single Ticketmaster venue in the same state has a matching name and is within 1 km of the venue
@@ -31,9 +31,13 @@ The matching command SHALL search Ticketmaster venues by each venue's name and s
 - **WHEN** "Big Night Live" and "PLAY Boston at Big Night Live" both lie within 1 km of Big Night Live
 - **THEN** the venue is linked to "Big Night Live"
 
+#### Scenario: Listing with events preferred
+- **WHEN** "Off The Rails" (no upcoming events) and "Off The Rails Music Venue" (14 upcoming events) both lie within 1 km of Off The Rails
+- **THEN** the venue is linked to "Off The Rails Music Venue"
+
 #### Scenario: Ambiguous or distant candidates
 - **WHEN** several candidates within 1 km have the venue's exact name, or none does and several merely contain it, or no name match lies within 1 km, or the venue has no coordinates
-- **THEN** the venue is not linked and the report lists it with its candidates' IDs, names, addresses and distances
+- **THEN** the venue is not linked and the report lists it with its candidates' IDs, names, addresses, distances and upcoming event counts
 
 #### Scenario: No candidates
 - **WHEN** the search returns no Ticketmaster venues

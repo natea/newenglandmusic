@@ -16,8 +16,8 @@ FIXTURES = Path(__file__).parent / "fixtures" / "ticketmaster"
 PARADISE = (42.35183, -71.11954)
 
 
-def candidate(id, name, lat=None, lon=None, city="Boston"):
-    return {
+def candidate(id, name, lat=None, lon=None, city="Boston", events=None):
+    result = {
         "id": id,
         "name": name,
         "address": "1 Main St",
@@ -26,11 +26,49 @@ def candidate(id, name, lat=None, lon=None, city="Boston"):
         "latitude": lat,
         "longitude": lon,
     }
+    if events is not None:
+        result["upcoming_events"] = events
+    return result
 
 
 class FindMatchTestCase(SimpleTestCase):
     def setUp(self):
         self.venue = Venue(name="Paradise Rock Club", latitude=PARADISE[0], longitude=PARADISE[1])
+
+    def test_listing_with_events_preferred_over_an_empty_one(self):
+        # off the rails: the exact name is an empty listing; ticketweb sells under another
+        venue = Venue(name="Off The Rails", latitude=42.2626, longitude=-71.7965)
+        outcome, linked, _ = match.find_match(
+            venue,
+            [
+                candidate("KovZ917As-d", "Off The Rails", 42.2626, -71.7965, events=0),
+                candidate("rZ7HnEZ1739fP", "Off The Rails Music Venue", 42.2626, -71.7965, events=14),
+            ],
+        )
+        self.assertEqual((outcome, linked["id"]), ("linked", "rZ7HnEZ1739fP"))
+
+    def test_events_break_a_tie_between_same_name_listings(self):
+        # the song & dance: two listings of the same venue, only one selling shows
+        venue = Venue(name="The Song & Dance", latitude=43.0481, longitude=-76.1474)
+        outcome, linked, _ = match.find_match(
+            venue,
+            [
+                candidate("rZ7HnEZ17fJkA", "The Song & Dance", 43.0481, -76.1474, events=18),
+                candidate("Z7r9jZaAaB", "The Song and Dance", 43.0485, -76.1470, events=0),
+            ],
+        )
+        self.assertEqual((outcome, linked["id"]), ("linked", "rZ7HnEZ17fJkA"))
+
+    def test_without_events_the_name_rule_still_applies(self):
+        venue = Venue(name="Big Night Live", latitude=42.3663, longitude=-71.0622)
+        outcome, linked, _ = match.find_match(
+            venue,
+            [
+                candidate("a", "Big Night Live", 42.3663, -71.0622, events=0),
+                candidate("b", "PLAY Boston at Big Night Live", 42.3663, -71.0622, events=0),
+            ],
+        )
+        self.assertEqual((outcome, linked["id"]), ("linked", "a"))
 
     def test_one_clear_match(self):
         outcome, found, _ = match.find_match(

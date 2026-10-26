@@ -123,6 +123,7 @@ class ClientTestCase(SimpleTestCase):
                 "state": "MA",
                 "latitude": 42.3518332,
                 "longitude": -71.1195379,
+                "upcoming_events": 0,
             },
         )
         # a listing without coordinates
