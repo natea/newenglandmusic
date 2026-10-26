@@ -36,6 +36,57 @@ class UserSubmittedEventTestCase(TestCase):
 
         self.assertContains(response, "event is submitted for approval")
 
+    def test_links_without_a_scheme_get_https(self):
+        form = UserSubmittedEventForm(
+            dict(
+                starttime=timezone.now(),
+                title="brutal prog matinée",
+                venue=self.venue.pk,
+                hyperlink="example.com/show",
+                ticket_hyperlink="tickets.example.com/123",
+            )
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["hyperlink"], "https://example.com/show")
+        self.assertEqual(
+            form.cleaned_data["ticket_hyperlink"], "https://tickets.example.com/123"
+        )
+
+    def test_explicit_http_link_is_kept(self):
+        form = UserSubmittedEventForm(
+            dict(
+                starttime=timezone.now(),
+                title="brutal prog matinée",
+                venue=self.venue.pk,
+                hyperlink="http://example.com/show",
+            )
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["hyperlink"], "http://example.com/show")
+
+    def test_link_fields_accept_text_without_a_scheme(self):
+        response = self.client.get(self.endpoint)
+        for name in ("hyperlink", "ticket_hyperlink"):
+            self.assertContains(
+                response,
+                f'<input type="text" name="{name}" inputmode="url" id="id_{name}">',
+                html=True,
+            )
+
+    def test_invalid_link_is_rejected(self):
+        response = self.client.post(
+            self.endpoint,
+            data=dict(
+                starttime=timezone.now(),
+                title="brutal prog matinée",
+                venue=self.venue.pk,
+                hyperlink="not a link",
+            ),
+        )
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertContains(response, "Enter a valid URL.")
+        self.assertFalse(Event.all_objects.filter(title="brutal prog matinée").exists())
+
     def test_unapproved_events_are_hidden(self):
         admin_event = Event(title=uuid.uuid4(), starttime=timezone.now())
         admin_event.save()

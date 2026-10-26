@@ -23,9 +23,21 @@ class UserSubmittedEventForm(forms.ModelForm):
         widget=autocomplete.ModelSelect2(url="venue-autocomplete/"),
     )
 
-    # to get url validation/input type=url on the frontend
-    hyperlink = forms.URLField(label="link", required=False)
-    ticket_hyperlink = forms.URLField(label="ticket link", required=False)
+    # validated as links on the server, but plain text boxes in the browser: an
+    # input type=url won't submit without a scheme, and we add https ourselves.
+    # inputmode still brings up the url keyboard on phones
+    hyperlink = forms.URLField(
+        label="link",
+        required=False,
+        assume_scheme="https",
+        widget=forms.TextInput(attrs={"inputmode": "url"}),
+    )
+    ticket_hyperlink = forms.URLField(
+        label="ticket link",
+        required=False,
+        assume_scheme="https",
+        widget=forms.TextInput(attrs={"inputmode": "url"}),
+    )
 
     class Meta:
         model = Event

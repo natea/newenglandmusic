@@ -4,7 +4,7 @@ from datetime import date
 from dateutil import relativedelta
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
-from django.db.models import Q
+from django.db.models import Q, URLField
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -170,6 +170,8 @@ class KindListFilter(SimpleListFilter):
 
 
 class EventAdmin(admin.ModelAdmin):
+    # links typed without a scheme get https, which django 6 makes the default
+    formfield_overrides = {URLField: {"assume_scheme": "https"}}
     list_per_page = 500
     list_display = (
         "is_approved",
@@ -373,6 +375,8 @@ class LinkedToTicketmasterFilter(SimpleListFilter):
 
 
 class VenueAdmin(admin.ModelAdmin):
+    # links typed without a scheme get https, which django 6 makes the default
+    formfield_overrides = {URLField: {"assume_scheme": "https"}}
     list_display = (
         "name",
         "is_active",
