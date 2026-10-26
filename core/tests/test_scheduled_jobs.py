@@ -69,8 +69,9 @@ class JobScriptsTestCase(SimpleTestCase):
 
     def test_output_is_unbuffered(self):
         # so the host's log shows each command's report as it runs
-        self.run_job("daily.sh")
-        self.assertEqual(self.unbuffered, "1")
+        for script in ("daily.sh", "weekly.sh"):
+            self.run_job(script)
+            self.assertEqual(self.unbuffered, "1", script)
 
     def test_weekly_run(self):
         result, calls = self.run_job("weekly.sh")
