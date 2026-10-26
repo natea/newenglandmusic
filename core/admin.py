@@ -7,7 +7,7 @@ from django.contrib.admin import SimpleListFilter
 from django.db.models import Q, URLField
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from ordered_model.admin import OrderedModelAdmin
 from solo.admin import SingletonModelAdmin
@@ -26,6 +26,7 @@ from .models import (
     MenuItem,
     StaticPage,
     Venue,
+    VenueFetchStatus,
 )
 from .utils_datemath import (
     get_current_new_york_datetime,
@@ -377,6 +378,33 @@ class LinkedToTicketmasterFilter(SimpleListFilter):
         return queryset
 
 
+class FetchStatusFilter(SimpleListFilter):
+    """how a venue's latest event fetch went (see VenueFetchStatus)"""
+
+    title = "last fetch"
+    parameter_name = "fetch"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("problems", "Problems"),
+            ("nothing", "Nothing found"),
+            ("ok", "OK"),
+            ("never", "Never fetched"),
+        )
+
+    def queryset(self, request, queryset):
+        no_problems = Q(fetch_status__problems=[])
+        if self.value() == "problems":
+            return queryset.filter(fetch_status__isnull=False).exclude(no_problems)
+        if self.value() == "nothing":
+            return queryset.filter(no_problems, fetch_status__upcoming=0)
+        if self.value() == "ok":
+            return queryset.filter(no_problems, fetch_status__upcoming__gt=0)
+        if self.value() == "never":
+            return queryset.filter(fetch_status__isnull=True)
+        return queryset
+
+
 class VenueAdmin(admin.ModelAdmin):
     # links typed without a scheme get https, which django 6 makes the default
     formfield_overrides = {URLField: {"assume_scheme": "https"}}
@@ -391,6 +419,7 @@ class VenueAdmin(admin.ModelAdmin):
         "open_mic",
         "age_policy",
         "sheet_id",
+        "last_fetch",
     )
     list_display_links = ("name",)
     list_filter = (
@@ -401,6 +430,7 @@ class VenueAdmin(admin.ModelAdmin):
         "open_mic",
         "booking_type",
         LinkedToTicketmasterFilter,
+        FetchStatusFilter,
         "place_lookup_status",
         "place_business_status",
     )
@@ -473,7 +503,65 @@ class VenueAdmin(admin.ModelAdmin):
             },
         ),
         ("Event sources", {"fields": ("ticketmaster_venue_id",)}),
+        ("Event fetching", {"fields": ("fetch_status_details",)}),
     )
+    readonly_fields = ("fetch_status_details",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("fetch_status")
+
+    @staticmethod
+    def _fetch_status(venue):
+        try:
+            return venue.fetch_status
+        except VenueFetchStatus.DoesNotExist:
+            return None
+
+    @admin.display(description="last fetch")
+    def last_fetch(self, venue):
+        status = self._fetch_status(venue)
+        if status is None:
+            return format_html('<span style="color: #6e7781">never fetched</span>')
+        if status.problems:
+            return format_html(
+                '<strong style="color: #cf222e">problems ({})</strong>', len(status.problems)
+            )
+        if not status.upcoming:
+            return format_html('<span style="color: #6e7781">nothing found</span>')
+        return format_html(
+            '<span style="color: #1a7f37">OK · {} upcoming</span>', status.upcoming
+        )
+
+    @admin.display(description="latest fetch")
+    def fetch_status_details(self, venue):
+        status = self._fetch_status(venue)
+        if status is None:
+            return "never fetched"
+        run_link = (
+            format_html(
+                ' · <a href="{}">job run</a>',
+                reverse("admin:core_jobrun_change", args=[status.job_run_id]),
+            )
+            if status.job_run_id
+            else ""
+        )
+        problems = (
+            format_html(
+                '<strong style="color: #cf222e">problems</strong><ul>{}</ul>',
+                format_html_join("", "<li>{}</li>", ((p,) for p in status.problems)),
+            )
+            if status.problems
+            else "no problems"
+        )
+        return format_html(
+            "{} · {} · {} found, {} upcoming{}<br>{}",
+            timezone.localtime(status.fetched_at).strftime("%b %-d, %Y %-I:%M %p"),
+            status.source,
+            status.found,
+            status.upcoming,
+            run_link,
+            problems,
+        )
 
     # remove default bulk delete action - it's scary!
     def get_actions(self, request):
@@ -560,7 +648,15 @@ class JobRunOutcomeFilter(SimpleListFilter):
 
 # runs of the pipeline commands, recorded by core/job_runs.py; read-only
 class JobRunAdmin(admin.ModelAdmin):
-    list_display = ("command", "started_at", "duration", "outcome_label", "dry_run", "summary_text")
+    list_display = (
+        "command",
+        "started_at",
+        "duration",
+        "outcome_label",
+        "problem_count",
+        "dry_run",
+        "summary_text",
+    )
     list_filter = ("command", JobRunOutcomeFilter, "dry_run")
     ordering = ("-started_at",)
     fields = (
@@ -573,6 +669,7 @@ class JobRunAdmin(admin.ModelAdmin):
         "dry_run",
         "summary_text",
         "error_text",
+        "problems_table",
         "output_text",
     )
     readonly_fields = fields
@@ -607,6 +704,39 @@ class JobRunAdmin(admin.ModelAdmin):
     @admin.display(description="summary")
     def summary_text(self, run):
         return " · ".join(f"{label} {count}" for label, count in run.summary)
+
+    @admin.display(description="problems")
+    def problem_count(self, run):
+        count = len(run.problems)
+        if not count:
+            return "0"
+        return format_html('<strong style="color: #cf222e">{}</strong>', count)
+
+    @admin.display(description="problems")
+    def problems_table(self, run):
+        if not run.problems:
+            return "no problems"
+        rows = format_html_join(
+            "",
+            '<tr><td style="white-space: nowrap; vertical-align: top">'
+            '<a href="{}">{} {}</a></td><td><ul style="margin: 0">{}</ul></td></tr>',
+            (
+                (
+                    reverse("admin:core_venue_change", args=[item["venue_id"]]),
+                    item["sheet_id"],
+                    item["name"],
+                    format_html_join("", "<li>{}</li>", ((p,) for p in item["problems"])),
+                )
+                for item in run.problems
+            ),
+        )
+        return format_html(
+            '<div style="border-left: 4px solid #cf222e; padding-left: 8px">'
+            '<strong style="color: #cf222e">{} venues with problems</strong>'
+            "<table>{}</table></div>",
+            len(run.problems),
+            rows,
+        )
 
     @admin.display(description="error")
     def error_text(self, run):

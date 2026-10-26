@@ -74,3 +74,48 @@ class JobRunAdminTestCase(TestCase):
         page = self.client.get(f"/admin/core/venue/{venue.pk}/change/")
         for button in ("_save", "_saveasnew", "_addanother", "_continue"):
             self.assertContains(page, f'name="{button}"')
+
+    def test_run_with_problems(self):
+        rails = Venue.objects.create(sheet_id="V0316", name="Off The Rails")
+        burren = Venue.objects.create(sheet_id="V0285", name="The Burren")
+        run = JobRun.objects.create(
+            command="fetch_events",
+            started_at=timezone.now(),
+            finished_at=timezone.now(),
+            status=JobRun.Status.SUCCEEDED,
+            problems=[
+                {
+                    "venue_id": rails.pk,
+                    "sheet_id": "V0316",
+                    "name": "Off The Rails",
+                    "problems": ["failed: https://www.ticketweb.com/event/1 HttpError()"],
+                },
+                {
+                    "venue_id": burren.pk,
+                    "sheet_id": "V0285",
+                    "name": "The Burren",
+                    "problems": ["ai extraction failed: stopped with max_tokens"],
+                },
+            ],
+            output="the report",
+        )
+        page = self.client.get(f"{LIST_URL}{run.pk}/change/").content.decode()
+        self.assertIn("2 venues with problems", page)
+        self.assertIn(f'href="/admin/core/venue/{rails.pk}/change/"', page)
+        self.assertIn("stopped with max_tokens", page)
+        # listed before the text report
+        self.assertLess(page.index("2 venues with problems"), page.index("the report"))
+        listing = self.client.get(LIST_URL)
+        self.assertContains(listing, '<strong style="color: #cf222e">2</strong>', html=True)
+
+    def test_run_without_problems(self):
+        run = JobRun.objects.create(
+            command="fetch_events",
+            started_at=timezone.now(),
+            finished_at=timezone.now(),
+            status=JobRun.Status.SUCCEEDED,
+        )
+        page = self.client.get(f"{LIST_URL}{run.pk}/change/")
+        self.assertContains(page, "no problems")
+        listing = self.client.get(LIST_URL)
+        self.assertContains(listing, '<td class="field-problem_count">0</td>', html=True)

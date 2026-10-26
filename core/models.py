@@ -605,9 +605,31 @@ class JobRun(models.Model):
     summary = models.JSONField(default=list, blank=True)
     output = models.TextField(blank=True, default="")
     error = models.TextField(blank=True, default="")
+    # [{"venue_id", "sheet_id", "name", "problems": [...]}], for venues that had problems
+    problems = models.JSONField(default=list, blank=True)
 
     class Meta:
         ordering = ["-started_at"]
 
     def __str__(self):
         return f"{self.command} {timezone.localtime(self.started_at):%Y-%m-%d %H:%M}"
+
+
+# how fetch_events last went for a venue: when, from which source, what it found and what
+# failed. like VenueEventSource, kept apart so saving it never calls Venue.save()
+class VenueFetchStatus(models.Model):
+    venue = models.OneToOneField(Venue, on_delete=models.CASCADE, related_name="fetch_status")
+    fetched_at = models.DateTimeField()
+    # ical, json-ld, ticketing, ai or ticketmaster
+    source = models.CharField(max_length=32)
+    found = models.PositiveIntegerField(default=0)
+    upcoming = models.PositiveIntegerField(default=0)
+    problems = models.JSONField(default=list, blank=True)
+    # the run it came from; kept when old runs are pruned
+    job_run = models.ForeignKey(JobRun, null=True, blank=True, on_delete=models.SET_NULL)
+
+    class Meta:
+        verbose_name_plural = "venue fetch statuses"
+
+    def __str__(self):
+        return f"{self.venue}: {self.source}"

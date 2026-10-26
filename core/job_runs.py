@@ -3,7 +3,8 @@ recording each run of a pipeline command as a JobRun, so scheduled runs can be r
 the admin (/admin/core/jobrun/) after the host's own logs are gone.
 
 a command opts in by subclassing RecordedCommand ahead of BaseCommand, and can set
-self.job_summary to a list of (label, count) pairs for the admin list:
+self.job_summary to a list of (label, count) pairs for the admin list, and
+self.job_problems to the venues it had problems with (see JobRun.problems):
 
     class Command(RecordedCommand, BaseCommand):
         def handle(self, *args, **options):
@@ -104,13 +105,15 @@ class Tee:
 
 class RecordedCommand:
     job_summary = None
+    job_problems = None
 
     def execute(self, *args, **options):
         captured = StringIO()
         options["stdout"] = Tee(options.get("stdout") or sys.stdout, captured)
         stderr = options.get("stderr") or sys.stderr
         self.job_summary = []
-        run = self._start_run(args, options, stderr)
+        self.job_problems = []
+        self.job_run = run = self._start_run(args, options, stderr)
         try:
             result = super().execute(*args, **options)
         except BaseException:
@@ -149,6 +152,7 @@ class RecordedCommand:
             run.status = status
             run.finished_at = timezone.now()
             run.summary = [[label, count] for label, count in (self.job_summary or [])]
+            run.problems = self.job_problems or []
             run.output = clip(ANSI_RE.sub("", captured.getvalue()))
             run.error = error
             run.save()

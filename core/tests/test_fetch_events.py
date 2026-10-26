@@ -10,7 +10,7 @@ from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterErr
 from core.management.commands import fetch_events
 from core.event_sources import CSV_COLUMNS, save_event_source
 from core.job_runs import RecordedCommand
-from core.models import Event, JobRun, Venue, VenueEventSource
+from core.models import Event, JobRun, Venue, VenueEventSource, VenueFetchStatus
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.test import SimpleTestCase, TestCase
@@ -316,6 +316,69 @@ class FetchEventsTestCase(TestCase):
         self.assertEqual(summary["events updated"], 0)
         self.assertEqual(summary["venues with failures"], 1)
         self.assertEqual(run.output, output)
+
+    def failing_and_working_results(self, targets):
+        by_id = {t["sheet_id"]: t for t in targets}
+        return [
+            {
+                "kind": "error",
+                "target": by_id["V0001"],
+                "url": "https://v0001.example/cal.ics",
+                "error": "TimeoutError()",
+            },
+            {
+                "kind": "events",
+                "target": by_id["V0002"],
+                "events": [event("One"), event("Two", days=8), event("Past", days=-3)],
+                "url": "https://v0002.example/",
+                "source": "json-ld",
+            },
+        ]
+
+    def test_problems_are_listed_on_the_job_run(self):
+        self.crawl_returns(self.failing_and_working_results)
+        self.fetch("--sheet-ids", "V0001,V0002")
+        run = JobRun.objects.get()
+        self.assertEqual(
+            run.problems,
+            [
+                {
+                    "venue_id": self.venues["V0001"].pk,
+                    "sheet_id": "V0001",
+                    "name": "Venue V0001",
+                    "problems": ["failed: https://v0001.example/cal.ics TimeoutError()"],
+                }
+            ],
+        )
+
+    def test_fetched_venue_records_its_status(self):
+        self.crawl_returns(self.failing_and_working_results)
+        self.fetch("--sheet-ids", "V0001,V0002")
+        run = JobRun.objects.get()
+        working = VenueFetchStatus.objects.get(venue=self.venues["V0002"])
+        self.assertEqual(working.source, "json-ld")
+        self.assertEqual((working.found, working.upcoming), (3, 2))
+        self.assertEqual(working.problems, [])
+        self.assertEqual(working.job_run, run)
+        failing = VenueFetchStatus.objects.get(venue=self.venues["V0001"])
+        self.assertEqual((failing.found, failing.upcoming), (0, 0))
+        self.assertEqual(len(failing.problems), 1)
+
+    def test_dry_run_leaves_fetch_status_alone(self):
+        self.crawl_returns(self.failing_and_working_results)
+        self.fetch("--sheet-ids", "V0001,V0002", "--dry-run")
+        self.assertFalse(VenueFetchStatus.objects.exists())
+        self.assertEqual(len(JobRun.objects.get().problems), 1)
+
+    def test_venue_not_selected_keeps_its_status(self):
+        self.crawl_returns(self.failing_and_working_results)
+        self.fetch("--sheet-ids", "V0001,V0002")
+        before = VenueFetchStatus.objects.get(venue=self.venues["V0002"]).fetched_at
+        self.crawl_returns(lambda targets: [])
+        self.fetch("--sheet-ids", "V0001")
+        self.assertEqual(
+            VenueFetchStatus.objects.get(venue=self.venues["V0002"]).fetched_at, before
+        )
 
     def test_dry_run_is_recorded_as_such(self):
         self.fetch("--dry-run", "--per-source", "1")
@@ -787,3 +850,21 @@ class PriceBucketTestCase(SimpleTestCase):
         }
         for amount, bucket in cases.items():
             self.assertEqual(fetch_events.price_bucket(amount), bucket, amount)
+
+
+class IsProblemTestCase(SimpleTestCase):
+    def test_failures_are_problems_and_notes_are_not(self):
+        problems = [
+            "failed: https://v.example/cal.ics TimeoutError()",
+            "ticketmaster failed: HTTP 503",
+            "ai extraction failed: stopped with max_tokens",
+        ]
+        notes = [
+            "page text was truncated for ai extraction",
+            "3 events left unlabelled (--skip-ai)",
+            "not music, hidden from review (1): Trivia [other]",
+            "removed 2 unapproved events from the venue's ical feed",
+            "ticketmaster: 4 non-music or undated events left out",
+        ]
+        self.assertTrue(all(fetch_events.is_problem(note) for note in problems))
+        self.assertFalse(any(fetch_events.is_problem(note) for note in notes))

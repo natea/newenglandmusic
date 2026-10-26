@@ -1,5 +1,5 @@
 from core.admin import EventAdmin, VenueAdmin
-from core.models import Event, Venue
+from core.models import Event, JobRun, Venue, VenueFetchStatus
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
@@ -148,3 +148,60 @@ class EventAdminVenueLinkTestCase(TestCase):
 
     def test_venue_column_sorts_by_name(self):
         self.assertEqual(EventAdmin.get_venue_link.admin_order_field, "venue__name")
+
+
+class VenueAdminFetchStatusTestCase(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+        now = timezone.now()
+        self.run = JobRun.objects.create(command="fetch_events", started_at=now)
+        self.failing = Venue.objects.create(name="Off The Rails", sheet_id="V0316")
+        self.empty = Venue.objects.create(name="Congress Square Park", sheet_id="V0369")
+        self.working = Venue.objects.create(name="Bug Jar", sheet_id="V0591")
+        self.never = Venue.objects.create(name="Lizard Lounge", sheet_id="V0142")
+        for venue, upcoming, problems in (
+            (self.failing, 0, ["failed: https://www.ticketweb.com/event/1 HttpError()"]),
+            (self.empty, 0, []),
+            (self.working, 8, []),
+        ):
+            VenueFetchStatus.objects.create(
+                venue=venue,
+                fetched_at=now,
+                source="ticketing",
+                found=upcoming,
+                upcoming=upcoming,
+                problems=problems,
+                job_run=self.run,
+            )
+
+    def listed(self, state):
+        response = self.client.get("/admin/core/venue/", {"fetch": state})
+        return set(response.context["cl"].result_list)
+
+    def test_filter_states(self):
+        self.assertEqual(self.listed("problems"), {self.failing})
+        self.assertEqual(self.listed("nothing"), {self.empty})
+        self.assertEqual(self.listed("ok"), {self.working})
+        self.assertEqual(self.listed("never"), {self.never})
+
+    def test_filter_to_problem_venues_marks_them_red(self):
+        response = self.client.get("/admin/core/venue/", {"fetch": "problems"})
+        self.assertContains(
+            response, '<strong style="color: #cf222e">problems (1)</strong>', html=True
+        )
+
+    def test_list_column(self):
+        response = self.client.get("/admin/core/venue/")
+        self.assertContains(response, "OK · 8 upcoming")
+        self.assertContains(response, "nothing found")
+        self.assertContains(response, "never fetched")
+
+    def test_venue_page(self):
+        page = self.client.get(f"/admin/core/venue/{self.failing.pk}/change/")
+        self.assertContains(page, "ticketing · 0 found, 0 upcoming")
+        self.assertContains(page, "failed: https://www.ticketweb.com/event/1 HttpError()")
+        self.assertContains(page, f'href="/admin/core/jobrun/{self.run.pk}/change/"')
+
+    def test_never_fetched_venue_page(self):
+        page = self.client.get(f"/admin/core/venue/{self.never.pk}/change/")
+        self.assertContains(page, "never fetched")

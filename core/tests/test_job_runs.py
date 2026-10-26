@@ -26,6 +26,9 @@ class SampleCommand(RecordedCommand, BaseCommand):
         if options["fail"]:
             raise CommandError("it broke")
         self.job_summary = [("created", 2), ("updated", 3)]
+        self.job_problems = [
+            {"venue_id": 1, "sheet_id": "V0001", "name": "Venue", "problems": ["failed: x"]}
+        ]
 
     def command_name(self):
         return "sample"
@@ -46,6 +49,7 @@ class RecordedCommandTestCase(TestCase):
         self.assertIsNotNone(run.finished_at)
         self.assertEqual(run.arguments, {"lines": 2})
         self.assertEqual(run.summary, [["created", 2], ["updated", 3]])
+        self.assertEqual(run.problems[0]["sheet_id"], "V0001")
         self.assertEqual(run.output, output)
         self.assertEqual(output, "line 0\nline 1\ndone\n")
 

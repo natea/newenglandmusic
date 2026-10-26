@@ -7,9 +7,10 @@ from core.event_fetching.spider import SCRAPY_SETTINGS, VenueEventsSpider
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.event_fetching.ticketmaster import to_event_dict as ticketmaster_event
 from core.event_sources import event_source_row
-from core.models import Event, Venue, VenueEventSource
+from core.models import Event, Venue, VenueEventSource, VenueFetchStatus
 from core.job_runs import RecordedCommand
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 from django.utils import timezone
 from django.utils.html import escape
 from scrapy.crawler import CrawlerProcess
@@ -74,6 +75,15 @@ def short(value, max_length=255):
     """a char field value, or "" when it doesn't fit (e.g. a very long url)"""
     value = (value or "").strip()
     return value if len(value) <= max_length else ""
+
+
+# notes that mean something went wrong, as opposed to informational ones (a truncated
+# page, events hidden as not music). every failure note starts with one of these
+PROBLEM_PREFIXES = ("failed:", "ticketmaster failed:", "ai extraction failed:")
+
+
+def is_problem(note):
+    return note.startswith(PROBLEM_PREFIXES)
 
 
 def make_target(venue, source, row=None):
@@ -411,6 +421,25 @@ class Command(RecordedCommand, BaseCommand):
             f"labelling used {input_tokens} input / {output_tokens} output tokens"
         )
 
+    def save_fetch_statuses(self, chosen, events_by_venue, notes_by_venue):
+        """records how this fetch went for each venue, for the venue admin"""
+        now = timezone.now()
+        with transaction.atomic():
+            for target, unique in chosen:
+                VenueFetchStatus.objects.update_or_create(
+                    venue_id=target["venue_pk"],
+                    defaults={
+                        "fetched_at": now,
+                        "source": target["source"],
+                        "found": len(events_by_venue[target["sheet_id"]]),
+                        "upcoming": len(unique),
+                        "problems": [
+                            note for note in notes_by_venue[target["sheet_id"]] if is_problem(note)
+                        ],
+                        "job_run": getattr(self, "job_run", None),
+                    },
+                )
+
     def save_and_report(self, targets, events_by_venue, notes_by_venue, dry_run, skip_ai, model):
         now = timezone.now()
         chosen = []
@@ -462,11 +491,21 @@ class Command(RecordedCommand, BaseCommand):
             for note in notes_by_venue[target["sheet_id"]]:
                 self.stdout.write(self.style.WARNING(f"  {note}"))
 
-        failed_venues = sum(
-            1
-            for target in targets
-            if any("failed" in note for note in notes_by_venue[target["sheet_id"]])
-        )
+        self.job_problems = []
+        for target in targets:
+            problems = [note for note in notes_by_venue[target["sheet_id"]] if is_problem(note)]
+            if problems:
+                self.job_problems.append(
+                    {
+                        "venue_id": target["venue_pk"],
+                        "sheet_id": target["sheet_id"],
+                        "name": target["name"],
+                        "problems": problems,
+                    }
+                )
+        failed_venues = len(self.job_problems)
+        if not dry_run:
+            self.save_fetch_statuses(chosen, events_by_venue, notes_by_venue)
         self.job_summary = [
             ("venues", len(targets)),
             ("events created", totals["created"]),
