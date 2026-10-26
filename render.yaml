@@ -16,14 +16,14 @@ services:
   - type: web
     name: newenglandmusic
     runtime: python
-    # free: sleeps after 15 idle minutes (about a minute to wake), no shell tab
-    # and no pre-deploy command; 0.5c-512mb ($7/month) removes those limits
-    plan: free
+    # 0.5c-512mb ($7/month): stays awake and has a shell tab. free sleeps after
+    # 15 idle minutes and takes about a minute to wake
+    plan: 0.5c-512mb
     region: virginia
     branch: main
     # deploy a commit only after github actions has run the tests on it
     autoDeployTrigger: checksPass
-    # also runs the migrations: free services have no pre-deploy command
+    # also runs the migrations, so a failed migration fails the build
     buildCommand: ./bin/build.sh
     startCommand: 'gunicorn --access-logformat ''%(h)s %(l)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" reqtime: %(M)s ms'' nycnoise.wsgi:application'
     healthCheckPath: /
