@@ -1,4 +1,4 @@
-from core.admin import EventAdmin, LinkedToTicketmasterFilter, VenueAdmin
+from core.admin import EventAdmin, VenueAdmin
 from core.models import Event, Venue
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
@@ -37,9 +37,11 @@ class VenueAdminTicketmasterTestCase(TestCase):
         self.assertIn("ticketmaster_venue_id", self.admin.search_fields)
 
     def filtered(self, value):
-        params = {"ticketmaster": value} if value else {}
-        list_filter = LinkedToTicketmasterFilter(self.request, params, Venue, self.admin)
-        return set(list_filter.queryset(self.request, Venue.objects.all()))
+        # go through the changelist, since django 5 passes filters lists where 4.2 passed strings
+        request = RequestFactory().get("/admin/core/venue/", {"ticketmaster": value} if value else {})
+        request.user = self.request.user
+        changelist = self.admin.get_changelist_instance(request)
+        return set(changelist.get_queryset(request))
 
     def test_linked_filter(self):
         self.assertEqual(self.filtered("yes"), {self.linked})
