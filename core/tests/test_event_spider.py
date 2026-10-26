@@ -275,6 +275,20 @@ class SpiderTestCase(SimpleTestCase):
         self.assertIn("took too long", result["error"])
 
 
+    def test_http_error_records_its_status(self):
+        from scrapy.http import Response
+        from scrapy.spidermiddlewares.httperror import HttpError
+
+        response = Response("https://venue.example/events/?ical=1", status=429)
+        failure = SimpleNamespace(
+            request=SimpleNamespace(url=response.url, cb_kwargs={"target": target()}),
+            value=HttpError(response, "Ignoring non-200 response"),
+        )
+        self.spider.on_error(failure)
+        [result] = self.results
+        self.assertTrue(result["error"].startswith("HTTP 429 HttpError("))
+
+
 class PageTextTestCase(SimpleTestCase):
     def test_keeps_text_and_absolute_link_urls(self):
         text = page_text_for_ai(

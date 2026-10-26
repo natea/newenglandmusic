@@ -208,11 +208,17 @@ class VenueEventsSpider(scrapy.Spider):
 
     def on_error(self, failure):
         request = failure.request
+        error = repr(failure.value)
+        # an HttpError's own message doesn't say which status: 403 (blocked), 429 (too
+        # many requests) and 503 (overloaded) each need something different
+        response = getattr(failure.value, "response", None)
+        if getattr(response, "status", None):
+            error = f"HTTP {response.status} {error}"
         self.results.append(
             {
                 "kind": "error",
                 "target": request.cb_kwargs.get("target"),
                 "url": request.url,
-                "error": repr(failure.value)[:200],
+                "error": error[:200],
             }
         )
