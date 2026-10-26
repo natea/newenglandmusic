@@ -31,5 +31,5 @@
 ## 3. Check
 
 - [x] 3.1 Run the full suite with outbound network blocked, and verify that it passes.
-- [ ] 3.2 After the user has set up the service account, run `sync_venues_from_gsheets --dry-run` with `GOOGLE_SERVICE_ACCOUNT_JSON` set locally, logged to `logs/sync_venues_from_gsheets-YYYY-MM-DD.log`. Verify that the counts match a gog dry run: 729 venues and 53 areas, with no changes.
+- [x] 3.2 After the user has set up the service account, run `sync_venues_from_gsheets --dry-run` with `GOOGLE_SERVICE_ACCOUNT_JSON` set locally, logged to `logs/sync_venues_from_gsheets-YYYY-MM-DD.log`. Verify that the counts match a gog dry run: 729 venues and 53 areas, with no changes. (2026-10-26: both read 729 venues with 0 created and 0 area changes, and the log holds no key or token. The first try found the Sheets API disabled in the Cloud project, which now has its own error message.)
 - [x] 3.3 Note the follow-up in `PRODUCTION.md`: a Render cron job for the daily sync, once all three blockers are fixed. Verify by reading the note.
