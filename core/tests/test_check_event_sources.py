@@ -364,6 +364,32 @@ class CheckCommandTestCase(TestCase):
         self.assertEqual(self.saved("V0004").checked_at, ma_checked_at)
         self.assertFalse(VenueEventSource.objects.filter(venue__sheet_id="V0003").exists())
 
+    def test_report_lists_each_venue(self):
+        self.results["V0001"] = {
+            "url": "https://v0001.example/",
+            "events_page": "https://v0001.example/calendar/",
+            "ical_url": "https://v0001.example/events/?ical=1",
+            "ical_events": 23,
+            "platforms": "dice;eventbrite",
+            "js_heavy": "yes",
+        }
+        self.results["V0002"] = {"best_source": "bot-blocked", "error": "HTTP 403"}
+        out = StringIO()
+        with mock.patch.object(check, "check_venue", side_effect=lambda venue: {
+            "sheet_id": venue["sheet_id"],
+            "name": venue["name"],
+            "best_source": "ical",
+            **self.results.get(venue["sheet_id"], {}),
+        }):
+            call_command("check_event_sources", "--state", "NH", stdout=out, no_color=True)
+        output = out.getvalue()
+        self.assertIn("V0001 NH open (NH): ical", output)
+        self.assertIn("  events page: https://v0001.example/calendar/", output)
+        self.assertIn("  ical feed: https://v0001.example/events/?ical=1 (23 events)", output)
+        self.assertIn("  ticketing: dice, eventbrite · little text without javascript", output)
+        self.assertIn("V0002 NH unknown (NH): bot-blocked", output)
+        self.assertIn("  error: HTTP 403", output)
+
     def test_csv_export(self):
         self.results["V0001"] = {"platforms": "dice", "js_heavy": "yes"}
         with tempfile.TemporaryDirectory() as tmp:

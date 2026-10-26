@@ -371,6 +371,31 @@ class Command(RecordedCommand, BaseCommand):
         )
         parser.add_argument("--workers", type=int, default=16)
 
+    def report_source(self, source):
+        """what the check found for one venue, so a run can be reviewed venue by venue"""
+        venue = source.venue
+        location = ", ".join(part for part in (venue.city_town, venue.state) if part)
+        heading = f"{venue.sheet_id} {venue.name}" + (f" ({location})" if location else "")
+        self.stdout.write(self.style.MIGRATE_HEADING(f"\n{heading}: {source.best_source}"))
+        if source.url:
+            self.stdout.write(f"  site: {source.url}")
+        if source.events_page:
+            self.stdout.write(f"  events page: {source.events_page}")
+        if source.ical_url:
+            count = "" if source.ical_events is None else f" ({source.ical_events} events)"
+            self.stdout.write(f"  ical feed: {source.ical_url}{count}")
+        found = []
+        if source.json_ld_events:
+            found.append(f"{source.json_ld_events} json-ld events")
+        if source.platforms:
+            found.append("ticketing: " + ", ".join(source.platforms))
+        if source.js_heavy:
+            found.append("little text without javascript")
+        if found:
+            self.stdout.write("  " + " · ".join(found))
+        if source.error:
+            self.stdout.write(self.style.WARNING(f"  error: {source.error}"))
+
     def handle(self, *args, **options):
         venues = Venue.objects.order_by("sheet_id")
         if not options["include_inactive"]:
@@ -406,6 +431,10 @@ class Command(RecordedCommand, BaseCommand):
                 writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
                 writer.writeheader()
                 writer.writerows(event_source_csv_row(source) for source in sources)
+
+        for source in sources:
+            self.report_source(source)
+        self.stdout.write("")
 
         counts = {}
         for _, result in results:
