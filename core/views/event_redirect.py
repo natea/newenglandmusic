@@ -29,7 +29,7 @@ def event_redirect(request, event_id, tempate_path="core/empty.html"):
     title = f"{event_time} @ {venue} - {event_title}"
 
     redirect_time = (
-        1 if request.META["HTTP_USER_AGENT"] == "TelegramBot (like TwitterBot)" else 0
+        1 if request.META.get("HTTP_USER_AGENT") == "TelegramBot (like TwitterBot)" else 0
     )
 
     return render(
