@@ -243,7 +243,7 @@ class EventAdmin(admin.ModelAdmin):
         "user_submitted",
     ]
     list_editable = ("same_time_order_override",)
-    actions = ["mark_as_approved", "mark_as_live_music", "mark_as_not_music"]
+    actions = ["mark_as_approved", "mark_as_unapproved", "mark_as_live_music", "mark_as_not_music"]
 
     class Media:
         js = [
@@ -307,6 +307,12 @@ class EventAdmin(admin.ModelAdmin):
     @admin.action(description="Mark as approved")
     def mark_as_approved(self, request, queryset):
         queryset.update(is_approved=True)
+
+    # takes events off the site. relabelling doesn't, so this is how to remove an
+    # approved event that turns out not to be music
+    @admin.action(description="Mark as unapproved")
+    def mark_as_unapproved(self, request, queryset):
+        queryset.update(is_approved=False)
 
     # an admin's label is never overwritten by later imports
     @admin.action(description="Mark as live music")

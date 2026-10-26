@@ -59,6 +59,16 @@ class EventAdminKindTestCase(TestCase):
             self.assertEqual((event.kind, event.kind_set_by), ("live_music", "admin"))
         self.assertIn("comedy event", {e.title for e in Event.all_objects.filter(kind="live_music")})
 
+    def test_mark_as_unapproved(self):
+        Event.all_objects.filter(pk__in=[self.events["comedy"].pk, self.events["other"].pk]).update(is_approved=True)
+        self.run_action("mark_as_unapproved", "comedy")
+        self.assertFalse(Event.all_objects.get(pk=self.events["comedy"].pk).is_approved)
+        # off the site, and its label unchanged
+        self.assertFalse(Event.objects.filter(pk=self.events["comedy"].pk).exists())
+        self.assertEqual(Event.all_objects.get(pk=self.events["comedy"].pk).kind, "comedy")
+        self.assertTrue(Event.all_objects.get(pk=self.events["other"].pk).is_approved)
+        self.assertIn("mark_as_unapproved", self.admin.actions)
+
     def test_mark_as_not_music(self):
         self.run_action("mark_as_not_music", "live_music")
         event = Event.all_objects.get(pk=self.events["live_music"].pk)
