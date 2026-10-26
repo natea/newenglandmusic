@@ -49,6 +49,11 @@ A venue linked to more than one events API SHALL be fetched from exactly one, in
 - **WHEN** a venue has both a Ticketmaster and a SeatGeek link
 - **THEN** it is fetched from Ticketmaster only
 
+#### Scenario: Linked to Eventbrite and SeatGeek
+
+- **WHEN** a venue has both an Eventbrite organizer and a SeatGeek link
+- **THEN** it is fetched from Eventbrite only
+
 ### Requirement: SeatGeek needs a client ID and fails gracefully
 
 Without `SEATGEEK_CLIENT_ID`, linked venues SHALL be skipped with a note. An API error for one venue SHALL be reported as that venue's problem, and the run SHALL continue.
