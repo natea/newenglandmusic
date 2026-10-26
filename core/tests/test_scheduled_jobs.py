@@ -15,6 +15,7 @@ BIN = ROOT / "bin"
 # stands in for python: records each call, and fails the one matching $FAIL_STEP
 STUB_PYTHON = """#!/usr/bin/env bash
 echo "$*" >> "$CALLS"
+echo "$MALLOC_ARENA_MAX" > "$CALLS.arenas"
 if [ -n "$FAIL_STEP" ] && [ "$*" = "$FAIL_STEP" ]; then
   exit 3
 fi
@@ -27,7 +28,7 @@ DAILY = [
     "manage.py fetch_events --all",
 ]
 WEEKLY = [
-    "manage.py check_event_sources",
+    "manage.py check_event_sources --workers 8",
     "manage.py match_ticketmaster_venues",
     "manage.py match_eventbrite_organizers",
 ]
@@ -50,6 +51,7 @@ class JobScriptsTestCase(SimpleTestCase):
             result = subprocess.run(
                 ["bash", str(BIN / script)], env=env, capture_output=True, text=True, timeout=30
             )
+            self.arenas = Path(f"{calls}.arenas").read_text().strip() if Path(f"{calls}.arenas").exists() else None
             return result, calls.read_text().splitlines()
 
     def test_daily_run(self):
@@ -57,6 +59,11 @@ class JobScriptsTestCase(SimpleTestCase):
         self.assertEqual(calls, DAILY)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("=== every step succeeded", result.stdout)
+
+    def test_memory_pools_are_capped(self):
+        # threads on linux otherwise run the jobs out of memory
+        self.run_job("weekly.sh")
+        self.assertEqual(self.arenas, "2")
 
     def test_weekly_run(self):
         result, calls = self.run_job("weekly.sh")

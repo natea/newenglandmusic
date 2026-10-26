@@ -44,6 +44,8 @@ The script prints a line before each step and a summary at the end, which appear
 
 **Plan:** `0.5c-512mb`, the cheapest. The fetch runs Scrapy and up to 8 AI extraction threads. If the first runs run out of memory, the daily job moves to `1c-2g`, and this design is updated with the measured peak.
 
+**Memory, measured (2026-10-26):** the first weekly run on Render ran out of memory (over 512 MB) about 2.5 minutes into `check_event_sources`. Locally, on macOS, a full check of 696 venues peaks at 334 MB with 16 workers (74 s), and at about 240 MB with 4 workers on 100 venues, so the crawl doesn't leak. The difference is Linux's glibc allocator, which gives each thread its own memory pool and returns little of it. So `bin/steps.sh` sets `MALLOC_ARENA_MAX=2` for every step, and the weekly check runs with 8 workers instead of 16. If a job still runs out of memory, it moves to `1c-2g`.
+
 ## Risks / Trade-offs
 
 - [Render's IP addresses get blocked by more venue sites than a home connection.] → The fallback to linked APIs covers linked venues. The weekly-only crawl limits how often we hit each site. Blocked venues show in the fetch-problems filter.

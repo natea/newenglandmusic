@@ -4,6 +4,9 @@
 # venues as they were, which can still be fetched), but the host still marks the run failed.
 
 cd "$(dirname "$0")/.." || exit 1
+# linux's allocator gives each thread its own memory pool and returns little of it, so
+# the crawl's threads used over 512mb on render where macos peaks at about 330mb
+export MALLOC_ARENA_MAX="${MALLOC_ARENA_MAX:-2}"
 failed=()
 
 step() {
