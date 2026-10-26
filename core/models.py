@@ -314,7 +314,10 @@ class Venue(models.Model):
 
     # not from the sheet: the venue as found on google places by the lookup_venue_places
     # command. the sheet's coordinates are only town centres, so these are used instead
-    # when the match is confident (see exact_location)
+    # when the match is confident (see exact_location). google's terms allow storing only
+    # the place id (indefinitely) and its coordinates (for 30 days): place_looked_up_at
+    # is when the coordinates were last fetched, and lookup_venue_places refreshes or
+    # deletes them before then
     place_lookup_status = models.CharField(
         max_length=16, choices=PlaceLookupStatus.choices, blank=True, default=""
     )
@@ -322,16 +325,8 @@ class Venue(models.Model):
     place_id = models.CharField(
         max_length=255, blank=True, default="", verbose_name="Google place ID"
     )
-    place_name = models.CharField(max_length=255, blank=True, default="")
-    place_address = models.CharField(max_length=500, blank=True, default="")
     place_latitude = models.FloatField(null=True, blank=True)
     place_longitude = models.FloatField(null=True, blank=True)
-    place_business_status = models.CharField(max_length=32, blank=True, default="")
-    place_maps_url = models.URLField(
-        max_length=1000, blank=True, default="", verbose_name="Google Maps link"
-    )
-    place_website = models.URLField(max_length=1000, blank=True, default="")
-    place_phone = models.CharField(max_length=64, blank=True, default="")
 
     state = models.CharField(max_length=2, blank=True, default="")
     city_town = models.CharField(max_length=255, blank=True, default="")
@@ -404,12 +399,14 @@ class Venue(models.Model):
 
     @property
     def google_maps_link(self):
-        if self.has_confident_place and self.place_maps_url:
-            return self.place_maps_url
         latitude, longitude = self.exact_location
         if latitude is None or longitude is None:
             return ""
-        return f"https://www.google.com/maps/search/?api=1&query={latitude},{longitude}"
+        link = f"https://www.google.com/maps/search/?api=1&query={latitude},{longitude}"
+        # google's maps urls open the place itself when given its id
+        if self.has_confident_place and self.place_id:
+            link += f"&query_place_id={self.place_id}"
+        return link
 
     def __str__(self):
         return self.name

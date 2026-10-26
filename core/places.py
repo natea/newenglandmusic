@@ -3,9 +3,13 @@ looks up venues on google places, with the places api (new) text search -- the s
 world-cup-watch-parties uses. needs GOOGLE_PLACES_API_KEY, restricted in the google cloud
 console to the places api (new).
 
-the fields requested decide the price: the defaults are "pro" fields (5,000 free requests
-a month, then $32 per 1,000); website and phone are "enterprise" fields (1,000 free a
-month, then $35 per 1,000), so they're only requested with contact=True.
+the fields requested decide the price: these are "pro" fields (5,000 free requests a
+month, then $32 per 1,000).
+
+google's terms allow storing a place id indefinitely and its coordinates for 30 days, and
+nothing else: a search result's name, address and status are used while a lookup runs
+(to judge the match, and report closed venues) but never saved. place_details refreshes
+a stored id's coordinates (see lookup_venue_places --refresh-stale).
 """
 
 import time
@@ -13,16 +17,17 @@ import time
 import requests
 
 SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
+DETAILS_URL = "https://places.googleapis.com/v1/places/{place_id}"
 PRO_FIELDS = (
     "places.id",
     "places.displayName",
     "places.formattedAddress",
     "places.location",
     "places.businessStatus",
-    "places.googleMapsUri",
     "places.addressComponents",
 )
-CONTACT_FIELDS = ("places.websiteUri", "places.nationalPhoneNumber")
+# only what a refresh stores or reports
+DETAILS_FIELDS = ("id", "location", "businessStatus")
 MAX_RESULTS = 3
 BIAS_RADIUS_METERS = 30_000
 MIN_SECONDS_BETWEEN_REQUESTS = 0.2
@@ -32,6 +37,10 @@ TIMEOUT_SECONDS = 20
 
 class PlacesError(Exception):
     pass
+
+
+class PlaceNotFound(PlacesError):
+    """the place id is obsolete, or the place was removed"""
 
 
 def to_place_dict(place):
@@ -52,9 +61,6 @@ def to_place_dict(place):
         "latitude": location.get("latitude"),
         "longitude": location.get("longitude"),
         "business_status": place.get("businessStatus", ""),
-        "maps_url": place.get("googleMapsUri", ""),
-        "website": place.get("websiteUri", ""),
-        "phone": place.get("nationalPhoneNumber", ""),
     }
 
 
@@ -73,7 +79,34 @@ class PlacesClient:
                 self.sleep(wait)
         self.last_request_at = self.clock()
 
-    def search_place(self, text, bias_latitude=None, bias_longitude=None, contact=False):
+    def request(self, method, url, what, field_mask, **kwargs):
+        """the json response; retries network errors, 429 and 5xx"""
+        headers = {
+            # in a header rather than the url, so it can't end up in an error message
+            "X-Goog-Api-Key": self.api_key,
+            "X-Goog-FieldMask": ",".join(field_mask),
+        }
+        for attempt in range(MAX_RETRIES + 1):
+            self.throttle()
+            try:
+                response = self.session.request(
+                    method, url, headers=headers, timeout=TIMEOUT_SECONDS, **kwargs
+                )
+            except requests.RequestException as e:
+                error = f"{what}: {type(e).__name__}"
+            else:
+                if response.status_code == 200:
+                    return response.json()
+                error = f"{what}: HTTP {response.status_code}"
+                if response.status_code == 404:
+                    raise PlaceNotFound(error)
+                if response.status_code != 429 and response.status_code < 500:
+                    raise PlacesError(error)
+            if attempt < MAX_RETRIES:
+                self.sleep(2**attempt)
+        raise PlacesError(error)
+
+    def search_place(self, text, bias_latitude=None, bias_longitude=None):
         """the top few places for a text search, as dicts (see to_place_dict)"""
         body = {"textQuery": text, "pageSize": MAX_RESULTS}
         if bias_latitude is not None and bias_longitude is not None:
@@ -83,27 +116,18 @@ class PlacesClient:
                     "radius": BIAS_RADIUS_METERS,
                 }
             }
-        headers = {
-            # in a header rather than the url, so it can't end up in an error message
-            "X-Goog-Api-Key": self.api_key,
-            "X-Goog-FieldMask": ",".join(PRO_FIELDS + (CONTACT_FIELDS if contact else ())),
-        }
+        data = self.request("POST", SEARCH_URL, "places search", PRO_FIELDS, json=body)
+        return [to_place_dict(place) for place in data.get("places") or []]
 
-        for attempt in range(MAX_RETRIES + 1):
-            self.throttle()
-            try:
-                response = self.session.post(
-                    SEARCH_URL, json=body, headers=headers, timeout=TIMEOUT_SECONDS
-                )
-            except requests.RequestException as e:
-                error = f"places search: {type(e).__name__}"
-            else:
-                if response.status_code == 200:
-                    places = response.json().get("places") or []
-                    return [to_place_dict(place) for place in places]
-                error = f"places search: HTTP {response.status_code}"
-                if response.status_code != 429 and response.status_code < 500:
-                    raise PlacesError(error)
-            if attempt < MAX_RETRIES:
-                self.sleep(2**attempt)
-        raise PlacesError(error)
+    def place_details(self, place_id):
+        """a stored place's current id, coordinates and status"""
+        place = self.request(
+            "GET", DETAILS_URL.format(place_id=place_id), "place details", DETAILS_FIELDS
+        )
+        location = place.get("location") or {}
+        return {
+            "id": place.get("id", place_id),
+            "latitude": location.get("latitude"),
+            "longitude": location.get("longitude"),
+            "business_status": place.get("businessStatus", ""),
+        }

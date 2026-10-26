@@ -12,7 +12,7 @@ class EventVenueMapTestCase(TestCase):
             longitude=-71.1321,
             place_latitude=42.3519,
             place_longitude=-71.1195,
-            place_maps_url="https://maps.google.com/?cid=123",
+            place_id="ChIJparadise",
             **venue_fields,
         )
         event = Event.objects.create(title="show", starttime=timezone.now(), venue=venue)
@@ -21,13 +21,13 @@ class EventVenueMapTestCase(TestCase):
     def test_confident_place_location_is_used(self):
         html = self.event_html(place_lookup_status=Venue.PlaceLookupStatus.CONFIDENT)
         self.assertIn('data-venue-lnglat="-71.1195,42.3519"', html)
-        self.assertIn('href="https://maps.google.com/?cid=123"', html)
+        self.assertIn("query=42.3519,-71.1195&amp;query_place_id=ChIJparadise", html)
 
     def test_place_needing_review_is_not_used(self):
         html = self.event_html(place_lookup_status=Venue.PlaceLookupStatus.REVIEW)
         self.assertIn('data-venue-lnglat="-71.1321,42.3529"', html)
         self.assertIn("query=42.3529,-71.1321", html)
-        self.assertNotIn("cid=123", html)
+        self.assertNotIn("query_place_id", html)
 
     def test_venue_without_coordinates_has_no_pin(self):
         venue = Venue.objects.create(name="Nowhere")

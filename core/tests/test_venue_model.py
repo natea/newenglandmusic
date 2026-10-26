@@ -40,24 +40,33 @@ class VenueExactLocationTestCase(TestCase):
             place_lookup_status=status,
             place_latitude=42.3519,
             place_longitude=-71.1195,
-            place_maps_url="https://maps.google.com/?cid=123",
+            place_id="ChIJparadise",
         )
         return Venue(**{**defaults, **fields})
 
     def test_confident_place_is_used(self):
         venue = self.venue(Venue.PlaceLookupStatus.CONFIDENT)
         self.assertEqual(venue.exact_location, (42.3519, -71.1195))
-        self.assertEqual(venue.google_maps_link, "https://maps.google.com/?cid=123")
+        # google maps opens the place itself, by its id
+        self.assertEqual(
+            venue.google_maps_link,
+            "https://www.google.com/maps/search/?api=1&query=42.3519,-71.1195"
+            "&query_place_id=ChIJparadise",
+        )
 
-    def test_confident_place_without_maps_url_links_to_its_coordinates(self):
-        venue = self.venue(Venue.PlaceLookupStatus.CONFIDENT, place_maps_url="")
-        self.assertIn("query=42.3519,-71.1195", venue.google_maps_link)
+    def test_expired_coordinates_still_link_the_place(self):
+        venue = self.venue(
+            Venue.PlaceLookupStatus.CONFIDENT, place_latitude=None, place_longitude=None
+        )
+        self.assertEqual(venue.exact_location, (42.35, -71.13))
+        self.assertIn("query=42.35,-71.13&query_place_id=ChIJparadise", venue.google_maps_link)
 
     def test_unconfirmed_place_is_not_used(self):
         for status in ("", Venue.PlaceLookupStatus.REVIEW, Venue.PlaceLookupStatus.NOT_FOUND):
             venue = self.venue(status)
             self.assertEqual(venue.exact_location, (42.35, -71.13), status)
             self.assertIn("query=42.35,-71.13", venue.google_maps_link, status)
+            self.assertNotIn("query_place_id", venue.google_maps_link, status)
 
     def test_no_coordinates_at_all(self):
         self.assertEqual(Venue(name="v").exact_location, (None, None))

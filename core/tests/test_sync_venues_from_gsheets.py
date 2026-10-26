@@ -237,7 +237,6 @@ class SyncCommandTestCase(TestCase):
             latitude=42.35,
             place_lookup_status=Venue.PlaceLookupStatus.CONFIDENT,
             place_id="ChIJparadise",
-            place_address="967 Commonwealth Ave, Boston, MA",
             place_latitude=42.3519,
             place_longitude=-71.1195,
         )
@@ -247,7 +246,6 @@ class SyncCommandTestCase(TestCase):
         self.assertEqual(venue.latitude, 42.36)
         self.assertEqual(venue.place_lookup_status, Venue.PlaceLookupStatus.CONFIDENT)
         self.assertEqual(venue.place_id, "ChIJparadise")
-        self.assertEqual(venue.place_address, "967 Commonwealth Ave, Boston, MA")
         self.assertEqual(venue.exact_location, (42.3519, -71.1195))
 
     def test_fields_not_in_the_sheet_are_preserved(self):

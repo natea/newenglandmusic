@@ -157,6 +157,7 @@ These run in this order. Each one depends on the one before it:
 |---|---|---|
 | `sync_venues_from_gsheets` | daily | free |
 | `lookup_venue_places` | daily (it only looks up venues without a match yet, so most days it does nothing) | Places: about one call per new venue. 5,000 calls a month are free |
+| `lookup_venue_places --refresh-stale` | daily, after the lookup | Places: refreshes coordinates more than 25 days old by place ID, so each venue about every 25 days: roughly 880 Place Details Pro calls a month, inside the 5,000 free. Every run also deletes coordinates older than 30 days, as Google's terms require |
 | `check_event_sources` | weekly | free, but it crawls every venue's site, so don't run it more often |
 | `match_ticketmaster_venues` | weekly, after the source check | free (Ticketmaster allows 5,000 requests a day) |
 | `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster: a few hundred requests |
@@ -172,13 +173,12 @@ These run in this order. Each one depends on the one before it:
 
 **Crawling.** The crawler identifies itself as `venue-db-event-check/1.0` and obeys robots.txt. It also skips Tixr, which blocks the crawling IP address. Keep the full crawl weekly. A data-centre IP gets blocked faster than a home one.
 
-## Before the jobs can run on a server
+## Google Places terms
 
-This needs fixing first. It's a code change, with its own OpenSpec proposal:
-
-1. **Google Places terms.** The terms allow storing place IDs, but coordinates for only about 30 days. The venue-place-lookup design notes this. Before going public, either:
-   - refresh coordinates monthly (`lookup_venue_places --refresh`, which costs Places calls), or
-   - keep only the place IDs and look up coordinates when needed.
+Google's terms allow storing a place ID indefinitely and its coordinates for up to 30 days, and nothing else from Places. `lookup_venue_places` keeps to that:
+- **What's stored:** only each venue's place ID, coordinates, match status and when the coordinates were fetched. The name, address and open or closed status are used while a lookup runs, then discarded.
+- **Refreshing:** the daily `--refresh-stale` run re-fetches coordinates by place ID before they're 30 days old.
+- **Expiry:** every run deletes coordinates older than 30 days, even if its requests fail. The venue then uses its sheet coordinates until a refresh succeeds.
 
 ## Reading the sheet on a server
 
@@ -192,7 +192,7 @@ Locally, `sync_venues_from_gsheets` reads the sheet with the `gog` CLI, which si
 
 If the key ever leaks, delete it on the account's **Keys** tab and create a new one.
 
-**Still to do:** a Render Cron Job that runs the sync (and the other daily jobs) every day, once the Google Places terms above are met.
+**Still to do:** a Render Cron Job that runs the sync and the other daily jobs every day.
 
 ## Launch checklist
 
@@ -204,8 +204,8 @@ If the key ever leaks, delete it on the account's **Keys** tab and create a new 
 - [ ] the domain pointed at the host, and HTTPS working
 - [ ] `ALLOWED_HOSTS` and `SITE_URL` match the domain
 - [ ] the API keys restricted: Places to its API, Protomaps to the domain
-- [ ] the three blockers above fixed, then the scheduled jobs added
+- [ ] the scheduled jobs added (the sheet's service account set up first)
 - [ ] the first `fetch_events` run checked in `/admin/core/alleventproxy/` before events are approved
 - [ ] **before announcing or sharing the site:** Google Places terms met. Until then, keep the site unshared. As of 2026-10-25 it was deployed but kept private for this reason.
-  - **Stored content:** Google allows storing only place IDs indefinitely, and coordinates for up to 30 days. The `refresh-place-coordinates` change removes the other stored Places fields and expires old coordinates.
-  - **Maps:** "Places API results displayed on a map must be shown on a Google Map". The day maps use Protomaps, so either switch to Google Maps or pin venues from a geocoder whose results may be stored. Either one is a separate change.
+  - **Stored content:** done. Only place IDs and coordinates are stored, and coordinates are refreshed or deleted within 30 days (see Google Places terms above). The daily `--refresh-stale` job has to be running for pins to stay exact.
+  - **Maps (still open):** "Places API results displayed on a map must be shown on a Google Map". The day maps use Protomaps. The options: switch the day maps to the Google Maps JavaScript API, which has its own cost; pin venues from a geocoder whose results may be stored (US Census or OpenStreetMap) and use Places only for matching and the MAP link; or get a reading of the terms that allows the current maps. Each is a separate change.

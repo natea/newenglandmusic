@@ -432,7 +432,6 @@ class VenueAdmin(admin.ModelAdmin):
         LinkedToTicketmasterFilter,
         FetchStatusFilter,
         "place_lookup_status",
-        "place_business_status",
     )
     search_fields = (
         "name",
@@ -491,21 +490,28 @@ class VenueAdmin(admin.ModelAdmin):
                     "place_lookup_status",
                     "place_looked_up_at",
                     "place_id",
-                    "place_name",
-                    "place_address",
+                    "place_on_google_maps",
                     "place_latitude",
                     "place_longitude",
-                    "place_business_status",
-                    "place_maps_url",
-                    "place_website",
-                    "place_phone",
                 )
             },
         ),
         ("Event sources", {"fields": ("ticketmaster_venue_id",)}),
         ("Event fetching", {"fields": ("fetch_status_details",)}),
     )
-    readonly_fields = ("fetch_status_details",)
+    readonly_fields = ("fetch_status_details", "place_on_google_maps")
+
+    # google's terms don't let us store a place's name or address, so this shows the live
+    # place for judging a match
+    @admin.display(description="on google maps")
+    def place_on_google_maps(self, venue):
+        if not venue.place_id:
+            return "-"
+        return format_html(
+            '<a href="https://www.google.com/maps/place/?q=place_id:{}" target="_blank" '
+            'rel="noopener">View on Google Maps</a>',
+            venue.place_id,
+        )
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("fetch_status")
@@ -590,10 +596,8 @@ class VenueAdmin(admin.ModelAdmin):
         for venue in queryset:
             venue.place_lookup_status = ""
             venue.place_looked_up_at = None
-            venue.place_id = venue.place_name = venue.place_address = ""
+            venue.place_id = ""
             venue.place_latitude = venue.place_longitude = None
-            venue.place_business_status = venue.place_maps_url = ""
-            venue.place_website = venue.place_phone = ""
             venue.save()
 
 

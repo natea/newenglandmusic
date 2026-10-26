@@ -99,3 +99,4 @@ Rollback: revert. The dropped fields would be empty, and a `--refresh` run refil
 
   The user should choose before launch. It's a separate change either way, and it doesn't change this one's tasks.
 - **Pricing:** confirm the Place Details Pro free allowance (5,000 a month) on Google's current pricing page before the first real run. If it has changed, `--max-age-days` can stretch toward 28 to reduce calls.
+  - **Checked 2026-10-26:** Google's Maps Platform page gives Pro-category SKUs 5,000 free calls each a month. The allowances are per SKU, don't pool, and reset on the 1st. A request is billed at the highest SKU its field mask touches, so `id,location,businessStatus` is Place Details Pro. Google's own per-SKU price table didn't come up in search. A third-party list gives $17 per 1,000 after the free 5,000. At ~880 refreshes a month this stays free either way.

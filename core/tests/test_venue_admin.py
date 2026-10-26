@@ -72,16 +72,13 @@ class VenueAdminPlaceTestCase(TestCase):
             longitude=-71.1321,
             place_lookup_status=Venue.PlaceLookupStatus.REVIEW,
             place_id="ChIJparadise",
-            place_name="Paradise Rock Club",
             place_latitude=42.3519,
             place_longitude=-71.1195,
-            place_business_status="OPERATIONAL",
         )
         self.closed = Venue.objects.create(
             name="Gone",
             place_lookup_status=Venue.PlaceLookupStatus.CONFIDENT,
             place_id="ChIJgone",
-            place_business_status="CLOSED_PERMANENTLY",
         )
         self.not_found = Venue.objects.create(
             name="Nowhere", place_lookup_status=Venue.PlaceLookupStatus.NOT_FOUND
@@ -95,14 +92,20 @@ class VenueAdminPlaceTestCase(TestCase):
 
     def test_filters(self):
         self.assertEqual(self.changelist_ids(place_lookup_status__exact="review"), {"Paradise Rock Club"})
-        self.assertEqual(
-            self.changelist_ids(place_business_status__exact="CLOSED_PERMANENTLY"), {"Gone"}
-        )
+        self.assertEqual(self.changelist_ids(place_lookup_status__exact="confident"), {"Gone"})
 
     def test_place_fields_are_in_the_admin_form(self):
         fields = [f for _, options in self.admin.fieldsets for f in options["fields"]]
-        for field in ("place_lookup_status", "place_address", "place_latitude", "place_maps_url"):
+        for field in ("place_lookup_status", "place_looked_up_at", "place_id", "place_latitude"):
             self.assertIn(field, fields)
+        # only what google's terms let us store
+        for field in ("place_name", "place_address", "place_business_status", "place_maps_url"):
+            self.assertNotIn(field, fields)
+
+    def test_place_links_to_google_maps_by_its_id(self):
+        link = self.admin.place_on_google_maps(self.review)
+        self.assertIn('href="https://www.google.com/maps/place/?q=place_id:ChIJparadise"', link)
+        self.assertEqual(self.admin.place_on_google_maps(self.not_found), "-")
 
     def test_confirming_a_match_puts_it_to_use(self):
         event = Event.objects.create(title="show", starttime=timezone.now(), venue=self.review)

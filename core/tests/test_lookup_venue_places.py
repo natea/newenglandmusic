@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 from io import StringIO
@@ -6,7 +7,7 @@ from unittest import mock
 
 from core.management.commands import lookup_venue_places as lookup
 from core.models import Event, Venue
-from core.places import PlacesError, to_place_dict
+from core.places import PlaceNotFound, PlacesError, to_place_dict
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
@@ -29,9 +30,6 @@ def place(name, state="MA", lat=42.3519, lng=-71.1195, **fields):
         "latitude": lat,
         "longitude": lng,
         "business_status": "OPERATIONAL",
-        "maps_url": f"https://maps.google.com/?cid={name}",
-        "website": "",
-        "phone": "",
         **fields,
     }
 
@@ -65,8 +63,8 @@ class LookupVenuePlacesTestCase(TestCase):
     def run_lookup(self, *args, results=None):
         results = results or {}
 
-        def search(client, text, lat=None, lng=None, contact=False):
-            self.searches.append((text, lat, lng, contact))
+        def search(client, text, lat=None, lng=None):
+            self.searches.append((text, lat, lng))
             result = results.get(text.split(",")[0], [])
             if isinstance(result, Exception):
                 raise result
@@ -93,8 +91,8 @@ class LookupVenuePlacesTestCase(TestCase):
         self.assertEqual(
             self.searches,
             [
-                ("Merriweather Post Pavilion, Washington, DC", 38.904722, -77.016389, False),
-                ("Paradise Rock Club, Allston, MA", 42.3529, -71.1321, False),
+                ("Merriweather Post Pavilion, Washington, DC", 38.904722, -77.016389),
+                ("Paradise Rock Club, Allston, MA", 42.3529, -71.1321),
             ],
         )
 
@@ -103,9 +101,13 @@ class LookupVenuePlacesTestCase(TestCase):
         venue = Venue.objects.get(pk=self.paradise.pk)
         self.assertEqual(venue.place_lookup_status, Venue.PlaceLookupStatus.CONFIDENT)
         self.assertEqual(venue.place_id, "ChIJ4U6oQOh544kROegfjmsLBCs")
-        self.assertEqual(venue.place_address, "967 Commonwealth Ave, Boston, MA 02215, USA")
-        self.assertEqual(venue.place_business_status, "OPERATIONAL")
         self.assertIsNotNone(venue.place_looked_up_at)
+        # the terms allow storing the place id and coordinates, and nothing else
+        place_fields = {f.name for f in Venue._meta.get_fields() if f.name.startswith("place_")}
+        self.assertEqual(
+            place_fields,
+            {"place_lookup_status", "place_looked_up_at", "place_id", "place_latitude", "place_longitude"},
+        )
         self.assertAlmostEqual(venue.exact_location[0], 42.3518, places=3)
         # fields from the sheet are untouched
         self.assertEqual((venue.latitude, venue.age_policy, venue.is_active), (42.3529, "18+", True))
@@ -117,7 +119,8 @@ class LookupVenuePlacesTestCase(TestCase):
         output = self.run_lookup(results=self.recorded_results)
         venue = Venue.objects.get(pk=self.merriweather.pk)
         self.assertEqual(venue.place_lookup_status, Venue.PlaceLookupStatus.REVIEW)
-        self.assertIn("Columbia, MD", venue.place_address)
+        # the address is only reported, never stored
+        self.assertIn("Columbia, MD", output)
         # not used: the sheet's coordinates stand
         self.assertEqual(venue.exact_location, (38.904722, -77.016389))
         self.assertIn("needs review: confirm or clear in the venue admin (1)", output)
@@ -126,7 +129,7 @@ class LookupVenuePlacesTestCase(TestCase):
         self.run_lookup(results={"Paradise Rock Club": [place("Agganis Arena")]})
         venue = Venue.objects.get(pk=self.paradise.pk)
         self.assertEqual(venue.place_lookup_status, Venue.PlaceLookupStatus.REVIEW)
-        self.assertEqual(venue.place_name, "Agganis Arena")
+        self.assertEqual(venue.place_id, "id-Agganis Arena")
 
     def test_too_far_away_needs_review(self):
         self.run_lookup(results={"Paradise Rock Club": [place("Paradise Rock Club", lat=41.0, lng=-72.0)]})
@@ -169,7 +172,7 @@ class LookupVenuePlacesTestCase(TestCase):
             results={"Paradise Rock Club": [place("Paradise Rock Club", business_status="CLOSED_PERMANENTLY")]}
         )
         venue = Venue.objects.get(pk=self.paradise.pk)
-        self.assertEqual(venue.place_business_status, "CLOSED_PERMANENTLY")
+        self.assertFalse(hasattr(venue, "place_business_status"))
         self.assertIs(venue.is_active, True)
         self.assertIn("permanently closed: mark inactive in the sheet (1)", output)
 
@@ -191,14 +194,10 @@ class LookupVenuePlacesTestCase(TestCase):
         self.run_lookup("--limit", "1", "--refresh")
         self.assertEqual(len(self.searches), 1)
 
-    def test_contact_details_only_when_asked(self):
-        found = {"Paradise Rock Club": [place("Paradise Rock Club", website="https://p.example", phone="(617) 555-0100")]}
-        self.run_lookup(results=found)
-        self.assertEqual(Venue.objects.get(pk=self.paradise.pk).place_website, "")
-        self.run_lookup("--refresh", "--contact", results=found)
-        self.assertTrue(self.searches[-1][3])
-        venue = Venue.objects.get(pk=self.paradise.pk)
-        self.assertEqual((venue.place_website, venue.place_phone), ("https://p.example", "(617) 555-0100"))
+    def test_contact_details_are_never_requested(self):
+        # there's no option to ask for website or phone any more
+        with self.assertRaises(CommandError):
+            call_command("lookup_venue_places", "--contact", stdout=StringIO())
 
     def test_dry_run_saves_nothing(self):
         output = self.run_lookup("--dry-run", results=self.recorded_results)
@@ -215,7 +214,7 @@ class LookupVenuePlacesTestCase(TestCase):
         for pk in (event.pk, unapproved.pk):
             html = Event.all_objects.get(pk=pk).baked_html_template
             self.assertIn('data-venue-lnglat="-71.1195,42.3519"', html)
-            self.assertIn("cid=Paradise Rock Club", html)
+            self.assertIn("query_place_id=id-Paradise Rock Club", html)
 
     def test_failed_request_is_reported_and_others_continue(self):
         Venue.objects.filter(pk=self.paradise.pk).update(place_id="kept", place_lookup_status="")
@@ -233,3 +232,171 @@ class LookupVenuePlacesTestCase(TestCase):
             Venue.PlaceLookupStatus.REVIEW,
         )
         self.assertNotIn("SECRETKEY", output)
+
+
+def days_ago(days):
+    return timezone.now() - datetime.timedelta(days=days)
+
+
+class RefreshAndExpiryTestCase(TestCase):
+    def setUp(self):
+        self.venue = Venue.objects.create(
+            sheet_id="V0089",
+            name="Paradise Rock Club",
+            city_town="Allston",
+            state="MA",
+            latitude=42.3529,
+            longitude=-71.1321,
+            place_lookup_status=Venue.PlaceLookupStatus.CONFIDENT,
+            place_id="ChIJparadise",
+            place_latitude=42.3519,
+            place_longitude=-71.1195,
+            place_looked_up_at=days_ago(26),
+        )
+        env = mock.patch.dict(os.environ, {"GOOGLE_PLACES_API_KEY": "SECRETKEY"})
+        env.start()
+        self.addCleanup(env.stop)
+        self.details_calls = []
+        self.searches = []
+
+    def lookup(self, *args, details=None):
+        def place_details(client, place_id):
+            self.details_calls.append(place_id)
+            if isinstance(details, Exception):
+                raise details
+            return details or {
+                "id": place_id, "latitude": 42.3518, "longitude": -71.1194,
+                "business_status": "OPERATIONAL",
+            }
+
+        def search(client, text, lat=None, lng=None):
+            self.searches.append(text)
+            return []
+
+        out = StringIO()
+        with mock.patch.object(lookup.PlacesClient, "place_details", place_details), mock.patch.object(
+            lookup.PlacesClient, "search_place", search
+        ):
+            call_command("lookup_venue_places", *args, stdout=out)
+        return out.getvalue()
+
+    def refreshed(self):
+        return Venue.objects.get(pk=self.venue.pk)
+
+    # refreshing by place id
+
+    def test_stale_coordinates(self):
+        self.lookup("--refresh-stale")
+        self.assertEqual(self.details_calls, ["ChIJparadise"])
+        venue = self.refreshed()
+        self.assertEqual((venue.place_latitude, venue.place_longitude), (42.3518, -71.1194))
+        self.assertGreater(venue.place_looked_up_at, days_ago(1))
+
+    def test_fresh_coordinates(self):
+        Venue.objects.filter(pk=self.venue.pk).update(place_looked_up_at=days_ago(3))
+        self.lookup("--refresh-stale")
+        self.assertEqual(self.details_calls, [])
+
+    def test_max_age_days(self):
+        Venue.objects.filter(pk=self.venue.pk).update(place_looked_up_at=days_ago(10))
+        self.lookup("--refresh-stale", "--max-age-days", "7")
+        self.assertEqual(self.details_calls, ["ChIJparadise"])
+
+    def test_confirmed_match_survives_a_refresh(self):
+        self.lookup("--refresh-stale")
+        self.assertEqual(self.refreshed().place_lookup_status, Venue.PlaceLookupStatus.CONFIDENT)
+        self.assertEqual(self.searches, [])
+
+    def test_place_id_changed(self):
+        self.lookup("--refresh-stale", details={
+            "id": "ChIJmoved", "latitude": 42.3518, "longitude": -71.1194, "business_status": "OPERATIONAL",
+        })
+        self.assertEqual(self.refreshed().place_id, "ChIJmoved")
+
+    def test_closed_venue_found_while_refreshing(self):
+        output = self.lookup("--refresh-stale", details={
+            "id": "ChIJparadise", "latitude": 42.3518, "longitude": -71.1194,
+            "business_status": "CLOSED_PERMANENTLY",
+        })
+        self.assertIn("permanently closed: mark inactive in the sheet (1)", output)
+        self.assertIn("V0089 Paradise Rock Club", output)
+        self.assertIsNone(self.refreshed().is_active)
+
+    # expiry
+
+    def test_refresh_fails_past_the_limit(self):
+        Venue.objects.filter(pk=self.venue.pk).update(place_looked_up_at=days_ago(31))
+        output = self.lookup("--refresh-stale", details=PlacesError("place details: HTTP 503"))
+        venue = self.refreshed()
+        self.assertIsNone(venue.place_latitude)
+        self.assertEqual((venue.place_id, venue.place_lookup_status), ("ChIJparadise", "confident"))
+        self.assertEqual(venue.exact_location, (42.3529, -71.1321))
+        self.assertIn("coordinates over 30 days old: deleted, using sheet coordinates (1)", output)
+
+    def test_refresh_fails_within_the_limit(self):
+        output = self.lookup("--refresh-stale", details=PlacesError("place details: HTTP 503"))
+        self.assertEqual(self.refreshed().place_latitude, 42.3519)
+        self.assertIn("V0089 Paradise Rock Club (Allston, MA): place details: HTTP 503", output)
+
+    def test_missing_api_key_still_expires(self):
+        Venue.objects.filter(pk=self.venue.pk).update(place_looked_up_at=days_ago(31))
+        with mock.patch.dict(os.environ, {"GOOGLE_PLACES_API_KEY": ""}):
+            with self.assertRaisesMessage(CommandError, "GOOGLE_PLACES_API_KEY is not set"):
+                call_command("lookup_venue_places", stdout=StringIO())
+        self.assertIsNone(self.refreshed().place_latitude)
+
+    def test_expiry_runs_after_a_plain_lookup_too(self):
+        Venue.objects.filter(pk=self.venue.pk).update(place_looked_up_at=days_ago(31))
+        self.lookup()
+        self.assertIsNone(self.refreshed().place_latitude)
+
+    def test_expired_coordinates_restored(self):
+        Venue.objects.filter(pk=self.venue.pk).update(
+            place_looked_up_at=days_ago(31), place_latitude=None, place_longitude=None
+        )
+        self.lookup("--refresh-stale")
+        venue = self.refreshed()
+        self.assertEqual(venue.exact_location, (42.3518, -71.1194))
+
+    # a place google no longer knows
+
+    def test_place_gone(self):
+        output = self.lookup("--refresh-stale", details=PlaceNotFound("place details: HTTP 404"))
+        venue = self.refreshed()
+        self.assertEqual((venue.place_id, venue.place_lookup_status), ("", ""))
+        self.assertIsNone(venue.place_latitude)
+        self.assertIn("no longer on google", output)
+        self.lookup()
+        self.assertEqual(self.searches, ["Paradise Rock Club, Allston, MA"])
+
+    # stored event html
+
+    def test_coordinates_expire_from_stored_html(self):
+        event = Event.objects.create(title="show", starttime=timezone.now(), venue=self.venue)
+        self.assertIn("42.3519", Event.all_objects.get(pk=event.pk).baked_html_template)
+        Venue.objects.filter(pk=self.venue.pk).update(place_looked_up_at=days_ago(31))
+        self.lookup("--refresh-stale", details=PlacesError("place details: HTTP 503"))
+        html = Event.all_objects.get(pk=event.pk).baked_html_template
+        self.assertNotIn("42.3519", html)
+        self.assertIn('data-venue-lnglat="-71.1321,42.3529"', html)
+
+    def test_refresh_returning_the_same_place_rebakes_nothing(self):
+        with mock.patch.object(lookup, "rebake_events") as rebake:
+            self.lookup("--refresh-stale", details={
+                "id": "ChIJparadise", "latitude": 42.3519, "longitude": -71.1195,
+                "business_status": "OPERATIONAL",
+            })
+        rebake.assert_not_called()
+
+    # dry run
+
+    def test_dry_run_saves_nothing(self):
+        Venue.objects.create(
+            sheet_id="V0090", name="Old", place_id="ChIJold", place_latitude=1.0,
+            place_longitude=1.0, place_looked_up_at=days_ago(40),
+        )
+        output = self.lookup("--refresh-stale", "--dry-run")
+        self.assertEqual(self.refreshed().place_latitude, 42.3519)
+        self.assertEqual(Venue.objects.get(sheet_id="V0090").place_latitude, 1.0)
+        self.assertIn("refreshed [dry run, not saved] (2)", output)
+        self.assertIn("coordinates over 30 days old: would be deleted [dry run] (1)", output)
