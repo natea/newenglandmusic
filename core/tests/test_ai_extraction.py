@@ -8,7 +8,9 @@ from core.event_fetching.ai_extraction import (
     SYSTEM_PROMPT,
     ExtractionError,
     extract_events,
+    extract_events_in_parts,
     parse_price,
+    split_text,
 )
 from core.event_fetching.kinds import KINDS
 from django.test import SimpleTestCase
@@ -171,3 +173,78 @@ class ParsePriceTestCase(SimpleTestCase):
         self.assertEqual(parse_price("$12.50"), 12.5)
         self.assertIsNone(parse_price(""))
         self.assertIsNone(parse_price("donation"))
+
+
+def long_page(paragraphs=8):
+    return "\n\n".join(f"show {i}: " + "x" * 600 for i in range(paragraphs))
+
+
+class ExtractInPartsTestCase(SimpleTestCase):
+    """a page listing more events than fit in one response is extracted in halves"""
+
+    def run_parts(self, responder, page_text, **kwargs):
+        calls = []
+
+        def fake_extract(client, name, location, url, text, model):
+            calls.append(text)
+            return responder(text)
+
+        with mock.patch("core.event_fetching.ai_extraction.extract_events", fake_extract):
+            result = extract_events_in_parts(
+                None, "The Burren", "Somerville, MA", PAGE_URL, page_text, **kwargs
+            )
+        return result, calls
+
+    @staticmethod
+    def usage(input_tokens, output_tokens):
+        return SimpleNamespace(input_tokens=input_tokens, output_tokens=output_tokens)
+
+    def test_overflowing_page_is_split_and_merged(self):
+        page = long_page()
+
+        def responder(text):
+            if text == page:
+                raise ExtractionError("stopped with max_tokens", usage=self.usage(500, 16000))
+            # each half finds its own show, and both find a show listed at the seam
+            own = {"external_id": text[:7], "title": text[:7]}
+            shared = {"external_id": "seam", "title": "Seam Show"}
+            return [own, shared], self.usage(300, 100)
+
+        (events, usage), calls = self.run_parts(responder, page)
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(calls[1] + calls[2], page)
+        self.assertEqual(sorted(e["external_id"] for e in events), sorted([calls[1][:7], calls[2][:7], "seam"]))
+        # the failed first request counts too
+        self.assertEqual((usage.input_tokens, usage.output_tokens), (1100, 16200))
+
+    def test_gives_up_after_max_splits(self):
+        def responder(text):
+            raise ExtractionError("stopped with max_tokens", usage=self.usage(1, 1))
+
+        with self.assertRaisesMessage(ExtractionError, "max_tokens"):
+            self.run_parts(responder, long_page(), splits_left=1)
+
+    def test_other_errors_and_short_pages_are_not_split(self):
+        def refused(text):
+            raise ExtractionError("stopped with refusal")
+
+        with self.assertRaisesMessage(ExtractionError, "refusal"):
+            self.run_parts(refused, long_page())
+
+        def overflow(text):
+            raise ExtractionError("stopped with max_tokens")
+
+        with self.assertRaisesMessage(ExtractionError, "max_tokens"):
+            _, calls = self.run_parts(overflow, "a short page")
+
+    def test_page_that_fits_is_one_request(self):
+        (events, _), calls = self.run_parts(
+            lambda text: ([{"external_id": "a"}], self.usage(10, 10)), long_page()
+        )
+        self.assertEqual(len(calls), 1)
+
+    def test_split_text_cuts_at_a_paragraph_break(self):
+        first, second = split_text("aaaa\n\nbbbb\ncccc")
+        self.assertEqual(first, "aaaa")
+        self.assertEqual(second, "\n\nbbbb\ncccc")
+        self.assertEqual("".join(split_text("no breaks at all")), "no breaks at all")

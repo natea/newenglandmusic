@@ -322,7 +322,7 @@ class Command(RecordedCommand, BaseCommand):
         # imported here so the rest of the command works without the sdk configured
         import anthropic
 
-        from core.event_fetching.ai_extraction import MODEL, ExtractionError, extract_events
+        from core.event_fetching.ai_extraction import MODEL, ExtractionError, extract_events_in_parts
 
         client = anthropic.Anthropic()
         model = model or MODEL
@@ -330,7 +330,7 @@ class Command(RecordedCommand, BaseCommand):
         def extract(page):
             target = page["target"]
             try:
-                events, usage = extract_events(
+                events, usage = extract_events_in_parts(
                     client,
                     target["name"],
                     target["location"],

@@ -63,6 +63,17 @@ Without an API key, or with `--skip-ai`, pages SHALL be skipped with a note. An 
 - **WHEN** a response stops for a reason other than finishing its turn
 - **THEN** that venue is reported as failed and no partial events from it are saved
 
+### Requirement: Pages with too many events are extracted in parts
+When a page's events don't fit in one response, and the response stops for its output limit, the page text SHALL be split in two at the paragraph or line break nearest the middle, and each half SHALL be extracted on its own. This SHALL repeat, up to 3 times, for 8 parts at most. An event found in more than one part SHALL be kept once. The token use reported for the page SHALL include every request. Pages that fit in one response SHALL be extracted with one request, as before.
+
+#### Scenario: Page with months of nightly shows
+- **WHEN** a page's first extraction stops at its output limit, and each half then extracts normally
+- **THEN** the events from both halves are saved, a show listed in both is saved once, and the reported tokens include all three requests
+
+#### Scenario: Still too long after splitting
+- **WHEN** the parts still stop at their output limit after 3 splits
+- **THEN** that venue is reported as failed and no partial events from it are saved
+
 ### Requirement: Extracted events carry their kind
 Each AI-extracted event SHALL include its kind (as defined by `event-music-filter`), set in the same extraction request, so no separate labelling request is needed for it. A kind outside the allowed values SHALL leave the event unlabelled.
 

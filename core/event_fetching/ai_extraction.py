@@ -5,6 +5,7 @@ no ical feed or structured event data.
 
 import datetime
 import json
+from types import SimpleNamespace
 
 import anthropic
 from django.utils import timezone
@@ -92,7 +93,16 @@ EVENTS_SCHEMA = {
 
 
 class ExtractionError(Exception):
-    pass
+    def __init__(self, message, usage=None):
+        super().__init__(message)
+        # tokens the failed request still used
+        self.usage = usage
+
+
+# a page whose events don't fit in one response is split in halves, at most this many
+# times (into 2 ** MAX_SPLITS parts); pages shorter than this aren't split
+MAX_SPLITS = 3
+MIN_SPLIT_LENGTH = 2_000
 
 
 def parse_price(price_text):
@@ -169,8 +179,52 @@ def extract_events(client, venue_name, venue_location, page_url, page_text, mode
         ],
     )
     if response.stop_reason != "end_turn":
-        raise ExtractionError(f"stopped with {response.stop_reason}")
+        raise ExtractionError(f"stopped with {response.stop_reason}", usage=response.usage)
     text = next(block.text for block in response.content if block.type == "text")
     raw_events = json.loads(text)["events"]
     events = [to_event_dict(raw, page_url) for raw in raw_events]
     return [event for event in events if event], response.usage
+
+
+def split_text(text):
+    """two halves, cut at the paragraph (or else line) break nearest the middle"""
+    middle = len(text) // 2
+    for separator in ("\n\n", "\n"):
+        before = text.rfind(separator, 0, middle)
+        after = text.find(separator, middle)
+        cuts = [cut for cut in (before, after) if cut > 0]
+        if cuts:
+            cut = min(cuts, key=lambda cut: abs(cut - middle))
+            return text[:cut], text[cut:]
+    return text[:middle], text[middle:]
+
+
+def extract_events_in_parts(
+    client, venue_name, venue_location, page_url, page_text, model=MODEL, splits_left=MAX_SPLITS
+):
+    """
+    extract_events, but a page that lists more events than fit in one response (it stops
+    with max_tokens, e.g. a bar with months of nightly shows) is split in halves, and each
+    half extracted on its own. returns (events, usage), usage summed over every request
+    """
+    try:
+        return extract_events(client, venue_name, venue_location, page_url, page_text, model)
+    except ExtractionError as e:
+        if "max_tokens" not in str(e) or splits_left == 0 or len(page_text) < MIN_SPLIT_LENGTH:
+            raise
+        input_tokens = e.usage.input_tokens if e.usage else 0
+        output_tokens = e.usage.output_tokens if e.usage else 0
+
+    events = {}
+    for part in split_text(page_text):
+        part_events, usage = extract_events_in_parts(
+            client, venue_name, venue_location, page_url, part, model, splits_left - 1
+        )
+        # an event can appear in both halves; its external_id is the same in each
+        for event in part_events:
+            events.setdefault(event["external_id"], event)
+        input_tokens += usage.input_tokens
+        output_tokens += usage.output_tokens
+    return list(events.values()), SimpleNamespace(
+        input_tokens=input_tokens, output_tokens=output_tokens
+    )
