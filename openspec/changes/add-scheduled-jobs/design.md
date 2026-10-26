@@ -63,4 +63,7 @@ The script prints a line before each step and a summary at the end, which appear
 
 ## Open Questions
 
-- **Durations and memory** of a full run on Render. Measured on the first manual runs, and recorded here.
+- **Durations and memory (answered 2026-10-26),** from the first runs on Render, both on `0.5c-512mb`:
+  - **Weekly:** about 4.5 minutes. The source check took 4 minutes for 696 venues, after the memory fix above.
+  - **Daily:** about 13 minutes, nearly all of it `fetch_events --all` (492 venues, 12 minutes). It used about 1.75M input and 172K output tokens, the same as full runs locally. The sheet sync, read with the service account, took 30 seconds.
+  - Both stayed within 512 MB, so neither needs `1c-2g`.

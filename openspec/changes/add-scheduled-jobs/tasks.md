@@ -11,4 +11,4 @@
 
 - [x] 3.1 With the user's go-ahead, add `GOOGLE_PLACES_API_KEY` to the web service. Verify: it's listed on the service (checked without printing it).
 - [x] 3.2 Run the full suite with outbound network blocked, then release. The user runs the blueprint sync that creates the cron services. Verify: both services exist with their schedules.
-- [ ] 3.3 Trigger each job once by hand. Verify: each succeeds, its job runs appear in the admin, the refresh leaves no coordinates older than 30 days, and the measured durations and memory are recorded in design.md.
+- [x] 3.3 Trigger each job once by hand. Verify: each succeeds, its job runs appear in the admin, the refresh leaves no coordinates older than 30 days, and the measured durations and memory are recorded in design.md. (2026-10-26: weekly succeeded in 4.5 min after the memory fix, daily in 13 min; no coordinates are older than 30 days on Render.)

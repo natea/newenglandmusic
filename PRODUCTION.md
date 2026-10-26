@@ -220,7 +220,7 @@ If the key ever leaks, delete it on the account's **Keys** tab and create a new 
 - [ ] the domain pointed at the host, and HTTPS working
 - [ ] `ALLOWED_HOSTS` and `SITE_URL` match the domain
 - [ ] the API keys restricted: Places to its API, Protomaps to the domain
-- [ ] the scheduled jobs added (the sheet's service account set up first)
+- [x] the scheduled jobs added (the sheet's service account set up first): running on Render since 2026-10-26
 - [ ] Eventbrite's API terms checked for attribution and caching rules, since events imported from it are shown on the site
 - [ ] the first `fetch_events` run checked in `/admin/core/alleventproxy/` before events are approved
 - [ ] **before announcing or sharing the site:** Google Places terms met. Until then, keep the site unshared. As of 2026-10-25 it was deployed but kept private for this reason.
