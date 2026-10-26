@@ -323,6 +323,9 @@ class CheckCommandTestCase(TestCase):
             self.run_check("--state", "NH", "--include-inactive"), ["V0001", "V0002", "V0003"]
         )
 
+    def test_sheet_ids(self):
+        self.assertEqual(self.run_check("--sheet-ids", "V0001,V0004"), ["V0001", "V0004"])
+
     def test_limit(self):
         self.assertEqual(len(self.run_check("--limit", "2")), 2)
 

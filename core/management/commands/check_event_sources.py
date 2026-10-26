@@ -19,7 +19,7 @@ in the database (VenueEventSource), where match_ticketmaster_venues and fetch_ev
 
 run as:
 
-python manage.py check_event_sources [--state NY] [--limit 20] [--csv event_sources.csv]
+python manage.py check_event_sources [--state NY | --sheet-ids V0142,V0369] [--limit 20] [--csv event_sources.csv]
 
 a run replaces the saved results of the venues it checks, and leaves every other venue's
 alone, so a --state or --limit run doesn't lose the rest. --csv also writes this run's
@@ -362,6 +362,7 @@ class Command(RecordedCommand, BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--csv", help="also write this run's results to this csv file")
         parser.add_argument("--state", help="only check venues in this state, e.g. NY")
+        parser.add_argument("--sheet-ids", help="comma-separated Venue_IDs to check")
         parser.add_argument("--limit", type=int)
         parser.add_argument(
             "--include-inactive",
@@ -376,6 +377,8 @@ class Command(RecordedCommand, BaseCommand):
             venues = venues.exclude(is_active=False)
         if options["state"]:
             venues = venues.filter(state=options["state"].upper())
+        if options["sheet_ids"]:
+            venues = venues.filter(sheet_id__in=options["sheet_ids"].split(","))
         venues = list(
             venues.values("pk", "sheet_id", "name", "state", "city_town", "website", "booking_url")
         )

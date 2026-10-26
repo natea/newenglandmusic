@@ -40,7 +40,7 @@ A separate import command SHALL load a CSV in that format into the saved results
 ## MODIFIED Requirements
 
 ### Requirement: The check identifies itself honestly and can be scoped
-The check SHALL send the user agent `Mozilla/5.0 (compatible; venue-db-event-check/1.0)`. It SHALL skip inactive venues unless asked to include them, and SHALL accept a state filter and a limit.
+The check SHALL send the user agent `Mozilla/5.0 (compatible; venue-db-event-check/1.0)`. It SHALL skip inactive venues unless asked to include them, and SHALL accept a state filter, a list of venue sheet IDs and a limit.
 
 #### Scenario: State filter
 - **WHEN** the check runs with `--state NH`
