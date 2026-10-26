@@ -1,14 +1,13 @@
-import csv
 import json
 import os
-import tempfile
 from io import StringIO
 from pathlib import Path
 from unittest import mock
 
 from core.event_fetching.ticketmaster import TicketmasterError, to_venue_dict
 from core.management.commands import match_ticketmaster_venues as match
-from core.models import Venue
+from core.event_sources import save_event_source
+from core.models import Venue, VenueEventSource
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase
@@ -147,20 +146,6 @@ class FindMatchTestCase(SimpleTestCase):
 
 class MatchCommandTestCase(TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.report = os.path.join(self.tmp.name, "event_sources.csv")
-        with open(self.report, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=["sheet_id", "platforms"])
-            writer.writeheader()
-            writer.writerows(
-                [
-                    {"sheet_id": "V0089", "platforms": "ticketmaster"},
-                    {"sheet_id": "V0074", "platforms": "eventbrite;ticketmaster"},
-                    {"sheet_id": "V0200", "platforms": "eventbrite"},
-                    {"sheet_id": "V0300", "platforms": "ticketmaster"},
-                ]
-            )
         self.paradise = Venue.objects.create(
             sheet_id="V0089",
             name="Paradise Rock Club",
@@ -176,6 +161,17 @@ class MatchCommandTestCase(TestCase):
         Venue.objects.create(sheet_id="V0200", name="Eventbrite Only", state="MA")
         Venue.objects.create(sheet_id="V0300", name="Closed TM Venue", state="MA", is_active=False)
         Venue.objects.create(sheet_id="V0400", name="Not In Report", state="MA")
+        # saved source-check results; V0400 has never been checked
+        for sheet_id, platforms in (
+            ("V0089", "ticketmaster"),
+            ("V0074", "eventbrite;ticketmaster"),
+            ("V0200", "eventbrite"),
+            ("V0300", "ticketmaster"),
+        ):
+            save_event_source(
+                Venue.objects.get(sheet_id=sheet_id),
+                {"best_source": "ticketing", "platforms": platforms},
+            )
         env = mock.patch.dict(os.environ, {"TICKETMASTER_API_KEY": "test-key"})
         env.start()
         self.addCleanup(env.stop)
@@ -193,7 +189,7 @@ class MatchCommandTestCase(TestCase):
 
         out = StringIO()
         with mock.patch.object(match.TicketmasterClient, "search_venues", search):
-            call_command("match_ticketmaster_venues", "--report", self.report, *args, stdout=out)
+            call_command("match_ticketmaster_venues", *args, stdout=out)
         return out.getvalue()
 
     paradise_results = {
@@ -295,7 +291,15 @@ class MatchCommandTestCase(TestCase):
         self.assertIn("V0200 Eventbrite Only (MA): venues.json: HTTP 503", output)
 
     def test_missing_report_in_default_mode(self):
-        with self.assertRaisesMessage(CommandError, "run check_event_sources first"):
-            call_command(
-                "match_ticketmaster_venues", "--report", "/nonexistent.csv", stdout=StringIO()
-            )
+        VenueEventSource.objects.all().delete()
+        with self.assertRaisesMessage(
+            CommandError, "run check_event_sources first, or pass --sheet-ids or --all"
+        ):
+            call_command("match_ticketmaster_venues", stdout=StringIO())
+
+    def test_explicit_venues_need_no_saved_results(self):
+        VenueEventSource.objects.all().delete()
+        self.run_match("--sheet-ids", "V0089", results=self.paradise_results)
+        self.assertEqual(
+            Venue.objects.get(pk=self.paradise.pk).ticketmaster_venue_id, "KovZpZA11JtA"
+        )

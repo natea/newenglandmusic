@@ -1,8 +1,7 @@
-import csv
 import os
 
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
-from core.models import Venue
+from core.models import Venue, VenueEventSource
 from core.venue_matching import distance_km, names_match, normalize_name, spelling_variants
 from django.core.management.base import BaseCommand, CommandError
 
@@ -12,9 +11,9 @@ ticketmaster discovery api.
 
 run as:
 
-python manage.py match_ticketmaster_venues [--report event_sources.csv] [--sheet-ids V0089,V0113 | --all] [--recheck] [--dry-run]
+python manage.py match_ticketmaster_venues [--sheet-ids V0089,V0113 | --all] [--recheck] [--dry-run]
 
-by default, active venues whose event-source report (from check_event_sources) lists
+by default, active venues whose saved event source (from check_event_sources) links to
 ticketmaster or live nation are checked; --sheet-ids checks those venues and --all every
 active venue. venues that are already linked are skipped unless --recheck is given.
 
@@ -63,19 +62,14 @@ def find_match(venue, candidates):
     return "ambiguous", None, scored
 
 
-def ticketmaster_sheet_ids(report_path):
-    try:
-        with open(report_path) as f:
-            return {
-                row["sheet_id"]
-                for row in csv.DictReader(f)
-                if "ticketmaster" in row["platforms"].split(";")
-            }
-    except FileNotFoundError:
+def ticketmaster_venue_pks():
+    """venues whose saved event source links to ticketmaster (or live nation)"""
+    sources = VenueEventSource.objects.all()
+    if not sources.exists():
         raise CommandError(
-            f"{report_path} not found -- run check_event_sources first, or pass --sheet-ids or --all"
+            "no event sources saved -- run check_event_sources first, or pass --sheet-ids or --all"
         )
-
+    return sources.filter(platforms__contains=["ticketmaster"]).values("venue_id")
 
 
 def search_names(client, venue):
@@ -88,7 +82,6 @@ def search_names(client, venue):
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
-        parser.add_argument("--report", default="event_sources.csv")
         parser.add_argument("--sheet-ids", help="comma-separated Venue_IDs to check")
         parser.add_argument("--all", action="store_true", help="check every active venue")
         parser.add_argument(
@@ -109,7 +102,7 @@ class Command(BaseCommand):
         else:
             venues = venues.exclude(is_active=False)
             if not options["all"]:
-                venues = venues.filter(sheet_id__in=ticketmaster_sheet_ids(options["report"]))
+                venues = venues.filter(pk__in=ticketmaster_venue_pks())
 
         client = TicketmasterClient(api_key)
         groups = {"linked": [], "already linked": [], "ambiguous": [], "unmatched": [], "failed": []}

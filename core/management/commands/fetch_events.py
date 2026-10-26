@@ -1,4 +1,3 @@
-import csv
 import os
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -7,7 +6,8 @@ from core.event_fetching.classification import classify
 from core.event_fetching.spider import SCRAPY_SETTINGS, VenueEventsSpider
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.event_fetching.ticketmaster import to_event_dict as ticketmaster_event
-from core.models import Event, Venue
+from core.event_sources import event_source_row
+from core.models import Event, Venue, VenueEventSource
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django.utils.html import escape
@@ -19,9 +19,11 @@ for an admin to review.
 
 run as:
 
-python manage.py fetch_events [--report event_sources.csv] [--per-source 3 | --all] [--skip-ai] [--skip-ticketmaster] [--dry-run]
+python manage.py fetch_events [--per-source 3 | --all] [--skip-ai] [--skip-ticketmaster] [--dry-run]
 
-venues and how to fetch their events come from the csv written by check_event_sources.
+venues and how to fetch their events come from the results check_event_sources saved
+(VenueEventSource); a venue that has never been checked is skipped, unless it's linked to
+ticketmaster.
 by default, the first --per-source venues of each kind are fetched (a pilot); --all
 fetches every venue whose events can be fetched in one of these ways:
 
@@ -33,9 +35,9 @@ fetches every venue whose events can be fetched in one of these ways:
 - ticketmaster: the ticketmaster discovery api, for venues linked to ticketmaster (see
   match_ticketmaster_venues; needs TICKETMASTER_API_KEY). it replaces a linked venue's
   ical feed, ticketing or ai source -- but not its json-ld -- and also covers linked
-  venues the report found no usable source for. the venue's upcoming unapproved ical
+  venues the source check found no usable source for. the venue's upcoming unapproved ical
   events are then removed, as they'd duplicate ticketmaster's. pass --skip-ticketmaster
-  to fetch linked venues from their report source instead.
+  to fetch linked venues from their saved source instead.
 
 events are matched on external_id, so re-running updates events instead of duplicating
 them. new events are saved unapproved; already-approved events stay approved.
@@ -88,12 +90,11 @@ def make_target(venue, source, row=None):
     }
 
 
-def select_targets(report_path, per_source, sheet_ids, all_venues, use_ticketmaster=True):
-    try:
-        with open(report_path) as f:
-            rows = list(csv.DictReader(f))
-    except FileNotFoundError:
-        raise CommandError(f"{report_path} not found -- run check_event_sources first")
+def select_targets(per_source, sheet_ids, all_venues, use_ticketmaster=True):
+    sources = VenueEventSource.objects.select_related("venue").order_by("venue__sheet_id")
+    if not sources.exists():
+        raise CommandError("no event sources saved -- run check_event_sources first")
+    rows = [event_source_row(source) for source in sources]
 
     if sheet_ids:
         rows = [row for row in rows if row["sheet_id"] in sheet_ids]
@@ -106,7 +107,7 @@ def select_targets(report_path, per_source, sheet_ids, all_venues, use_ticketmas
             if source not in REPORT_SOURCE_TO_TARGET_SOURCE or len(picked[source]) >= per_source:
                 continue
             # for the pilot, prefer venues that are likely to work for their kind
-            if source == "json-ld" and int(row["json_ld_events"] or 0) < 3:
+            if source == "json-ld" and row["json_ld_events"] < 3:
                 continue
             if source == "ai-extraction" and (not row["events_page"] or row["js_heavy"]):
                 continue
@@ -129,7 +130,7 @@ def select_targets(report_path, per_source, sheet_ids, all_venues, use_ticketmas
             targets.append(make_target(venue, source, row))
 
     if use_ticketmaster and (sheet_ids or all_venues):
-        # linked venues the report gave no usable source, e.g. bot-blocked sites
+        # linked venues with no usable saved source, e.g. bot-blocked sites or never checked
         linked = Venue.objects.exclude(ticketmaster_venue_id__isnull=True).exclude(
             ticketmaster_venue_id=""
         )
@@ -180,7 +181,6 @@ def save_event(venue_pk, source, source_url, data, dry_run):
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
-        parser.add_argument("--report", default="event_sources.csv")
         parser.add_argument(
             "--per-source",
             type=int,
@@ -192,13 +192,13 @@ class Command(BaseCommand):
             help="comma-separated Venue_IDs to fetch, instead of picking per source",
         )
         parser.add_argument(
-            "--all", action="store_true", help="fetch every venue in the report"
+            "--all", action="store_true", help="fetch every venue with a usable saved source"
         )
         parser.add_argument("--skip-ai", action="store_true")
         parser.add_argument(
             "--skip-ticketmaster",
             action="store_true",
-            help="fetch venues linked to ticketmaster from their report source instead",
+            help="fetch venues linked to ticketmaster from their saved source instead",
         )
         parser.add_argument(
             "--model",
@@ -211,7 +211,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         sheet_ids = set(options["sheet_ids"].split(",")) if options["sheet_ids"] else None
         targets = select_targets(
-            options["report"],
             options["per_source"],
             sheet_ids,
             options["all"],

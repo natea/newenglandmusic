@@ -7,9 +7,11 @@ from unittest import mock
 import requests
 from bs4 import BeautifulSoup
 from core.management.commands import check_event_sources as check
-from core.models import Venue
+from core.event_sources import CSV_COLUMNS
+from core.models import Venue, VenueEventSource
 from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase
+from django.utils import timezone
 
 LONG_TEXT = "<p>" + "Live music every night of the week. " * 20 + "</p>"
 ICAL = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nSUMMARY:a\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nSUMMARY:b\r\nEND:VEVENT\r\nEND:VCALENDAR"
@@ -291,17 +293,27 @@ class CheckCommandTestCase(TestCase):
         Venue.objects.create(sheet_id="V0002", name="NH unknown", state="NH", is_active=None)
         Venue.objects.create(sheet_id="V0003", name="NH closed", state="NH", is_active=False)
         Venue.objects.create(sheet_id="V0004", name="MA open", state="MA", is_active=True)
+        self.results = {}
 
     def run_check(self, *args):
-        def fake_check(venue):
-            return {"sheet_id": venue["sheet_id"], "name": venue["name"], "best_source": "ical"}
+        """runs the check with canned results; returns the sheet ids it checked"""
+        checked = []
 
-        with tempfile.TemporaryDirectory() as tmp:
-            output = os.path.join(tmp, "report.csv")
-            with mock.patch.object(check, "check_venue", side_effect=fake_check):
-                call_command("check_event_sources", "--output", output, *args, stdout=StringIO())
-            with open(output) as f:
-                return [row["sheet_id"] for row in csv.DictReader(f)]
+        def fake_check(venue):
+            checked.append(venue["sheet_id"])
+            return {
+                "sheet_id": venue["sheet_id"],
+                "name": venue["name"],
+                "best_source": "ical",
+                **self.results.get(venue["sheet_id"], {}),
+            }
+
+        with mock.patch.object(check, "check_venue", side_effect=fake_check):
+            call_command("check_event_sources", *args, stdout=StringIO())
+        return sorted(checked)
+
+    def saved(self, sheet_id):
+        return VenueEventSource.objects.get(venue__sheet_id=sheet_id)
 
     def test_state_filter_skips_inactive_venues(self):
         self.assertEqual(self.run_check("--state", "nh"), ["V0001", "V0002"])
@@ -313,6 +325,65 @@ class CheckCommandTestCase(TestCase):
 
     def test_limit(self):
         self.assertEqual(len(self.run_check("--limit", "2")), 2)
+
+    def test_first_check_of_a_venue(self):
+        self.results["V0001"] = {
+            "ical_url": "https://v0001.example/cal.ics",
+            "ical_events": 12,
+        }
+        before = timezone.now()
+        self.run_check("--state", "NH")
+        source = self.saved("V0001")
+        self.assertEqual(source.best_source, "ical")
+        self.assertEqual(source.ical_url, "https://v0001.example/cal.ics")
+        self.assertEqual(source.ical_events, 12)
+        self.assertGreaterEqual(source.checked_at, before)
+
+    def test_recheck_replaces_the_result(self):
+        self.results["V0001"] = {"ical_url": "https://v0001.example/cal.ics", "ical_events": 12}
+        self.run_check("--state", "NH")
+        self.results["V0001"] = {"best_source": "ticketing", "platforms": "dice;eventbrite"}
+        self.run_check("--state", "NH")
+        self.assertEqual(VenueEventSource.objects.filter(venue__sheet_id="V0001").count(), 1)
+        source = self.saved("V0001")
+        self.assertEqual(source.best_source, "ticketing")
+        self.assertEqual(source.platforms, ["dice", "eventbrite"])
+        self.assertEqual(source.ical_url, "")
+
+    def test_partial_run_keeps_other_results(self):
+        self.run_check()
+        ma_checked_at = self.saved("V0004").checked_at
+        self.results["V0001"] = {"best_source": "ai-extraction"}
+        # the state filter: only active NH venues are checked, and only their results change
+        self.assertEqual(self.run_check("--state", "NH"), ["V0001", "V0002"])
+        self.assertEqual(self.saved("V0001").best_source, "ai-extraction")
+        self.assertEqual(self.saved("V0004").best_source, "ical")
+        self.assertEqual(self.saved("V0004").checked_at, ma_checked_at)
+        self.assertFalse(VenueEventSource.objects.filter(venue__sheet_id="V0003").exists())
+
+    def test_csv_export(self):
+        self.results["V0001"] = {"platforms": "dice", "js_heavy": "yes"}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "sources.csv")
+            self.run_check("--state", "NH", "--csv", path)
+            with open(path) as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+        self.assertEqual(reader.fieldnames, CSV_COLUMNS)
+        self.assertEqual([row["sheet_id"] for row in rows], ["V0001", "V0002"])
+        self.assertEqual(rows[0]["platforms"], "dice")
+        self.assertEqual(rows[0]["js_heavy"], "yes")
+        self.assertEqual(VenueEventSource.objects.count(), 2)
+
+    def test_no_file_without_csv(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = os.getcwd()
+            os.chdir(tmp)
+            try:
+                self.run_check()
+            finally:
+                os.chdir(cwd)
+            self.assertEqual(os.listdir(tmp), [])
 
     def test_user_agent_identifies_the_crawler(self):
         self.assertEqual(check.USER_AGENT, "Mozilla/5.0 (compatible; venue-db-event-check/1.0)")

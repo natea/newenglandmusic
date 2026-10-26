@@ -414,6 +414,39 @@ class Venue(models.Model):
         return self.name
 
 
+# what check_event_sources last found for a venue: how its events can be fetched.
+# kept in its own table so saving a result never calls Venue.save(), which would
+# re-render every one of the venue's events (see core/event_sources.py)
+class VenueEventSource(models.Model):
+    class BestSource(models.TextChoices):
+        ICAL = "ical"
+        JSON_LD = "json-ld"
+        TICKETING = "ticketing"
+        AI_EXTRACTION = "ai-extraction"
+        NO_WEBSITE = "no-website"
+        SOCIAL_ONLY = "social-only"
+        ROBOTS_BLOCKED = "robots-blocked"
+        DEAD_DOMAIN = "dead-domain"
+        BOT_BLOCKED = "bot-blocked"
+        UNREACHABLE = "unreachable"
+        CHECK_FAILED = "check-failed"
+
+    venue = models.OneToOneField(Venue, on_delete=models.CASCADE, related_name="event_source")
+    checked_at = models.DateTimeField()
+    url = models.URLField(max_length=1000, blank=True, default="")
+    events_page = models.URLField(max_length=1000, blank=True, default="")
+    best_source = models.CharField(max_length=32, choices=BestSource.choices)
+    json_ld_events = models.PositiveIntegerField(default=0)
+    ical_url = models.URLField(max_length=1000, blank=True, default="")
+    ical_events = models.PositiveIntegerField(null=True, blank=True)
+    platforms = ArrayField(models.CharField(max_length=64), blank=True, default=list)
+    js_heavy = models.BooleanField(default=False)
+    error = models.TextField(blank=True, default="")
+
+    def __str__(self):
+        return f"{self.venue}: {self.best_source}"
+
+
 # a region, state or metro area from the sheet's geo-filters_json tab.
 # venues aren't linked to areas: membership is worked out from these rules at
 # query time (see core/geo_filters.py), so it never goes stale.

@@ -19,12 +19,15 @@ The check SHALL save each checked venue's result in the database: its URL, event
 - **WHEN** a venue's result is saved
 - **THEN** the venue's fields and its events' rendered HTML are unchanged
 
-### Requirement: Results can be exported to and imported from CSV
-The check SHALL write the results of the venues it checked to a CSV file when given `--csv <path>`, with the same columns as the previous report file: sheet_id, name, state, city_town, url, events_page, best_source, json_ld_events, ical_url, ical_events, platforms, js_heavy and error. A separate import command SHALL load such a CSV into the saved results, matching rows to venues by sheet_id and skipping rows whose venue doesn't exist. Imported results SHALL be marked as checked at the file's modification time. The import SHALL support a dry run.
+### Requirement: Results can be exported to CSV
+When given `--csv <path>`, the check SHALL also write the results of the venues it checked to that file, with the same columns as the previous report file: sheet_id, name, state, city_town, url, events_page, best_source, json_ld_events, ical_url, ical_events, platforms, js_heavy and error.
 
 #### Scenario: CSV export
 - **WHEN** the check runs with `--csv sources.csv`
 - **THEN** the results are saved in the database and also written to `sources.csv` with those columns
+
+### Requirement: An existing CSV report can be imported
+A separate import command SHALL load a CSV in that format into the saved results, without crawling. It SHALL match rows to venues by sheet_id and skip, and report, rows whose venue doesn't exist. Imported results SHALL be marked as checked at the file's modification time. The import SHALL support a dry run.
 
 #### Scenario: Import an existing report
 - **WHEN** the import command loads a CSV with rows for 3 existing venues and 1 unknown sheet ID

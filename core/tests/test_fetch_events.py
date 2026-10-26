@@ -1,7 +1,5 @@
-import csv
 import datetime
 import os
-import tempfile
 from io import StringIO
 from pathlib import Path
 from unittest import mock
@@ -10,32 +8,19 @@ from core.event_fetching.ai_extraction import ExtractionError
 from core.event_fetching.spider import VenueEventsSpider
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.management.commands import fetch_events
-from core.models import Event, Venue
+from core.event_sources import CSV_COLUMNS, save_event_source
+from core.models import Event, Venue, VenueEventSource
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 from scrapy.http import HtmlResponse
 
-REPORT_COLUMNS = [
-    "sheet_id",
-    "name",
-    "state",
-    "city_town",
-    "url",
-    "events_page",
-    "best_source",
-    "json_ld_events",
-    "ical_url",
-    "ical_events",
-    "platforms",
-    "js_heavy",
-    "error",
-]
 
 
-def report_row(sheet_id, best_source, **values):
-    row = dict.fromkeys(REPORT_COLUMNS, "")
+def source_result(sheet_id, best_source, **values):
+    """a check result, as check_event_sources saves it"""
+    row = dict.fromkeys(CSV_COLUMNS, "")
     row.update(
         sheet_id=sheet_id,
         best_source=best_source,
@@ -82,21 +67,18 @@ class FakeCrawlerProcess:
 
 class FetchEventsTestCase(TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.report = os.path.join(self.tmp.name, "event_sources.csv")
         self.venues = {
             sheet_id: Venue.objects.create(sheet_id=sheet_id, name=f"Venue {sheet_id}", state="VT")
             for sheet_id in ("V0001", "V0002", "V0003", "V0004", "V0005", "V0006")
         }
-        self.write_report(
+        self.save_sources(
             [
-                report_row("V0001", "ical", ical_url="https://v0001.example/cal.ics"),
-                report_row("V0002", "json-ld", json_ld_events="5"),
-                report_row("V0003", "ticketing", platforms="eventbrite"),
-                report_row("V0004", "ai-extraction"),
-                report_row("V0005", "bot-blocked"),
-                report_row("V0006", "social-only"),
+                source_result("V0001", "ical", ical_url="https://v0001.example/cal.ics"),
+                source_result("V0002", "json-ld", json_ld_events="5"),
+                source_result("V0003", "ticketing", platforms="eventbrite"),
+                source_result("V0004", "ai-extraction"),
+                source_result("V0005", "bot-blocked"),
+                source_result("V0006", "social-only"),
             ]
         )
         patcher = mock.patch.object(fetch_events, "CrawlerProcess", FakeCrawlerProcess)
@@ -108,11 +90,13 @@ class FetchEventsTestCase(TestCase):
         env.start()
         self.addCleanup(env.stop)
 
-    def write_report(self, rows):
-        with open(self.report, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=REPORT_COLUMNS)
-            writer.writeheader()
-            writer.writerows(rows)
+    def save_sources(self, results):
+        """replaces every saved event source with these, as a full source check would"""
+        VenueEventSource.objects.all().delete()
+        venues = Venue.objects.in_bulk([r["sheet_id"] for r in results], field_name="sheet_id")
+        for result in results:
+            if result["sheet_id"] in venues:
+                save_event_source(venues[result["sheet_id"]], result)
 
     def crawl_returns(self, results_for_targets):
         FakeCrawlerProcess.crawl_results = staticmethod(results_for_targets)
@@ -134,7 +118,7 @@ class FetchEventsTestCase(TestCase):
 
     def fetch(self, *args):
         out = StringIO()
-        call_command("fetch_events", "--report", self.report, *args, stdout=out)
+        call_command("fetch_events", *args, stdout=out)
         return out.getvalue()
 
     def saved(self, sheet_id="V0001"):
@@ -143,8 +127,16 @@ class FetchEventsTestCase(TestCase):
     # selecting venues
 
     def test_missing_report(self):
+        VenueEventSource.objects.all().delete()
         with self.assertRaisesMessage(CommandError, "run check_event_sources first"):
-            call_command("fetch_events", "--report", "/nonexistent.csv", stdout=StringIO())
+            call_command("fetch_events", stdout=StringIO())
+
+    def test_venue_never_checked(self):
+        Venue.objects.create(sheet_id="V0007", name="Venue V0007", state="VT")
+        targets = fetch_events.select_targets(3, None, True)
+        self.assertEqual(
+            sorted(t["sheet_id"] for t in targets), ["V0001", "V0002", "V0003", "V0004"]
+        )
 
     def test_all_fetches_every_usable_venue(self):
         self.fetch("--all")
@@ -162,19 +154,20 @@ class FetchEventsTestCase(TestCase):
     def test_pilot_picks_a_few_likely_venues_per_source(self):
         for sheet_id in ("V0011", "V0012", "V0013", "V0014"):
             Venue.objects.create(sheet_id=sheet_id, name=sheet_id)
-        self.write_report(
+        self.save_sources(
             [
-                report_row("V0011", "json-ld", json_ld_events="1"),
-                report_row("V0012", "json-ld", json_ld_events="9"),
-                report_row("V0013", "json-ld", json_ld_events="9"),
-                report_row("V0014", "ai-extraction", js_heavy="yes"),
-                report_row("V0004", "ai-extraction"),
+                source_result("V0011", "json-ld", json_ld_events="1"),
+                source_result("V0012", "json-ld", json_ld_events="9"),
+                source_result("V0013", "json-ld", json_ld_events="9"),
+                source_result("V0014", "ai-extraction", js_heavy="yes"),
+                source_result("V0004", "ai-extraction"),
             ]
         )
         self.fetch("--per-source", "1")
-        # too few json-ld events and js-heavy pages are passed over for the pilot
+        # too few json-ld events and js-heavy pages are passed over for the pilot;
+        # venues come in sheet id order
         self.assertEqual(
-            [t["sheet_id"] for t in FakeCrawlerProcess.seen_targets], ["V0012", "V0004"]
+            [t["sheet_id"] for t in FakeCrawlerProcess.seen_targets], ["V0004", "V0012"]
         )
 
     def test_no_venues_to_fetch(self):
@@ -366,8 +359,8 @@ class FetchEventsTestCase(TestCase):
 
     def test_ai_failure_for_one_page_doesnt_stop_others(self):
         Venue.objects.create(sheet_id="V0007", name="Venue V0007")
-        self.write_report(
-            [report_row("V0004", "ai-extraction"), report_row("V0007", "ai-extraction")]
+        self.save_sources(
+            [source_result("V0004", "ai-extraction"), source_result("V0007", "ai-extraction")]
         )
         self.ai_page("V0004", "V0007")
 
@@ -441,7 +434,7 @@ class FetchEventsTicketmasterTestCase(TestCase):
         self.addCleanup(patcher.stop)
 
     # reuse the helpers of the other test case
-    write_report = FetchEventsTestCase.write_report
+    save_sources = FetchEventsTestCase.save_sources
     crawl_returns = FetchEventsTestCase.crawl_returns
     fetch = FetchEventsTestCase.fetch
     saved = FetchEventsTestCase.saved
@@ -449,7 +442,7 @@ class FetchEventsTicketmasterTestCase(TestCase):
     def sources(self, *args):
         return {
             target["sheet_id"]: target["source"]
-            for target in fetch_events.select_targets(self.report, 3, *args)
+            for target in fetch_events.select_targets(3, *args)
         }
 
     def test_linked_venues_keep_feeds_and_replace_scraping(self):
@@ -477,7 +470,7 @@ class FetchEventsTicketmasterTestCase(TestCase):
         self.assertNotIn("V0098", self.sources(None, True))
 
     def test_skip_ticketmaster_uses_the_report_sources(self):
-        targets = fetch_events.select_targets(self.report, 3, None, True, use_ticketmaster=False)
+        targets = fetch_events.select_targets(3, None, True, use_ticketmaster=False)
         self.assertEqual(
             {t["sheet_id"]: t["source"] for t in targets},
             {"V0001": "ical", "V0002": "json-ld", "V0003": "ticketing", "V0004": "ai"},
@@ -595,7 +588,7 @@ class FetchEventsTicketmasterTestCase(TestCase):
 class FetchEventsLabellingTestCase(TestCase):
     """fetch_events labelling events by kind before saving them"""
 
-    write_report = FetchEventsTestCase.write_report
+    save_sources = FetchEventsTestCase.save_sources
     crawl_returns = FetchEventsTestCase.crawl_returns
     events_for = FetchEventsTestCase.events_for
     fetch = FetchEventsTestCase.fetch

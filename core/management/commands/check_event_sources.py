@@ -7,15 +7,22 @@ from urllib.robotparser import RobotFileParser
 
 import requests
 from bs4 import BeautifulSoup
+from core.event_sources import CSV_COLUMNS, event_source_csv_row, save_event_source
 from core.models import Venue
 from django.core.management.base import BaseCommand
+from django.db import transaction
 
 """
-for each venue's website, figure out how its events could be fetched, and write a csv report.
+for each venue's website, figure out how its events could be fetched, and save the answer
+in the database (VenueEventSource), where match_ticketmaster_venues and fetch_events read it.
 
 run as:
 
-python manage.py check_event_sources --output event_sources.csv [--state NY] [--limit 20]
+python manage.py check_event_sources [--state NY] [--limit 20] [--csv event_sources.csv]
+
+a run replaces the saved results of the venues it checks, and leaves every other venue's
+alone, so a --state or --limit run doesn't lose the rest. --csv also writes this run's
+results to a file, in the old report's columns, for people to read.
 
 for each venue, the homepage and (if one is linked) its events page are fetched, and
 checked for, in order of preference:
@@ -352,7 +359,7 @@ def check_venue_unsafe(venue):
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
-        parser.add_argument("--output", default="event_sources.csv")
+        parser.add_argument("--csv", help="also write this run's results to this csv file")
         parser.add_argument("--state", help="only check venues in this state, e.g. NY")
         parser.add_argument("--limit", type=int)
         parser.add_argument(
@@ -369,7 +376,7 @@ class Command(BaseCommand):
         if options["state"]:
             venues = venues.filter(state=options["state"].upper())
         venues = list(
-            venues.values("sheet_id", "name", "state", "city_town", "website", "booking_url")
+            venues.values("pk", "sheet_id", "name", "state", "city_town", "website", "booking_url")
         )
         if options["limit"]:
             venues = venues[: options["limit"]]
@@ -378,21 +385,29 @@ class Command(BaseCommand):
 
         results = []
         with ThreadPoolExecutor(max_workers=options["workers"]) as executor:
-            futures = [executor.submit(check_venue, venue) for venue in venues]
+            futures = {executor.submit(check_venue, venue): venue["pk"] for venue in venues}
             for i, future in enumerate(as_completed(futures), start=1):
-                results.append(future.result())
+                results.append((futures[future], future.result()))
                 if i % 50 == 0:
                     self.stdout.write(f"  {i}/{len(venues)}")
 
-        results.sort(key=lambda result: result["sheet_id"] or "")
-        with open(options["output"], "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=list(results[0].keys()))
-            writer.writeheader()
-            writer.writerows(results)
+        results.sort(key=lambda pk_and_result: pk_and_result[1]["sheet_id"] or "")
+        # saved together at the end: a crawl that dies halfway leaves the previous results
+        venues_by_pk = Venue.objects.in_bulk([pk for pk, _ in results])
+        with transaction.atomic():
+            sources = [save_event_source(venues_by_pk[pk], result) for pk, result in results]
+
+        if options["csv"]:
+            with open(options["csv"], "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
+                writer.writeheader()
+                writer.writerows(event_source_csv_row(source) for source in sources)
 
         counts = {}
-        for result in results:
+        for _, result in results:
             counts[result["best_source"]] = counts.get(result["best_source"], 0) + 1
         for source, count in sorted(counts.items(), key=lambda item: -item[1]):
             self.stdout.write(f"{source:16} {count}")
-        self.stdout.write(self.style.SUCCESS(f"wrote {options['output']}"))
+        self.stdout.write(self.style.SUCCESS(f"saved {len(sources)} results"))
+        if options["csv"]:
+            self.stdout.write(self.style.SUCCESS(f"wrote {options['csv']}"))

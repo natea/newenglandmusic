@@ -100,6 +100,15 @@ gunicorn nycnoise.wsgi:application
 
 **Loading the local database.** Make a dump locally, then restore it into Render's database. The restore needs its **External Database URL**, from the database's page in the dashboard.
 
+The jobs share `check_event_sources`' results through the database. If your local results are still only in an old `event_sources.csv`, import them first, so the server doesn't have to crawl every venue again:
+
+```sh
+venv/bin/python manage.py import_event_sources event_sources.csv --dry-run
+venv/bin/python manage.py import_event_sources event_sources.csv
+```
+
+Then dump and restore:
+
 ```sh
 # DATABASE_URL here is the local one, from .env
 pg_dump --format=custom --no-owner --no-privileges --exclude-table-data=django_session \
@@ -148,9 +157,9 @@ These run in this order. Each one depends on the one before it:
 |---|---|---|
 | `sync_venues_from_gsheets` | daily | free |
 | `lookup_venue_places` | daily (it only looks up venues without a match yet, so most days it does nothing) | Places: about one call per new venue. 5,000 calls a month are free |
-| `check_event_sources --output <report path>` | weekly | free, but it crawls every venue's site, so don't run it more often |
-| `match_ticketmaster_venues --report <report path>` | weekly, after the source check | free (Ticketmaster allows 5,000 requests a day) |
-| `fetch_events --report <report path> --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster: a few hundred requests |
+| `check_event_sources` | weekly | free, but it crawls every venue's site, so don't run it more often |
+| `match_ticketmaster_venues` | weekly, after the source check | free (Ticketmaster allows 5,000 requests a day) |
+| `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster: a few hundred requests |
 
 **A single script would be simplest.** For example, `bin/refresh.sh` would run the daily commands in order and stop at the first failure, plus a weekly script for the crawl. Then the scheduler needs only two entries.
 
@@ -165,11 +174,7 @@ These need fixing first. Each is a code change, so each needs its own OpenSpec p
 1. **The sheet sync uses the `gog` CLI.** gog signs in to Google as you, through a browser, so it can't sign in on a server. Two options:
    - Read the sheet with a **Google service account** instead, after sharing the sheet with the account's email address.
    - Use the sheet's **published CSV link**, which needs no credentials but makes the sheet public.
-2. **The event-source report is a file.** `check_event_sources` writes `event_sources.csv`, and `match_ticketmaster_venues` and `fetch_events` read it. The file isn't in git, and most hosts give each run a fresh, empty disk. So the report has to live somewhere that persists:
-   - in the database (a model holding each venue's best source; the best option)
-   - on a mounted volume
-   - in object storage
-3. **Google Places terms.** The terms allow storing place IDs, but coordinates for only about 30 days. The venue-place-lookup design notes this. Before going public, either:
+2. **Google Places terms.** The terms allow storing place IDs, but coordinates for only about 30 days. The venue-place-lookup design notes this. Before going public, either:
    - refresh coordinates monthly (`lookup_venue_places --refresh`, which costs Places calls), or
    - keep only the place IDs and look up coordinates when needed.
 
