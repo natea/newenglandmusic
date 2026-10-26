@@ -36,6 +36,22 @@ class UserSubmittedEventTestCase(TestCase):
 
         self.assertContains(response, "event is submitted for approval")
 
+    def test_links_without_a_scheme_get_https(self):
+        form = UserSubmittedEventForm(
+            dict(
+                starttime=timezone.now(),
+                title="brutal prog matinée",
+                venue=self.venue.pk,
+                hyperlink="example.com/show",
+                ticket_hyperlink="tickets.example.com/123",
+            )
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["hyperlink"], "https://example.com/show")
+        self.assertEqual(
+            form.cleaned_data["ticket_hyperlink"], "https://tickets.example.com/123"
+        )
+
     def test_unapproved_events_are_hidden(self):
         admin_event = Event(title=uuid.uuid4(), starttime=timezone.now())
         admin_event.save()

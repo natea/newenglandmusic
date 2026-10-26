@@ -24,8 +24,10 @@ class UserSubmittedEventForm(forms.ModelForm):
     )
 
     # to get url validation/input type=url on the frontend
-    hyperlink = forms.URLField(label="link", required=False)
-    ticket_hyperlink = forms.URLField(label="ticket link", required=False)
+    hyperlink = forms.URLField(label="link", required=False, assume_scheme="https")
+    ticket_hyperlink = forms.URLField(
+        label="ticket link", required=False, assume_scheme="https"
+    )
 
     class Meta:
         model = Event

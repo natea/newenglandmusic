@@ -36,6 +36,12 @@ class VenueAdminTicketmasterTestCase(TestCase):
         self.assertIn("ticketmaster_venue_id", fields)
         self.assertIn("ticketmaster_venue_id", self.admin.search_fields)
 
+    def test_website_without_a_scheme_gets_https(self):
+        venue = Venue.objects.get(pk=self.unlinked.pk)
+        venue.website = "example.com"
+        venue = self.save_through_admin_form(venue, "")
+        self.assertEqual(Venue.objects.get(pk=venue.pk).website, "https://example.com")
+
     def filtered(self, value):
         # go through the changelist, since django 5 passes filters lists where 4.2 passed strings
         request = RequestFactory().get("/admin/core/venue/", {"ticketmaster": value} if value else {})
