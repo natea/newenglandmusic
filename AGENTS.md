@@ -46,7 +46,7 @@ These are management commands, run in this order:
 4. **`match_ticketmaster_venues`** and **`match_eventbrite_organizers`:** link venues to Ticketmaster venues and to their Eventbrite organizers, found from the Eventbrite links on their own pages.
 5. **`fetch_events`:** fetches upcoming events, from a linked API (Ticketmaster first, then Eventbrite) or else the saved source, falling back to a linked API when a feed or JSON-LD page fails, and saves new ones **unapproved**, for review at `/admin/core/alleventproxy/`. `Event.objects` returns approved events only; use `Event.all_objects` for everything.
 
-Each run of these commands is recorded as a `JobRun` (`core/job_runs.py`) and listed at `/admin/core/jobrun/`. A new pipeline command should subclass `RecordedCommand` and set `self.job_summary`.
+On Render, two cron jobs run them on a schedule: `bin/daily.sh` and `bin/weekly.sh`, defined in `render.yaml` (see `PRODUCTION.md`). A step that fails doesn't stop the later ones, but fails the run. Each run of these commands is recorded as a `JobRun` (`core/job_runs.py`) and listed at `/admin/core/jobrun/`. A new pipeline command should subclass `RecordedCommand` and set `self.job_summary`.
 
 ### Logs
 

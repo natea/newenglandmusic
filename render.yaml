@@ -1,6 +1,5 @@
-# render blueprint: the web site and its postgres database.
+# render blueprint: the web site, its postgres database and the scheduled jobs.
 # spec: https://render.com/docs/blueprint-spec
-# the scheduled jobs (venue sync, event fetching) aren't here yet; see PRODUCTION.md.
 databases:
   - name: newenglandmusic
     databaseName: newenglandmusic
@@ -57,6 +56,121 @@ services:
       - key: GOOGLE_SERVICE_ACCOUNT_JSON
         sync: false
       # inherited from nyc noise and unused by this site, but the settings require them
+      - key: PROD_INTERNAL_API_SERVER
+        value: https://nyc-noise.com/
+      - key: RC_DEVELOPER_INTERNAL_TOKEN
+        value: unused
+      - key: PYINSTRUMENT_ENABLE
+        value: "false"
+      - key: DEBUG_TOOLBAR_ENABLE
+        value: "false"
+      - key: ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION
+        value: "False"
+
+  # sheet sync, places lookups and event fetching, daily at 10:00 utc (5 or 6 am eastern)
+  - type: cron
+    name: newenglandmusic-daily
+    runtime: python
+    # billed by the second of running time, with a $1 minimum a month
+    plan: 0.5c-512mb
+    region: virginia
+    branch: main
+    autoDeployTrigger: checksPass
+    schedule: "0 10 * * *"
+    # only installs requirements: the web service's build migrates
+    buildCommand: ./bin/build-job.sh
+    startCommand: ./bin/daily.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.14
+      - key: DJANGO_SETTINGS_MODULE
+        value: nycnoise.settings.prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: newenglandmusic
+          property: connectionString
+      # secrets are set once, on the web service, and copied here on each blueprint sync
+      - key: DJANGO_SECRET_KEY
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: DJANGO_SECRET_KEY
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: GOOGLE_SERVICE_ACCOUNT_JSON
+      - key: GOOGLE_PLACES_API_KEY
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: GOOGLE_PLACES_API_KEY
+      - key: ANTHROPIC_API_KEY
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: ANTHROPIC_API_KEY
+      - key: TICKETMASTER_API_KEY
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: TICKETMASTER_API_KEY
+      - key: EVENTBRITE_API_KEY
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: EVENTBRITE_API_KEY
+      # inherited from nyc noise and unused, but the settings require them
+      - key: PROD_INTERNAL_API_SERVER
+        value: https://nyc-noise.com/
+      - key: RC_DEVELOPER_INTERNAL_TOKEN
+        value: unused
+      - key: PYINSTRUMENT_ENABLE
+        value: "false"
+      - key: DEBUG_TOOLBAR_ENABLE
+        value: "false"
+      - key: ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION
+        value: "False"
+
+  # event source check and api matching, sundays at 07:00 utc, before that day's daily run
+  - type: cron
+    name: newenglandmusic-weekly
+    runtime: python
+    # billed by the second of running time, with a $1 minimum a month
+    plan: 0.5c-512mb
+    region: virginia
+    branch: main
+    autoDeployTrigger: checksPass
+    schedule: "0 7 * * 0"
+    # only installs requirements: the web service's build migrates
+    buildCommand: ./bin/build-job.sh
+    startCommand: ./bin/weekly.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.14
+      - key: DJANGO_SETTINGS_MODULE
+        value: nycnoise.settings.prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: newenglandmusic
+          property: connectionString
+      # secrets are set once, on the web service, and copied here on each blueprint sync
+      - key: DJANGO_SECRET_KEY
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: DJANGO_SECRET_KEY
+      - key: TICKETMASTER_API_KEY
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: TICKETMASTER_API_KEY
+      - key: EVENTBRITE_API_KEY
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: EVENTBRITE_API_KEY
+      # inherited from nyc noise and unused, but the settings require them
       - key: PROD_INTERNAL_API_SERVER
         value: https://nyc-noise.com/
       - key: RC_DEVELOPER_INTERNAL_TOKEN

@@ -34,11 +34,12 @@ venv/bin/python -c "from django.core.management.utils import get_random_secret_k
 
 Keep it only in the host's settings, never in git. Changing it logs everyone out of the admin. Some hosts can generate it for you (Render: `generateValue: true`).
 
-**For the scheduled jobs:**
+**For the scheduled jobs:** set these on the web service. The cron jobs copy them from it on each blueprint sync, so after changing one, run a blueprint sync (or redeploy the jobs) for them to see it.
 - `ANTHROPIC_API_KEY`: AI event extraction and labelling events by kind.
 - `TICKETMASTER_API_KEY`: the Consumer Key of a Ticketmaster app.
 - `EVENTBRITE_API_KEY`: the private token of an Eventbrite account, from eventbrite.com/platform/api-keys.
 - `GOOGLE_PLACES_API_KEY`: in Google Cloud, restrict it to the Places API (New) and cap its daily quota.
+- `GOOGLE_SERVICE_ACCOUNT_JSON`: the sheet sync's service-account key (see "Reading the sheet on a server").
 
 **Optional:**
 - **`CONTACT_EMAIL`:** shown on the submit-event form.
@@ -164,7 +165,20 @@ These run in this order. Each one depends on the one before it:
 | `match_eventbrite_organizers` | weekly, after the source check | free (Eventbrite allows 2,000 requests an hour). It fetches the pages of venues that link Eventbrite, politely, and links only new venues unless given `--recheck` |
 | `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster and Eventbrite: a few hundred requests each |
 
-**A single script would be simplest.** For example, `bin/refresh.sh` would run the daily commands in order and stop at the first failure, plus a weekly script for the crawl. Then the scheduler needs only two entries.
+### How they run on Render
+
+`render.yaml` defines two cron jobs, each running a script:
+
+| Job | Schedule (UTC) | Script | Runs |
+|---|---|---|---|
+| `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | sheet sync, Places lookup, coordinate refresh, `fetch_events --all` |
+| `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster and Eventbrite matching |
+
+- **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed sheet sync leaves the venues as they were, and they can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.
+- **Builds:** the jobs build with `bin/build-job.sh`, which only installs the requirements. Only the web service migrates. Like the web service, they deploy a commit only once CI passes.
+- **Setting them up:** after `render.yaml` changes on `main`, run a blueprint sync in the Render dashboard (the blueprint's page, **Manual Sync**). It shows the services it will create and their cost for approval.
+- **Running one now:** trigger a run from the job's page in the dashboard, or with `render jobs create <service id> --start-command ./bin/daily.sh`. A manual run cancels one that's already running.
+- **Cost:** each job is billed by the second of running time on `0.5c-512mb`, with a $1 minimum a month, so about $2 a month for both, plus the Anthropic usage above.
 
 **Reviewing runs.** Each run of these commands is recorded in the database, wherever it runs, and listed newest first in the admin at `/admin/core/jobrun/`:
 - **What a run shows:** its arguments, start time and duration, its outcome, a short summary of counts, the report it printed, and the error if it failed.
