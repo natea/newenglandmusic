@@ -1025,6 +1025,73 @@ class FetchEventsFallbackTestCase(TestCase):
         self.assertEqual(VenueFetchStatus.objects.get(venue=self.venues["V0002"]).problems, problems)
 
 
+class FetchEventsExistingCopyTestCase(TestCase):
+    """the same show arriving under a new external id updates the copy already saved"""
+
+    def setUp(self):
+        FetchEventsEventbriteTestCase.setUp(self)
+        self.start = (timezone.now() + datetime.timedelta(days=4)).replace(microsecond=0)
+
+    save_sources = FetchEventsTestCase.save_sources
+    crawl_returns = FetchEventsTestCase.crawl_returns
+    events_for = FetchEventsTestCase.events_for
+    fetch = FetchEventsTestCase.fetch
+
+    def scraped(self, title="Gryme", **fields):
+        values = dict(
+            title=title, starttime=self.start, venue=self.venues["V0003"], source="ticketing",
+            external_id="json-ld:7c910d1f86a739f8", is_approved=True, kind="dj_dance",
+        )
+        values.update(fields)
+        return Event.all_objects.create(**values)
+
+    def eventbrite_copy(self, title="GRYME!"):
+        return eb_event("1998699082760", title, start={"utc": self.start.strftime("%Y-%m-%dT%H:%M:%SZ")})
+
+    def test_same_show_under_a_new_id(self):
+        existing = self.scraped()
+        self.eb_events["eb-V0003"] = [self.eventbrite_copy()]
+        output = self.fetch("--sheet-ids", "V0003")
+        event = Event.all_objects.get(venue=self.venues["V0003"])
+        self.assertEqual(event.pk, existing.pk)
+        self.assertEqual((event.external_id, event.source), ("eventbrite:1998699082760", "eventbrite"))
+        self.assertTrue(event.is_approved)
+        self.assertEqual(event.kind, "dj_dance")
+        self.assertIn("1 updated", output)
+
+    def test_hand_entered_event(self):
+        hand = self.scraped(source="", external_id=None)
+        self.eb_events["eb-V0003"] = [self.eventbrite_copy()]
+        self.fetch("--sheet-ids", "V0003")
+        self.assertEqual(Event.all_objects.filter(venue=self.venues["V0003"]).count(), 2)
+        hand.refresh_from_db()
+        self.assertEqual((hand.external_id, hand.source, hand.title), (None, "", "Gryme"))
+
+    def test_different_time_or_title_is_a_different_show(self):
+        self.scraped(title="Gryme Matinee")
+        self.scraped(external_id="json-ld:later", starttime=self.start + datetime.timedelta(hours=3))
+        self.eb_events["eb-V0003"] = [self.eventbrite_copy()]
+        self.fetch("--sheet-ids", "V0003")
+        self.assertEqual(Event.all_objects.filter(venue=self.venues["V0003"]).count(), 3)
+
+    def test_two_copies_in_one_run_dont_take_each_other(self):
+        # a feed listing the same show twice under two ids keeps both, as before
+        self.events_for("V0001", [
+            event("Twice", external_id="ical:a", starttime=self.start),
+            event("Twice", external_id="ical:b", starttime=self.start),
+        ])
+        self.fetch("--sheet-ids", "V0001")
+        self.assertEqual(
+            set(Event.all_objects.values_list("external_id", flat=True)), {"ical:a", "ical:b"}
+        )
+
+    def test_adopted_copy_keeps_an_admin_label(self):
+        self.scraped(kind="live_music", kind_set_by=Event.KindSetBy.ADMIN)
+        self.eb_events["eb-V0003"] = [self.eventbrite_copy()]
+        self.fetch("--sheet-ids", "V0003")
+        self.assertEqual(Event.all_objects.get().kind, "live_music")
+
+
 class FetchEventsLabellingTestCase(TestCase):
     """fetch_events labelling events by kind before saving them"""
 

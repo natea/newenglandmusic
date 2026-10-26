@@ -1,4 +1,5 @@
 import os
+import re
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
@@ -190,13 +191,44 @@ def select_targets(per_source, sheet_ids, all_venues, use_ticketmaster=True, use
     return targets
 
 
-def save_event(venue_pk, source, source_url, data, dry_run):
-    """returns ("created", "updated" or "skipped"; the event's kind)"""
+def normalized_title(title):
+    """a title for matching copies of one show: "GRYME!" and "Gryme" are the same"""
+    return re.sub(r"\W", "", (title or "").lower())
+
+
+def existing_copy(venue_pk, starttime, title, saved_ids):
+    """
+    an imported event already saved for this show under another id: the same venue,
+    start time and title. ids change when a venue's source does (a scraped eventbrite
+    page, then the eventbrite api) or when ai extraction words a link differently.
+    hand-entered events, and copies saved earlier in this run, are never taken
+    """
+    key = normalized_title(title)
+    candidates = (
+        Event.all_objects.filter(venue_id=venue_pk, starttime=starttime)
+        .exclude(source="")
+        .exclude(external_id__in=saved_ids)
+        .order_by("pk")
+    )
+    return next((event for event in candidates if normalized_title(event.title) == key), None)
+
+
+def save_event(venue_pk, source, source_url, data, dry_run, saved_ids=frozenset()):
+    """
+    returns ("created", "updated" or "skipped"; the event's kind). saved_ids are the
+    external ids this run has already saved
+    """
     external_id = data["external_id"][:255]
     if not data["title"] and not data["artists"]:
         return "skipped", ""
 
     event = Event.all_objects.filter(external_id=external_id).first()
+    adopted = False
+    if event is None and data["title"]:
+        event = existing_copy(venue_pk, data["starttime"], data["title"], saved_ids)
+        adopted = event is not None
+        if adopted:
+            event.external_id = external_id
     created = event is None
     if created:
         event = Event(external_id=external_id, is_approved=False)
@@ -216,7 +248,8 @@ def save_event(venue_pk, source, source_url, data, dry_run):
     event.is_cancelled = data["is_cancelled"]
     # an admin's label always stands; otherwise keep the label the event already has
     # unless there's a new one
-    if event.kind_set_by != Event.KindSetBy.ADMIN and data.get("kind"):
+    # an adopted copy keeps its label: a fresh one for the same text could flip it
+    if event.kind_set_by != Event.KindSetBy.ADMIN and data.get("kind") and not (adopted and event.kind):
         event.kind = data["kind"]
         event.kind_set_by = Event.KindSetBy.AI
 
@@ -620,12 +653,16 @@ class Command(RecordedCommand, BaseCommand):
 
         totals = defaultdict(int)
         kind_totals = defaultdict(int)
+        saved_ids = set()
         for target, unique in chosen:
             found = events_by_venue[target["sheet_id"]]
             outcomes = defaultdict(int)
             hidden = []
             for source, source_url, data in unique:
-                outcome, kind = save_event(target["venue_pk"], source, source_url, data, dry_run)
+                outcome, kind = save_event(
+                    target["venue_pk"], source, source_url, data, dry_run, saved_ids
+                )
+                saved_ids.add(data["external_id"][:255])
                 outcomes[outcome] += 1
                 if outcome != "skipped":
                     kind_totals[kind or "unlabelled"] += 1
