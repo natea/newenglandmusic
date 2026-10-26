@@ -32,6 +32,7 @@ API keys live in `.env`, which is git-ignored:
 
 - **Venues come from the Google Sheet copy** "Northeastern US Music Venues - v3 (venue-db copy)" (`1QBzKHOUWOR0Fw0ODrwEep5eGfZg4SmTUq4PsaCbbnGQ`, tab "V3 - Flattened"). Rows are keyed by its `Venue_ID` column. Don't modify the original sheet (`14s8oWNJbRNWn7jys675u_t8B9A8nXyuAVkBhzyE4l2M`).
 - **Read Google Sheets with the `gog` CLI,** not an MCP server. If it reports `invalid_grant`, the user must re-authorize: `gog auth add <your-google-account> --services calendar,drive,gmail,sheets`.
+- **On a server, the sheet sync reads the sheet with a service account** instead, when `GOOGLE_SERVICE_ACCOUNT_JSON` is set (`core/google_sheets.py`; setup in `PRODUCTION.md`). Never print or log that variable.
 - **The sheet's coordinates are town centres,** not venue locations. Use `Venue.exact_location`, which is the Google Places location when that match is confident.
 
 ## The pipeline

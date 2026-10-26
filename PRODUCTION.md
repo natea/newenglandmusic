@@ -174,14 +174,25 @@ These run in this order. Each one depends on the one before it:
 
 ## Before the jobs can run on a server
 
-These need fixing first. Each is a code change, so each needs its own OpenSpec proposal:
+This needs fixing first. It's a code change, with its own OpenSpec proposal:
 
-1. **The sheet sync uses the `gog` CLI.** gog signs in to Google as you, through a browser, so it can't sign in on a server. Two options:
-   - Read the sheet with a **Google service account** instead, after sharing the sheet with the account's email address.
-   - Use the sheet's **published CSV link**, which needs no credentials but makes the sheet public.
-2. **Google Places terms.** The terms allow storing place IDs, but coordinates for only about 30 days. The venue-place-lookup design notes this. Before going public, either:
+1. **Google Places terms.** The terms allow storing place IDs, but coordinates for only about 30 days. The venue-place-lookup design notes this. Before going public, either:
    - refresh coordinates monthly (`lookup_venue_places --refresh`, which costs Places calls), or
    - keep only the place IDs and look up coordinates when needed.
+
+## Reading the sheet on a server
+
+Locally, `sync_venues_from_gsheets` reads the sheet with the `gog` CLI, which signs in to Google as you through a browser. A server can't do that, so there it reads the sheet with a **Google Cloud service account** instead. The account can only read, and only sheets shared with it, so the sheet stays private. Set it up once:
+
+1. **Create the account.** In the Google Cloud console, pick or create a project and enable the **Google Sheets API** for it. Under **IAM & Admin > Service Accounts**, create a service account; it needs no roles.
+2. **Create its key.** On the account's **Keys** tab, add a key of type **JSON**. A file downloads; keep it out of the repo.
+3. **Share the sheet.** Share the venue sheet copy ("Northeastern US Music Venues - v3 (venue-db copy)") with the account's email address, which ends in `iam.gserviceaccount.com`, as a **Viewer**. Don't share the original sheet.
+4. **Give Render the key.** In the web service's **Environment** settings, set `GOOGLE_SERVICE_ACCOUNT_JSON` to the whole contents of the JSON file, then delete the downloaded file.
+5. **Check it.** In the service's **Shell** tab, run `python manage.py sync_venues_from_gsheets --dry-run`. It should report the venues and areas with no errors. An error names the tab and what to fix, such as sharing the sheet with the account's email.
+
+If the key ever leaks, delete it on the account's **Keys** tab and create a new one.
+
+**Still to do:** a Render Cron Job that runs the sync (and the other daily jobs) every day, once the Google Places terms above are met.
 
 ## Launch checklist
 

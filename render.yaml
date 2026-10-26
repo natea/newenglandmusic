@@ -53,6 +53,9 @@ services:
         sync: false
       - key: GOATCOUNTER_CODE
         sync: false
+      # a google cloud service account's json key, for the sheet sync (see PRODUCTION.md)
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
       # inherited from nyc noise and unused by this site, but the settings require them
       - key: PROD_INTERNAL_API_SERVER
         value: https://nyc-noise.com/

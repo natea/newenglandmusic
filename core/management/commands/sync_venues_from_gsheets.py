@@ -2,6 +2,7 @@ import json
 import subprocess
 from collections import Counter
 
+from core import google_sheets
 from core.geo_filters import area_q
 from core.models import GeoArea, Venue
 from core.job_runs import RecordedCommand
@@ -18,8 +19,10 @@ run as:
 
 python manage.py sync_venues_from_gsheets [--dry-run]
 
-the sheet is read with the gog cli, which must be installed and authorized
-with the sheets service.
+on a server, the sheet is read with a google cloud service account whose json key is in
+GOOGLE_SERVICE_ACCOUNT_JSON (see core/google_sheets.py and PRODUCTION.md). without
+it, it's read with the gog cli, which must be installed and authorized with the sheets
+service.
 
 every row must have a Venue_ID (e.g. V0042) -- venues are matched on it, so it
 must never change for a given row. rows are created or updated; venues that are
@@ -106,10 +109,10 @@ def venue_fields_from_row(row):
     }
 
 
-def get_rows_from_google_sheets(sheet_id, tab):
+def get_values_with_gog(sheet_id, a1_range, tab):
     try:
         result = subprocess.run(
-            ["gog", "sheets", "get", sheet_id, f"'{tab}'!A1:ZZ", "--json", "--results-only"],
+            ["gog", "sheets", "get", sheet_id, a1_range, "--json", "--results-only"],
             capture_output=True,
             text=True,
             check=True,
@@ -118,8 +121,19 @@ def get_rows_from_google_sheets(sheet_id, tab):
         raise CommandError("the gog cli is not installed")
     except subprocess.CalledProcessError as e:
         raise CommandError(f"gog failed reading tab {tab!r}: {e.stderr.strip()}")
+    return json.loads(result.stdout)
 
-    values = json.loads(result.stdout)
+
+def get_rows_from_google_sheets(sheet_id, tab):
+    """
+    the tab's rows as dicts keyed by its header row. read with a service account when
+    GOOGLE_SERVICE_ACCOUNT_JSON is set (on a server), and with the gog cli otherwise
+    """
+    a1_range = f"'{tab}'!A1:ZZ"
+    if google_sheets.is_configured():
+        values = google_sheets.read_values(sheet_id, a1_range, tab)
+    else:
+        values = get_values_with_gog(sheet_id, a1_range, tab)
     header, *rows = values
     # the sheets api drops trailing empty cells, so pad each row out to the header
     return [dict(zip(header, row + [""] * (len(header) - len(row)))) for row in rows]
