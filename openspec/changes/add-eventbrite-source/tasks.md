@@ -18,7 +18,7 @@
 ## 4. Docs and a real run
 
 - [x] 4.1 Update `PRODUCTION.md` (the key, the matching command in the job table, and the terms check on the launch checklist) and `AGENTS.md` (the pipeline and the rate limit). Verify by reading both.
-- [ ] 4.2 Run the full suite with outbound network blocked. Then link the venues covered in 1.3 and run `fetch_events --sheet-ids` for them. Verify: every test passes, the job run shows Eventbrite events, and those venues' fetch statuses no longer show their old ticketing-page failures.
+- [x] 4.2 Run the full suite with outbound network blocked. Then link the venues covered in 1.3 and run `fetch_events --sheet-ids` for them. Verify: every test passes, the job run shows Eventbrite events, and those venues' fetch statuses no longer show their old ticketing-page failures. (2026-10-26: 524 tests pass offline; 37 venues linked, 7 left unlinked as "events elsewhere"; the fetch created 334 events and updated 128, from Eventbrite for 30 venues, with no failures. Logs: `logs/match_eventbrite_organizers-2026-10-26.log`, `logs/fetch_events-2026-10-26-eventbrite.log`)
 
 ## Workflow follow-up
 
