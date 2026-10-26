@@ -199,7 +199,19 @@ class VenueAdminFetchStatusTestCase(TestCase):
     def test_venue_page(self):
         page = self.client.get(f"/admin/core/venue/{self.failing.pk}/change/")
         self.assertContains(page, "ticketing · 0 found, 0 upcoming")
-        self.assertContains(page, "failed: https://www.ticketweb.com/event/1 HttpError()")
+        self.assertContains(
+            page,
+            'failed: <a target="_blank" rel="noopener" href="https://www.ticketweb.com/event/1">'
+            "https://www.ticketweb.com/event/1</a> HttpError()",
+        )
+
+    def test_problem_text_is_escaped(self):
+        status = self.failing.fetch_status
+        status.problems = ["failed: https://x.example/ DownloadFailedError('[<twisted.Failure>]')"]
+        status.save()
+        page = self.client.get(f"/admin/core/venue/{self.failing.pk}/change/")
+        self.assertContains(page, "[&lt;twisted.Failure&gt;]")
+        self.assertNotContains(page, "<twisted.Failure>")
         self.assertContains(page, f'href="/admin/core/jobrun/{self.run.pk}/change/"')
 
     def test_never_fetched_venue_page(self):

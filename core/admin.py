@@ -7,7 +7,7 @@ from django.contrib.admin import SimpleListFilter
 from django.db.models import Q, URLField
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import format_html, format_html_join
+from django.utils.html import format_html, format_html_join, urlize
 from django.utils.safestring import mark_safe
 from ordered_model.admin import OrderedModelAdmin
 from solo.admin import SingletonModelAdmin
@@ -548,7 +548,7 @@ class VenueAdmin(admin.ModelAdmin):
         problems = (
             format_html(
                 '<strong style="color: #cf222e">problems</strong><ul>{}</ul>',
-                format_html_join("", "<li>{}</li>", ((p,) for p in status.problems)),
+                format_html_join("", "<li>{}</li>", ((linked(p),) for p in status.problems)),
             )
             if status.problems
             else "no problems"
@@ -626,6 +626,13 @@ class MenuItemAdmin(OrderedModelAdmin):
 
 
 admin.site.register(MenuItem, MenuItemAdmin)
+
+
+def linked(problem):
+    """a problem message with its urls as links, to open the failing page in a new tab"""
+    return mark_safe(
+        urlize(problem, autoescape=True).replace("<a ", '<a target="_blank" rel="noopener" ')
+    )
 
 
 class JobRunOutcomeFilter(SimpleListFilter):
@@ -725,7 +732,7 @@ class JobRunAdmin(admin.ModelAdmin):
                     reverse("admin:core_venue_change", args=[item["venue_id"]]),
                     item["sheet_id"],
                     item["name"],
-                    format_html_join("", "<li>{}</li>", ((p,) for p in item["problems"])),
+                    format_html_join("", "<li>{}</li>", ((linked(p),) for p in item["problems"])),
                 )
                 for item in run.problems
             ),

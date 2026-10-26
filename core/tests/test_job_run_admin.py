@@ -103,6 +103,12 @@ class JobRunAdminTestCase(TestCase):
         self.assertIn("2 venues with problems", page)
         self.assertIn(f'href="/admin/core/venue/{rails.pk}/change/"', page)
         self.assertIn("stopped with max_tokens", page)
+        # the failing page is a link, for spot checks
+        self.assertIn(
+            '<a target="_blank" rel="noopener" href="https://www.ticketweb.com/event/1">'
+            "https://www.ticketweb.com/event/1</a> HttpError()",
+            page,
+        )
         # listed before the text report
         self.assertLess(page.index("2 venues with problems"), page.index("the report"))
         listing = self.client.get(LIST_URL)
