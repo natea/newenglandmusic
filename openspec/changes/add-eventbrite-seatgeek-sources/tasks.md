@@ -1,6 +1,6 @@
 ## 1. Clients and the coverage check
 
-- [ ] 1.1 The user creates an Eventbrite private token and a SeatGeek client ID, and adds `EVENTBRITE_TOKEN` and `SEATGEEK_CLIENT_ID` to `.env`. Add both to `.env.example`. Verify: both are set (checked without printing them).
+- [ ] 1.1 The user creates an Eventbrite private token and a SeatGeek client ID, and adds `EVENTBRITE_API_KEY` and `SEATGEEK_CLIENT_ID` to `.env`. Add both to `.env.example`. Verify: both are set (checked without printing them).
 - [ ] 1.2 Add `core/event_fetching/eventbrite.py` and `core/event_fetching/seatgeek.py`, modelled on `ticketmaster.py`. Include rate-limited clients, event-to-dict conversion, and keys kept out of errors. Record fixtures once from the real APIs, with keys and personal data stripped. Verify: client tests that replay the fixtures with a fake session pass, with network blocked.
 - [ ] 1.3 Add `measure_api_coverage`, a dry run that saves nothing. For each venue, it reports whether each API finds it and how many upcoming events it lists. It covers the venues with ticketing-page failures in the latest fetch's job run, and every venue whose platforms include eventbrite, etix or axs. Verify: a test with mocked clients. Then run it for real, log it to `logs/`, and record the totals under Open Questions in design.md.
 - [ ] 1.4 Show the coverage results to the user, and record their decision on which APIs to build. Drop the tasks and spec of any API they decline. Verify: the decision is written in design.md, and `openspec validate add-eventbrite-seatgeek-sources` passes.

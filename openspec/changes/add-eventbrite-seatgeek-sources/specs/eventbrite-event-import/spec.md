@@ -43,7 +43,7 @@ When `fetch_events` runs, a venue with an Eventbrite organizer ID and no Ticketm
 
 ### Requirement: Eventbrite needs a token and fails gracefully
 
-Without `EVENTBRITE_TOKEN`, linked venues SHALL be skipped with a note. An API error for one venue SHALL be reported as that venue's problem, and the run SHALL continue.
+Without `EVENTBRITE_API_KEY`, linked venues SHALL be skipped with a note. An API error for one venue SHALL be reported as that venue's problem, and the run SHALL continue.
 
 #### Scenario: API error
 

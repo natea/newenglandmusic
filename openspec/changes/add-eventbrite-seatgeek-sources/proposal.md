@@ -19,7 +19,7 @@ AXS, Etix and Eventim offer no public listings API. But two free official APIs c
   - `fetch_events` fetches that venue's upcoming concerts.
 - **One API source per venue:** a venue linked to several APIs is fetched from one, in this order: Ticketmaster, then Eventbrite, then SeatGeek. Like Ticketmaster today, a linked API replaces the venue's ticketing-page scraping and AI extraction, but not its iCal feed or JSON-LD. This avoids the same show being saved twice under different IDs.
 - **Admin:** both IDs are editable on the venue page, searchable, and filterable ("linked to Eventbrite", "linked to SeatGeek").
-- **Keys:** the new settings `EVENTBRITE_TOKEN` and `SEATGEEK_CLIENT_ID`, read from `.env`, are listed in `.env.example` and `PRODUCTION.md`. A missing key skips that API with a note, as with Ticketmaster.
+- **Keys:** the new settings `EVENTBRITE_API_KEY` and `SEATGEEK_CLIENT_ID`, read from `.env`, are listed in `.env.example` and `PRODUCTION.md`. A missing key skips that API with a note, as with Ticketmaster.
 
 ## Capabilities
 
