@@ -3,6 +3,7 @@ from datetime import date
 
 from dateutil import relativedelta
 from django.contrib import admin
+from django import forms
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q, URLField
 from django.urls import reverse
@@ -14,6 +15,9 @@ from solo.admin import SingletonModelAdmin
 from tinymce.widgets import TinyMCE
 
 from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filter
+from .spotify import parse_artist_id
+from .spotify_links import rebake_events_naming
+from .artist_matching import normalize
 from .job_runs import DIDNT_FINISH, STALE_AFTER, outcome
 from .models import (
     AllEventProxy,
@@ -24,6 +28,7 @@ from .models import (
     IndexPageMessages,
     JobRun,
     MenuItem,
+    SpotifyArtistLink,
     StaticPage,
     Venue,
     VenueFetchStatus,
@@ -779,3 +784,92 @@ class JobRunAdmin(admin.ModelAdmin):
 
 
 admin.site.register(JobRun, JobRunAdmin)
+
+
+class SpotifyArtistLinkForm(forms.ModelForm):
+    spotify_link = forms.CharField(
+        required=False,
+        label="Spotify artist link",
+        help_text="paste the artist's link from Spotify (Share > Copy link to artist), "
+        "e.g. https://open.spotify.com/artist/... or spotify:artist:...",
+    )
+    no_spotify_artist = forms.BooleanField(
+        required=False, help_text="this name has no artist on Spotify: show no play button"
+    )
+
+    class Meta:
+        model = SpotifyArtistLink
+        fields = ["name_key"]
+        labels = {"name_key": "Artist name"}
+        help_texts = {"name_key": "as an event writes it; it's stored normalized"}
+
+    def clean_name_key(self):
+        key = normalize(self.cleaned_data["name_key"])
+        if not key:
+            raise forms.ValidationError("enter the artist's name")
+        return key
+
+    def clean_spotify_link(self):
+        link = self.cleaned_data["spotify_link"].strip()
+        if link and not parse_artist_id(link):
+            raise forms.ValidationError(
+                "that isn't a Spotify artist link: it should look like "
+                "https://open.spotify.com/artist/... or spotify:artist:..."
+            )
+        return link
+
+    def clean(self):
+        cleaned = super().clean()
+        link, none = cleaned.get("spotify_link"), cleaned.get("no_spotify_artist")
+        if link and none:
+            raise forms.ValidationError("give a Spotify link or tick no Spotify artist, not both")
+        if not link and not none and not self.instance.pk:
+            raise forms.ValidationError("give a Spotify link, or tick no Spotify artist")
+        return cleaned
+
+
+class SpotifyArtistLinkAdmin(admin.ModelAdmin):
+    form = SpotifyArtistLinkForm
+    list_display = ["name_key", "status", "spotify_page", "source", "checked_at", "last_seen_at"]
+    list_filter = ["status", "source"]
+    search_fields = ["name_key"]
+    readonly_fields = ["status", "spotify_page", "source", "checked_at", "last_seen_at"]
+    actions = ["mark_no_spotify_artist"]
+
+    @admin.display(description="Spotify")
+    def spotify_page(self, link):
+        if not link.spotify_artist_id:
+            return "-"
+        return format_html(
+            '<a href="https://open.spotify.com/artist/{}" target="_blank">{}</a>',
+            link.spotify_artist_id,
+            link.spotify_artist_id,
+        )
+
+    def save_model(self, request, link, form, change):
+        """an editor's choice: matched to the pasted artist, or no artist"""
+        now = timezone.now()
+        artist_id = parse_artist_id(form.cleaned_data.get("spotify_link"))
+        if artist_id or form.cleaned_data.get("no_spotify_artist"):
+            link.status = SpotifyArtistLink.Status.MATCHED if artist_id else SpotifyArtistLink.Status.NONE
+            link.spotify_artist_id = artist_id or ""
+            link.source = SpotifyArtistLink.Source.EDITOR
+            link.checked_at = now
+        if not link.last_seen_at:
+            link.last_seen_at = now
+        super().save_model(request, link, form, change)
+        rebake_events_naming([link.name_key])
+
+    @admin.action(description="Mark as no Spotify artist")
+    def mark_no_spotify_artist(self, request, queryset):
+        keys = list(queryset.values_list("name_key", flat=True))
+        queryset.update(
+            status=SpotifyArtistLink.Status.NONE,
+            spotify_artist_id="",
+            source=SpotifyArtistLink.Source.EDITOR,
+            checked_at=timezone.now(),
+        )
+        rebake_events_naming(keys)
+
+
+admin.site.register(SpotifyArtistLink, SpotifyArtistLinkAdmin)

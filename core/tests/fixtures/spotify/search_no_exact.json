@@ -1,0 +1,4 @@
+{"artists": {"limit": 10, "offset": 0, "total": 2, "next": null, "previous": null, "items": [
+  {"id": "fakeHaven000000000001", "name": "Haven", "type": "artist", "uri": "spotify:artist:fakeHaven000000000001", "genres": [], "images": [], "external_urls": {"spotify": "https://open.spotify.com/artist/fakeHaven000000000001"}},
+  {"id": "fakeTheDen00000000002", "name": "The Den", "type": "artist", "uri": "spotify:artist:fakeTheDen00000000002", "genres": [], "images": [], "external_urls": {"spotify": "https://open.spotify.com/artist/fakeTheDen00000000002"}}
+]}}

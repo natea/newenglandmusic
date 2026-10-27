@@ -139,6 +139,8 @@ article {
 
 .event {
   display: flex;
+  // so the spotify rows below can take the full width
+  flex-wrap: wrap;
 
   padding-top: 10px;
   padding-bottom: 10px;
@@ -206,6 +208,51 @@ article {
 
   .price {
     font-size: 0.85rem;
+  }
+
+  // spotify play buttons and player: rows of their own below the event's text, lined up
+  // with the text past the time column (see .event-time)
+  .spotify-artists,
+  .spotify-player {
+    flex-basis: 100%;
+    margin-left: 5.6em;
+    max-width: calc(100% - 5.6em);
+  }
+
+  .spotify-artists {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    margin-top: 4px;
+  }
+
+  .spotify-play {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: black;
+    text-decoration: none;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 1px 8px;
+
+    &:hover {
+      border-color: #1db954;
+    }
+  }
+
+  .spotify-mark {
+    width: 12px;
+    height: 12px;
+    fill: #1db954;
+  }
+
+  .spotify-player {
+    border: 0;
+    border-radius: 12px;
+    margin-top: 6px;
+    height: 152px;
   }
 }
 

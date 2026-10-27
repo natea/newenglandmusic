@@ -1,0 +1,4 @@
+{"artists": {"limit": 10, "offset": 0, "total": 2, "next": null, "previous": null, "items": [
+  {"id": "fakeEpicenterOne00001", "name": "Epicenter", "type": "artist", "uri": "spotify:artist:fakeEpicenterOne00001", "genres": [], "images": [], "external_urls": {"spotify": "https://open.spotify.com/artist/fakeEpicenterOne00001"}},
+  {"id": "fakeEpicenterTwo00002", "name": "EPICENTER", "type": "artist", "uri": "spotify:artist:fakeEpicenterTwo00002", "genres": [], "images": [], "external_urls": {"spotify": "https://open.spotify.com/artist/fakeEpicenterTwo00002"}}
+]}}

@@ -2,7 +2,7 @@
 
 - **Artist names are free text.** Events have a free-text `title` and `artists` (see `add-spotify-followed-artists`' design for how sparse and noisy `artists` is). Sample bills include "SHEBAD w/ Psymon Spine + A Halloween Surprise" and "State Theatre Presents: The Ballroom Thieves".
 - **Event HTML is stored.** `core/utils_event_caching.bake_event_html` renders each event's HTML into `Event.baked_html_template`. So anything new in an event's markup must be rendered when the event is saved, and again whenever its inputs change.
-- **The title line is a link.** `event.html` wraps the title and artists in the event's hyperlink. A button can't sit inside an `<a>`, so the play buttons go after that line rather than beside each name in the text.
+- **The title line is a link.** `event.html` wraps the title and artists in the event's hyperlink. A button can't sit inside an `<a>`, and the text after it is already crowded with the ICAL, GCAL and MAP links. So the play buttons go in a row of their own below the text, not inside it.
 - **The map clones events.** The day maps' info panel (`map.html`) shows copies of event elements.
 - **Events have a kind.** `Event.kind` with `is_music_kind()` already says which events are music.
 - **What Spotify allows (checked 2026-10-26):**
@@ -54,11 +54,13 @@
 **5. Rendering.**
 - **What's rendered:**
   - `bake_event_html` passes `spotify_artists`: an ordered list of `(display name, artist ID)` for the event's matched names, looked up in one query by `name_key`.
-  - `event.html` renders `<a class="spotify-play" href="https://open.spotify.com/artist/<id>" data-spotify-artist="<id>" target="_blank" rel="noopener">` after the title line.
+  - `event.html` renders a `<div class="spotify-artists">` holding one `<a class="spotify-play" href="https://open.spotify.com/artist/<id>" data-spotify-artist="<id>" target="_blank" rel="noopener">` per artist. It goes after `.event-time-and-content` and `.event-ticket`, as a third child of the `.event` flex row.
+  - `.event` gets `flex-wrap: wrap`, and the row takes the full width (`flex-basis: 100%`), indented to line up with the text past the time column. The time, text and tix columns don't change.
 - **The script:** a small one (`static/js/spotify_preview.js`) listens for clicks on `document`, so it also works for the copies in the map panel. On a click it:
   - calls `preventDefault`;
   - removes any open player;
-  - inserts `<iframe src="https://open.spotify.com/embed/artist/<id>" height="152" loading="lazy" allow="encrypted-media; clipboard-write">` after the event.
+  - inserts `<iframe src="https://open.spotify.com/embed/artist/<id>" width="100%" height="152" frameborder="0" allowfullscreen loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture">` below the row of buttons, inside the event. The attributes are those of Spotify's [Creating an Embed](https://developer.spotify.com/documentation/embeds/tutorials/creating-an-embed) guide, which lists artists among the embeddable types, at its compact height.
+  - The Widget Terms require showing the player as Spotify makes it, unaltered and not covered by anything, so the styles touch only its margins and corner radius.
 - **When there's no ID:** with Spotify unconfigured, or no matched names, the list is empty and nothing renders.
 
 **6. Re-render only what changed.**
@@ -74,7 +76,7 @@
 - **What it does:** it gets a Client Credentials token, and spaces searches 0.5 seconds apart.
 - **Retries:** it uses the same 429 handling as the shared client: `Retry-After`, then a backoff of 1, 2 and 4 seconds, at most three tries.
 - **Its summary:** the job summary carries the counts from the spec.
-- **Where it runs:** it's added to `bin/weekly.sh` after `match_eventbrite_organizers`.
+- **Where it runs:** at the end of `bin/daily.sh`, after `fetch_events`, with `--limit 1000`. It was weekly at first. A real run on 2026-10-27 got the app blocked for about a day after 650 searches, so it moved to daily: a blocked run stops and keeps what it found, and the next morning's carries on, so a backlog clears itself.
 
 **How Spotify is mocked in tests.**
 - **What's patched:** the HTTP session of `core/spotify.py`, with `unittest.mock`, as in the followed-artists change, along with `time.sleep`.
@@ -94,7 +96,7 @@
 - **[A wrong band linked when names collide]** → Accept only unique exact matches, let editors override, and offer an admin filter for automatic links to review. Visitors see the Spotify player's artist name before anything plays, so a mismatch is visible.
 - **[Playwright is a new dev dependency]**, and the suite's first browser test → It's the only way to cover the click scenarios automatically, as the project requires. It's limited to one test module, it runs offline, and the CI job gains a `playwright install --with-deps chromium` step. The alternative, verifying by hand as `add-event-music-filter` did for model-judgment scenarios, is weaker here, because click behavior is deterministic and testable.
 - **[Spotify policy wording on storing IDs]** → The terms don't address IDs specifically. Storing only IDs, with 30-day expiry and no other metadata, is the narrowest reading. If Spotify objects, deleting the table removes all buttons and changes nothing else.
-- **[The first run is slow]** → About 1,500 names at 0.5 seconds each is roughly 13 minutes. That's acceptable for the weekly job. `--limit` allows a gradual first run.
+- **[The first run is slow, and Spotify's limits aren't published]** → About 2,500 names at 2 seconds each is roughly 85 minutes. The daily `--limit 1000` spreads it over three mornings, and a block only delays the rest by a day.
 - **[The embed adds third-party content to the site]** → It loads only on click, and the player is Spotify's own branded widget, governed by the Widget Terms.
 
 ## Migration Plan
@@ -102,6 +104,6 @@
 1. Deploy the migration.
 2. Set the Spotify variables, shared with `add-spotify-followed-artists`.
 3. Run `match_spotify_artists --dry-run --limit 50` locally to check matches, then a full run against the Render database.
-4. The weekly job keeps the links current from then on.
+4. The daily job keeps the links current from then on.
 
 **Rollback:** unset the variables and re-render the events, or drop the table with a reverse migration. The listing then renders exactly as before.

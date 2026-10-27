@@ -1,0 +1,5 @@
+{"artists": {"href": "https://api.spotify.com/v1/search?query=The+Ballroom+Thieves&type=artist&offset=0&limit=10", "limit": 10, "offset": 0, "total": 3, "next": null, "previous": null, "items": [
+  {"id": "fakeBallroomThieves01", "name": "The Ballroom Thieves", "type": "artist", "uri": "spotify:artist:fakeBallroomThieves01", "genres": ["indie folk"], "images": [], "external_urls": {"spotify": "https://open.spotify.com/artist/fakeBallroomThieves01"}},
+  {"id": "fakeBallroomBlitz0002", "name": "Ballroom Blitz", "type": "artist", "uri": "spotify:artist:fakeBallroomBlitz0002", "genres": [], "images": [], "external_urls": {"spotify": "https://open.spotify.com/artist/fakeBallroomBlitz0002"}},
+  {"id": "fakeThieves0000000003", "name": "Thieves", "type": "artist", "uri": "spotify:artist:fakeThieves0000000003", "genres": [], "images": [], "external_urls": {"spotify": "https://open.spotify.com/artist/fakeThieves0000000003"}}
+]}}

@@ -636,3 +636,32 @@ class VenueFetchStatus(models.Model):
 
     def __str__(self):
         return f"{self.venue}: {self.source}"
+
+
+# which spotify artist an artist name on our events is, for the listing's play buttons
+# (see match_spotify_artists). keyed by the normalized name, so one search serves every
+# event naming it. spotify's terms forbid keeping a database of its content, so only the
+# id is kept, and only while an upcoming event names the artist
+class SpotifyArtistLink(models.Model):
+    class Status(models.TextChoices):
+        MATCHED = "matched", "Matched"
+        AMBIGUOUS = "ambiguous", "Several artists with this name"
+        NOT_FOUND = "not_found", "No artist with this name"
+        NONE = "none", "No Spotify artist"
+
+    class Source(models.TextChoices):
+        AUTO = "auto", "Automatic"
+        EDITOR = "editor", "Editor"
+
+    # core.artist_matching.normalize() of the name as our events write it
+    name_key = models.CharField(max_length=255, unique=True)
+    status = models.CharField(max_length=16, choices=Status.choices)
+    spotify_artist_id = models.CharField(max_length=64, blank=True, default="")
+    # an editor's choice is never searched again or overwritten by the command
+    source = models.CharField(max_length=8, choices=Source.choices, default=Source.AUTO)
+    checked_at = models.DateTimeField()
+    # the last run that found the name on an upcoming event; links unseen for 30 days go
+    last_seen_at = models.DateTimeField()
+
+    def __str__(self):
+        return self.name_key

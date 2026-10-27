@@ -27,6 +27,7 @@ DAILY = [
     "manage.py lookup_venue_places",
     "manage.py lookup_venue_places --refresh-stale",
     "manage.py fetch_events --all",
+    "manage.py match_spotify_artists --limit 1000",
 ]
 WEEKLY = [
     "manage.py check_event_sources --workers 8",
@@ -125,6 +126,9 @@ class RenderConfigurationTestCase(SimpleTestCase):
                 "ANTHROPIC_API_KEY",
                 "TICKETMASTER_API_KEY",
                 "EVENTBRITE_API_KEY",
+                # spotify matching, and new events rendering their play buttons
+                "SPOTIFY_CLIENT_ID",
+                "SPOTIFY_CLIENT_SECRET",
             },
         )
         self.assertEqual(

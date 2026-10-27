@@ -40,6 +40,7 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 - `EVENTBRITE_API_KEY`: the private token of an Eventbrite account, from eventbrite.com/platform/api-keys.
 - `GOOGLE_PLACES_API_KEY`: in Google Cloud, restrict it to the Places API (New) and cap its daily quota.
 - `GOOGLE_SERVICE_ACCOUNT_JSON`: the sheet sync's service-account key (see "Reading the sheet on a server").
+- `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`: a Spotify app's credentials, for the listing's play buttons (see "Spotify play buttons"). The web service uses them too, because saving an event renders its buttons.
 
 **Optional:**
 - **`CONTACT_EMAIL`:** shown on the submit-event form.
@@ -163,6 +164,7 @@ These run in this order. Each one depends on the one before it:
 | `check_event_sources` | weekly | free, but it crawls every venue's site, so don't run it more often |
 | `match_ticketmaster_venues` | weekly, after the source check | free (Ticketmaster allows 5,000 requests a day) |
 | `match_eventbrite_organizers` | weekly, after the source check | free (Eventbrite allows 2,000 requests an hour). It fetches the pages of venues that link Eventbrite, politely, and links only new venues unless given `--recheck` |
+| `match_spotify_artists --limit 1000` | daily, after `fetch_events` | free, but rate limited. It searches Spotify for artist names it hasn't seen, and for automatic matches more than 30 days old, two seconds apart. Spotify doesn't publish its limits: 650 searches half a second apart got the app blocked for about a day (2026-10-27). When blocked, a run stops at once and keeps what it found, and the next morning's carries on, so a first run's backlog of roughly 2,500 names clears itself within a few days. After that, each morning searches only new names |
 | `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster and Eventbrite: a few hundred requests each |
 
 ### How they run on Render
@@ -171,7 +173,7 @@ These run in this order. Each one depends on the one before it:
 
 | Job | Schedule (UTC) | Script | Runs |
 |---|---|---|---|
-| `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | sheet sync, Places lookup, coordinate refresh, `fetch_events --all` |
+| `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | sheet sync, Places lookup, coordinate refresh, `fetch_events --all`, Spotify matching |
 | `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster and Eventbrite matching |
 
 - **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed sheet sync leaves the venues as they were, and they can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.
@@ -195,6 +197,33 @@ Google's terms allow storing a place ID indefinitely and its coordinates for up 
 - **What's stored:** only each venue's place ID, coordinates, match status and when the coordinates were fetched. The name, address and open or closed status are used while a lookup runs, then discarded.
 - **Refreshing:** the daily `--refresh-stale` run re-fetches coordinates by place ID before they're 30 days old.
 - **Expiry:** every run deletes coordinates older than 30 days, even if its requests fail. The venue then uses its sheet coordinates until a refresh succeeds.
+
+## Spotify play buttons
+
+The events listing shows a "▶ artist name" button for each artist matched to Spotify, in a row of its own below the event's text. Clicking it opens Spotify's embedded artist player below the buttons. Without JavaScript, the button is a link to the artist on Spotify.
+
+**Setting up the Spotify app:**
+1. At [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard), create an app. The account that owns it needs Spotify Premium: without it, Spotify's API stops answering, although buttons already matched keep working.
+2. Tick only **Web API**. Spotify requires a redirect URI, and the play buttons don't use it; register the two that `add-spotify-followed-artists` will need: `https://newenglandmusic.onrender.com/spotify/callback` and `http://127.0.0.1:8001/spotify/callback`.
+3. From the app's **Settings**, copy the Client ID and the client secret into `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`: locally in `.env`, and on Render on the web service, then run a blueprint sync so the cron jobs get them too.
+4. Run `match_spotify_artists --dry-run --limit 50` to check the matches, then a full run.
+
+**How matching works.** `match_spotify_artists` reads the artist names from each upcoming approved music event's title and artists text (`core/artist_names.py`).
+- **Signing in:** it signs in to Spotify as the app (the Client Credentials flow), so no visitor signs in, and development mode's 5-user cap doesn't apply.
+- **When a name is linked:** only when exactly one Spotify artist has the same name, ignoring case, accents, punctuation and a leading "The". Names shared by several artists are marked ambiguous, and names with no match are marked not found, so neither is searched again for 30 days.
+
+**What's stored.** Spotify's terms forbid keeping a database of its content.
+- **What's kept:** `SpotifyArtistLink` keeps only each name (normalized), its status, the Spotify artist ID, who set it, and when.
+- **Re-checking:** automatic matches are searched again after 30 days.
+- **Deleting:** a link is deleted once no upcoming event has named the artist for 30 days.
+
+**Correcting a match.** At `/admin/core/spotifyartistlink/`:
+- **Fixing or adding a match:** paste the artist's Spotify link (Share > Copy link to artist). This also works for a name the command hasn't seen, by adding a link.
+- **Hiding a button:** tick **No Spotify artist**, or use the action of the same name.
+- **Finding matches to review:** filter by source "Automatic". That's where a local band sharing its name with a different Spotify artist would show up.
+- **Effects:** an editor's choice is never searched again or overwritten, and saving it re-renders that artist's upcoming events.
+
+**Terms.** The player is Spotify's own widget, shown as Spotify makes it. Nothing loads from Spotify until a visitor clicks, so a page view sets no Spotify cookies. The Widget Terms bar using the player for commercial purposes, which this site doesn't do.
 
 ## Reading the sheet on a server
 
