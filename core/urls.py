@@ -2,6 +2,7 @@ from django.conf import settings
 from django.urls import include, path, re_path
 
 from .views.autocomplete import VenueAutocomplete
+from .views.calendar_feed import calendar_feed
 from .views.email_subscribe import email_subscribe
 from .views.event_gcal import event_gcal_redirect
 from .views.event_ics_download import event_ics_download
@@ -29,6 +30,7 @@ urlpatterns = [
     # other urls
     path("submit-event", EventCreateView.as_view(), name="submit_event"),
     path("saved", saved_shows, name="saved_shows"),
+    path("calendar.ics", calendar_feed, name="calendar_feed"),
     path("event/<int:event_id>/gcal", event_gcal_redirect, name="event_gcal_redirect"),
     path("event/<int:event_id>/ics", event_ics_download, name="event_ics_download"),
     path("email-subscribe", email_subscribe, name="email_subscribe"),

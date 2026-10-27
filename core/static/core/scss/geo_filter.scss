@@ -20,3 +20,27 @@
   padding: 10px;
   background: #eeeeff;
 }
+
+/* subscribing to the chosen area's calendar feed, under the filter */
+.calendarSubscribe {
+  padding: 4px 6px 6px;
+  background: #eeeeff;
+  font-size: 0.85rem;
+
+  summary {
+    cursor: pointer;
+  }
+
+  .calendarLinks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin: 6px 0;
+  }
+
+  input {
+    width: 100%;
+    max-width: 40em;
+    font-size: 0.85rem;
+  }
+}

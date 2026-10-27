@@ -29,6 +29,7 @@
   {% endif %}
 
   {% include "core/geo_filter_form.html" %}
+  {% include "core/calendar_subscribe.html" %}
 
   {% include "calendar/calendar.html" with calendar_dates=calendar_dates all_event_dates=all_event_dates geo_query=geo_query only %}
 

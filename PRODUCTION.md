@@ -247,6 +247,14 @@ Next to each Spotify button, an Apple Music button opens Apple's player for the 
 
 **Still to settle before going public:** whether Apple's terms for promotional use of its content cover a concert listing.
 
+## Calendar feeds
+
+`/calendar.ics` is an iCalendar feed that people can subscribe to in Google Calendar, Apple Calendar or Outlook. It takes the listing's `region`, `state` and `metro` parameters (for example `/calendar.ics?state=vermont`), and with none it covers the whole Northeast. It never uses a visitor's remembered filter.
+- **What's in it:** approved shows from the past week through the next 90 days, with cancelled ones marked cancelled. Each show keeps the same ID in every feed and download (`event-<id>@newenglandmusic`), so a calendar app's refresh updates shows instead of duplicating them. That ID doesn't depend on the site's address, so moving to a custom domain is safe.
+- **Refreshing:** the feed asks apps to refresh every six hours. Apple honours that; Google refreshes on its own schedule, up to about a day.
+- **Caching:** responses carry an `ETag` and `Cache-Control: public, max-age=3600`, and an unchanged feed answers 304.
+- **Subscribing:** a "Subscribe to this calendar" panel under the area filter offers a `webcal://` link, a Google Calendar link and the plain URL, all built from `SITE_URL`. Apple Calendar fetches `webcal://` over HTTPS, so locally (plain HTTP) subscribe to the `http://localhost:8001/calendar.ics?...` address instead. Set `SITE_URL` to the public address once there's a custom domain, or the links keep pointing at the `onrender.com` one.
+
 ## Saved shows
 
 Every event has a SAVE link after SHARE, and `/saved` lists a visitor's upcoming saved shows by date. Saved shows live only in the visitor's browser, in a `saved_shows` cookie of event IDs, so there are no accounts and nothing is stored on the server. The SAVE link is part of each event's stored HTML: after a deploy that changes `event.html`, run `resave_all_events` so every stored event gets it.

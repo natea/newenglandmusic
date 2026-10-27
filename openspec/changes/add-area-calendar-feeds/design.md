@@ -33,11 +33,12 @@
 - **What it reads:** the view calls `parse_geo_filter(request.GET)` directly, not `geo_filter_for_request`. So the cookie is never read or written.
 
 **2. Stable UIDs, shared with the single-event download.**
-- **The UID:** `event-<pk>@<site host>`, with the host taken from `SITE_URL`.
+- **The UID:** `event-<pk>@newenglandmusic`. The domain part is fixed rather than taken from `SITE_URL`: moving from the `onrender.com` address to a custom domain would otherwise change every UID, and subscribers would see every show twice.
 - **One builder:** a function `event_to_ical(event)` in `core/calendar_feeds.py` builds a `VEVENT` with:
   - `UID`;
   - `DTSTART`, and `DTEND` an hour later;
-  - `DTSTAMP`, `SUMMARY`, `LOCATION` and `DESCRIPTION`;
+  - `DTSTAMP`, set to when the event was created rather than the current time, so an unchanged feed is byte for byte the same and its ETag matches;
+  - `SUMMARY`, `LOCATION` and `DESCRIPTION`;
   - `URL`, the event's `/event/<id>` link;
   - `STATUS:CANCELLED` when the event is cancelled.
 - **The download:** `get_ics_string_from_event` becomes a thin wrapper around it, so a downloaded event and its feed copy share a UID.

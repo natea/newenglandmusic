@@ -40,6 +40,12 @@ A cancelled event SHALL have `STATUS:CANCELLED`. The feed SHALL include events t
 
 The calendar SHALL be named for the site and the area, such as "New England Music: Vermont", and SHALL ask to be refreshed every six hours (`REFRESH-INTERVAL` and `X-PUBLISHED-TTL`).
 
+The site's name in the calendar's name, and the part of each UID after "@", SHALL come from the `SITE_NAME` and `UID_DOMAIN` settings, which default to "New England Music" and "newenglandmusic".
+
+#### Scenario: Names from the settings
+- **WHEN** `SITE_NAME` is "Boston Shows" and `UID_DOMAIN` is "boston-shows"
+- **THEN** a Vermont feed's calendar is named "Boston Shows: Vermont", and event 12's UID is `event-12@boston-shows`
+
 #### Scenario: Stable identifiers
 - **WHEN** a feed is fetched twice, and the event's single-event download is fetched
 - **THEN** the event has the same UID in all three

@@ -5,6 +5,7 @@ from django.db.models.functions import TruncDate
 from django.http import HttpResponseNotFound, HttpResponseRedirect
 from django.shortcuts import render
 
+from ..calendar_feeds import subscribe_links
 from ..geo_filters import (
     CookieAction,
     apply_cookie_action,
@@ -190,6 +191,7 @@ def _get_events_page_for_month(
             "region_options": offered_areas(GeoArea.Kind.REGION),
             "state_options": offered_areas(GeoArea.Kind.STATE),
             "metro_groups": metro_groups(geo_filter.state),
+            "calendar_links": subscribe_links(geo_filter),
             "no_matching_events": bool(geo_filter)
             and not any(day["events"] for day in grouped_events_as_list),
             "month_year_header": month_datetime.strftime("%Y %B").lower(),

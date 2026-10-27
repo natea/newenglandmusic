@@ -227,6 +227,11 @@ META_USE_TITLE_TAG = True
 SITE_URL = (
     os.environ.get("SITE_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "http://localhost:8001"
 ).rstrip("/")
+# the calendar feeds' names ("New England Music: Vermont"); see core/calendar_feeds.py
+SITE_NAME = os.environ.get("SITE_NAME") or "New England Music"
+# the part after "@" in each show's calendar UID. keep it fixed: changing it after people
+# subscribe makes their calendars show every show twice
+UID_DOMAIN = os.environ.get("UID_DOMAIN") or "newenglandmusic"
 META_SITE_PROTOCOL = urlparse(SITE_URL).scheme
 META_SITE_DOMAIN = urlparse(SITE_URL).netloc
 META_SITE_TYPE = "website"

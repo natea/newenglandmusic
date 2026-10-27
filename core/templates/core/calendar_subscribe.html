@@ -1,0 +1,19 @@
+{% comment %}
+  subscribing to the listing's calendar feed (core/views/calendar_feed.py), for the area the
+  filter above has chosen, or for every area. a <details>, so it works without javascript.
+  calendar_links comes from core.calendar_feeds.subscribe_links
+{% endcomment %}
+{% if calendar_links %}
+  <details class="calendarSubscribe">
+    <summary>Subscribe to this calendar{% if geo_filter %}: {% for area in geo_filter.areas %}{{ area.label }}{% if not forloop.last %} / {% endif %}{% endfor %}{% endif %}</summary>
+    <div class="calendarLinks">
+      <a href="{{ calendar_links.webcal }}">Apple Calendar, Outlook or phone</a>
+      <a href="{{ calendar_links.google }}" target="_blank" rel="noopener">Google Calendar</a>
+    </div>
+    <label>
+      or add this address to any calendar app:
+      <input type="text" readonly value="{{ calendar_links.url }}" onfocus="this.select()">
+    </label>
+    <p>Calendar apps check for new shows on their own schedule: Google can take up to a day.</p>
+  </details>
+{% endif %}

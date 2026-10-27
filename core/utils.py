@@ -1,28 +1,16 @@
 import datetime
-import uuid
 
 from django.utils.html import strip_tags
 from django.utils.http import urlencode
-from icalendar import Calendar
-from icalendar import Event as ICalEvent
 
 from .models import Event
 
 
 def get_ics_string_from_event(event: Event):
-    cal = Calendar()
-    cal_event = ICalEvent()
+    # the same entry as in the area feeds, so a downloaded event and its feed copy share a UID
+    from .calendar_feeds import calendar
 
-    cal_event.add("DTSTART", event.starttime)
-    cal_event.add("DTEND", event.starttime + datetime.timedelta(hours=1))
-    cal_event.add("CREATED", datetime.datetime.now())
-    cal_event.add("UID", uuid.uuid4())
-    cal_event.add("SUMMARY", event.calendar_name)
-    cal_event.add("DESCRIPTION", strip_tags(event.description))
-    cal_event.add("LOCATION", event.venue_name_and_address)
-
-    cal.add_component(cal_event)
-    return cal.to_ical().decode("utf-8")
+    return calendar([event]).decode("utf-8")
 
 
 def get_gcal_link_from_event(event: Event):
