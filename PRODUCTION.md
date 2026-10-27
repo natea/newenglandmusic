@@ -247,6 +247,10 @@ Next to each Spotify button, an Apple Music button opens Apple's player for the 
 
 **Still to settle before going public:** whether Apple's terms for promotional use of its content cover a concert listing.
 
+## Saved shows
+
+Every event has a SAVE link after SHARE, and `/saved` lists a visitor's upcoming saved shows by date. Saved shows live only in the visitor's browser, in a `saved_shows` cookie of event IDs, so there are no accounts and nothing is stored on the server. The SAVE link is part of each event's stored HTML: after a deploy that changes `event.html`, run `resave_all_events` so every stored event gets it.
+
 ## Reading the sheet on a server
 
 Locally, `sync_venues_from_gsheets` reads the sheet with the `gog` CLI, which signs in to Google as you through a browser. A server can't do that, so there it reads the sheet with a **Google Cloud service account** instead. The account can only read, and only sheets shared with it, so the sheet stays private. Set it up once:

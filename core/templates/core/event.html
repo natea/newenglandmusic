@@ -123,6 +123,11 @@
       {% endif %}
         
       + <a href="{% url 'event_redirect' event.pk %}" data-event-title="{{ event.title_and_artists }}" onclick="return Share(this, '{{ event.pk }}')" class="share">SHARE</a>
+      {% comment %}
+        the same for every visitor: core/js/saved_shows.js shows it, and sets SAVE or SAVED
+        from the visitor's saved_shows cookie. hidden without javascript, which saving needs
+      {% endcomment %}
+      <span class="save-wrap" hidden>+ <a href="{% url 'saved_shows' %}" class="save" data-event-id="{{ event.pk }}" role="button" aria-pressed="false">SAVE</a></span>
     </span>
   </div>
   <div class="event-ticket">

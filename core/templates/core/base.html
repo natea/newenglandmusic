@@ -17,6 +17,7 @@
     
     <link href="{% sass_src 'scss/core.scss' %}" rel="stylesheet" type="text/css" />
     <script src="{% static 'core/js/artist_preview.js' %}" defer></script>
+    <script src="{% static 'core/js/saved_shows.js' %}" defer></script>
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -146,9 +147,14 @@
                   </div>
                   <div class='rightColumn'>
                       <div>
+                          {% comment %}
+                            the count comes from core/js/saved_shows.js, from the visitor's cookie
+                          {% endcomment %}
+                          <a href="{% url 'saved_shows' %}" class="saved-count">Saved shows</a>
                           {% get_header_menu_items as header_menu_items %}
                           {% for menu_item in header_menu_items %}
                             {% if menu_item.show_in_header %}
+                              {% if forloop.first %}|{% endif %}
                               <a href="{{ menu_item.url }}">{{ menu_item.name }}</a>
                               {% if not forloop.last %}|{% endif %}
                             {% endif %}

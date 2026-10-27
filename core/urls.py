@@ -9,6 +9,7 @@ from .views.event_redirect import event_redirect
 from .views.event_submission import EventCreateView
 from .views.index import index, past_month_archive
 from .views.internal_db_dump import internal_db_dump
+from .views.saved_shows import saved_shows
 
 urlpatterns = [
     # the two main event page types:
@@ -27,6 +28,7 @@ urlpatterns = [
     ),
     # other urls
     path("submit-event", EventCreateView.as_view(), name="submit_event"),
+    path("saved", saved_shows, name="saved_shows"),
     path("event/<int:event_id>/gcal", event_gcal_redirect, name="event_gcal_redirect"),
     path("event/<int:event_id>/ics", event_ics_download, name="event_ics_download"),
     path("email-subscribe", email_subscribe, name="email_subscribe"),

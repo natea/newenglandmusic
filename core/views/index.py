@@ -61,6 +61,17 @@ def _get_calendar_dates(month_datetime):
     return date_events
 
 
+def group_events_by_date(events):
+    """
+    {date: [events]} in the events' order, for events annotated with date=TruncDate
+    ("starttime"); shared with the saved shows page
+    """
+    grouped_events = defaultdict(list)
+    for event in events:
+        grouped_events[event.date].append(event)
+    return grouped_events
+
+
 def _fetch_events_from_start_to_end_time_group_by_date_as_list(
     events_start_time, events_end_time, geo_filter
 ):
@@ -81,9 +92,7 @@ def _fetch_events_from_start_to_end_time_group_by_date_as_list(
         .annotate(date=TruncDate("starttime"))
     )
 
-    grouped_events = defaultdict(list)
-    for event in fetched_events:
-        grouped_events[event.date].append(event)
+    grouped_events = group_events_by_date(fetched_events)
 
     grouped_events_as_list = []
     all_event_dates = []

@@ -1,0 +1,89 @@
+## Purpose
+
+Lets a visitor mark the shows they're interested in, and see them all together, grouped by date, without making an account.
+
+## ADDED Requirements
+
+### Requirement: Visitors can save and unsave a show
+Every event in the listings SHALL have a SAVE link in its line of links, after SHARE. When JavaScript is on:
+- clicking SAVE SHALL save the event, and the link SHALL read SAVED;
+- clicking SAVED SHALL unsave it, and the link SHALL read SAVE again.
+
+The change SHALL take effect without reloading the page. It SHALL show on every copy of the event on the page, including the day map's panel. Saved events SHALL be kept in a first-party cookie, `saved_shows`, holding their IDs, newest first. The cookie SHALL last a year, and be renewed on each change. When JavaScript is off, the SAVE link SHALL NOT be shown.
+
+#### Scenario: Save a show
+- **WHEN** a visitor clicks SAVE on an event
+- **THEN** the link reads SAVED, and the event's ID is in the `saved_shows` cookie
+
+#### Scenario: Unsave a show
+- **WHEN** a visitor clicks SAVED on a saved event
+- **THEN** the link reads SAVE, and the event's ID is no longer in the cookie
+
+#### Scenario: Saved state shown on load
+- **WHEN** a visitor who saved an event opens any page listing it
+- **THEN** that event's link reads SAVED, and other events' links read SAVE
+
+#### Scenario: Every copy of the event updates
+- **WHEN** the day map's panel shows a copy of an event, and the visitor saves the event in the listing
+- **THEN** the copy's link also reads SAVED
+
+#### Scenario: No JavaScript
+- **WHEN** JavaScript is off
+- **THEN** no SAVE link is shown
+
+### Requirement: The Saved shows page lists upcoming saved shows by date
+`/saved` SHALL list the visitor's saved events that are approved and haven't started yet, in start-time order, grouped under the same date headings as the homepage. Each event SHALL look exactly as it does in the listing, play buttons and SAVE link included.
+
+The page SHALL ignore the region, state and metro filter, and SHALL NOT change the remembered filter. With no upcoming saved shows, it SHALL say so, and explain how to save one.
+
+The page SHALL accept a `group` parameter, so that other groupings can be added later. `date` is the only value, and the default; any other value SHALL be treated as `date`.
+
+#### Scenario: Grouped by date
+- **WHEN** a visitor has saved two shows on Nov 6 and one on Nov 8
+- **THEN** `/saved` shows a Nov 6 heading with two events in start-time order, then a Nov 8 heading with one
+
+#### Scenario: Area filter ignored
+- **WHEN** a visitor's remembered filter is Vermont, and they saved a show in Maine
+- **THEN** `/saved` lists the Maine show, and the remembered filter is still Vermont
+
+#### Scenario: Nothing saved
+- **WHEN** the visitor has no saved shows, or none upcoming
+- **THEN** `/saved` says there are no saved shows, and explains the SAVE link
+
+#### Scenario: Unknown group
+- **WHEN** a visitor opens `/saved?group=venue`
+- **THEN** the shows are grouped by date
+
+### Requirement: Shows that can no longer happen drop off
+On `/saved`, the site SHALL leave out saved IDs for events that are past, deleted or unapproved, and SHALL rewrite the cookie without them. IDs that aren't positive whole numbers SHALL be ignored and dropped. The cookie SHALL hold at most 300 IDs; saving beyond that SHALL drop the oldest saved.
+
+#### Scenario: Past show dropped
+- **WHEN** a saved show's start time has passed
+- **THEN** it isn't listed on `/saved`, and the response's cookie no longer holds its ID
+
+#### Scenario: Deleted or unapproved show dropped
+- **WHEN** a saved event has been deleted, or marked unapproved
+- **THEN** it isn't listed, and its ID is dropped from the cookie
+
+#### Scenario: Malformed cookie
+- **WHEN** the cookie holds "12,abc,,-3,12"
+- **THEN** the page treats it as the single ID 12, and rewrites the cookie as "12"
+
+#### Scenario: Limit
+- **WHEN** a visitor with 300 saved shows saves another
+- **THEN** the new one is kept, and the oldest saved is dropped
+
+### Requirement: The header shows a Saved shows link with a count
+Every page's header SHALL have a "Saved shows" link to `/saved`. When JavaScript is on and the visitor has saved shows, the link SHALL show their number, for example "Saved shows (3)", and SHALL update as shows are saved and unsaved. The count SHALL be of the IDs in the cookie, so it can briefly include shows the Saved shows page will drop.
+
+#### Scenario: Count shown
+- **WHEN** a visitor has saved three shows
+- **THEN** the header link reads "Saved shows (3)"
+
+#### Scenario: Count updates
+- **WHEN** the visitor saves a fourth show
+- **THEN** the header link reads "Saved shows (4)" without a reload
+
+#### Scenario: Nothing saved
+- **WHEN** the visitor has saved nothing
+- **THEN** the header link reads "Saved shows", with no number

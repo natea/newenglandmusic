@@ -4,7 +4,7 @@ for what only javascript does: opening, swapping and closing the players. every 
 isn't to the test server is aborted, so the suite stays offline -- neither service's player
 actually loads; the tests check the iframes' src instead.
 
-needs `python -m playwright install chromium` once (ci does it).
+see core/tests/browser.py.
 """
 
 import datetime
@@ -12,11 +12,9 @@ from unittest import mock
 
 from core.models import AppleMusicArtistLink, Event, SpotifyArtistLink
 from core.tests.apple_music_fixture import SWITCHED_ON
+from core.tests.browser import BrowserTestCase
 from core.tests.spotify_fixture import CREDENTIALS
-from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.utils import timezone
-from playwright.sync_api import Error as PlaywrightError
-from playwright.sync_api import sync_playwright
 
 
 def matched(name_key, artist_id):
@@ -35,33 +33,9 @@ def apple_matched(name_key, artist_id, song_id, album_id):
     )
 
 
-class PreviewBrowserTestCase(StaticLiveServerTestCase):
-    @classmethod
-    def setUpClass(cls):
-        # playwright's sync api runs an event loop, which django's orm refuses without this
-        cls.async_unsafe = mock.patch.dict("os.environ", {"DJANGO_ALLOW_ASYNC_UNSAFE": "true"})
-        cls.async_unsafe.start()
-        super().setUpClass()
-        cls.playwright = sync_playwright().start()
-        try:
-            cls.browser = cls.playwright.chromium.launch()
-        except PlaywrightError as e:
-            cls.playwright.stop()
-            super().tearDownClass()
-            cls.async_unsafe.stop()
-            # fail, not skip: a skipped test isn't a passing one
-            raise AssertionError(
-                f"chromium isn't installed for playwright: run `python -m playwright install chromium` ({e})"
-            )
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.browser.close()
-        cls.playwright.stop()
-        super().tearDownClass()
-        cls.async_unsafe.stop()
-
+class PreviewBrowserTestCase(BrowserTestCase):
     def setUp(self):
+        super().setUp()
         self.enterContext(mock.patch.dict("os.environ", {**CREDENTIALS, **SWITCHED_ON}))
         matched("psymon spine", "fakePsymonSpine")
         apple_matched("psymon spine", "100000051", "964625539", "964625535")
@@ -69,22 +43,9 @@ class PreviewBrowserTestCase(StaticLiveServerTestCase):
         tomorrow = timezone.now() + datetime.timedelta(days=1)
         Event.objects.create(artists="SHEBAD, Psymon Spine", starttime=tomorrow)
         Event.objects.create(artists="Lake Street Dive", starttime=tomorrow + datetime.timedelta(hours=1))
-        self.blocked = []
 
     def open_homepage(self, javascript=True):
-        context = self.browser.new_context(java_script_enabled=javascript)
-        self.addCleanup(context.close)
-        context.route("**/*", self.only_the_test_server)
-        page = context.new_page()
-        page.goto(self.live_server_url + "/")
-        return context, page
-
-    def only_the_test_server(self, route):
-        if route.request.url.startswith(self.live_server_url):
-            route.continue_()
-        else:
-            self.blocked.append(route.request.url)
-            route.abort()
+        return self.open_page("/", javascript=javascript)
 
     def players(self, page):
         return page.locator("iframe.spotify-player")

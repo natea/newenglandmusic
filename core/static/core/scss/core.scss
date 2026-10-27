@@ -336,6 +336,15 @@ article {
   font-size: 0.85rem;
 }
 
+.save {
+  color: #000000;
+  font-size: 0.85rem;
+}
+
+.save.is-saved {
+  font-weight: bold;
+}
+
 /*************************************/
 /** Calendar styles                 **/
 /*************************************/
