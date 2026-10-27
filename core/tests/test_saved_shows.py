@@ -59,8 +59,9 @@ class SavedPageTestCase(TestCase):
         self.assertEqual([len(day["events"]) for day in groups], [2, 1])
         self.assertEqual(groups[0]["date"], (self.today + timedelta(days=6)).date())
         self.assertEqual(self.titles(response), ["early nov 6", "late nov 6", "nov 8"])
-        # each event as the listing shows it
-        self.assertContains(response, Event.objects.get(pk=early.pk).baked_html_template)
+        # each event as the listing shows it, with its icon row
+        self.assertContains(response, f'id="event-{early.pk}"')
+        self.assertContains(response, 'class="event-actions"', count=3)
 
     def test_area_filter_ignored(self):
         boston_show = self.event("boston show", 2)
@@ -79,7 +80,7 @@ class SavedPageTestCase(TestCase):
         response = self.client.get("/saved")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No saved shows yet")
-        self.assertContains(response, "SAVE")
+        self.assertContains(response, "bookmark icon")
 
     def test_none_upcoming(self):
         past = self.event("last week", -7)
@@ -143,14 +144,14 @@ class SaveLinkRenderTestCase(TestCase):
             title="a show", starttime=beginning_of_day(get_current_new_york_datetime()) + timedelta(days=1, hours=20)
         )
 
-    def test_save_link_after_share_hidden_until_the_script_runs(self):
-        html = Event.objects.get(pk=self.show.pk).baked_html_template
-        self.assertIn(f'class="save" data-event-id="{self.show.pk}"', html)
-        self.assertLess(html.index('class="share"'), html.index('class="save"'))
-        # the wrapper, "+" included, is hidden: without javascript no SAVE shows
-        wrap = html[html.index('<span class="save-wrap"'):]
-        self.assertTrue(wrap.startswith('<span class="save-wrap" hidden>'))
-        self.assertIn('href="/saved"', wrap)
+    def test_bookmark_is_a_form_on_the_page_not_in_the_stored_html(self):
+        stored = Event.objects.get(pk=self.show.pk).baked_html_template
+        self.assertIn("<!--event-actions-->", stored)
+        self.assertNotIn('class="save', stored)
+        html = self.client.get("/").content.decode()
+        self.assertIn(
+            f'<form class="save-form" method="post" action="/saved/toggle/{self.show.pk}">', html
+        )
 
     def test_header_link_on_every_page(self):
         for path in ("/", "/saved"):

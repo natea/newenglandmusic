@@ -1,6 +1,7 @@
 """
-saving shows in a real browser: the SAVE links, the saved_shows cookie and the header's
-count, which only javascript sets. see core/tests/browser.py.
+saving shows in a real browser: the bookmarks, the saved_shows cookie and the header's
+count, with javascript saving in place, and without it through the bookmark's form. see
+core/tests/browser.py.
 """
 
 import datetime
@@ -20,7 +21,10 @@ class SavedShowsBrowserTestCase(BrowserTestCase):
         self.second = Event.objects.create(title="second show", starttime=tomorrow + datetime.timedelta(hours=1))
 
     def save_link(self, page, event):
-        return page.locator(f"#event-{event.pk} a.save")
+        return page.locator(f"#event-{event.pk} button.save")
+
+    def is_saved(self, button):
+        return button.get_attribute("aria-pressed") == "true" and "is-saved" in button.get_attribute("class")
 
     def saved_cookie(self, context):
         for cookie in context.cookies():
@@ -34,18 +38,21 @@ class SavedShowsBrowserTestCase(BrowserTestCase):
     def test_save_a_show(self):
         context, page = self.open_page()
         link = self.save_link(page, self.first)
-        self.assertEqual(link.inner_text(), "SAVE")
+        self.assertEqual(link.get_attribute("title"), "Save show")
         link.click()
-        self.assertEqual(link.inner_text(), "SAVED")
-        self.assertEqual(link.get_attribute("aria-pressed"), "true")
+        self.assertTrue(self.is_saved(link))
+        self.assertEqual(link.get_attribute("title"), "Saved (click to remove)")
         self.assertEqual(self.saved_cookie(context), str(self.first.pk))
+        # saved in place: no reload
+        self.assertEqual(page.url, self.live_server_url + "/")
 
     def test_unsave_a_show(self):
         context, page = self.open_page()
         link = self.save_link(page, self.first)
         link.click()
         link.click()
-        self.assertEqual(link.inner_text(), "SAVE")
+        self.assertFalse(self.is_saved(link))
+        self.assertEqual(link.get_attribute("title"), "Save show")
         self.assertEqual(self.saved_cookie(context), "")
 
     def test_newest_saved_first(self):
@@ -58,8 +65,8 @@ class SavedShowsBrowserTestCase(BrowserTestCase):
         context, page = self.open_page()
         self.save_link(page, self.second).click()
         _, again = self.open_page(context=context)
-        self.assertEqual(self.save_link(again, self.second).inner_text(), "SAVED")
-        self.assertEqual(self.save_link(again, self.first).inner_text(), "SAVE")
+        self.assertTrue(self.is_saved(self.save_link(again, self.second)))
+        self.assertFalse(self.is_saved(self.save_link(again, self.first)))
 
     def test_every_copy_of_the_event_updates(self):
         _, page = self.open_page()
@@ -71,18 +78,28 @@ class SavedShowsBrowserTestCase(BrowserTestCase):
                 document.body.appendChild(copy);
             }}"""
         )
-        copy = page.locator("#map-copy a.save")
+        copy = page.locator("#map-copy button.save")
         copy.wait_for(state="visible")
         self.save_link(page, self.first).click()
-        self.assertEqual(copy.inner_text(), "SAVED")
+        self.assertTrue(self.is_saved(copy))
         # and saving from the copy updates the listing's
         copy.click()
-        self.assertEqual(self.save_link(page, self.first).inner_text(), "SAVE")
+        self.assertFalse(self.is_saved(self.save_link(page, self.first)))
 
     def test_no_javascript(self):
-        _, page = self.open_page(javascript=False)
-        self.assertFalse(self.save_link(page, self.first).is_visible())
-        self.assertEqual(self.count(page), "Saved shows")
+        context, page = self.open_page("/?state=nowhere", javascript=False)
+        self.save_link(page, self.first).click()
+        page.wait_for_load_state()
+        # the form's post saved it, and brought the visitor back to the same page, at the event
+        self.assertEqual(self.saved_cookie(context), str(self.first.pk))
+        self.assertEqual(page.url, f"{self.live_server_url}/?state=nowhere#event-{self.first.pk}")
+        self.assertTrue(self.is_saved(self.save_link(page, self.first)))
+        self.assertFalse(self.is_saved(self.save_link(page, self.second)))
+        # and again, to unsave
+        self.save_link(page, self.first).click()
+        page.wait_for_load_state()
+        self.assertIsNone(self.saved_cookie(context))
+        self.assertFalse(self.is_saved(self.save_link(page, self.first)))
 
     def test_count_shown_and_updated(self):
         _, page = self.open_page()
@@ -115,7 +132,7 @@ class SavedShowsBrowserTestCase(BrowserTestCase):
         self.assertEqual(saved.locator("div.event").count(), 2)
         self.assertIn("first show", saved.locator("div.event").nth(0).inner_text())
         self.assertIn("second show", saved.locator("div.event").nth(1).inner_text())
-        self.assertEqual(self.save_link(saved, self.second).inner_text(), "SAVED")
+        self.assertTrue(self.is_saved(self.save_link(saved, self.second)))
         self.assertEqual(self.count(saved), "Saved shows (2)")
         # the page kept the cookie as it was
         self.assertEqual(self.saved_cookie(context), f"{self.first.pk},{self.second.pk}")

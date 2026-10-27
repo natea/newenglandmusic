@@ -34,8 +34,48 @@
   .calendarLinks {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 12px;
+    gap: 6px 8px;
     margin: 6px 0;
+  }
+
+  // pills like the listing's play buttons, with a line-drawn calendar icon
+  .calendarLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    border-radius: 14px;
+    background: #ffffff;
+    color: black;
+    text-decoration: none;
+
+    &:hover {
+      border-color: black;
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    &.google svg {
+      stroke: #1a73e8;
+
+      .dot {
+        fill: #1a73e8;
+        stroke: none;
+      }
+    }
+
+    &.google:hover {
+      border-color: #1a73e8;
+    }
   }
 
   input {

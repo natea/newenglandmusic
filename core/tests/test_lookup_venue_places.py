@@ -5,6 +5,7 @@ from io import StringIO
 from pathlib import Path
 from unittest import mock
 
+from core.event_actions import actions_html
 from core.management.commands import lookup_venue_places as lookup
 from core.models import Event, Venue
 from core.places import PlaceNotFound, PlacesError, to_place_dict
@@ -212,9 +213,10 @@ class LookupVenuePlacesTestCase(TestCase):
         self.assertIn('data-venue-lnglat="-71.1321,42.3529"', Event.all_objects.get(pk=event.pk).baked_html_template)
         self.run_lookup(results={"Paradise Rock Club": [place("Paradise Rock Club")]})
         for pk in (event.pk, unapproved.pk):
-            html = Event.all_objects.get(pk=pk).baked_html_template
-            self.assertIn('data-venue-lnglat="-71.1195,42.3519"', html)
-            self.assertIn("query_place_id=id-Paradise Rock Club", html)
+            stored = Event.all_objects.select_related("venue").get(pk=pk)
+            # the pin is in the stored html; the map link in the icon row, made at page time
+            self.assertIn('data-venue-lnglat="-71.1195,42.3519"', stored.baked_html_template)
+            self.assertIn("query_place_id=id-Paradise Rock Club", actions_html(stored, set(), "/"))
 
     def test_failed_request_is_reported_and_others_continue(self):
         Venue.objects.filter(pk=self.paradise.pk).update(place_id="kept", place_lookup_status="")

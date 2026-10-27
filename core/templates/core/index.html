@@ -2,6 +2,7 @@
 
 {% load static %}
 {% load nyc_noise_date_formatting %}
+{% load event_actions %}
 
 {% block head %}
   {% if protomaps_api_key %}
@@ -81,7 +82,7 @@
       {% endif %}
 
       {% for event in date_events.events %}
-        {{ event.get_baked_html|safe }}
+        {% event_html event %}
 
         {% comment %}
           for local development, it's typically easier/better to

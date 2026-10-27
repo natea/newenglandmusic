@@ -1,3 +1,4 @@
+from core.event_actions import with_actions
 from core.models import Event, Venue
 from core.utils_event_caching import bake_event_html
 from django.test import TestCase, override_settings
@@ -16,7 +17,8 @@ class EventVenueMapTestCase(TestCase):
             **venue_fields,
         )
         event = Event.objects.create(title="show", starttime=timezone.now(), venue=venue)
-        return bake_event_html(event)
+        # as a listing shows it: the map link is in the icon row, made at page time
+        return with_actions(bake_event_html(event), event, set(), "/")
 
     def test_confident_place_location_is_used(self):
         html = self.event_html(place_lookup_status=Venue.PlaceLookupStatus.CONFIDENT)

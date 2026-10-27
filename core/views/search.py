@@ -29,7 +29,9 @@ def search(request):
     )
 
     results_events = (
-        Event.objects.annotate(
+        # the venue, for each event's map icon (core/event_actions.py)
+        Event.objects.select_related("venue")
+        .annotate(
             search=SearchVector(
                 "title",
                 "artists",

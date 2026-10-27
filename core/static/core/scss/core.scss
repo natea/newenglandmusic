@@ -312,37 +312,73 @@ article {
   }
 }
 
-.gcal {
-  color: #000000;
-  font-size: 0.85rem;
-}
-
 .eventDescription {
   font-size: 0.85rem;
 }
 
-.ical {
-  color: #000000;
-  font-size: 0.85rem;
+// the event's link icons (core/event_actions.py): a row of their own below the text,
+// lined up with it like the play buttons, each icon named by its title on hover
+.event .event-actions {
+  flex-basis: 100%;
+  margin-left: 4.6em;
+  max-width: calc(100% - 4.6em);
+  display: flex;
+  align-items: center;
+  gap: 2px 10px;
+  margin-top: 4px;
+
+  a,
+  button {
+    display: inline-flex;
+    padding: 2px;
+    color: #000000;
+    border-radius: 4px;
+  }
+
+  a:hover,
+  button:hover {
+    background: rgba(0, 0, 0, 0.08);
+  }
+
+  form {
+    display: inline-flex;
+    margin: 0;
+  }
+
+  button {
+    border: 0;
+    background: none;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .gcal {
+    color: #1a73e8;
+  }
+
+  .map {
+    color: #993366;
+  }
+
+  .save.is-saved svg {
+    fill: currentColor;
+  }
 }
 
-.map {
-  color: #993366;
-  font-size: 0.85rem;
-}
-
-.share {
-  color: #000000;
-  font-size: 0.85rem;
-}
-
-.save {
-  color: #000000;
-  font-size: 0.85rem;
-}
-
-.save.is-saved {
-  font-weight: bold;
+// the google calendar icon's two dots are filled, inside the symbol (core/icons.html)
+#icon-gcal .dot {
+  fill: currentColor;
+  stroke: none;
 }
 
 /*************************************/

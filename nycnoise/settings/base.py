@@ -88,6 +88,7 @@ TEMPLATES = [
                 "core.context_processors.analytics",
                 "core.context_processors.contact",
                 "core.context_processors.maps",
+                "core.context_processors.site",
             ],
         },
     },
@@ -227,7 +228,8 @@ META_USE_TITLE_TAG = True
 SITE_URL = (
     os.environ.get("SITE_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "http://localhost:8001"
 ).rstrip("/")
-# the calendar feeds' names ("New England Music: Vermont"); see core/calendar_feeds.py
+# the site's name: the calendar feeds' names ("New England Music: Vermont"; see
+# core/calendar_feeds.py) and the "install" banner on iphones (base.html)
 SITE_NAME = os.environ.get("SITE_NAME") or "New England Music"
 # the part after "@" in each show's calendar UID. keep it fixed: changing it after people
 # subscribe makes their calendars show every show twice

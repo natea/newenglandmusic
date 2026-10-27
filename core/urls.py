@@ -10,7 +10,7 @@ from .views.event_redirect import event_redirect
 from .views.event_submission import EventCreateView
 from .views.index import index, past_month_archive
 from .views.internal_db_dump import internal_db_dump
-from .views.saved_shows import saved_shows
+from .views.saved_shows import saved_shows, toggle_saved_show
 
 urlpatterns = [
     # the two main event page types:
@@ -30,6 +30,7 @@ urlpatterns = [
     # other urls
     path("submit-event", EventCreateView.as_view(), name="submit_event"),
     path("saved", saved_shows, name="saved_shows"),
+    path("saved/toggle/<int:event_id>", toggle_saved_show, name="toggle_saved_show"),
     path("calendar.ics", calendar_feed, name="calendar_feed"),
     path("event/<int:event_id>/gcal", event_gcal_redirect, name="event_gcal_redirect"),
     path("event/<int:event_id>/ics", event_ics_download, name="event_ics_download"),

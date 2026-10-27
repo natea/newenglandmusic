@@ -232,6 +232,7 @@ The events listing shows a "▶ artist name" button for each artist matched to S
 Next to each Spotify button, an Apple Music button opens Apple's player for the artist's most popular song: the first of the Apple Music API's top songs, which Apple documents as ordered by popularity. Under the player, a "More by <artist> on Apple Music" link goes to the artist's page.
 - **Why a song:** Apple's artist player exists, but plays nothing for visitors who aren't signed in to Apple Music, which is most visitors (tested 2026-10-27). The song player plays a 30-second preview for everyone, and full songs for subscribers who are signed in.
 - **Without JavaScript,** the button is a link to the artist's page on Apple Music.
+- **Signing in inside the player doesn't stick** (tested 2026-10-27 in Chrome and Safari, locally and on the live site, with and without the frame's sandbox). Apple's sign-in popup signs the visitor in, but the player in our page stays signed out: browsers keep a third-party frame's cookies apart, and Apple's player doesn't request storage access. Safari also opens Apple's popup at a size Apple sets, which can't be resized. So everyone gets the 30-second preview, and full songs through "View in Apple Music" or "More by … on Apple Music", which open Apple Music where the visitor is already signed in. A visitor can make it work for themselves by allowing third-party cookies for `[*.]apple.com` in their browser.
 
 **Setting up the MusicKit key** (needs the Apple Developer Program membership):
 1. At [developer.apple.com/account](https://developer.apple.com/account), under **Certificates, Identifiers & Profiles > Identifiers**, add a **Media ID**.
@@ -255,9 +256,11 @@ Next to each Spotify button, an Apple Music button opens Apple's player for the 
 - **Caching:** responses carry an `ETag` and `Cache-Control: public, max-age=3600`, and an unchanged feed answers 304.
 - **Subscribing:** a "Subscribe to this calendar" panel under the area filter offers a `webcal://` link, a Google Calendar link and the plain URL, all built from `SITE_URL`. Apple Calendar fetches `webcal://` over HTTPS, so locally (plain HTTP) subscribe to the `http://localhost:8001/calendar.ics?...` address instead. Set `SITE_URL` to the public address once there's a custom domain, or the links keep pointing at the `onrender.com` one.
 
-## Saved shows
+## Saved shows and the event icons
 
-Every event has a SAVE link after SHARE, and `/saved` lists a visitor's upcoming saved shows by date. Saved shows live only in the visitor's browser, in a `saved_shows` cookie of event IDs, so there are no accounts and nothing is stored on the server. The SAVE link is part of each event's stored HTML: after a deploy that changes `event.html`, run `resave_all_events` so every stored event gets it.
+Each event has a row of link icons below its text: calendar file, Google Calendar, map, share, and a bookmark to save the show. `/saved` lists a visitor's upcoming saved shows by date. Saved shows live only in the visitor's browser, in a `saved_shows` cookie of event IDs, so there are no accounts and nothing is stored on the server. The bookmark works without JavaScript too: it posts to `/saved/toggle/<id>`, which updates the cookie and goes back to the event.
+
+The icon row is built when a page is rendered (`core/event_actions.py`), not stored with the event, so changing it needs no re-render. The stored HTML only holds a placeholder for it. After the deploy that introduced the placeholder (2026-10-27), run `resave_all_events` once on Render. Until then, stored events show no icon row.
 
 ## Reading the sheet on a server
 

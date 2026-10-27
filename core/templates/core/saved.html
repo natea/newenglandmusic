@@ -1,10 +1,11 @@
 {% extends 'core/base.html' %}
 
 {% load nyc_noise_date_formatting %}
+{% load event_actions %}
 
 {% comment %}
   the visitor's saved shows (core/views/saved_shows.py), grouped by date. each event is its
-  stored html, exactly as in the listings, so its SAVE link and play buttons work here too.
+  stored html, exactly as in the listings, so its bookmark and play buttons work here too.
   "group" is always "date" for now; venue, artist and location groupings can come later.
 {% endcomment %}
 
@@ -14,7 +15,7 @@
 
 {% block content %}
   <p class="saved-note">
-    Shows you save with the SAVE link on any listing appear here. They're saved in this
+    Shows you save with the bookmark icon on any listing appear here. They're saved in this
     browser only.
   </p>
 
@@ -22,12 +23,12 @@
     <article>
       <h4><a name="{{ date_events.date|date:'mdy' }}" href="/{{ date_events.date|date:'Y-m' }}/#{{ date_events.date|date:'mdy' }}">{{ date_events.date|date:"M d"|lower }} {{ date_events.date|nyc_noise_day_with_parens }}</a></h4>
       {% for event in date_events.events %}
-        {{ event.get_baked_html|safe }}
+        {% event_html event %}
       {% endfor %}
     </article>
   {% empty %}
     <p class="saved-empty">
-      No saved shows yet. Click <b>SAVE</b> after an event's SHARE link, on the
+      No saved shows yet. Click the bookmark icon at the end of an event, on the
       <a href="/">listings</a>, to keep it here.
     </p>
   {% endfor %}

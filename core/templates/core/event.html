@@ -84,14 +84,13 @@
         Unknown venue
       {% endif %}
 
-      //
-
+      {% comment %} "//" only between the parts there are: the links are in their own row {% endcomment %}
       {% if event.description %}
-        <span class='eventDescription'>{{ event.description | safe }}</span> //
+        // <span class='eventDescription'>{{ event.description | safe }}</span>
       {% endif %}
 
       {% if event.age_policy_emoji or event.venue.accessibility_notes %}
-      <span class='accessibility'>
+      // <span class='accessibility'>
         ACCESS:
 
         {% if event.age_policy_emoji %}
@@ -104,30 +103,6 @@
       </span>
       {% endif %}
 
-      +
-      <a href="{% url 'event_ics_download' event.id %}" class="ical">ICAL</a>
-      +
-      {% comment %}
-        we've found that on production, using a template tag that generated
-        and inserted the google calendar link directly into the template below,
-        was taking about 200ms in total. as a fix, instead of rendering
-        all of the event google calendar links, simply link to /event/ID/gcal
-        and redirect anyone who clicks on that link to the (generated-once)
-        google calendar link.
-      {% endcomment %}
-      <a href="{% url 'event_gcal_redirect' event.id %}" class="gcal">GCAL</a>
-
-      {% if event.venue and not event.venue_override and event.venue.google_maps_link %}
-        +
-        <a href="{{ event.venue.google_maps_link }}" target="_blank" class="map"><b>MAP</b></a>
-      {% endif %}
-        
-      + <a href="{% url 'event_redirect' event.pk %}" data-event-title="{{ event.title_and_artists }}" onclick="return Share(this, '{{ event.pk }}')" class="share">SHARE</a>
-      {% comment %}
-        the same for every visitor: core/js/saved_shows.js shows it, and sets SAVE or SAVED
-        from the visitor's saved_shows cookie. hidden without javascript, which saving needs
-      {% endcomment %}
-      <span class="save-wrap" hidden>+ <a href="{% url 'saved_shows' %}" class="save" data-event-id="{{ event.pk }}" role="button" aria-pressed="false">SAVE</a></span>
     </span>
   </div>
   <div class="event-ticket">
@@ -136,8 +111,15 @@
     {% endif %}
   </div>
   {% comment %}
-    play buttons get a row of their own, below the text rather than in it with the
-    ICAL/GCAL/MAP links: spotify's and apple music's, for each artist matched on them.
+    the event's link icons (calendar file, google calendar, map, share, save) go here, in a
+    row of their own. they're made when a page is rendered (core/event_actions.py, through
+    the event_html template tag), not stored with this html, so they can change without
+    re-rendering every stored event, and the save bookmark can show the visitor's own state
+  {% endcomment %}
+  <!--event-actions-->
+  {% comment %}
+    play buttons get a row of their own, below the text and the link icons' row: spotify's
+    and apple music's, for each artist matched on them.
     each is a plain link to the artist's page; with javascript, core/js/artist_preview.js
     opens the service's player below the row instead, and only then does anything load
     from spotify or apple

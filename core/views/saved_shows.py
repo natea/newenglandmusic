@@ -1,9 +1,13 @@
 from django.db.models.functions import TruncDate
+from django.http import HttpResponseRedirect
 from django.shortcuts import render
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 from ..models import Event
 from ..opengraph import get_meta
-from ..saved_shows import COOKIE_MAX_AGE, COOKIE_NAME, format_saved, parse_saved
+from ..saved_shows import COOKIE_MAX_AGE, COOKIE_NAME, format_saved, parse_saved, toggle_saved
 from ..utils_datemath import beginning_of_day, get_current_new_york_datetime
 from .index import group_events_by_date
 
@@ -43,5 +47,30 @@ def saved_shows(request):
     if kept:
         response.set_cookie(COOKIE_NAME, format_saved(kept), max_age=COOKIE_MAX_AGE, samesite="Lax")
     elif COOKIE_NAME in request.COOKIES:
+        response.delete_cookie(COOKIE_NAME, samesite="Lax")
+    return response
+
+
+# no csrf check: the toggle's only effect is one public event id in the visitor's own cookie,
+# which isn't worth a csrf token in each of a listing's thousand forms. post only, so links
+# and prefetching can't set it off
+@csrf_exempt
+@require_POST
+def toggle_saved_show(request, event_id):
+    """
+    saves or unsaves a show without javascript: the bookmark's form posts here, and the
+    visitor goes back to where they were (next, on this site only), at the event
+    """
+    saved = parse_saved(request.COOKIES.get(COOKIE_NAME))
+    if event_id in saved or Event.all_objects.filter(pk=event_id).exists():
+        saved = toggle_saved(saved, event_id)
+    next_url = request.POST.get("next", "")
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        next_url = "/"
+    response = HttpResponseRedirect(next_url)
+    if saved:
+        response.set_cookie(COOKIE_NAME, format_saved(saved), max_age=COOKIE_MAX_AGE, samesite="Lax")
+    else:
+        # an empty value would be written as '""'
         response.delete_cookie(COOKIE_NAME, samesite="Lax")
     return response

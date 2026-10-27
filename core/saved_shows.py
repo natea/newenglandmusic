@@ -27,3 +27,10 @@ def format_saved(ids):
     """the cookie value: commas encoded as the browser writes them, or django would quote
     and escape the value ("\"12\\0547\""), which the browser's script can't read"""
     return quote(",".join(str(event_id) for event_id in ids))
+
+
+def toggle_saved(ids, event_id):
+    """the ids with event_id removed if saved, or else added first, the oldest past the limit dropped"""
+    if event_id in ids:
+        return [saved for saved in ids if saved != event_id]
+    return ([event_id] + ids)[:MAX_SAVED]

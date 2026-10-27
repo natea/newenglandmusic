@@ -1,5 +1,7 @@
 {% extends 'core/base.html' %}
 
+{% load event_actions %}
+
 {% block content %}
   <h3>Search results for: {{ query }}</h3>
 
@@ -12,7 +14,7 @@
           {{ results_event.starttime|date:"M d (D) Y"|lower }}
         </a>
 
-        {% include 'core/event.html' with event=results_event only %}
+        {% event_html results_event %}
       </div>
     {% empty %}
       No results found.

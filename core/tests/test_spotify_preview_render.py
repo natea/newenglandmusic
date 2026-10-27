@@ -39,8 +39,8 @@ class PreviewRenderTestCase(TestCase):
     def test_buttons_in_a_row_of_their_own_below_the_text(self):
         html = self.baked()
         row = html.index('<div class="artist-previews">')
-        # after the text and its ical/gcal/share links, and the tix column, not inside them
-        self.assertGreater(row, html.index('class="share"'))
+        # after the text, the tix column and the link icons' row, not inside them
+        self.assertGreater(row, html.index("<!--event-actions-->"))
         self.assertGreater(row, html.index('<div class="event-ticket">'))
         self.assertNotIn("spotify-play", html[html.index('<span class="event-content">') : row])
 

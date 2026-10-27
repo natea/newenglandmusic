@@ -7,8 +7,14 @@
   <details class="calendarSubscribe">
     <summary>Subscribe to this calendar{% if geo_filter %}: {% for area in geo_filter.areas %}{{ area.label }}{% if not forloop.last %} / {% endif %}{% endfor %}{% endif %}</summary>
     <div class="calendarLinks">
-      <a href="{{ calendar_links.webcal }}">Apple Calendar, Outlook or phone</a>
-      <a href="{{ calendar_links.google }}" target="_blank" rel="noopener">Google Calendar</a>
+      <a class="calendarLink" href="{{ calendar_links.webcal }}">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg>
+        Apple Calendar, Outlook or phone
+      </a>
+      <a class="calendarLink google" href="{{ calendar_links.google }}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path class="dot" d="M8.5 14.5h2v2h-2zM13.5 14.5h2v2h-2z"/></svg>
+        Google Calendar
+      </a>
     </div>
     <label>
       or add this address to any calendar app:

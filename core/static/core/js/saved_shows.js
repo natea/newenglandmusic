@@ -1,7 +1,8 @@
-// saving shows (see core/saved_shows.py): each event's SAVE link toggles its id in the
-// visitor's saved_shows cookie, newest first, and the header's "Saved shows" link counts
-// them. the event html is the same for everyone, so the links are shown and labelled here,
-// from the cookie. listening on document covers the map panel's copies of events.
+// saving shows in place (see core/saved_shows.py): each event's bookmark toggles its id in
+// the visitor's saved_shows cookie, newest first, and the header's "Saved shows" link counts
+// them. the page already shows each bookmark's state (core/event_actions.py), and without
+// javascript the bookmark's form saves through the server; this saves without a reload, and
+// keeps every copy of an event in step. listening on document covers the map panel's copies.
 (function () {
   const COOKIE = "saved_shows";
   const MAX_SAVED = 300;
@@ -28,7 +29,7 @@
   }
 
   // only what differs is changed: rewriting the same text would wake the observer below
-  // again, for ever
+  // again, for ever (the header count's text)
   function setText(element, text) {
     if (element.textContent !== text) {
       element.textContent = text;
@@ -37,15 +38,16 @@
 
   function render(ids) {
     const saved = new Set(ids);
-    document.querySelectorAll("a.save[data-event-id]").forEach(function (link) {
-      const isSaved = saved.has(link.dataset.eventId);
-      setText(link, isSaved ? "SAVED" : "SAVE");
-      link.setAttribute("aria-pressed", isSaved ? "true" : "false");
-      link.classList.toggle("is-saved", isSaved);
-      const wrap = link.closest(".save-wrap");
-      if (wrap) {
-        wrap.hidden = false;
+    document.querySelectorAll(".save[data-event-id]").forEach(function (button) {
+      const isSaved = saved.has(button.dataset.eventId);
+      const label = isSaved ? "Saved (click to remove)" : "Save show";
+      // attributes, not text: the observer below only watches for added elements
+      // the title is its accessible name too: the button has no text
+      if (button.title !== label) {
+        button.title = label;
       }
+      button.setAttribute("aria-pressed", isSaved ? "true" : "false");
+      button.classList.toggle("is-saved", isSaved);
     });
     document.querySelectorAll("a.saved-count").forEach(function (link) {
       setText(link, ids.length ? "Saved shows (" + ids.length + ")" : "Saved shows");
@@ -53,12 +55,13 @@
   }
 
   document.addEventListener("click", function (e) {
-    const link = e.target.closest && e.target.closest("a.save[data-event-id]");
-    if (!link) {
+    const button = e.target.closest && e.target.closest(".save[data-event-id]");
+    if (!button) {
       return;
     }
+    // saved here, in place: the form's post is only for browsers without javascript
     e.preventDefault();
-    const id = link.dataset.eventId;
+    const id = button.dataset.eventId;
     let ids = readSaved();
     if (ids.includes(id)) {
       ids = ids.filter(function (saved) { return saved !== id; });

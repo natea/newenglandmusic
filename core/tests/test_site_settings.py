@@ -91,3 +91,15 @@ class MapsTestCase(TestCase):
         response = self.client.get("/")
         self.assertContains(response, "zoom: 8,")
         self.assertContains(response, "center: [-72.7, 41.8],")
+
+
+class SiteNameTestCase(TestCase):
+    @override_settings(SITE_NAME="New England Music")
+    def test_install_banner_names_the_site(self):
+        response = self.client.get("/")
+        self.assertContains(response, "<b>INSTALL NEW ENGLAND MUSIC</b>")
+        self.assertNotContains(response, "NYC NOISE")
+
+    @override_settings(SITE_NAME="Boston Shows")
+    def test_install_banner_follows_the_setting(self):
+        self.assertContains(self.client.get("/"), "<b>INSTALL BOSTON SHOWS</b>")

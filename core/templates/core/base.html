@@ -135,6 +135,7 @@
 </head>
 
 <body>
+    {% include "core/icons.html" %}
     <div id='mainContainer'>
       <main>
           <div class='header'>
@@ -205,7 +206,7 @@
     <div style="display:none;" id="iosPWAPrompt">
       <div id='x'>[X]</div>
 
-      "<b>INSTALL" NYC NOISE</b>:<br/>
+      <b>INSTALL {{ site_name|upper }}</b>:<br/>
 
       tap
 
