@@ -266,6 +266,12 @@ class DuoAndOccasionTestCase(TestCase):
         self.assertEqual(SpotifyArtistLink.objects.get(name_key="boulder canyon").spotify_artist_id, "fakeBoulder")
         self.assertIn('data-spotify-artist="fakeBoulder"', Event.objects.get(pk=event.pk).baked_html_template)
 
+    def test_backing_band_not_searched(self):
+        upcoming_event(artists="Chris Cote and his Band of These Guys")
+        spotify = FakeSpotify()
+        self.run_command(spotify)
+        self.assertEqual(self.searched(spotify), ["Chris Cote and his Band of These Guys", "Chris Cote"])
+
     def test_duo_that_is_an_artist_not_split(self):
         upcoming_event(artists="AJ Lee & Blue Summit")
         spotify = FakeSpotify({"AJ Lee & Blue Summit": found(("AJ Lee & Blue Summit", "fakeAJ"))})
