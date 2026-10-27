@@ -36,7 +36,7 @@
   - the button's link and label are right;
   - the homepage has no `open.spotify.com` iframe;
   - nothing renders when Spotify isn't configured.
-- [ ] 4.3 Add `playwright` to the development requirements with `uv pip install`, add `playwright install --with-deps chromium` to `.github/workflows/django.yml`, and write `core/tests/test_spotify_preview_browser.py`. It's a `StaticLiveServerTestCase` that aborts every request that isn't to the live server. Verify that it passes locally and in CI. It covers:
+- [x] 4.3 Add `playwright` to the development requirements with `uv pip install`, add `playwright install --with-deps chromium` to `.github/workflows/django.yml`, and write `core/tests/test_spotify_preview_browser.py`. It's a `StaticLiveServerTestCase` that aborts every request that isn't to the live server. Verify that it passes locally and in CI. It covers:
   - a click opening the player with the right `src`;
   - one player at a time;
   - a second click closing the player;
