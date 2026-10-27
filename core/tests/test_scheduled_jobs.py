@@ -28,6 +28,7 @@ DAILY = [
     "manage.py lookup_venue_places --refresh-stale",
     "manage.py fetch_events --all",
     "manage.py match_spotify_artists --limit 1000",
+    "manage.py match_apple_music_artists --limit 1000",
 ]
 WEEKLY = [
     "manage.py check_event_sources --workers 8",
@@ -129,6 +130,10 @@ class RenderConfigurationTestCase(SimpleTestCase):
                 # spotify matching, and new events rendering their play buttons
                 "SPOTIFY_CLIENT_ID",
                 "SPOTIFY_CLIENT_SECRET",
+                "APPLE_MUSIC_TEAM_ID",
+                "APPLE_MUSIC_KEY_ID",
+                "APPLE_MUSIC_PRIVATE_KEY",
+                "APPLE_MUSIC_PREVIEWS",
             },
         )
         self.assertEqual(

@@ -1,6 +1,6 @@
 # what the tests need on top of the site's own requirements: ci and development install
 # this; the host installs only requirements.txt. playwright drives the browser test of the
-# spotify play buttons, after `python -m playwright install chromium`
+# spotify and apple music play buttons, after `python -m playwright install chromium`
 -r requirements.txt
 greenlet==3.5.6
 playwright==1.64.1

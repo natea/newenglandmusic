@@ -57,7 +57,8 @@ def clean_name(name):
 
 
 def split_names(text):
-    names = (clean_name(name) for name in SEPARATOR_RE.split(text or ""))
+    # str(): a title or artists value needn't be a string until the event is saved
+    names = (clean_name(name) for name in SEPARATOR_RE.split(str(text or "")))
     return [name for name in names if name]
 
 
@@ -69,7 +70,7 @@ def title_names(title):
     """
     if not title:
         return []
-    names = split_names(TITLE_PREFIX_RE.sub("", title.strip()))
+    names = split_names(TITLE_PREFIX_RE.sub("", str(title).strip()))
     return [name for name in names if not TITLE_STOPWORDS_RE.search(name)]
 
 

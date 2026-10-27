@@ -38,7 +38,7 @@ class PreviewRenderTestCase(TestCase):
 
     def test_buttons_in_a_row_of_their_own_below_the_text(self):
         html = self.baked()
-        row = html.index('<div class="spotify-artists">')
+        row = html.index('<div class="artist-previews">')
         # after the text and its ical/gcal/share links, and the tix column, not inside them
         self.assertGreater(row, html.index('class="share"'))
         self.assertGreater(row, html.index('<div class="event-ticket">'))
@@ -90,7 +90,7 @@ class PreviewRenderTestCase(TestCase):
     def test_homepage_has_buttons_but_no_player(self):
         response = self.client.get("/")
         self.assertContains(response, 'data-spotify-artist="fakePsymonSpine"')
-        self.assertContains(response, "core/js/spotify_preview.js")
+        self.assertContains(response, "core/js/artist_preview.js")
         self.assertNotContains(response, "<iframe")
         self.assertNotContains(response, "open.spotify.com/embed")
 

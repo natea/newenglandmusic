@@ -141,6 +141,12 @@ class PlaceholderTestCase(SimpleTestCase):
             names(title="Lake Street Dive", artists="Highway Kind", kind=Event.Kind.OTHER), []
         )
 
+    def test_title_not_yet_a_string(self):
+        import uuid
+
+        title = uuid.UUID("12345678-1234-5678-1234-567812345678")
+        self.assertEqual(names(title=title), ["12345678-1234-5678-1234-567812345678"])
+
     def test_unlabelled_event_counts_as_music(self):
         self.assertEqual(names(artists="Highway Kind"), ["Highway Kind"])
 

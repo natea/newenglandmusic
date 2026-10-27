@@ -1,0 +1,4 @@
+{"results": {"artists": {"data": [
+  {"id": "100000021", "type": "artists", "attributes": {"name": "Haven", "url": "https://music.apple.com/us/artist/haven/100000021"}},
+  {"id": "100000022", "type": "artists", "attributes": {"name": "The Den", "url": "https://music.apple.com/us/artist/the-den/100000022"}}
+]}}, "meta": {"results": {"order": ["artists"]}}}

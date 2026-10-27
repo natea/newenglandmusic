@@ -125,7 +125,7 @@ No Apple iframe or script SHALL load before a click. At most one player, Apple o
 - **THEN** no Apple buttons render, even for matched artists
 
 ### Requirement: The developer token is signed on the server and kept secret
-The site SHALL sign its own developer token from the configured team ID, key ID and private key: an ES256 JWT, with the team ID as issuer and the key ID in its header, expiring at most one hour after it's issued. It SHALL send the token only in the `Authorization` header of server-side requests. The private key and the token SHALL never appear in a page, a URL, a log line or an error message.
+The site SHALL sign its own developer token from the configured team ID, key ID and private key: an ES256 JWT, with the team ID as issuer and the key ID in its header, expiring at most one hour after it's issued. Its issue time SHALL be backdated by a minute, so that a server whose clock is slightly behind doesn't see it as issued in the future. It SHALL send the token only in the `Authorization` header of server-side requests. The private key and the token SHALL never appear in a page, a URL, a log line or an error message.
 
 #### Scenario: Token signed correctly
 - **WHEN** the client makes a request
@@ -136,7 +136,7 @@ The site SHALL sign its own developer token from the configured team ID, key ID 
 - **THEN** neither the HTML nor the error message contains the private key or the token
 
 ### Requirement: Apple's rate limits are respected
-The command SHALL space its requests at least 0.5 seconds apart. On a 429 it SHALL wait as long as the `Retry-After` header says, or else back off exponentially (1, 2, then 4 seconds), for at most three tries for the same request. When a request still fails, or fails with another error, the command SHALL leave that name's link unchanged, count the failure, and continue. On a 401, which means the credentials are wrong, it SHALL stop the run. It SHALL record the counts of searched, matched, ambiguous, not-found, deleted and failed names in its job summary.
+The command SHALL space its requests at least 0.5 seconds apart. On a 429 it SHALL wait as long as the `Retry-After` header says, or else back off exponentially (1, 2, then 4 seconds), for at most three tries for the same request. When a request still fails, or fails with another error, the command SHALL leave that name's link unchanged, count the failure, and continue. On a 401, it SHALL retry the request with the same token, after 2, 4, 8 and then 16 seconds, for at most five tries, since Apple rejects about one valid request in ten, sometimes several in a row. A 401 on all five tries means the credentials are wrong, and it SHALL stop the run. When a `Retry-After` asks for more than 60 seconds, it SHALL stop searching without waiting, keep and re-render what it found, and leave the remaining names for the next run. It SHALL record the counts of searched, matched, ambiguous, not-found, deleted and failed names in its job summary.
 
 #### Scenario: Rate limited then succeeds
 - **WHEN** a search gets 429 with `Retry-After: 3`, and then succeeds
@@ -146,6 +146,14 @@ The command SHALL space its requests at least 0.5 seconds apart. On a 429 it SHA
 - **WHEN** a search fails three times with 429
 - **THEN** that name's link is unchanged, the failure is counted, and the remaining names are still searched
 
+#### Scenario: Blocked for hours
+- **WHEN** a search gets 429 with `Retry-After: 86400`, after one name was matched in the same run
+- **THEN** the command doesn't wait, makes no further request, keeps and re-renders the match it found, and reports the names left for the next run
+
+#### Scenario: Spurious rejection
+- **WHEN** Apple answers 401 four times, then 200
+- **THEN** the request succeeds with the same token, and the run carries on
+
 #### Scenario: Bad credentials stop the run
-- **WHEN** Apple answers 401
+- **WHEN** Apple answers 401 to a request and to all four of its retries
 - **THEN** the command stops searching, saves nothing more, and reports that the Apple Music credentials were rejected

@@ -43,7 +43,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-          # the browser for the spotify play-button test (core/tests/test_spotify_preview_browser.py)
+          # the browser for the play-button test (core/tests/test_artist_preview_browser.py)
           python -m playwright install --with-deps chromium
       - name: Run Tests
         run: |

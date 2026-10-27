@@ -1,0 +1,4 @@
+{"results": {"artists": {"data": [
+  {"id": "100000011", "type": "artists", "attributes": {"name": "Epicenter", "url": "https://music.apple.com/us/artist/epicenter/100000011"}},
+  {"id": "100000012", "type": "artists", "attributes": {"name": "EPICENTER", "url": "https://music.apple.com/us/artist/epicenter/100000012"}}
+]}}, "meta": {"results": {"order": ["artists"]}}}

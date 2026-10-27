@@ -61,6 +61,16 @@ services:
         sync: false
       - key: SPOTIFY_CLIENT_SECRET
         sync: false
+      # a musickit key, for the apple music play buttons (see PRODUCTION.md), and the
+      # switch that shows them ("true"), set once the matches are reviewed
+      - key: APPLE_MUSIC_TEAM_ID
+        sync: false
+      - key: APPLE_MUSIC_KEY_ID
+        sync: false
+      - key: APPLE_MUSIC_PRIVATE_KEY
+        sync: false
+      - key: APPLE_MUSIC_PREVIEWS
+        sync: false
       # inherited from nyc noise and unused by this site, but the settings require them
       - key: PROD_INTERNAL_API_SERVER
         value: https://nyc-noise.com/
@@ -137,6 +147,27 @@ services:
           type: web
           name: newenglandmusic
           envVarKey: SPOTIFY_CLIENT_SECRET
+      # apple music matching, and new events rendering their play buttons
+      - key: APPLE_MUSIC_TEAM_ID
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: APPLE_MUSIC_TEAM_ID
+      - key: APPLE_MUSIC_KEY_ID
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: APPLE_MUSIC_KEY_ID
+      - key: APPLE_MUSIC_PRIVATE_KEY
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: APPLE_MUSIC_PRIVATE_KEY
+      - key: APPLE_MUSIC_PREVIEWS
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: APPLE_MUSIC_PREVIEWS
       # inherited from nyc noise and unused, but the settings require them
       - key: PROD_INTERNAL_API_SERVER
         value: https://nyc-noise.com/

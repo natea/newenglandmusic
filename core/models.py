@@ -665,3 +665,34 @@ class SpotifyArtistLink(models.Model):
 
     def __str__(self):
         return self.name_key
+
+
+# which apple music artist an artist name on our events is, and that artist's most popular
+# song, for the listing's apple music play buttons (see match_apple_music_artists). like
+# SpotifyArtistLink, keyed by the normalized name and kept only while events name it
+class AppleMusicArtistLink(models.Model):
+    class Status(models.TextChoices):
+        MATCHED = "matched", "Matched"
+        AMBIGUOUS = "ambiguous", "Several artists with this name"
+        NOT_FOUND = "not_found", "No artist with this name"
+        NONE = "none", "No Apple Music artist"
+
+    class Source(models.TextChoices):
+        AUTO = "auto", "Automatic"
+        EDITOR = "editor", "Editor"
+
+    # core.artist_matching.normalize() of the name as our events write it
+    name_key = models.CharField(max_length=255, unique=True)
+    status = models.CharField(max_length=16, choices=Status.choices)
+    apple_artist_id = models.CharField(max_length=32, blank=True, default="")
+    # the first of the artist's top songs, and its album: what the player opens
+    top_song_id = models.CharField(max_length=32, blank=True, default="")
+    top_album_id = models.CharField(max_length=32, blank=True, default="")
+    # an editor's artist is never searched for or overwritten; its top song still refreshes
+    source = models.CharField(max_length=8, choices=Source.choices, default=Source.AUTO)
+    checked_at = models.DateTimeField()
+    # the last run that found the name on an upcoming event; links unseen for 30 days go
+    last_seen_at = models.DateTimeField()
+
+    def __str__(self):
+        return self.name_key

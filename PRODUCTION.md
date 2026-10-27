@@ -41,6 +41,7 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 - `GOOGLE_PLACES_API_KEY`: in Google Cloud, restrict it to the Places API (New) and cap its daily quota.
 - `GOOGLE_SERVICE_ACCOUNT_JSON`: the sheet sync's service-account key (see "Reading the sheet on a server").
 - `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`: a Spotify app's credentials, for the listing's play buttons (see "Spotify play buttons"). The web service uses them too, because saving an event renders its buttons.
+- `APPLE_MUSIC_TEAM_ID`, `APPLE_MUSIC_KEY_ID`, `APPLE_MUSIC_PRIVATE_KEY`, `APPLE_MUSIC_PREVIEWS`: a MusicKit key, and the switch that shows the Apple Music buttons (see "Apple Music play buttons").
 
 **Optional:**
 - **`CONTACT_EMAIL`:** shown on the submit-event form.
@@ -165,6 +166,7 @@ These run in this order. Each one depends on the one before it:
 | `match_ticketmaster_venues` | weekly, after the source check | free (Ticketmaster allows 5,000 requests a day) |
 | `match_eventbrite_organizers` | weekly, after the source check | free (Eventbrite allows 2,000 requests an hour). It fetches the pages of venues that link Eventbrite, politely, and links only new venues unless given `--recheck` |
 | `match_spotify_artists --limit 1000` | daily, after `fetch_events` | free, but rate limited. It searches Spotify for artist names it hasn't seen, and for automatic matches more than 30 days old, two seconds apart. Spotify doesn't publish its limits: 650 searches half a second apart got the app blocked for about a day (2026-10-27). When blocked, a run stops at once and keeps what it found, and the next morning's carries on, so a first run's backlog of roughly 2,500 names clears itself within a few days. After that, each morning searches only new names |
+| `match_apple_music_artists --limit 1000` | daily, after the Spotify matching | free with the Developer Program membership. Like the Spotify matching, but also looks up each matched artist's top song. Requests go half a second apart, and a long rate-limit block stops the run the same way. It does nothing until the MusicKit key is set |
 | `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster and Eventbrite: a few hundred requests each |
 
 ### How they run on Render
@@ -173,7 +175,7 @@ These run in this order. Each one depends on the one before it:
 
 | Job | Schedule (UTC) | Script | Runs |
 |---|---|---|---|
-| `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | sheet sync, Places lookup, coordinate refresh, `fetch_events --all`, Spotify matching |
+| `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | sheet sync, Places lookup, coordinate refresh, `fetch_events --all`, Spotify and Apple Music matching |
 | `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster and Eventbrite matching |
 
 - **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed sheet sync leaves the venues as they were, and they can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.
@@ -224,6 +226,26 @@ The events listing shows a "▶ artist name" button for each artist matched to S
 - **Effects:** an editor's choice is never searched again or overwritten, and saving it re-renders that artist's upcoming events.
 
 **Terms.** The player is Spotify's own widget, shown as Spotify makes it. Nothing loads from Spotify until a visitor clicks, so a page view sets no Spotify cookies. The Widget Terms bar using the player for commercial purposes, which this site doesn't do.
+
+## Apple Music play buttons
+
+Next to each Spotify button, an Apple Music button opens Apple's player for the artist's most popular song: the first of the Apple Music API's top songs, which Apple documents as ordered by popularity. Under the player, a "More by <artist> on Apple Music" link goes to the artist's page.
+- **Why a song:** Apple's artist player exists, but plays nothing for visitors who aren't signed in to Apple Music, which is most visitors (tested 2026-10-27). The song player plays a 30-second preview for everyone, and full songs for subscribers who are signed in.
+- **Without JavaScript,** the button is a link to the artist's page on Apple Music.
+
+**Setting up the MusicKit key** (needs the Apple Developer Program membership):
+1. At [developer.apple.com/account](https://developer.apple.com/account), under **Certificates, Identifiers & Profiles > Identifiers**, add a **Media ID**.
+2. Under **Keys**, add a key with **Media Services (MusicKit, ShazamKit, Apple Music Feed)** enabled, configured with that Media ID. Download its `.p8` file: Apple allows this only once. Note the key's **Key ID**, and your **Team ID** from the **Membership** page.
+3. Set `APPLE_MUSIC_TEAM_ID`, `APPLE_MUSIC_KEY_ID` and `APPLE_MUSIC_PRIVATE_KEY` (the `.p8` file's whole text) locally in `.env`, and on Render on the web service, then run a blueprint sync so the daily job gets them too. In `.env`, write the key's newlines as `\n` on one line. Then delete the downloaded file, or keep it somewhere safe outside the repo.
+4. Run `match_apple_music_artists --dry-run --limit 30`, and check a few matches and their top songs.
+5. Run it for real, and review the automatic matches at `/admin/core/applemusicartistlink/`.
+6. Set `APPLE_MUSIC_PREVIEWS` to `true` on the web service and in `.env`, then run `resave_all_events` so the stored event pages get their buttons.
+
+**What's stored:** for each name, only the Apple Music artist ID, its top song's ID and that song's album ID, with the same 30-day refresh and expiry as the Spotify links. An editor's artist is never changed, but its top song is refreshed. The site signs its own short-lived developer tokens from the key, on the server, so the key never reaches a browser. If the key leaks, revoke it under **Keys** and make a new one.
+
+**Correcting a match** works as it does for Spotify: paste the artist's Apple Music page link, or tick **No Apple Music artist**. A pasted link looks up its top song at once.
+
+**Still to settle before going public:** whether Apple's terms for promotional use of its content cover a concert listing.
 
 ## Reading the sheet on a server
 

@@ -1,0 +1,4 @@
+{"results": {"artists": {"href": "/v1/catalog/us/search?limit=10&term=The+Ballroom+Thieves&types=artists", "data": [
+  {"id": "489634654", "type": "artists", "href": "/v1/catalog/us/artists/489634654", "attributes": {"name": "The Ballroom Thieves", "genreNames": ["Singer/Songwriter"], "url": "https://music.apple.com/us/artist/the-ballroom-thieves/489634654"}},
+  {"id": "100000001", "type": "artists", "href": "/v1/catalog/us/artists/100000001", "attributes": {"name": "Ballroom Blitz", "genreNames": ["Rock"], "url": "https://music.apple.com/us/artist/ballroom-blitz/100000001"}}
+]}}, "meta": {"results": {"order": ["artists"], "rawOrder": ["artists"]}}}

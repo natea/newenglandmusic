@@ -4,6 +4,7 @@ from datetime import date
 from dateutil import relativedelta
 from django.contrib import admin
 from django import forms
+from django.contrib import messages
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q, URLField
 from django.urls import reverse
@@ -15,12 +16,14 @@ from solo.admin import SingletonModelAdmin
 from tinymce.widgets import TinyMCE
 
 from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filter
+from . import apple_music
 from .spotify import parse_artist_id
 from .spotify_links import rebake_events_naming
 from .artist_matching import normalize
 from .job_runs import DIDNT_FINISH, STALE_AFTER, outcome
 from .models import (
     AllEventProxy,
+    AppleMusicArtistLink,
     DateMessage,
     EmailSubscriber,
     Event,
@@ -873,3 +876,122 @@ class SpotifyArtistLinkAdmin(admin.ModelAdmin):
 
 
 admin.site.register(SpotifyArtistLink, SpotifyArtistLinkAdmin)
+
+
+class AppleMusicArtistLinkForm(forms.ModelForm):
+    apple_music_link = forms.CharField(
+        required=False,
+        label="Apple Music artist link",
+        help_text="paste the artist's page link from Apple Music, "
+        "e.g. https://music.apple.com/us/artist/the-ballroom-thieves/489634654",
+    )
+    no_apple_music_artist = forms.BooleanField(
+        required=False, help_text="this name has no artist on Apple Music: show no play button"
+    )
+
+    class Meta:
+        model = AppleMusicArtistLink
+        fields = ["name_key"]
+        labels = {"name_key": "Artist name"}
+        help_texts = {"name_key": "as an event writes it; it's stored normalized"}
+
+    def clean_name_key(self):
+        key = normalize(self.cleaned_data["name_key"])
+        if not key:
+            raise forms.ValidationError("enter the artist's name")
+        return key
+
+    def clean_apple_music_link(self):
+        link = self.cleaned_data["apple_music_link"].strip()
+        if link and not apple_music.parse_artist_id(link):
+            raise forms.ValidationError(
+                "that isn't an Apple Music artist link: it should look like "
+                "https://music.apple.com/us/artist/<name>/<number>"
+            )
+        return link
+
+    def clean(self):
+        cleaned = super().clean()
+        link, none = cleaned.get("apple_music_link"), cleaned.get("no_apple_music_artist")
+        if link and none:
+            raise forms.ValidationError("give an Apple Music link or tick no Apple Music artist, not both")
+        if not link and not none and not self.instance.pk:
+            raise forms.ValidationError("give an Apple Music link, or tick no Apple Music artist")
+        return cleaned
+
+
+class AppleMusicArtistLinkAdmin(admin.ModelAdmin):
+    form = AppleMusicArtistLinkForm
+    list_display = ["name_key", "status", "apple_music_page", "top_song", "source", "checked_at", "last_seen_at"]
+    list_filter = ["status", "source"]
+    search_fields = ["name_key"]
+    readonly_fields = ["status", "apple_music_page", "top_song", "source", "checked_at", "last_seen_at"]
+    actions = ["mark_no_apple_music_artist"]
+
+    @admin.display(description="Apple Music")
+    def apple_music_page(self, link):
+        if not link.apple_artist_id:
+            return "-"
+        return format_html(
+            '<a href="https://music.apple.com/us/artist/{}" target="_blank">{}</a>',
+            link.apple_artist_id,
+            link.apple_artist_id,
+        )
+
+    @admin.display(description="top song")
+    def top_song(self, link):
+        if not link.top_song_id:
+            return "-"
+        return format_html(
+            '<a href="https://music.apple.com/us/album/{}?i={}" target="_blank">{}</a>',
+            link.top_album_id,
+            link.top_song_id,
+            link.top_song_id,
+        )
+
+    def save_model(self, request, link, form, change):
+        """an editor's choice: matched to the pasted artist (with its top song), or no artist"""
+        now = timezone.now()
+        artist_id = apple_music.parse_artist_id(form.cleaned_data.get("apple_music_link"))
+        if artist_id or form.cleaned_data.get("no_apple_music_artist"):
+            link.status = AppleMusicArtistLink.Status.MATCHED if artist_id else AppleMusicArtistLink.Status.NONE
+            link.apple_artist_id = artist_id or ""
+            link.top_song_id = link.top_album_id = ""
+            link.source = AppleMusicArtistLink.Source.EDITOR
+            link.checked_at = now
+            if artist_id:
+                self.look_up_top_song(request, link)
+        if not link.last_seen_at:
+            link.last_seen_at = now
+        super().save_model(request, link, form, change)
+        rebake_events_naming([link.name_key])
+
+    def look_up_top_song(self, request, link):
+        if not apple_music.credentials():
+            messages.warning(request, "Apple Music isn't configured, so the artist's top song wasn't looked up.")
+            return
+        try:
+            song = apple_music.client().top_song(link.apple_artist_id)
+        except apple_music.AppleMusicError as e:
+            messages.warning(request, f"The artist was saved, but its top song couldn't be looked up: {e}")
+            return
+        if song:
+            link.top_song_id, link.top_album_id = song["song_id"], song["album_id"]
+        else:
+            messages.warning(request, "Apple Music lists no top songs for this artist, so no button will show.")
+
+    @admin.action(description="Mark as no Apple Music artist")
+    def mark_no_apple_music_artist(self, request, queryset):
+        keys = list(queryset.values_list("name_key", flat=True))
+        queryset.update(
+            status=AppleMusicArtistLink.Status.NONE,
+            apple_artist_id="",
+            top_song_id="",
+            top_album_id="",
+            source=AppleMusicArtistLink.Source.EDITOR,
+            checked_at=timezone.now(),
+        )
+        rebake_events_naming(keys)
+
+
+admin.site.register(AppleMusicArtistLink, AppleMusicArtistLinkAdmin)

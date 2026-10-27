@@ -210,23 +210,24 @@ article {
     font-size: 0.85rem;
   }
 
-  // spotify play buttons and player: rows of their own below the event's text, lined up
-  // with the text past the time column (see .event-time)
-  .spotify-artists,
-  .spotify-player {
+  // play buttons and players: rows of their own below the event's text, lined up with the
+  // text past the time column (see .event-time)
+  .artist-previews,
+  .artist-player {
     flex-basis: 100%;
     margin-left: 5.6em;
     max-width: calc(100% - 5.6em);
   }
 
-  .spotify-artists {
+  .artist-previews {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 8px;
     margin-top: 4px;
   }
 
-  .spotify-play {
+  .spotify-play,
+  .apple-play {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -246,6 +247,29 @@ article {
     width: 12px;
     height: 12px;
     fill: #1db954;
+  }
+
+  .apple-play:hover {
+    border-color: #fa243c;
+  }
+
+  .apple-mark {
+    width: 12px;
+    height: 12px;
+    fill: #fa243c;
+  }
+
+  .apple-player {
+    iframe {
+      border: 0;
+      border-radius: 10px;
+      height: 175px;
+      width: 100%;
+    }
+
+    .apple-more {
+      font-size: 0.85rem;
+    }
   }
 
   .spotify-player {
