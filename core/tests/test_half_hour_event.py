@@ -24,8 +24,11 @@ class EventOrderingTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "core/index.html")
         self.assertContains(response, event_title)
-        self.assertContains(response, "7:00pm:")
-        self.assertNotContains(response, "7pm:")
+        self.assertContains(response, "7:00pm")
+        self.assertNotContains(response, "7pm")
+        # no bullet before the time, nor colon after it
+        self.assertNotContains(response, "7:00pm:")
+        self.assertNotContains(response, "•")
         # the day map's popup reads the same time
         self.assertContains(response, 'data-starttime="7:00pm"')
 
@@ -44,4 +47,5 @@ class EventOrderingTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "core/index.html")
         self.assertContains(response, event_title)
-        self.assertContains(response, "7:30pm:")
+        self.assertContains(response, "7:30pm")
+        self.assertNotContains(response, "7:30pm:")

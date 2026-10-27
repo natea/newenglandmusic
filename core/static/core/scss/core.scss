@@ -174,8 +174,8 @@ article {
 
   .event-time {
     flex: 0 0 auto;
-    // fits "• 12:30pm:"; a longer starttime_override just pushes its own text over
-    min-width: 5.6em;
+    // fits "12:30pm"; a longer starttime_override just pushes its own text over
+    min-width: 4.6em;
     padding-right: 0.3em;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
@@ -215,8 +215,8 @@ article {
   .artist-previews,
   .artist-player {
     flex-basis: 100%;
-    margin-left: 5.6em;
-    max-width: calc(100% - 5.6em);
+    margin-left: 4.6em;
+    max-width: calc(100% - 4.6em);
   }
 
   .artist-previews {

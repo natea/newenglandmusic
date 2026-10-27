@@ -24,11 +24,10 @@
 >
   <div class="event-time-and-content">
     <span class="event-time">
-      •
       {% if event.starttime_override %}
-        {{ event.starttime_override }}:
+        {{ event.starttime_override }}
       {% else %}
-        {{ event.starttime|date:"g:iA"|lower }}:
+        {{ event.starttime|date:"g:iA"|lower }}
       {% endif %}
     </span>
     <span class="event-content">
