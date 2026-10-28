@@ -44,7 +44,9 @@ urlpatterns = [
     path("internal-api/db", internal_db_dump, name="internal_db_dump"),
 ]
 
-if settings.DEBUG and settings.SHOW_DEBUG_TOOLBAR:
+# only dev settings define SHOW_DEBUG_TOOLBAR; the test settings (DEBUG on, for
+# compilescss in ci) don't
+if settings.DEBUG and getattr(settings, "SHOW_DEBUG_TOOLBAR", False):
     import debug_toolbar
 
     urlpatterns += [path("__debug__/", include(debug_toolbar.urls))]
