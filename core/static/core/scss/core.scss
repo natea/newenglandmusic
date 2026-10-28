@@ -181,6 +181,13 @@ article {
     font-variant-numeric: tabular-nums;
   }
 
+  // the day of a show in the saved shows map's panel, above its time (map/map.html, which
+  // puts a <br> after it)
+  .event-date {
+    font-size: 0.8rem;
+    font-weight: bold;
+  }
+
   .event-content {
     flex: 1;
     min-width: 0;

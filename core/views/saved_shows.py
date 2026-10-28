@@ -32,11 +32,19 @@ def saved_shows(request):
         .annotate(date=TruncDate("starttime"))
     )
     grouped = group_events_by_date(events)
+    # the map gets a toggle only when some listed show can have a pin: map/map.html pins the
+    # uncancelled events that carry data-venue-lnglat, which a located venue gives them
+    has_mappable = any(
+        event.venue and not event.is_cancelled
+        and event.venue.exact_latitude is not None and event.venue.exact_longitude is not None
+        for event in events
+    )
     response = render(
         request,
         "core/saved.html",
         {
             "group": group,
+            "has_mappable": has_mappable,
             "grouped_events_as_list": [{"date": date, "events": events} for date, events in grouped.items()],
             "meta": get_meta(),
         },

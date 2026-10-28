@@ -5,19 +5,36 @@
 
 <script type="text/javascript">
   document.addEventListener("DOMContentLoaded", function() {
-    const dateLinks = document.querySelectorAll('a[data-date]')
+    // two kinds of map: a day's (a "SHOW MAP" link with data-date, on the listing) and a
+    // map of every event on the page (data-map="all", on the saved shows page)
+    const dateLinks = document.querySelectorAll('a[data-date], a[data-map="all"]')
+    // each map, its pins and its pin-click handler, by key ("all" or a day's mmddyy): the
+    // map only adds its pins once its style has loaded, so the tests read them here
+    window.siteMaps = window.siteMaps || {};
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    // "110626" (mmddyy) -> "Nov 6"
+    const shortDate = mmddyy => `${MONTHS[parseInt(mmddyy.slice(0, 2), 10) - 1]} ${parseInt(mmddyy.slice(2, 4), 10)}`;
+    const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    // "110626" (mmddyy) -> "Fri"
+    const weekday = mmddyy => DAYS[new Date(
+      2000 + parseInt(mmddyy.slice(4, 6), 10), parseInt(mmddyy.slice(0, 2), 10) - 1, parseInt(mmddyy.slice(2, 4), 10)
+    ).getDay()];
+    // the page's own events, not the copies a map's info panel shows
+    const notACopy = eventDiv => !eventDiv.closest('[id^="map-"][id$="-info"]');
 
-    // function to check if venues are within ~10 meters of eachother
-    const areWithinTenMeters = (lnglatA, lnglatB) => {
+    // whether two venues are next door to each other, within about 50 meters: they share a
+    // pin, as their pins would otherwise sit on top of each other (the 9:30 Club and The
+    // Atlantis, 28m apart, hid each other's shows)
+    const areNextDoor = (lnglatA, lnglatB) => {
       // convert each string to an 2D array of numbers
       const pointsA = lnglatA.split(',').map(d => parseFloat(d));
       const pointsB = lnglatB.split(',').map(d => parseFloat(d));
 
       const distance = Math.sqrt((pointsA[0]-pointsB[0]) ** 2 + (pointsA[1]-pointsB[1]) ** 2);
-      return distance < 0.0001;
+      return distance < 0.0005;
     }
 
-    // do some preprocessing to figure out venues ~10m of each other
+    // do some preprocessing to figure out venues next door to each other
     // first, create a dictionary of all of our venues and their lnglats
     const lnglatsByVenueId = {}
     const allEventDivs = document.querySelectorAll(`div.event[data-venue-lnglat]`)
@@ -27,12 +44,12 @@
         const venueId = eventDiv.getAttribute('data-venue-id');
         lnglatsByVenueId[venueId] = eventDiv.getAttribute('data-venue-lnglat');
       });
-    // an array where each element is an array of venue IDs within ~10m of each other
+    // an array where each element is an array of venue IDs next door to each other
     const mergedVenues = [];
     Object.entries(lnglatsByVenueId).forEach(([venueId, venueLngLat]) => {
       let foundMatchingVenue = false;
       mergedVenues.forEach((venueList, index) => {
-        if (areWithinTenMeters(venueLngLat, lnglatsByVenueId[venueList[0]])) {
+        if (areNextDoor(venueLngLat, lnglatsByVenueId[venueList[0]])) {
           mergedVenues[index].push(venueId);
           foundMatchingVenue = true;
         }
@@ -50,7 +67,9 @@
       link.addEventListener('click', function(event) {
         event.preventDefault();
         
-        const date = link.getAttribute('data-date');
+        // a day's map, or (scope "all") one of every event on the page
+        const scope = link.getAttribute('data-map') === 'all' ? 'all' : null;
+        const date = scope || link.getAttribute('data-date');
         const mapDiv = document.querySelector(`#map-${date}`);
         const mapIsShown = mapDiv.style.display === 'block';
         mapDiv.style.display = mapIsShown ? 'none' : 'block';
@@ -68,7 +87,9 @@
         // find all of the <div> with class="event"
         // that have a data-date of the same value,
         // and have a data-venue-latlng
-        const eventDivs = document.querySelectorAll(`div.event[data-date="${date}"][data-venue-lnglat]`);
+        const eventDivs = Array.from(document.querySelectorAll(
+          scope ? 'div.event[data-venue-lnglat]' : `div.event[data-date="${date}"][data-venue-lnglat]`
+        )).filter(notACopy);
 
         const eventsByVenueId = {};
         Array.from(eventDivs).forEach(eventDiv => {
@@ -77,7 +98,10 @@
             return;
           }
           const lnglat = eventDiv.getAttribute('data-venue-lnglat').split(',');
-          const startTime = eventDiv.getAttribute('data-starttime');
+          // a map of several days labels each show with its date too: "Nov 6 7:00pm"
+          const startTime = scope
+            ? `${shortDate(eventDiv.getAttribute('data-date'))} ${eventDiv.getAttribute('data-starttime')}`
+            : eventDiv.getAttribute('data-starttime');
           const titleAndArtists = eventDiv.getAttribute('data-title-and-artists');
           let subString = titleAndArtists.split(' ').slice(0, 5).join(' ');
           if (titleAndArtists.length > subString.length) {
@@ -108,8 +132,12 @@
           const description = events.map(event => event.properties.description).join('\n');
           const eventTimes = events.map(event => event.properties.startTime).join(', ');
           const event = events[0];
+          // a map of several days labels each show on a line of its own, its date and time
+          // with its name, so a shared pin doesn't separate when from what
+          const label = events.map(event => `${event.properties.startTime} ${event.properties.description}`).join('\n');
           event.properties.startTime = eventTimes;
           event.properties.description = description;
+          event.properties.label = label;
           return event;
         });
         const allFeatures = {
@@ -125,18 +153,21 @@
           style: "https://api.protomaps.com/styles/v4/light/en.json?key={{ protomaps_api_key|urlencode }}",
           maxPitch: 0,
         });
-        // fit bounds of all points
-        const bounds = new maplibregl.LngLatBounds();
-        features.forEach(feature => {
-          bounds.extend(feature.geometry.coordinates);
-        });
-        map.fitBounds(bounds, {
-          padding: {top: 25, bottom: 10}, // more room at top for marker height
-          animate: false,
-        });
-        if (map.getZoom() > 10) {
-          // choosing to not zoom in from a lower number to make sure all points are visible
-          map.setZoom(10);
+        // fit bounds of all points. a day without located shows has none, and fitting empty
+        // bounds throws, which stopped the rest of the map's setup
+        if (features.length) {
+          const bounds = new maplibregl.LngLatBounds();
+          features.forEach(feature => {
+            bounds.extend(feature.geometry.coordinates);
+          });
+          map.fitBounds(bounds, {
+            padding: {top: 25, bottom: 10}, // more room at top for marker height
+            animate: false,
+          });
+          if (map.getZoom() > 10) {
+            // choosing to not zoom in from a lower number to make sure all points are visible
+            map.setZoom(10);
+          }
         }
         map.on('load', () => {
           map.loadImage(
@@ -181,7 +212,7 @@
                   'type': 'symbol',
                   'source': 'places',
                   'layout': {
-                    'text-field': [
+                    'text-field': scope ? ['get', 'label'] : [
                       'format',
                       ['get', 'startTime'],
                       {
@@ -197,6 +228,9 @@
                       {'font-scale': 0.8}
                     ],
                     'text-line-height': 0.9,
+                    // wider than the default 10 ems on a map of several days, so each show's
+                    // "Oct 28 6:30pm The Hails..." line stays one line
+                    'text-max-width': scope ? 24 : 10,
                     'text-font': ['Noto Sans Regular'],
                     'text-justify': 'left',
                     'text-allow-overlap': true,
@@ -221,29 +255,47 @@
             });
           });
         });
-        map.on('click', 'poi-icons', (e) => {
+        // a pin's shows, listed under the map, and the pin marked
+        const showPin = (feature) => {
           document.getElementById(`map-${date}-info`).innerHTML = '';
 
-          // Get all divs at this venue (or venues) on this date
-          const venueIds = e.features[0].properties.venueIds.split(',');
+          // Get all divs at this venue (or venues), on this date or (scope "all") any
+          const venueIds = feature.properties.venueIds.split(',');
           const eventsQuerySelector = venueIds
-            .map(venueId => `div.event[data-date="${date}"][data-venue-id="${venueId}"]`)
+            .map(venueId => scope
+              ? `div.event[data-venue-id="${venueId}"]`
+              : `div.event[data-date="${date}"][data-venue-id="${venueId}"]`)
             .join(', ');
-          const eventDivs = document.querySelectorAll(eventsQuerySelector);
+          const eventDivs = Array.from(document.querySelectorAll(eventsQuerySelector)).filter(notACopy);
           eventDivs.forEach(eventDiv => {
             // clone the whole eventDiv and insert it into the map-<date>-info div.
             // the clone keeps the .event layout (time column + text column), so it
             // lines up exactly like the listing below -- don't restyle it here
             const clonedEventDiv = eventDiv.cloneNode(true);
+            // a map of several days: say which day, above the time, as "Wed", "Oct 28" and the
+            // time on lines of their own, each no wider than the time column, so the text
+            // lines up with the listing's. real line breaks, not only css, so it holds
+            // whatever stylesheet the browser has cached
+            const time = scope && clonedEventDiv.querySelector('.event-time');
+            if (time) {
+              const day = document.createElement('span');
+              day.className = 'event-date';
+              const mmddyy = eventDiv.getAttribute('data-date');
+              day.append(weekday(mmddyy), document.createElement('br'), shortDate(mmddyy));
+              time.prepend(day, document.createElement('br'));
+            }
             document.getElementById(`map-${date}-info`).appendChild(clonedEventDiv);
           })
           document.getElementById(`map-${date}-info`).style.display = 'block';
 
+          if (!map.getLayer('poi-icons')) {
+            return;  // the style hasn't loaded, so there are no pins to mark yet
+          }
           map.setLayoutProperty('poi-icons', 'icon-image',
             [
               'match',
               ['get', 'divId'],
-              e.features[0].properties.divId,
+              feature.properties.divId,
               'marker-blue', //image when id is the hovered feature id
               'marker-red' // default
             ]
@@ -252,12 +304,14 @@
             [
               'match',
               ['get', 'divId'],
-              e.features[0].properties.divId,
+              feature.properties.divId,
               1000, // sort key when id is the hovered feature id
               0 // default
             ]
           )
-        });
+        };
+        map.on('click', 'poi-icons', (e) => showPin(e.features[0]));
+        window.siteMaps[date] = {map: map, features: allFeatures.features, showPin: showPin};
         map.on('mousemove', 'poi-icons', (e) => {
           if (e.features.length > 0) {
             // change cursor

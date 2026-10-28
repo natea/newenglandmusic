@@ -5,7 +5,7 @@ from core.models import Event, Venue
 from core.saved_shows import COOKIE_NAME, MAX_SAVED, format_saved, parse_saved
 from core.tests.geo_fixture import load_geo_fixture
 from core.utils_datemath import beginning_of_day, get_current_new_york_datetime
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 
 
 class ParseSavedTestCase(SimpleTestCase):
@@ -158,3 +158,51 @@ class SaveLinkRenderTestCase(TestCase):
             response = self.client.get(path)
             self.assertContains(response, '<a href="/saved" class="saved-count">Saved shows</a>', msg_prefix=path)
             self.assertContains(response, "core/js/saved_shows.js", msg_prefix=path)
+
+
+@override_settings(PROTOMAPS_API_KEY="fake-protomaps-key")
+class SavedMapRenderTestCase(TestCase):
+    def setUp(self):
+        self.tomorrow = beginning_of_day(get_current_new_york_datetime()) + timedelta(days=1, hours=20)
+        self.located = Venue.objects.create(name="Paradise Rock Club", latitude=42.3519, longitude=-71.1195)
+        self.unlocated = Venue.objects.create(name="Nowhere")
+
+    def saved_page(self, *events):
+        self.client.cookies[COOKIE_NAME] = format_saved([event.pk for event in events])
+        return self.client.get("/saved")
+
+    def show(self, **fields):
+        return Event.objects.create(title="a show", starttime=self.tomorrow, **fields)
+
+    def test_toggle_with_mappable_saved_shows(self):
+        response = self.saved_page(self.show(venue=self.located))
+        self.assertContains(response, '<a href="#" data-map="all"')
+        self.assertContains(response, '<div id="map-all"')
+        self.assertContains(response, '<div id="map-all-info"')
+        self.assertContains(response, "maplibre-gl.min.js")
+
+    def test_no_toggle_without_a_key(self):
+        with self.settings(PROTOMAPS_API_KEY=""):
+            response = self.saved_page(self.show(venue=self.located))
+        self.assertNotContains(response, 'data-map="all"')
+        self.assertNotContains(response, "maplibre-gl.min.js")
+
+    def test_no_toggle_with_nothing_mappable(self):
+        response = self.saved_page(
+            self.show(venue=self.unlocated),
+            self.show(venue=self.located, is_cancelled=True),
+            self.show(venue_override="somewhere else"),
+        )
+        self.assertEqual(len(response.context["grouped_events_as_list"][0]["events"]), 3)
+        self.assertNotContains(response, 'data-map="all"')
+        self.assertNotContains(response, "maplibre-gl.min.js")
+
+    def test_no_toggle_with_nothing_saved(self):
+        self.assertNotContains(self.client.get("/saved"), 'data-map="all"')
+
+    def test_day_map_links_unchanged_on_the_listing(self):
+        self.show(venue=self.located)
+        response = self.client.get("/")
+        self.assertContains(response, f'data-date="{self.tomorrow:%m%d%y}" style="color:white;background:green;">SHOW MAP</a>')
+        # no page-wide toggle (the map script itself mentions data-map="all")
+        self.assertNotContains(response, '<a href="#" data-map="all"')
