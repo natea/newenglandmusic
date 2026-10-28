@@ -1,4 +1,10 @@
-## ADDED Requirements
+# youtube-artist-preview Specification
+
+## Purpose
+
+Lets visitors sample an act from the events listing in YouTube's own player, beside the Spotify and Apple Music buttons. An artist gets a YouTube button only when evidence ties the channel or video to the artist already matched on Spotify or Apple Music, never on a name alone.
+
+## Requirements
 
 ### Requirement: Only artists already matched elsewhere are matched on YouTube
 `match_youtube_artists` SHALL consider only names whose Spotify link, or Apple Music link, is matched. It SHALL never search YouTube for a name that is matched on neither. A name SHALL be considered once however many events name it.
