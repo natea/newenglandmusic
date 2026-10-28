@@ -81,7 +81,10 @@ class RequestsTestCase(SimpleTestCase):
 
     def test_top_song_and_its_album_from_the_song_url(self):
         apple = FakeAppleMusic(songs={"489634654": fixture("top_songs.json")})
-        self.assertEqual(apple.client().top_song("489634654"), {"song_id": "964625539", "album_id": "964625535"})
+        self.assertEqual(
+            apple.client().top_song("489634654"),
+            {"song_id": "964625539", "album_id": "964625535", "name": "Archers", "album_name": "A Wolf in the Doorway"},
+        )
         self.assertTrue(apple.requests[0].url.endswith("/v1/catalog/us/artists/489634654/view/top-songs"))
         self.assertEqual(apple.requests[0].params, {"limit": 1})
 

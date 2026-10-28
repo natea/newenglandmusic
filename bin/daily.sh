@@ -2,7 +2,7 @@
 # the daily scheduled job (render.yaml's newenglandmusic-daily; see PRODUCTION.md): syncs
 # the venue sheet, looks up new venues on google places, refreshes coordinates before
 # google's 30 days run out, fetches every venue's events, then links the artists on
-# upcoming events to spotify and apple music for the listing's play buttons.
+# upcoming events to spotify, apple music and youtube for the listing's play buttons.
 source "$(dirname "$0")/steps.sh"
 
 step python manage.py sync_venues_from_gsheets
@@ -16,4 +16,8 @@ step python manage.py fetch_events --all
 step python manage.py match_spotify_artists --limit 500
 # does nothing until the musickit key is set (see PRODUCTION.md)
 step python manage.py match_apple_music_artists --limit 1000
+# last, as it confirms artists the spotify and apple music matching found. 90 song searches
+# stay within youtube's 10,000 free daily units (101 each); does nothing until
+# YOUTUBE_API_KEY is set
+step python manage.py match_youtube_artists --limit 90
 finish

@@ -71,6 +71,12 @@ services:
         sync: false
       - key: APPLE_MUSIC_PREVIEWS
         sync: false
+      # the youtube play buttons: a google cloud key restricted to youtube data api v3, and
+      # the switch that shows them ("true"), set once the matches are reviewed
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: YOUTUBE_PREVIEWS
+        sync: false
       # inherited from nyc noise and unused by this site, but the settings require them
       - key: PROD_INTERNAL_API_SERVER
         value: https://nyc-noise.com/
@@ -168,6 +174,17 @@ services:
           type: web
           name: newenglandmusic
           envVarKey: APPLE_MUSIC_PREVIEWS
+      # youtube matching, and new events rendering their play buttons
+      - key: YOUTUBE_API_KEY
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: YOUTUBE_API_KEY
+      - key: YOUTUBE_PREVIEWS
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: YOUTUBE_PREVIEWS
       # inherited from nyc noise and unused, but the settings require them
       - key: PROD_INTERNAL_API_SERVER
         value: https://nyc-noise.com/

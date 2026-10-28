@@ -696,3 +696,47 @@ class AppleMusicArtistLink(models.Model):
 
     def __str__(self):
         return self.name_key
+
+
+class YouTubeArtistLink(models.Model):
+    """
+    the youtube channel, and if found the video, that is an artist's own, for the listing's
+    youtube play buttons (match_youtube_artists). only ids are kept: youtube's policies allow
+    storing api data for 30 days, so every match is re-checked within that
+    """
+
+    class Status(models.TextChoices):
+        MATCHED = "matched", "Matched"
+        AMBIGUOUS = "ambiguous", "Sources disagree"
+        NOT_FOUND = "not_found", "Not confirmed"
+        NONE = "none", "No YouTube"
+
+    class Evidence(models.TextChoices):
+        WIKIDATA = "wikidata", "Wikidata links it to the Spotify or Apple Music artist"
+        MUSICBRAINZ = "musicbrainz", "MusicBrainz links it to the Spotify artist"
+        TOPIC_SONG = "topic-song", "The top song on the artist's Topic channel"
+        CHANNEL_SONG = "channel-song", "The top song on the artist's channel"
+        EDITOR = "editor", "Editor"
+
+    class Source(models.TextChoices):
+        AUTO = "auto", "Automatic"
+        EDITOR = "editor", "Editor"
+
+    # core.artist_matching.normalize() of the name as our events write it
+    name_key = models.CharField(max_length=255, unique=True)
+    status = models.CharField(max_length=16, choices=Status.choices)
+    evidence = models.CharField(max_length=16, choices=Evidence.choices, blank=True, default="")
+    channel_id = models.CharField(max_length=32, blank=True, default="")
+    # blank for a channel matched by id alone: its button plays the channel's uploads
+    video_id = models.CharField(max_length=16, blank=True, default="")
+    # an editor's link is never re-matched or overwritten; it's still re-checked
+    source = models.CharField(max_length=8, choices=Source.choices, default=Source.AUTO)
+    checked_at = models.DateTimeField()
+    # the last run that found the name on an upcoming event; links unseen for 30 days go
+    last_seen_at = models.DateTimeField()
+
+    class Meta:
+        verbose_name = "YouTube artist link"
+
+    def __str__(self):
+        return self.name_key

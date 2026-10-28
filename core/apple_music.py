@@ -172,13 +172,23 @@ class AppleMusicClient:
         ]
 
     def top_song(self, artist_id):
-        """the artist's most popular song, as {"song_id", "album_id"}, or None"""
+        """
+        the artist's most popular song, as {"song_id", "album_id", "name", "album_name"}, or
+        None. only the ids are stored; the names are for match_youtube_artists to find the
+        same recording on youtube during its run
+        """
         data = self.get(f"artists/{artist_id}/view/top-songs", limit=1)
         for song in data.get("data") or []:
+            attributes = song.get("attributes") or {}
             # the album is in the song's url, which saves a request for its albums
-            match = ALBUM_ID_RE.search((song.get("attributes") or {}).get("url", ""))
+            match = ALBUM_ID_RE.search(attributes.get("url", ""))
             if song.get("id") and match:
-                return {"song_id": song["id"], "album_id": match.group(1)}
+                return {
+                    "song_id": song["id"],
+                    "album_id": match.group(1),
+                    "name": attributes.get("name", ""),
+                    "album_name": attributes.get("albumName", ""),
+                }
         return None
 
 

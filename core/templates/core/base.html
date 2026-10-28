@@ -191,15 +191,14 @@
           {% block content %}{% endblock content %}
 
           {% get_footer_menu_items as all_footer_menu_items %}
-          {% if all_footer_menu_items %}
-            <div id='footer'>
-              <hr>
-              {% for menu_item in all_footer_menu_items %}
-                <a href="{{ menu_item.url }}">{{ menu_item.name }}</a>
-                {% if not forloop.last %}|{% endif %}
-              {% endfor %}
-            </div>
-          {% endif %}
+          {% comment %} the privacy link is on every page, as youtube's developer policies ask {% endcomment %}
+          <div id='footer'>
+            <hr>
+            {% for menu_item in all_footer_menu_items %}
+              <a href="{{ menu_item.url }}">{{ menu_item.name }}</a> |
+            {% endfor %}
+            <a href="/privacy">Privacy</a>
+          </div>
       </main>
     </div>
 

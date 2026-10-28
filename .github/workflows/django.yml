@@ -47,6 +47,9 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Run Tests
         run: |
+          # the compiled css is git-ignored, and the browser tests check sizes it sets
+          # (the youtube player's 200px minimum)
+          python manage.py compilescss
           python manage.py test
         env:
           DATABASE_URL: "postgres://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@${{ env.POSTGRES_HOST }}:${{ env.POSTGRES_PORT }}/${{ env.POSTGRES_DB }}"

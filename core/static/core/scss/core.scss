@@ -234,7 +234,8 @@ article {
   }
 
   .spotify-play,
-  .apple-play {
+  .apple-play,
+  .youtube-play {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -275,6 +276,34 @@ article {
     }
 
     .apple-more {
+      font-size: 0.85rem;
+    }
+  }
+
+  .youtube-mark {
+    width: 14px;
+    height: 14px;
+    fill: #ff0000;
+  }
+
+  .youtube-play:hover {
+    border-color: #ff0000;
+  }
+
+  // youtube's minimum functionality rules: the player is at least 200px each way, and
+  // nothing is drawn over it
+  .youtube-player {
+    iframe {
+      border: 0;
+      border-radius: 10px;
+      margin-top: 6px;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      min-width: 200px;
+      min-height: 200px;
+    }
+
+    .youtube-more {
       font-size: 0.85rem;
     }
   }

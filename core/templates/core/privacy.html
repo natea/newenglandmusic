@@ -1,0 +1,23 @@
+{% extends 'core/base.html' %}
+
+{% comment %}
+  youtube's developer policies ask an api client for a privacy policy that says it uses
+  youtube api services, links to google's privacy policy, and links to youtube's terms
+  (see PRODUCTION.md, "YouTube play buttons")
+{% endcomment %}
+
+{% block content %}
+  <div id='maincontent' class='static_page'>
+    <h1>Privacy</h1>
+
+    <h2>What we keep</h2>
+    <p>{{ site_name }} has no accounts. The only thing it keeps about you is the shows you save, in a cookie in your own browser (<code>saved_shows</code>). Clear it, or unsave the shows, to remove it.</p>
+
+    <h2>Players from Spotify, Apple Music and YouTube</h2>
+    <p>Some events have play buttons. Nothing loads from these services until you press one. Then the player is served by that service, under its own privacy policy.</p>
+    <p>{{ site_name }} uses YouTube API Services to find artists' own videos for its YouTube buttons. By using the YouTube player you agree to be bound by the <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube Terms of Service</a>, and Google handles what it collects under the <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>. The YouTube player comes from youtube-nocookie.com, which sets no cookies until you play a video.</p>
+
+    <h2>Analytics</h2>
+    <p>The site may count visits with an analytics service (GoatCounter or Google Analytics), which records the pages opened. Google Analytics' data is handled under the Google Privacy Policy linked above.</p>
+  </div>
+{% endblock %}

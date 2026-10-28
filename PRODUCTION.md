@@ -42,6 +42,7 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 - `GOOGLE_SERVICE_ACCOUNT_JSON`: the sheet sync's service-account key (see "Reading the sheet on a server").
 - `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`: a Spotify app's credentials, for the listing's play buttons (see "Spotify play buttons"). The web service uses them too, because saving an event renders its buttons.
 - `APPLE_MUSIC_TEAM_ID`, `APPLE_MUSIC_KEY_ID`, `APPLE_MUSIC_PRIVATE_KEY`, `APPLE_MUSIC_PREVIEWS`: a MusicKit key, and the switch that shows the Apple Music buttons (see "Apple Music play buttons").
+- `YOUTUBE_API_KEY`, `YOUTUBE_PREVIEWS`: a Google Cloud key restricted to YouTube Data API v3, and the switch that shows the YouTube buttons (see "YouTube play buttons").
 
 **Optional:**
 - **`CONTACT_EMAIL`:** shown on the submit-event form.
@@ -167,6 +168,7 @@ These run in this order. Each one depends on the one before it:
 | `match_eventbrite_organizers` | weekly, after the source check | free (Eventbrite allows 2,000 requests an hour). It fetches the pages of venues that link Eventbrite, politely, and links only new venues unless given `--recheck` |
 | `match_spotify_artists --limit 500` | daily, after `fetch_events` | free, but rate limited. It searches Spotify for artist names it hasn't seen, and for automatic matches more than 30 days old, half a second apart, taking about 4 minutes. Spotify doesn't publish its limits, but the number of searches is what counts, not their pace: about 650 half a second apart (2026-10-27) and about 680 two seconds apart (2026-10-28) each got the app blocked for about a day. The block applies to the whole developer account, so a dev app's runs use up production's allowance too. 500 a morning stays under it, and clears a first run's backlog of about 2,700 names in about six days. When blocked, a run stops at once and keeps what it found, and the next morning's carries on. After the backlog, each morning searches only new names |
 | `match_apple_music_artists --limit 1000` | daily, after the Spotify matching | free with the Developer Program membership. Like the Spotify matching, but also looks up each matched artist's top song. Requests go half a second apart, and a long rate-limit block stops the run the same way. It does nothing until the MusicKit key is set |
+| `match_youtube_artists --limit 90` | daily, after the Apple Music matching | free within YouTube Data API v3's 10,000 units a day. It matches only artists already matched on Spotify or Apple Music: first through Wikidata and MusicBrainz, then at most 90 searches for their Apple top song (101 units each). It does nothing until `YOUTUBE_API_KEY` is set |
 | `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster and Eventbrite: a few hundred requests each |
 
 ### How they run on Render
@@ -248,6 +250,40 @@ Next to each Spotify button, an Apple Music button opens Apple's player for the 
 
 **Still to settle before going public:** whether Apple's terms for promotional use of its content cover a concert listing.
 
+## YouTube play buttons
+
+Next to the Spotify and Apple Music buttons, a YouTube button opens YouTube's own player, from `youtube-nocookie.com`.
+- **Who gets a button:** an artist gets one only when the match is certain. They must already be matched on Spotify or Apple Music, and one of these must tie them to the YouTube channel or video:
+  - a Wikidata or MusicBrainz entry that links their Spotify or Apple ID to the channel;
+  - their Apple Music top song on their own channel, or on their "<artist> - Topic" channel, with the same song and album.
+- **What it plays:**
+  - the confirmed song's video;
+  - or, for a channel found through Wikidata or MusicBrainz, the channel's uploads.
+- **Without JavaScript,** the button is a link to the video or the channel on YouTube.
+
+**Which Google Cloud APIs to enable:** only **YouTube Data API v3**. `match_youtube_artists` uses it to search for videos and to check channels and videos. It's free up to 10,000 quota units a day, and nothing is charged without billing turned on. Leave these off:
+- **YouTube Embedded Player API:** the player is a plain iframe, which needs no API or key.
+- **YouTube oEmbed API:** we don't fetch embed codes.
+- **YouTube Analytics API and YouTube Reporting API:** these are for a channel owner's own statistics.
+
+**Setting up the key:**
+1. In the Google Cloud project, under **APIs & Services > Library**, enable **YouTube Data API v3**.
+2. Under **Credentials**, create an API key. Under **API restrictions**, restrict it to YouTube Data API v3. It's used only from the server, so set **Application restrictions** to None, or to Render's outbound IP addresses. Don't choose **Websites**: a server sends no referrer, so Google refuses every request with 403 "Requests from referer <empty> are blocked" (seen 2026-10-28), and `match_youtube_artists` stops with an error.
+3. Set `YOUTUBE_API_KEY` locally in `.env`, and on Render on the web service, then run a blueprint sync so the daily job gets it too. The client sends the key in the `X-goog-api-key` header, never in a URL.
+4. Run `match_youtube_artists --dry-run --limit 10`, and check each proposed match on YouTube.
+5. Run it for real, and review the matches at `/admin/core/youtubeartistlink/`.
+6. Set `YOUTUBE_PREVIEWS` to `true` on the web service and in `.env`, then run `resave_all_events` so the stored event pages get their buttons.
+
+**Quota:** a song search with its video check costs 101 units, so the daily step makes at most 90 searches (`--limit 90`). A Wikidata or MusicBrainz match costs 1 unit to check its channel, and so does each 30-day re-check. When the quota runs out, the run stops, keeps what it found, and the next morning's run carries on.
+
+**What's stored:** for each name, only the YouTube channel ID and video ID, and which evidence matched them. YouTube's Developer Policies require stored data to be refreshed or deleted within 30 days, so every match is re-checked after 30 days. A video that's gone, or can no longer be embedded, loses its button. Links expire like the Spotify ones.
+
+**Correcting a match:** paste a channel URL (`https://www.youtube.com/channel/UC…`), or a video URL (`watch?v=…` or `youtu.be/…`), or tick **No YouTube**. An editor's match shows its button even for an artist not matched on Spotify or Apple Music.
+
+**The terms:**
+- YouTube's Developer Policies require a privacy policy that says the site uses YouTube API Services and links to Google's Privacy Policy, and a link to YouTube's Terms of Service. `/privacy` does this, and every page's footer links to it.
+- The Required Minimum Functionality rules forbid changing the player or putting anything over it, and require it to be at least 200 × 200 px. That's why custom-skin players such as csPlayer aren't used.
+
 ## Calendar feeds
 
 `/calendar.ics` is an iCalendar feed that people can subscribe to in Google Calendar, Apple Calendar or Outlook. It takes the listing's `region`, `state` and `metro` parameters (for example `/calendar.ics?state=vermont`), and with none it covers the whole Northeast. It never uses a visitor's remembered filter.
@@ -285,7 +321,8 @@ If the key ever leaks, delete it on the account's **Keys** tab and create a new 
 - [ ] an admin user created: `python manage.py createsuperuser`
 - [ ] the domain pointed at the host, and HTTPS working
 - [ ] `ALLOWED_HOSTS` and `SITE_URL` match the domain
-- [ ] the API keys restricted: Places to its API, Protomaps to the domain
+- [ ] the API keys restricted: Places to its API, YouTube to YouTube Data API v3, Protomaps to the domain
+- [ ] YouTube's Developer Policies met: `/privacy` linked from every page. The policies also say users must agree to the privacy policy before using the site. Decide whether a footer link is enough for a public listing.
 - [x] the scheduled jobs added (the sheet's service account set up first): running on Render since 2026-10-26
 - [ ] Eventbrite's API terms checked for attribution and caching rules, since events imported from it are shown on the site
 - [ ] the first `fetch_events` run checked in `/admin/core/alleventproxy/` before events are approved

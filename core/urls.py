@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.urls import include, path, re_path
+from django.views.generic import TemplateView
 
 from .views.autocomplete import VenueAutocomplete
 from .views.calendar_feed import calendar_feed
@@ -29,6 +30,7 @@ urlpatterns = [
     ),
     # other urls
     path("submit-event", EventCreateView.as_view(), name="submit_event"),
+    path("privacy", TemplateView.as_view(template_name="core/privacy.html"), name="privacy"),
     path("saved", saved_shows, name="saved_shows"),
     path("saved/toggle/<int:event_id>", toggle_saved_show, name="toggle_saved_show"),
     path("calendar.ics", calendar_feed, name="calendar_feed"),

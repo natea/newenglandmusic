@@ -29,6 +29,7 @@ DAILY = [
     "manage.py fetch_events --all",
     "manage.py match_spotify_artists --limit 500",
     "manage.py match_apple_music_artists --limit 1000",
+    "manage.py match_youtube_artists --limit 90",
 ]
 WEEKLY = [
     "manage.py check_event_sources --workers 8",
@@ -134,6 +135,8 @@ class RenderConfigurationTestCase(SimpleTestCase):
                 "APPLE_MUSIC_KEY_ID",
                 "APPLE_MUSIC_PRIVATE_KEY",
                 "APPLE_MUSIC_PREVIEWS",
+                "YOUTUBE_API_KEY",
+                "YOUTUBE_PREVIEWS",
             },
         )
         self.assertEqual(

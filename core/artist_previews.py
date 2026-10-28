@@ -5,14 +5,17 @@ artist id and its apple music artist, top song and album, whichever are matched.
 spotify buttons come from SpotifyArtistLink, including its fallbacks (a duo's acts, the
 artist an occasion starts with: see core/spotify_links.py). apple music buttons come from
 AppleMusicArtistLink, for the event's names as written, and only when APPLE_MUSIC_PREVIEWS
-is on. an artist matched on both gets both buttons, side by side.
+is on; youtube buttons likewise from YouTubeArtistLink, when YOUTUBE_PREVIEWS is on. an
+artist matched on several gets their buttons side by side.
 """
 
 from core.apple_music import previews_enabled
+from core import youtube
 from core.artist_matching import normalize
 from core.artist_names import event_artist_names
 from core.spotify import credentials as spotify_credentials
 from core.spotify_links import event_spotify_artists
+from core.youtube_links import event_youtube_artists
 
 
 def event_apple_music_artists(event, names):
@@ -33,18 +36,28 @@ def event_apple_music_artists(event, names):
 
 
 def event_artist_previews(event):
-    """[{"label", "spotify" (an id or None), "apple" (ids or None)}], in the event's order"""
-    if not spotify_credentials() and not previews_enabled():
+    """
+    [{"label", "spotify" (an id or None), "apple" (ids or None), "youtube" (ids or None)}],
+    in the event's order
+    """
+    if not spotify_credentials() and not previews_enabled() and not youtube.previews_enabled():
         return []
     names = event_artist_names(event)
     apple = event_apple_music_artists(event, names)
+    on_youtube = event_youtube_artists(names)
     entries = {}
+
+    def entry(key, label):
+        return entries.setdefault(key, {"label": label, "spotify": None, "apple": None, "youtube": None})
+
     for label, spotify_id in event_spotify_artists(event):
-        entries.setdefault(normalize(label), {"label": label, "spotify": None, "apple": None})["spotify"] = spotify_id
+        entry(normalize(label), label)["spotify"] = spotify_id
     for name in names:
         key = normalize(name)
         if key in apple:
-            entries.setdefault(key, {"label": name, "spotify": None, "apple": None})["apple"] = apple[key]
+            entry(key, name)["apple"] = apple[key]
+        if key in on_youtube:
+            entry(key, name)["youtube"] = on_youtube[key]
     # the event's own order: spotify's labels can be part of a name ("Built to Spill" from
     # "Built to Spill Fall 2026 Tour", "Boulder Canyon" from a duo), so each label goes where
     # the first name containing it is

@@ -16,7 +16,7 @@ from solo.admin import SingletonModelAdmin
 from tinymce.widgets import TinyMCE
 
 from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filter
-from . import apple_music
+from . import apple_music, youtube
 from .spotify import parse_artist_id
 from .spotify_links import rebake_events_naming
 from .artist_matching import normalize
@@ -24,6 +24,7 @@ from .job_runs import DIDNT_FINISH, STALE_AFTER, outcome
 from .models import (
     AllEventProxy,
     AppleMusicArtistLink,
+    YouTubeArtistLink,
     DateMessage,
     EmailSubscriber,
     Event,
@@ -995,3 +996,114 @@ class AppleMusicArtistLinkAdmin(admin.ModelAdmin):
 
 
 admin.site.register(AppleMusicArtistLink, AppleMusicArtistLinkAdmin)
+
+
+class YouTubeArtistLinkForm(forms.ModelForm):
+    youtube_link = forms.CharField(
+        required=False,
+        label="YouTube channel or video link",
+        help_text="paste the artist's channel link (https://www.youtube.com/channel/UC…) or one of "
+        "their videos (https://www.youtube.com/watch?v=… or https://youtu.be/…)",
+    )
+    no_youtube = forms.BooleanField(required=False, help_text="this name has no YouTube: show no play button")
+
+    class Meta:
+        model = YouTubeArtistLink
+        fields = ["name_key"]
+        labels = {"name_key": "Artist name"}
+        help_texts = {"name_key": "as an event writes it; it's stored normalized"}
+
+    def clean_name_key(self):
+        key = normalize(self.cleaned_data["name_key"])
+        if not key:
+            raise forms.ValidationError("enter the artist's name")
+        return key
+
+    def clean_youtube_link(self):
+        link = self.cleaned_data["youtube_link"].strip()
+        if link and not youtube.parse_link(link):
+            raise forms.ValidationError(
+                "that isn't a YouTube channel or video link: it should look like "
+                "https://www.youtube.com/channel/UC…, https://www.youtube.com/watch?v=… or https://youtu.be/…"
+            )
+        return link
+
+    def clean(self):
+        cleaned = super().clean()
+        link, none = cleaned.get("youtube_link"), cleaned.get("no_youtube")
+        if link and none:
+            raise forms.ValidationError("give a YouTube link or tick no YouTube, not both")
+        if not link and not none and not self.instance.pk:
+            raise forms.ValidationError("give a YouTube link, or tick no YouTube")
+        return cleaned
+
+
+class YouTubeArtistLinkAdmin(admin.ModelAdmin):
+    form = YouTubeArtistLinkForm
+    list_display = ["name_key", "status", "evidence", "youtube_page", "source", "checked_at", "last_seen_at"]
+    list_filter = ["status", "evidence", "source"]
+    search_fields = ["name_key"]
+    readonly_fields = ["status", "evidence", "youtube_page", "source", "checked_at", "last_seen_at"]
+    actions = ["mark_no_youtube"]
+
+    @admin.display(description="YouTube")
+    def youtube_page(self, link):
+        if link.video_id:
+            return format_html('<a href="https://www.youtube.com/watch?v={}" target="_blank">{}</a>', link.video_id, link.video_id)
+        if link.channel_id:
+            return format_html('<a href="https://www.youtube.com/channel/{}" target="_blank">{}</a>', link.channel_id, link.channel_id)
+        return "-"
+
+    def save_model(self, request, link, form, change):
+        """an editor's choice: matched to the pasted channel or video, or no youtube"""
+        now = timezone.now()
+        found = youtube.parse_link(form.cleaned_data.get("youtube_link"))
+        if found or form.cleaned_data.get("no_youtube"):
+            kind, found_id = found or ("", "")
+            link.status = YouTubeArtistLink.Status.MATCHED if found else YouTubeArtistLink.Status.NONE
+            link.evidence = YouTubeArtistLink.Evidence.EDITOR
+            link.channel_id = found_id if kind == "channel" else ""
+            link.video_id = found_id if kind == "video" else ""
+            link.source = YouTubeArtistLink.Source.EDITOR
+            link.checked_at = now
+            if kind == "video":
+                self.look_up_channel(request, link)
+        if not link.last_seen_at:
+            link.last_seen_at = now
+        super().save_model(request, link, form, change)
+        rebake_events_naming([link.name_key])
+
+    def look_up_channel(self, request, link):
+        """the pasted video's channel, for the player's "More by …" link"""
+        if not youtube.api_key():
+            messages.warning(request, "YouTube isn't configured, so the video wasn't checked.")
+            return
+        try:
+            video = youtube.client().videos([link.video_id]).get(link.video_id)
+        except youtube.YouTubeError as e:
+            messages.warning(request, f"The video was saved, but couldn't be checked: {e}")
+            return
+        if video is None:
+            messages.warning(request, "YouTube has no such video, so no button will show until it's fixed.")
+            link.status = YouTubeArtistLink.Status.NOT_FOUND
+            return
+        link.channel_id = video["channel_id"]
+        if not video["embeddable"]:
+            messages.warning(request, "That video can't be embedded, so no button will show until it's fixed.")
+            link.status = YouTubeArtistLink.Status.NOT_FOUND
+
+    @admin.action(description="Mark as no YouTube")
+    def mark_no_youtube(self, request, queryset):
+        keys = list(queryset.values_list("name_key", flat=True))
+        queryset.update(
+            status=YouTubeArtistLink.Status.NONE,
+            evidence=YouTubeArtistLink.Evidence.EDITOR,
+            channel_id="",
+            video_id="",
+            source=YouTubeArtistLink.Source.EDITOR,
+            checked_at=timezone.now(),
+        )
+        rebake_events_naming(keys)
+
+
+admin.site.register(YouTubeArtistLink, YouTubeArtistLinkAdmin)
