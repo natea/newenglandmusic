@@ -212,7 +212,7 @@ class ThrottlingTestCase(TestCase):
         with spotify.patch():
             call_command("match_spotify_artists", stdout=StringIO())
         self.assertEqual(len(spotify.searches), 2)
-        self.assertIn(2.0, spotify.sleeps)
+        self.assertIn(0.5, spotify.sleeps)
 
     def test_job_summary(self):
         upcoming_event(

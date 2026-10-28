@@ -29,7 +29,7 @@ without a search of its own when that artist is already known.
 names an editor set in the admin are never searched. needs SPOTIFY_CLIENT_ID and
 SPOTIFY_CLIENT_SECRET, and does nothing without them.
 
-searches go two seconds apart. when spotify blocks the app for longer than a minute, the
+searches go half a second apart. when spotify blocks the app for longer than a minute, the
 run stops there and keeps what it found: the next run carries on, as found names aren't due again.
 a first run over every name can use --limit to spread itself over a few days.
 """

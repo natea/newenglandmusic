@@ -17,9 +17,11 @@ import requests
 
 API_URL = "https://api.spotify.com/v1/"
 TOKEN_URL = "https://accounts.spotify.com/api/token"
-# spotify publishes no fixed rate limit, only a rolling 30-second window. development-mode
-# apps get little: about 650 searches half a second apart got a 24-hour block (2026-10-27)
-MIN_SECONDS_BETWEEN_REQUESTS = 2
+# spotify publishes no fixed rate limit, only a rolling 30-second window. what blocks a
+# development-mode app for a day is the number of searches, not their pace: about 650 half
+# a second apart (2026-10-27) and about 680 two seconds apart (2026-10-28) each got a 24-hour
+# block. so the daily job caps the searches (bin/daily.sh), and the spacing only stays polite
+MIN_SECONDS_BETWEEN_REQUESTS = 0.5
 MAX_TRIES = 3
 # a longer Retry-After means the app is blocked for hours: stop, rather than wait it out
 MAX_RETRY_WAIT_SECONDS = 60

@@ -11,8 +11,9 @@ step python manage.py lookup_venue_places --refresh-stale
 step python manage.py fetch_events --all
 # daily, so a first run's backlog clears itself: when spotify blocks the app (development
 # mode gets little), the run stops and keeps what it found, and tomorrow's carries on.
-# --limit keeps each morning's searches well under the burst that got a day-long block
-step python manage.py match_spotify_artists --limit 1000
+# --limit 500 keeps each morning under the ~650 searches a day that got day-long blocks
+# (2026-10-27 and 28): a block also costs the next morning's run
+step python manage.py match_spotify_artists --limit 500
 # does nothing until the musickit key is set (see PRODUCTION.md)
 step python manage.py match_apple_music_artists --limit 1000
 finish

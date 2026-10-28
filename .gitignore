@@ -165,3 +165,6 @@ cython_debug/
 
 # preview folders the Clearance markdown viewer leaves next to files it opens
 .clearance-rendered-preview-*/
+
+# scss compiled by `manage.py compilescss` (served compiled in dev by django-sass-processor)
+core/static/core/scss/*.css

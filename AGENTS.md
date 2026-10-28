@@ -63,7 +63,7 @@ Write the output of long command runs to `logs/`, never to a temporary or scratc
 - **Anthropic:** event extraction defaults to `claude-haiku-5-5`. A full `fetch_events --all` run costs about $0.30.
 - **Ticketmaster Discovery API:** free, limited to 5 requests per second and 5,000 per day.
 - **Eventbrite API:** free, limited to 2,000 requests an hour per token. The client waits half a second between requests.
-- **Spotify Web API:** free. In development mode the app's owner needs Spotify Premium, and only 5 users may sign in, which the play buttons don't need. Search returns at most 10 results. The client waits two seconds between requests, because a few hundred quick searches got the app blocked for about a day (2026-10-27). Spread big runs with `--limit`.
+- **Spotify Web API:** free. In development mode the app's owner needs Spotify Premium, and only 5 users may sign in, which the play buttons don't need. Search returns at most 10 results. About 650 searches in a day get the whole developer account blocked for about a day, whatever their pace (2026-10-27 and 28), dev and production apps alike. So keep local runs small with `--limit`, and the daily job caps itself at 500.
 - **Apple Music API:** free with the Apple Developer Program membership; the limit isn't published. The client waits half a second between requests, and stops a run when Apple asks for a wait over a minute.
 - **Google Places Text Search:** 5,000 free calls a month for the default fields, and 1,000 with `--contact`. Rerunning lookups for every venue uses up that allowance, so look up only venues that need it.
 - **Ask before a run that spends money** beyond a small sample. Prefer `--dry-run` and `--limit` / `--sheet-ids` first.

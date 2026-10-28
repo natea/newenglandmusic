@@ -92,7 +92,7 @@ The import SHALL save only events starting from now onward. It SHALL deduplicate
 - **THEN** they are not saved
 
 ### Requirement: Imported events are queued for review without duplicates
-Each event SHALL get an external ID from its source. A new event SHALL be saved unapproved. An event with an existing external ID SHALL be updated in place, keeping its approval.
+Each event SHALL get an external ID from its source. A new event SHALL be saved unapproved. An event with an existing external ID SHALL be updated in place, keeping its approval. An event with a new external ID SHALL instead update an existing imported event at the same venue with the same start time and the same title, ignoring case, spaces and punctuation, keeping its approval and kind, and taking the new external ID. Events entered by hand SHALL NOT be updated this way.
 
 #### Scenario: Re-running the import
 - **WHEN** the import runs twice over the same feed
@@ -101,6 +101,14 @@ Each event SHALL get an external ID from its source. A new event SHALL be saved 
 #### Scenario: Previously approved event
 - **WHEN** an approved event is re-imported with a changed description
 - **THEN** its description changes and it stays approved
+
+#### Scenario: Same show under a new ID
+- **WHEN** a venue's approved scraped event "Gryme" at 9 pm on Oct 30 exists, and the Eventbrite import brings "GRYME" at the same time under an Eventbrite ID
+- **THEN** the existing event is updated and takes the Eventbrite ID, stays approved and keeps its kind, and no second event is created
+
+#### Scenario: Hand-entered event
+- **WHEN** an event entered by hand has the same venue, start time and title as an imported one
+- **THEN** the imported event is saved separately, and the hand-entered event is unchanged
 
 ### Requirement: Imported content is safe to display
 Descriptions from venue websites SHALL be stripped of HTML, unescaped, shortened to 600 characters and HTML-escaped before saving. Text fields that don't fit SHALL be left empty instead of failing the save.
@@ -190,3 +198,26 @@ When the fallback gets the venue's events, the saved source's failure SHALL be r
 #### Scenario: Fallback fails too
 - **WHEN** a venue's JSON-LD fails and its Eventbrite request returns an error
 - **THEN** both the JSON-LD failure and the Eventbrite failure are listed as the venue's problems
+
+### Requirement: Existing duplicates can be merged
+The `dedupe_events` command SHALL merge upcoming imported events that share a venue, start time and normalised title. It SHALL keep the oldest copy from the venue's latest fetch source, or else the oldest copy, and delete the rest. The kept copy SHALL take another copy's admin-set kind when it has none, and SHALL be approved if any copy was, unless its kind is not music. `--dry-run` SHALL list each group and change nothing.
+
+#### Scenario: Eventbrite and scraped copies
+- **WHEN** a venue last fetched from Eventbrite has an approved scraped copy and an unapproved Eventbrite copy of the same show
+- **THEN** the Eventbrite copy is kept and approved, and the scraped copy is deleted
+
+#### Scenario: Better copy isn't music
+- **WHEN** an approved scraped copy is labelled live music, and the Eventbrite copy to keep is labelled comedy
+- **THEN** the Eventbrite copy is kept unapproved, and the scraped copy is deleted
+
+#### Scenario: Equal copies
+- **WHEN** two AI copies of a show exist and neither is from the venue's latest fetch source
+- **THEN** the older one is kept
+
+#### Scenario: Admin label carried over
+- **WHEN** the copy to delete has a kind an admin set, and the kept copy's kind came from AI
+- **THEN** the kept copy takes the admin's kind
+
+#### Scenario: Dry run
+- **WHEN** the command runs with `--dry-run`
+- **THEN** it lists every group with the copy it would keep and those it would delete, and no event changes

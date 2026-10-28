@@ -5,11 +5,11 @@ Run the venue and event pipeline on a schedule on the host, in dependency order,
 ## ADDED Requirements
 
 ### Requirement: The daily job runs the daily pipeline in order
-The daily job SHALL run, in this order: `sync_venues_from_gsheets`, `lookup_venue_places`, `lookup_venue_places --refresh-stale`, and `fetch_events --all`.
+The daily job SHALL run, in this order: `sync_venues_from_gsheets`, `lookup_venue_places`, `lookup_venue_places --refresh-stale`, `fetch_events --all`, `match_spotify_artists --limit 1000` and `match_apple_music_artists --limit 1000`. The artist matching runs daily, after the fetch, so new events' artists are matched the next morning, and a matching run cut short by a rate limit carries on the next day.
 
 #### Scenario: Daily run
 - **WHEN** the daily job runs and every step succeeds
-- **THEN** the four commands run in that order, and the job succeeds
+- **THEN** the six commands run in that order, and the job succeeds
 
 ### Requirement: The weekly job runs the source check and matching in order
 The weekly job SHALL run, in this order: `check_event_sources`, `match_ticketmaster_venues`, and `match_eventbrite_organizers`.

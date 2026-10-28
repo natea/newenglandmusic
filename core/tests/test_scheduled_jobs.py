@@ -27,7 +27,7 @@ DAILY = [
     "manage.py lookup_venue_places",
     "manage.py lookup_venue_places --refresh-stale",
     "manage.py fetch_events --all",
-    "manage.py match_spotify_artists --limit 1000",
+    "manage.py match_spotify_artists --limit 500",
     "manage.py match_apple_music_artists --limit 1000",
 ]
 WEEKLY = [

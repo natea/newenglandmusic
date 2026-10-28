@@ -141,7 +141,7 @@ Names that are ambiguous, not found or marked "no Spotify artist" SHALL show no 
 - **THEN** the browser follows the link to the artist's page on Spotify
 
 ### Requirement: Spotify requests are throttled and recover from rate limits
-The command SHALL space its Spotify requests at least 2 seconds apart. On a 429 it SHALL wait as long as the `Retry-After` header says, backing off exponentially, for at most three tries for the same request. When a request still fails, or fails with another error, the command SHALL leave that name's link unchanged, count the failure, and continue with the other names.
+The command SHALL space its Spotify requests at least 0.5 seconds apart. On a 429 it SHALL wait as long as the `Retry-After` header says, backing off exponentially, for at most three tries for the same request. When a request still fails, or fails with another error, the command SHALL leave that name's link unchanged, count the failure, and continue with the other names.
 
 When a `Retry-After` asks for more than 60 seconds, the app is blocked for a long time. The command SHALL then stop searching without waiting, and keep and re-render what it found so far. The next run SHALL carry on with the names still due.
 
