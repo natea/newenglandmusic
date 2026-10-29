@@ -14,9 +14,10 @@ import time
 
 import requests
 
+from core.user_agent import USER_AGENT
+
 WIKIDATA_URL = "https://query.wikidata.org/sparql"
 MUSICBRAINZ_URL = "https://musicbrainz.org/ws/2/"
-USER_AGENT = "venue-db-event-check/1.0 (+https://newenglandmusic.onrender.com)"
 TIMEOUT_SECONDS = 30
 WIKIDATA_BATCH = 200
 MUSICBRAINZ_SECONDS_BETWEEN_REQUESTS = 1.1
