@@ -317,6 +317,9 @@ class Venue(models.Model):
         CONFIDENT = "confident", "Confident match"
         REVIEW = "review", "Needs review"
         NOT_FOUND = "not_found", "Not found"
+        # set by an admin for a venue with no single place, such as a festival across a
+        # town: no lookup searches for it, and it keeps the sheet's coordinates
+        SKIPPED = "skipped", "Not looked up (no single place)"
 
     # not from the sheet: the venue as found on google places by the lookup_venue_places
     # command. the sheet's coordinates are only town centres, so these are used instead

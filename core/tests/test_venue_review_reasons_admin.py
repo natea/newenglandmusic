@@ -1,11 +1,13 @@
+import datetime
 import os
 from unittest import mock
 
-from core.models import Venue
+from core.models import Event, Venue
 from core.places import PlacesClient, PlacesError
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 Status = Venue.PlaceLookupStatus
 
@@ -121,3 +123,48 @@ class GoogleNameAdminTestCase(TestCase):
         response = self.client.get(self.name_url(self.dewey))
         self.assertEqual(response.status_code, 302)
         self.place_name.assert_not_called()
+
+
+class SkipPlaceLookupAdminTestCase(TestCase):
+    """"don't look up on google", for a venue with no single place (skip-place-lookup)"""
+
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+        self.porchfest = review(
+            "Porchfest", ["name", "type"], 1.2, city_town="Somerville", state="MA",
+            latitude=42.3876, longitude=-71.0995, place_latitude=42.3960, place_longitude=-71.1220,
+        )
+        self.event = Event.objects.create(title="porchfest", starttime=timezone.now() + datetime.timedelta(days=3), venue=self.porchfest)
+
+    def act(self, action, venue, query="?place_lookup_status__exact=review"):
+        # as from the review list, whose filter a cleared venue no longer matches
+        url = reverse("admin:core_venue_changelist") + query
+        return self.client.post(url, {"action": action, "_selected_action": [venue.pk]}, follow=True)
+
+    def test_marking_a_festival(self):
+        response = self.act("skip_place_lookup", self.porchfest)
+        messages = [str(m) for m in response.context["messages"]]
+        self.assertEqual(messages, ["1 venue won't be looked up on Google. Clear their lookup to undo."])
+        venue = Venue.objects.get(pk=self.porchfest.pk)
+        self.assertEqual(venue.place_lookup_status, Status.SKIPPED)
+        self.assertEqual(
+            (venue.place_id, venue.place_latitude, venue.place_longitude, venue.place_looked_up_at),
+            ("", None, None, None),
+        )
+        self.assertEqual((venue.place_review_reasons, venue.place_distance_km), ([], None))
+        self.assertEqual(venue.exact_location, (42.3876, -71.0995))
+        # the event's stored map pin is the sheet's
+        html = Event.all_objects.get(pk=self.event.pk).baked_html_template
+        self.assertIn('data-venue-lnglat="-71.0995,42.3876"', html)
+
+    def test_undoing_it(self):
+        self.act("skip_place_lookup", self.porchfest)
+        self.act("clear_place_lookup", self.porchfest, query="?place_lookup_status__exact=skipped")
+        self.assertEqual(Venue.objects.get(pk=self.porchfest.pk).place_lookup_status, "")
+
+    def test_filtering(self):
+        Venue.objects.create(name="The Sinclair", place_lookup_status=Status.CONFIDENT)
+        self.act("skip_place_lookup", self.porchfest)
+        response = self.client.get(reverse("admin:core_venue_changelist") + "?place_lookup_status__exact=skipped")
+        self.assertEqual([v.name for v in response.context["cl"].result_list], ["Porchfest"])
+        self.assertContains(response, "Not looked up (no single place)")

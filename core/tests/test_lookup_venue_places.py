@@ -7,7 +7,7 @@ from unittest import mock
 
 from core.event_actions import actions_html
 from core.management.commands import lookup_venue_places as lookup
-from core.models import Event, Venue
+from core.models import Event, JobRun, Venue
 from core.places import PlaceNotFound, PlacesError, to_place_dict
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -503,3 +503,39 @@ class ReviewReasonsTestCase(LookupVenuePlacesTestCase):
         output = self.run_lookup("--review", "--dry-run", results={"Paradise Rock Club": [place("Agganis Arena")]})
         self.assertIn("[failed: name]", output)
         self.assertEqual(Venue.objects.get(pk=self.paradise.pk).place_review_reasons, [])
+
+
+class SkippedVenueTestCase(TestCase):
+    """a venue an admin marked "don't look up on google" (skip-place-lookup)"""
+
+    # the refresh tests' venue and mocks, without their tests
+    lookup = RefreshAndExpiryTestCase.lookup
+    refreshed = RefreshAndExpiryTestCase.refreshed
+
+    def setUp(self):
+        RefreshAndExpiryTestCase.setUp(self)
+        # a place id left behind is the worst case: the admin action removes it
+        Venue.objects.filter(pk=self.venue.pk).update(place_lookup_status=Venue.PlaceLookupStatus.SKIPPED)
+
+    def assert_left_alone(self, output):
+        self.assertEqual((self.searches, self.details_calls), ([], []))
+        self.assertEqual(self.refreshed().place_lookup_status, Venue.PlaceLookupStatus.SKIPPED)
+        self.assertNotIn("Paradise Rock Club", output)
+
+    def test_every_mode_skips_it(self):
+        for args in ((), ("--refresh",), ("--review",), ("--refresh-stale",)):
+            with self.subTest(args=args):
+                self.assert_left_alone(self.lookup(*args))
+
+    def test_named_explicitly(self):
+        self.assert_left_alone(self.lookup("--refresh", "--sheet-ids", "V0089"))
+
+    def test_not_in_the_job_summary(self):
+        self.lookup()
+        summary = JobRun.objects.latest("pk").summary
+        self.assertNotIn("skipped", [group for group, _ in summary])
+
+    def test_others_are_still_looked_up(self):
+        Venue.objects.create(sheet_id="V0090", name="The Sinclair", city_town="Cambridge", state="MA", is_active=True)
+        self.lookup()
+        self.assertEqual(self.searches, ["The Sinclair, Cambridge, MA"])

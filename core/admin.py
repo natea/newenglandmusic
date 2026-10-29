@@ -536,6 +536,7 @@ class VenueAdmin(admin.ModelAdmin):
         "mark_as_active",
         "mark_place_as_confident",
         "clear_place_lookup",
+        "skip_place_lookup",
     ]
     fieldsets = (
         (None, {"fields": ("sheet_id", "name", "is_active", "venue_type", "size")}),
@@ -770,6 +771,21 @@ class VenueAdmin(admin.ModelAdmin):
             venue.place_review_reasons = []
             venue.place_distance_km = None
             venue.save()
+
+    @admin.action(description="Don't look up on Google (no single place, e.g. a festival)")
+    def skip_place_lookup(self, request, queryset):
+        """
+        for a venue with no single place, such as a festival across a town: its matched place
+        goes, as when clearing, and no lookup searches for it again. clearing undoes it
+        """
+        # the ids first: the queryset keeps the list's filters, and once cleared a venue no
+        # longer matches "needs review"
+        pks = list(queryset.values_list("pk", flat=True))
+        self.clear_place_lookup(request, queryset)
+        # update(): clearing just saved them, re-rendering their events with the sheet's pins
+        count = Venue.objects.filter(pk__in=pks).update(place_lookup_status=Venue.PlaceLookupStatus.SKIPPED)
+        venues = "1 venue" if count == 1 else f"{count} venues"
+        self.message_user(request, f"{venues} won't be looked up on Google. Clear their lookup to undo.")
 
 
 admin.site.register(Venue, VenueAdmin)

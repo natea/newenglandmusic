@@ -26,7 +26,9 @@ then is its location used (see Venue.exact_location). anything else is saved as 
 review, for an admin to confirm or clear in the venue admin, with the checks it failed
 (name, state, distance) and its distance, so the admin can say why. --review searches again
 only for venues needing review, to record those reasons for ones looked up before. venues already looked up are
-skipped unless --refresh is given.
+skipped unless --refresh is given. a venue an admin marked "don't look up on google" (one with
+no single place, such as a festival across a town) is skipped by every mode, even when named
+with --sheet-ids; clearing its lookup in the venue admin undoes that.
 
 google's terms allow storing only the place id (indefinitely) and its coordinates (for
 30 days), so that's all that's saved; the result's name, address and open/closed status
@@ -207,7 +209,8 @@ class Command(RecordedCommand, BaseCommand):
             self.report_expired(expired, options["dry_run"])
 
     def selected_venues(self, options):
-        venues = Venue.objects.order_by("sheet_id")
+        # every mode leaves alone a venue an admin marked as having no single place
+        venues = Venue.objects.order_by("sheet_id").exclude(place_lookup_status=Venue.PlaceLookupStatus.SKIPPED)
         if options["sheet_ids"]:
             venues = venues.filter(sheet_id__in=options["sheet_ids"].split(","))
         else:
@@ -226,7 +229,8 @@ class Command(RecordedCommand, BaseCommand):
         if options["limit"]:
             venues = venues[: options["limit"]]
 
-        groups = {status: [] for status in Venue.PlaceLookupStatus.values}
+        # what a lookup can decide; "skipped" is an admin's, and those venues aren't selected
+        groups = {status: [] for status in Venue.PlaceLookupStatus.values if status != Venue.PlaceLookupStatus.SKIPPED}
         groups["closed"] = []
         groups["failed"] = []
         venues = list(venues)
