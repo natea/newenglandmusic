@@ -6,7 +6,7 @@
 
 **Goals:** a record for every act the events name that MusicBrainz can settle as one kind, and a list of the rest for an editor, without guessing.
 
-**Non-Goals:** linking events to records; names from titles; splitting duos; a scheduled run.
+**Non-Goals:** replacing the Artists text, or showing performers to visitors; names from titles; splitting duos; a scheduled run.
 
 ## Decisions
 
@@ -27,12 +27,19 @@ A record without a state skips enrichment's "placed only outside the US" check, 
 
 **5. Pace and stopping.** The existing paced client (`MusicIds`, 1.1 s between requests). Each name costs two searches and, for candidates with areas, area lookups (cached per run). `MusicBrainzBusy` stops the run; records made so far are kept, each saved as it's decided, and the next run skips them.
 
-**How it's tested.** With `core/tests/musicbrainz_fixture.FakeMusicBrainz` and `FakeLastFm`: a band, a person, both, not found, several without evidence, placeholders and repeats and existing records skipped, unapproved events ignored, the dry run, the review CSV's columns, a busy MusicBrainz stopping the run, and the review CSV imported by `import_artists` (with `Act_ID` and `Kind` filled in). Nothing reaches the network.
+**6. `EventPerformer`, not two many-to-many fields.** `EventPerformer(event, artist (nullable), band (nullable), order, source)`, with a check constraint that exactly one of `artist` and `band` is set, and unique constraints on `(event, artist)` and `(event, band)`. One table keeps one billing order across artists and bands, which two `ManyToManyField`s (`Event.artists_linked`, `Event.bands_linked`) couldn't. Alternative rejected: a generic foreign key, which the admin's autocomplete and Django's constraints handle poorly. `source` is `names` or `editor`.
+
+**7. Linking from the names.** `core/event_performers.link_from_names(event, records=None)`: `split_names(event.artists)` minus placeholders, each looked up by `name_key` in a map of every artist's and band's `name_key` to its record, built once per run (names with two records map to none). It deletes the event's `names` links and creates the new ones, in order, skipping a record the event already has from an editor; `order` follows the names, and editor links keep theirs. `import_artists_from_events` calls it for every approved event after making records (a few thousand inserts, in one transaction); `fetch_events.save_event` calls it after `event.save()`, outside a dry run. Nothing reads the links for visitors yet, so stored event HTML isn't re-rendered.
+
+**8. The admin.** An `EventPerformerInline` (tabular, ordered by `order`) on `EventAdmin`, with `autocomplete_fields = ("artist", "band")` (both admins already have `search_fields`) and `source` read-only; `save_formset` marks new rows `editor`. An editor who removes a link from names sees it come back if the name stays in the text: removing the name from the text is how to unlink it, which the inline's help text says.
+
+**How it's tested.** With `core/tests/musicbrainz_fixture.FakeMusicBrainz` and `FakeLastFm`: a band, a person, both, not found, several without evidence, placeholders and repeats and existing records skipped, unapproved events ignored, the dry run, the review CSV's columns, a busy MusicBrainz stopping the run, and the review CSV imported by `import_artists` (with `Act_ID` and `Kind` filled in). For the links: several acts in order, a name with no record, two records with one name, the text changing, an editor's performer kept, the constraint on artist-or-band, `fetch_events` linking a saved event (and not in a dry run), and the admin inline adding an editor's performer. Nothing reaches the network.
 
 ## Risks / Trade-offs
 
 - **[A same-named act]** A local act sharing an exact name with the only MusicBrainz act of one kind gets that act's ID. → The same risk the Spotify matching takes; an editor clears it in the admin, and the review list catches every name with two candidates.
 - **[Duo billings and odd entries]** "Dana and Alden", "Cooking Class x No Stupid Questions" → whole names that MusicBrainz doesn't know go on the review list; the splitter already breaks "x" and "w/".
+- **[An editor's removed link comes back]** A link made from a name is rebuilt from the text. → Removing the name from the text unlinks it, as the inline's help text says; an "unlinked" list is a follow-up if it's needed.
 - **[Run time]** About an hour for 950 names. → `--limit`, most-named first; a stopped run resumes where it left off.
 
 ## Migration Plan
