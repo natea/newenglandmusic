@@ -163,3 +163,16 @@ class PlaceDetailsTestCase(SimpleTestCase):
         with self.assertRaises(places.PlacesError) as raised:
             client.place_details("x")
         self.assertNotIn("SECRETKEY", str(raised.exception))
+
+
+class PlaceNameTestCase(SimpleTestCase):
+    def test_asks_for_the_name_alone(self):
+        client, session, _ = client_with(response(data={"displayName": {"text": "Three Dollar Deweys"}}))
+        self.assertEqual(client.place_name("ChIJdewey"), "Three Dollar Deweys")
+        args, kwargs = session.request.call_args
+        self.assertEqual(args, ("GET", "https://places.googleapis.com/v1/places/ChIJdewey"))
+        self.assertEqual(kwargs["headers"]["X-Goog-FieldMask"], "displayName")
+
+    def test_place_without_a_name(self):
+        client, _, _ = client_with(response(data={}))
+        self.assertEqual(client.place_name("ChIJx"), "")

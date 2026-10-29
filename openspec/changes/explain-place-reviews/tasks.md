@@ -17,6 +17,8 @@
 
 - [x] 3.1 Add the "Why review" column and the reason filter to the venue admin, and clear the fields in the "mark confident" and "clear" actions. Verify with admin tests for why a venue needs review, filtering by reason, and the actions clearing the reasons.
 
+- [x] 3.2 Show Google's name for a review venue's place, asked for live by place ID and never stored: on its venue page, and in the list on a click (`PlacesClient.place_name`, an admin view, `google-name.js`). Verify with tests that the list asks Google nothing, a click asks for that venue only, nothing is saved, only review venues are looked up, failures show without the key, and only admins can ask.
+
 ## 4. Docs and check
 
 - [x] 4.1 Document `--review` and the reasons in PRODUCTION.md's Google Places section. Run the whole suite with outbound network blocked, then run `lookup_venue_places --review --dry-run --limit 20` locally, which spends 20 Places requests, after asking. Verify that the tests pass, and that the printed reasons match what the Maps links show.

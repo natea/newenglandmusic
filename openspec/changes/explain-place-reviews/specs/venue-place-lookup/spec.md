@@ -24,7 +24,7 @@ A result SHALL be stored as confident only when its name matches the venue's nam
 - **THEN** the venue is marked as not found and nothing else changes
 
 ### Requirement: Admins can settle uncertain matches
-The venue admin SHALL show the place ID, the looked-up coordinates, when they were fetched and a Google Maps link from the place ID. It SHALL filter by lookup status, and SHALL let an admin mark a match needing review as confident, or clear a venue's lookup. For a match needing review, the list SHALL show a "Why review" column naming its reasons in words ("name differs", "in another state", "38 km away"), and SHALL filter by each reason. Marking a match confident, or clearing a lookup, SHALL clear its reasons and distance.
+The venue admin SHALL show the place ID, the looked-up coordinates, when they were fetched and a Google Maps link from the place ID. It SHALL filter by lookup status, and SHALL let an admin mark a match needing review as confident, or clear a venue's lookup. For a match needing review, the list SHALL show a "Why review" column naming its reasons in words ("name differs", "in another state", "38 km away"), and SHALL filter by each reason. For a match needing review, the admin SHALL also show the place's name on Google, asked for by its place ID when needed and never stored: on the venue's page when it opens, and in the list only when the admin asks for that venue. Loading the list SHALL NOT ask Google for anything. Marking a match confident, or clearing a lookup, SHALL clear its reasons and distance.
 
 #### Scenario: Confirming a match
 - **WHEN** an admin marks a venue's review-needed match as confident
@@ -38,6 +38,20 @@ The venue admin SHALL show the place ID, the looked-up coordinates, when they we
 - **WHEN** an admin opens the venue list filtered to "Needs review"
 - **THEN** each venue shows why, such as "name differs · 0.4 km away" for $3 Dewey's
 
+#### Scenario: Google's name on the venue page
+- **WHEN** an admin opens "$3 Dewey's", a venue needing review
+- **THEN** the page shows Google's name for its place, "Three Dollar Deweys", and nothing is saved
+
+#### Scenario: Google's name in the list, on request
+- **WHEN** an admin loads the venue list
+- **THEN** Google is asked for nothing, and each venue needing review has a "show Google's name" link
+- **WHEN** the admin clicks it for "$3 Dewey's"
+- **THEN** Google is asked for that place's name alone, and it's shown in place of the link
+
+#### Scenario: Confident venues aren't looked up
+- **WHEN** an admin opens a venue whose match is confident
+- **THEN** Google isn't asked for its name
+
 #### Scenario: Filter by reason
 - **WHEN** an admin filters the list by the reason "in another state"
 - **THEN** only review venues whose match failed the state check are listed
@@ -50,7 +64,7 @@ For a looked-up venue, the lookup SHALL store only:
 - the time the coordinates were fetched;
 - for a match needing review, which of the lookup's checks it failed, and its distance from the sheet's coordinates. These are the site's own judgments about the match, not Places content. The distance SHALL be deleted whenever the coordinates are.
 
-No other Places content SHALL be stored: not the place's name, address, business status, Maps link, website or phone. That includes stored event HTML, which keeps only coordinates. The lookup MAY use other content while it runs, to judge a match and to report closed venues.
+No other Places content SHALL be stored: not the place's name, address, business status, Maps link, website or phone. That includes stored event HTML, which keeps only coordinates. The lookup MAY use other content while it runs, to judge a match and to report closed venues, and the venue admin MAY show a review venue's name on Google, fetched when an admin asks.
 
 #### Scenario: Confident match is stored
 - **WHEN** a lookup confidently matches "Paradise Rock Club" to a place

@@ -27,6 +27,12 @@
 - **The filter:** `PlaceReviewReasonFilter` lists the three reasons, using `place_review_reasons__contains=[reason]`.
 - **Clearing:** the "mark confident" and "clear" actions empty both fields.
 
+**3a. Google's name, shown live (added 2026-10-29).** The reasons say a name differs but not what Google calls the place, and judging a match needs both names. Storing Google's name, even until the review is settled, would break the terms, which allow only the place ID and 30 days of coordinates. So the admin asks Place Details for `displayName` alone by the stored place ID, and shows it without saving it:
+- **On a review venue's page,** when it opens.
+- **In the list,** a "show Google's name" link per review venue, which fetches the name from an admin view and puts it in place of the link. Looking names up as the list loads would spend up to 100 requests a page view, so it waits for a click.
+
+The view answers only for review venues, only to admins, and with `Cache-Control: no-store`, so a browser doesn't keep it either. A missing key or a failed request shows as text in place of the name, without the key.
+
 **4. `--review` for the backfill.** It selects `place_lookup_status=REVIEW`, ignoring whether a venue was looked up before, and otherwise runs the plain search path. It's a one-off, run manually, not added to `bin/daily.sh`.
 
 **How it's tested.** Nothing reaches the network.
