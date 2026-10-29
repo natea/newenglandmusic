@@ -3,7 +3,7 @@ from unittest import mock
 
 from core.management.commands import enrich_artists_from_musicbrainz as command
 from core.models import Artist, Band, BandMembership, MusicAct
-from core.tests.musicbrainz_fixture import SPEEDY_ORTIZ, FakeLastFm, FakeMusicBrainz
+from core.tests.musicbrainz_fixture import SPEEDY_ORTIZ, FakeLastFm, FakeMusicBrainz, fake_wikipedia
 from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.test import TestCase
@@ -68,7 +68,10 @@ class ArtistAdminTestCase(TestCase):
         self.assertEqual((band.musicbrainz_status, band.field_sources["musicbrainz_id"]), (Status.EDITOR, "editor"))
         # a refresh looks it up by that id, and keeps it as the editor's
         mb = FakeMusicBrainz()
-        with mock.patch.object(command, "MusicIds", return_value=mb), mock.patch.object(command.lastfm, "api_key", return_value=None):
+        wikipedia, _ = fake_wikipedia()
+        with mock.patch.object(command, "MusicIds", return_value=mb), mock.patch.object(command.lastfm, "api_key", return_value=None), mock.patch.object(
+            command, "Wikipedia", return_value=wikipedia
+        ):
             call_command("enrich_artists_from_musicbrainz", "--refresh", stdout=StringIO())
         band.refresh_from_db()
         self.assertEqual((band.musicbrainz_id, band.musicbrainz_status), (SPEEDY_ORTIZ, Status.EDITOR))
@@ -105,3 +108,24 @@ class ArtistAdminTestCase(TestCase):
         html = self.change(self.band).content.decode()
         self.assertIn("indie rock", html)
         self.assertIn("genres from <a href=\"https://musicbrainz.org/doc/About/Data_License\">MusicBrainz</a>, CC BY-NC-SA", html)
+
+
+class IntroductionAdminTestCase(TestCase):
+    def test_the_credit(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+        band = Band.objects.create(
+            name="Speedy Ortiz", wikipedia_extract="Speedy Ortiz is an American indie rock band.",
+            wikipedia_url="https://en.wikipedia.org/wiki/Speedy_Ortiz", disambiguation="Northampton band",
+        )
+        html = self.client.get(reverse("admin:core_band_change", args=[band.pk])).content.decode()
+        self.assertIn("Speedy Ortiz is an American indie rock band.", html)
+        self.assertIn('From the Wikipedia article <a href="https://en.wikipedia.org/wiki/Speedy_Ortiz"', html)
+        self.assertIn('<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>', html)
+        self.assertIn("Northampton band", html)
+
+    def test_clearing_a_match_clears_the_introduction(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+        band = Band.objects.create(name="X", musicbrainz_id=OTHER, wikipedia_extract="text", wikipedia_url="https://en.wikipedia.org/wiki/X", disambiguation="d")
+        self.client.post(reverse("admin:core_band_changelist"), {"action": "clear_musicbrainz_match", "_selected_action": [band.pk]})
+        band.refresh_from_db()
+        self.assertEqual((band.wikipedia_extract, band.wikipedia_url, band.disambiguation), ("", "", ""))

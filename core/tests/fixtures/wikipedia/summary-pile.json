@@ -1,0 +1,39 @@
+{
+ "type": "disambiguation",
+ "title": "Pile",
+ "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Pile</span></span>",
+ "namespace": {
+  "id": 0,
+  "text": ""
+ },
+ "wikibase_item": "Q1904424",
+ "titles": {
+  "canonical": "Pile",
+  "normalized": "Pile",
+  "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Pile</span></span>"
+ },
+ "pageid": 2430583,
+ "lang": "en",
+ "dir": "ltr",
+ "revision": "1296232734",
+ "tid": "f4786bc2-4c72-11f0-a7b0-afb0b76044a2",
+ "timestamp": "2025-06-18T18:35:06Z",
+ "description": "Topics referred to by the same term",
+ "description_source": "local",
+ "content_urls": {
+  "desktop": {
+   "page": "https://en.wikipedia.org/wiki/Pile",
+   "revisions": "https://en.wikipedia.org/wiki/Pile?action=history",
+   "edit": "https://en.wikipedia.org/wiki/Pile?action=edit",
+   "talk": "https://en.wikipedia.org/wiki/Talk:Pile"
+  },
+  "mobile": {
+   "page": "https://en.wikipedia.org/wiki/Pile",
+   "revisions": "https://en.wikipedia.org/wiki/Special:History/Pile",
+   "edit": "https://en.wikipedia.org/wiki/Pile?action=edit",
+   "talk": "https://en.wikipedia.org/wiki/Talk:Pile"
+  }
+ },
+ "extract": "Pile or Piles may refer to:",
+ "extract_html": "<p><b>Pile</b> or <b>Piles</b> may refer to:</p>"
+}

@@ -857,6 +857,15 @@ class MusicAct(models.Model):
     genres = ArrayField(models.CharField(max_length=100), blank=True, default=list)
     wikidata_id = models.CharField(max_length=16, blank=True, default="")
     discogs_url = models.URLField(blank=True, default="")
+    # musicbrainz's short note telling same-named acts apart ("Boston indie rock band"), cc0
+    disambiguation = models.CharField(max_length=255, blank=True, default="")
+    # the opening paragraph of the act's english wikipedia article, found through its
+    # wikidata id: cc by-sa 4.0, kept word for word and credited wherever it's shown, with
+    # a link to the article and the licence (see core/wikipedia.py)
+    wikipedia_extract = models.TextField(blank=True, default="")
+    wikipedia_url = models.URLField(max_length=500, blank=True, default="")
+    wikipedia_revision = models.CharField(max_length=32, blank=True, default="")
+    wikipedia_fetched_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -1,5 +1,6 @@
 import os
 import re
+from urllib.parse import unquote
 from datetime import date
 
 from dateutil import relativedelta
@@ -22,6 +23,7 @@ from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filt
 from . import apple_music, youtube
 from .places import PlacesClient, PlacesError
 from .spotify import parse_artist_id
+from .wikipedia import LICENSE_URL
 from .spotify_links import rebake_events_naming
 from .artist_matching import normalize
 from .job_runs import DIDNT_FINISH, STALE_AFTER, outcome
@@ -1276,7 +1278,9 @@ admin.site.register(YouTubeArtistLink, YouTubeArtistLinkAdmin)
 
 MUSICBRAINZ_FIELDS = (
     "mb_type", "country", "area", "begin_date", "end_date", "genres", "wikidata_id", "discogs_url",
+    "disambiguation",
 )
+WIKIPEDIA_FIELDS = ("wikipedia_extract", "wikipedia_url", "wikipedia_revision", "wikipedia_fetched_at")
 
 
 class BandMembershipInline(admin.TabularInline):
@@ -1303,7 +1307,7 @@ class MusicActAdmin(admin.ModelAdmin):
     actions = ["clear_musicbrainz_match"]
     readonly_fields = (
         "musicbrainz_status", "musicbrainz_checked_at", "musicbrainz_page", "genres_from_musicbrainz",
-        *[f for f in MUSICBRAINZ_FIELDS if f != "genres"], "field_sources",
+        *[f for f in MUSICBRAINZ_FIELDS if f != "genres"], "field_sources", "introduction_from_wikipedia",
     )
     fieldsets = (
         (None, {"fields": ("name", "act_id", "city_town", "state", "website", "bandcamp_url", "notes")}),
@@ -1313,10 +1317,12 @@ class MusicActAdmin(admin.ModelAdmin):
                 "description": "set the MusicBrainz id to choose the artist by hand; enrichment then looks it up and never replaces it",
                 "fields": (
                     "musicbrainz_id", "musicbrainz_status", "musicbrainz_checked_at", "musicbrainz_page", "mb_type",
-                    "country", "area", "begin_date", "end_date", "genres_from_musicbrainz", "wikidata_id", "discogs_url",
+                    "disambiguation", "country", "area", "begin_date", "end_date", "genres_from_musicbrainz",
+                    "wikidata_id", "discogs_url",
                 ),
             },
         ),
+        ("Introduction", {"fields": ("introduction_from_wikipedia",)}),
         ("Who set what", {"fields": ("field_sources",), "classes": ("collapse",)}),
     )
 
@@ -1337,6 +1343,18 @@ class MusicActAdmin(admin.ModelAdmin):
         return format_html(
             '{} <span class="help">(genres from <a href="https://musicbrainz.org/doc/About/Data_License">MusicBrainz</a>, CC BY-NC-SA)</span>',
             ", ".join(act.genres),
+        )
+
+    @admin.display(description="from Wikipedia")
+    def introduction_from_wikipedia(self, act):
+        # cc by-sa 4.0: shown word for word, with a link to the article and the licence
+        if not act.wikipedia_extract:
+            return "-"
+        return format_html(
+            '<p>{}</p><p class="help">From the Wikipedia article <a href="{}" target="_blank" rel="noopener">{}</a>, '
+            'under <a href="{}" target="_blank" rel="noopener">CC BY-SA 4.0</a> (fetched {})</p>',
+            act.wikipedia_extract, act.wikipedia_url, unquote(act.wikipedia_url.rsplit("/", 1)[-1]).replace("_", " "),
+            LICENSE_URL, act.wikipedia_fetched_at.date() if act.wikipedia_fetched_at else "",
         )
 
     def save_model(self, request, act, form, change):
@@ -1375,6 +1393,9 @@ def clear_musicbrainz(act):
     act.musicbrainz_checked_at = None
     for name in MUSICBRAINZ_FIELDS:
         setattr(act, name, [] if name == "genres" else "")
+    # found through musicbrainz's wikidata link, so it goes with it
+    for name in WIKIPEDIA_FIELDS:
+        setattr(act, name, None if name == "wikipedia_fetched_at" else "")
     for name in ("website", "bandcamp_url"):
         if act.field_sources.get(name) == "musicbrainz":
             setattr(act, name, "")

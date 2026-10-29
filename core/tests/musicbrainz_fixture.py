@@ -61,3 +61,53 @@ class FakeLastFm:
     def artist_info(self, name):
         self.calls.append(name)
         return self.pages.get(name)
+
+
+WIKIPEDIA_FIXTURES = Path(__file__).parent / "fixtures" / "wikipedia"
+SPEEDY_ORTIZ_WIKIDATA = "Q17091953"
+
+
+def load_wikipedia(name):
+    return json.loads((WIKIPEDIA_FIXTURES / f"{name}.json").read_text())
+
+
+class FakeWikipediaSession:
+    """
+    a requests session answering wikidata's sitelinks and wikipedia's summaries from
+    recorded responses, for core.wikipedia.Wikipedia; anything else is a 404
+    """
+
+    def __init__(self, summaries=None, titles=None, status=200):
+        self.summaries = {"Speedy_Ortiz": load_wikipedia("summary-speedy-ortiz"), "Pile": load_wikipedia("summary-pile"), **(summaries or {})}
+        self.titles = {SPEEDY_ORTIZ_WIKIDATA: "Speedy Ortiz", **(titles or {})}
+        self.status = status
+        self.requests = []
+
+    def get(self, url, params=None, headers=None, timeout=None):
+        self.requests.append((url, params, headers))
+        if self.status != 200:
+            return FakeResponse(self.status, {})
+        if url.startswith("https://www.wikidata.org/"):
+            qid = params["ids"]
+            title = self.titles.get(qid)
+            sitelinks = {"enwiki": {"site": "enwiki", "title": title}} if title else {}
+            return FakeResponse(200, {"entities": {qid: {"id": qid, "sitelinks": sitelinks}}})
+        title = url.rsplit("/", 1)[-1]
+        summary = self.summaries.get(title)
+        return FakeResponse(200, copy.deepcopy(summary)) if summary else FakeResponse(404, {})
+
+
+class FakeResponse:
+    def __init__(self, status_code, data):
+        self.status_code = status_code
+        self.data = data
+
+    def json(self):
+        return self.data
+
+
+def fake_wikipedia(**kwargs):
+    from core.wikipedia import Wikipedia
+
+    session = FakeWikipediaSession(**kwargs)
+    return Wikipedia(session=session, sleep=lambda seconds: None), session

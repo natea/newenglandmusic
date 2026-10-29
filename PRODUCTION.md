@@ -386,7 +386,10 @@ venv/bin/python manage.py enrich_artists_from_musicbrainz --limit 20 --dry-run
 
 It finds each record's MusicBrainz artist and stores its ID, type, country, area, dates, genres, links (official site, Bandcamp, Wikidata, Discogs) and a band's members. It accepts a search only for an exact name of the right kind; a name several acts share needs evidence (a covered state, or Last.fm's page naming the MusicBrainz ID), else it's marked "ambiguous". About 2 seconds a record, at MusicBrainz's one request a second. In the admin, set a record's MusicBrainz ID by hand to settle it (later runs keep it), or use "Clear MusicBrainz match" to search again.
 
+**Introductions.** Enrichment also keeps MusicBrainz's short disambiguation note ("Boston indie rock band"), and, for an act MusicBrainz links to Wikidata, the opening paragraph of its English Wikipedia article (two more requests: Wikidata for the article's title, Wikipedia's summary for its text). It's accepted only when it's an ordinary article of that Wikidata item, and a later run that finds no article removes it. Most small local acts have none.
+
 **What may be kept:**
+- **Wikipedia:** its text is CC BY-SA 4.0. It's kept word for word, with the article's link and revision, and must be credited wherever it's shown: "From the Wikipedia article <link>, under CC BY-SA 4.0 <licence link>", as the admin does. Don't edit it, and don't keep the summary's images, which have their own licences.
 - **MusicBrainz:** its core data (artists, areas, dates, relationships and URLs) is public domain (CC0). Its genre tags are supplementary data under CC BY-NC-SA: kept, admin-only, credited.
 - **Last.fm:** nothing. Its answer only helps choose between MusicBrainz artists, as its terms require.
 - **Bandcamp:** only a link. It has no public API (only labels and merch partners get one), and its acceptable use policy forbids scraping, so nothing is ever requested from it, through a scraping service or otherwise.

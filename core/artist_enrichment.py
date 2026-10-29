@@ -23,6 +23,7 @@ from core.artist_evidence import covered_places, shares_name
 from core.artist_matching import normalize
 from core.artists import is_bandcamp_url
 from core.models import Artist, Band, BandMembership, MusicAct
+from core.wikipedia import WikipediaError
 
 Status = MusicAct.MusicBrainzStatus
 MUSICBRAINZ = "musicbrainz"
@@ -161,6 +162,7 @@ def apply_details(record, details, status):
         record.musicbrainz_id = details["id"]
     record.musicbrainz_status = status
     record.mb_type = details.get("type") or ""
+    record.disambiguation = (details.get("disambiguation") or "")[:255]
     record.country = (details.get("country") or "")[:2]
     record.area = ((details.get("area") or {}).get("name") or "")[:255]
     record.begin_date = (life.get("begin") or "")[:10]
@@ -227,11 +229,31 @@ def add_members(band, details):
     return added
 
 
-def enrich(record, musicbrainz, matcher):
+def add_introduction(record, wikipedia, problems):
     """
-    looks the record up (by its id when it has one, else by a search), stores what's found
-    and returns (status, members added). raises core.music_ids.MusicIdsError when musicbrainz
-    can't be asked
+    the opening paragraph of the record's english wikipedia article (not saved); none when
+    it has no wikidata id or article. a failed request keeps what it had, and is reported
+    """
+    if not record.wikidata_id:
+        found = None
+    else:
+        try:
+            found = wikipedia.introduction(record.wikidata_id)
+        except WikipediaError as e:
+            problems.append(f"{record.name}: {e}; kept its earlier wikipedia text")
+            return
+    record.wikipedia_extract = found["extract"] if found else ""
+    record.wikipedia_url = found["url"][:500] if found else ""
+    record.wikipedia_revision = found["revision"][:32] if found else ""
+    record.wikipedia_fetched_at = timezone.now() if found else None
+
+
+def enrich(record, musicbrainz, matcher, wikipedia=None, problems=None):
+    """
+    looks the record up (by its id when it has one, else by a search), stores what's found,
+    and its wikipedia introduction when `wikipedia` is given, and returns (status, members
+    added). a wikipedia failure goes in `problems`. raises core.music_ids.MusicIdsError when
+    musicbrainz can't be asked
     """
     now = timezone.now()
     if record.musicbrainz_id:
@@ -252,6 +274,8 @@ def enrich(record, musicbrainz, matcher):
         record.musicbrainz_status = Status.AMBIGUOUS
     else:
         apply_details(record, details, status)
+        if wikipedia is not None:
+            add_introduction(record, wikipedia, problems if problems is not None else [])
     record.musicbrainz_checked_at = now
     record.save()
     if details is not None and isinstance(record, Band):

@@ -6,7 +6,7 @@ from core.artist_enrichment import Matcher, enrich, links, members
 from core.management.commands import enrich_artists_from_musicbrainz as command
 from core.models import Artist, Band, BandMembership, JobRun, MusicAct
 from core.music_ids import MUSICBRAINZ_SECONDS_BETWEEN_REQUESTS, MusicIds
-from core.tests.musicbrainz_fixture import SPEEDY_ORTIZ, FakeLastFm, FakeMusicBrainz, candidate, details, load
+from core.tests.musicbrainz_fixture import SPEEDY_ORTIZ, SPEEDY_ORTIZ_WIKIDATA, FakeLastFm, FakeMusicBrainz, candidate, details, fake_wikipedia, load, load_wikipedia
 from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase
 
@@ -202,10 +202,13 @@ class EnrichTestCase(TestCase):
 
 
 class EnrichCommandTestCase(TestCase):
-    def run_command(self, *args, mb=None, lastfm=None, key="KEY"):
+    def run_command(self, *args, mb=None, lastfm=None, key="KEY", wikipedia=None):
         mb = mb or FakeMusicBrainz()
+        self.wikipedia, self.wikipedia_session = wikipedia or fake_wikipedia()
         out = StringIO()
         with mock.patch.object(command, "MusicIds", return_value=mb), mock.patch.object(
+            command, "Wikipedia", return_value=self.wikipedia
+        ), mock.patch.object(
             command.lastfm, "api_key", return_value=key
         ), mock.patch.object(command.lastfm, "client", return_value=lastfm or FakeLastFm()):
             call_command("enrich_artists_from_musicbrainz", *args, stdout=out)
@@ -281,3 +284,100 @@ class EnrichCommandTestCase(TestCase):
         output, _ = self.run_command(mb=mb)
         self.assertIn("stopping this run", output)
         self.assertEqual(Band.objects.get(name="Speedy Ortiz").musicbrainz_id, SPEEDY_ORTIZ)
+
+
+class WikipediaClientTestCase(SimpleTestCase):
+    def test_requests_user_agent_and_pace(self):
+        wikipedia, session = fake_wikipedia()
+        sleeps = []
+        wikipedia.sleep = sleeps.append
+        found = wikipedia.introduction(SPEEDY_ORTIZ_WIKIDATA)
+        self.assertTrue(found["extract"].startswith("Speedy Ortiz is an American indie rock band from Northampton"))
+        self.assertEqual(found["url"], "https://en.wikipedia.org/wiki/Speedy_Ortiz")
+        (wikidata_url, params, headers), (summary_url, _, _) = session.requests
+        self.assertEqual(wikidata_url, "https://www.wikidata.org/w/api.php")
+        self.assertEqual((params["ids"], params["props"], params["sitefilter"]), (SPEEDY_ORTIZ_WIKIDATA, "sitelinks", "enwiki"))
+        self.assertEqual(summary_url, "https://en.wikipedia.org/api/rest_v1/page/summary/Speedy_Ortiz")
+        self.assertIn("venue-db-event-check/1.0", headers["User-Agent"])
+        self.assertEqual(len(sleeps), 1)
+
+    def test_an_id_that_isnt_one_is_never_sent(self):
+        wikipedia, session = fake_wikipedia()
+        self.assertIsNone(wikipedia.introduction("Q1|Q2"))
+        self.assertEqual(session.requests, [])
+
+
+class IntroductionTestCase(TestCase):
+    def enrich(self, band, mb=None, **wikipedia):
+        mb = mb or FakeMusicBrainz()
+        self.wikipedia, self.session = fake_wikipedia(**wikipedia)
+        self.problems = []
+        return enrich(band, mb, Matcher(mb, covered_states=set()), self.wikipedia, self.problems)
+
+    def test_an_act_with_a_wikipedia_article(self):
+        band = Band.objects.create(name="Speedy Ortiz")
+        self.enrich(band)
+        band.refresh_from_db()
+        summary = load_wikipedia("summary-speedy-ortiz")
+        # word for word, with its link and revision
+        self.assertEqual(band.wikipedia_extract, summary["extract"])
+        self.assertEqual(band.wikipedia_url, "https://en.wikipedia.org/wiki/Speedy_Ortiz")
+        self.assertEqual(band.wikipedia_revision, str(summary["revision"]))
+        self.assertIsNotNone(band.wikipedia_fetched_at)
+        # no image: each has its own licence
+        stored = json.dumps(list(Band.objects.values()), default=str)
+        self.assertNotIn(summary["thumbnail"]["source"], stored)
+        self.assertNotIn("upload.wikimedia.org", stored)
+
+    def test_disambiguation_note(self):
+        mbid = HORSE_A
+        mb = FakeMusicBrainz(
+            searches={"Krill": [candidate(mbid, "Krill")]},
+            artists={mbid: details(mbid, "Krill", disambiguation="Boston indie rock band")},
+        )
+        band = Band.objects.create(name="Krill")
+        self.enrich(band, mb)
+        band.refresh_from_db()
+        self.assertEqual(band.disambiguation, "Boston indie rock band")
+
+    def test_a_local_act_without_an_article(self):
+        mb = FakeMusicBrainz(searches={"Krill": [candidate(HORSE_A, "Krill")]}, artists={HORSE_A: details(HORSE_A, "Krill")})
+        band = Band.objects.create(name="Krill")
+        self.enrich(band, mb)
+        self.assertEqual(self.session.requests, [])
+        # and one with a wikidata item but no english article
+        speedy = Band.objects.create(name="Speedy Ortiz")
+        self.enrich(speedy, titles={SPEEDY_ORTIZ_WIKIDATA: None})
+        speedy.refresh_from_db()
+        self.assertEqual((speedy.wikipedia_extract, speedy.wikipedia_url, speedy.wikipedia_fetched_at), ("", "", None))
+        self.assertEqual(len(self.session.requests), 1)
+
+    def test_the_wrong_article(self):
+        # a disambiguation page
+        pile = load_wikipedia("summary-pile")
+        band = Band.objects.create(name="Speedy Ortiz")
+        self.enrich(band, titles={SPEEDY_ORTIZ_WIKIDATA: "Pile"}, summaries={"Pile": {**pile, "wikibase_item": SPEEDY_ORTIZ_WIKIDATA}})
+        band.refresh_from_db()
+        self.assertEqual(band.wikipedia_extract, "")
+        # an article of another wikidata item
+        other = {**load_wikipedia("summary-speedy-ortiz"), "wikibase_item": "Q1"}
+        self.enrich(band, summaries={"Speedy_Ortiz": other})
+        band.refresh_from_db()
+        self.assertEqual(band.wikipedia_extract, "")
+
+    def test_a_later_run_without_an_article_removes_the_old_text(self):
+        band = Band.objects.create(name="Speedy Ortiz")
+        self.enrich(band)
+        band.musicbrainz_checked_at = None
+        self.enrich(band, titles={SPEEDY_ORTIZ_WIKIDATA: None})
+        band.refresh_from_db()
+        self.assertEqual(band.wikipedia_extract, "")
+
+    def test_a_failed_request_keeps_the_text_and_the_match(self):
+        band = Band.objects.create(name="Speedy Ortiz")
+        self.enrich(band)
+        text = Band.objects.get(pk=band.pk).wikipedia_extract
+        status, _ = self.enrich(band, status=503)
+        band.refresh_from_db()
+        self.assertEqual((status, band.musicbrainz_id, band.wikipedia_extract), (Status.MATCHED, SPEEDY_ORTIZ, text))
+        self.assertEqual(self.problems, ["Speedy Ortiz: wikidata: HTTP 503; kept its earlier wikipedia text"])
