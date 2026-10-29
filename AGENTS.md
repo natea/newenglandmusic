@@ -40,6 +40,10 @@ API keys live in `.env`, which is git-ignored:
 - **On a server, the sheet sync reads the sheet with a service account** instead, when `GOOGLE_SERVICE_ACCOUNT_JSON` is set (`core/google_sheets.py`; setup in `PRODUCTION.md`). Never print or log that variable.
 - **The sheet's coordinates are town centres,** not venue locations. Use `Venue.exact_location`, which is the Google Places location when that match is confident.
 
+## Neighborhoods
+
+`lookup_venue_neighborhoods` (weekly) finds each venue on OpenStreetMap (Nominatim, then Overpass for point-only neighborhoods) by its own name and town, never with Google data, and stores `Venue.neighborhood`. No key; one Nominatim request a second; the footer credits "© OpenStreetMap contributors". Tests mock both with `core/tests/osm_fixture.py`.
+
 ## Location lookups
 
 `load_census_gazetteer --year 2026` loads the Census Bureau's Gazetteer files (public domain) into `CensusPlace`, which the location form uses to turn a ZIP code or town into a point (`core/location.py`). Run it once at setup and once a year; it isn't part of the daily job. Tests build small Gazetteer zip files in `core/tests/census_fixture.py` instead of downloading.
@@ -83,7 +87,7 @@ Write the output of long command runs to `logs/`, never to a temporary or scratc
 - **Propose every major change before building it.** Create an OpenSpec proposal (`/opsx:propose`) for any major change: a new feature, capability or data source; a model or schema change; a new external API; or a change to behavior a spec in `openspec/specs/` describes. Implement only after the user has reviewed it, with `/opsx:apply` and then `/opsx:archive`. Small bug fixes and minor tweaks don't need a proposal, but they still need tests. If unsure, ask.
 - **OpenSpec layout:** plans live in `openspec/` (spec-driven schema), and the main specs in `openspec/specs/` describe current behavior.
 - **A feature is complete only when every spec scenario has a passing automated test.** Don't archive a change until it does and all its tasks are checked.
-- **Tests never touch the network.** Mock Google Sheets (`gog`), venue websites, Anthropic, Ticketmaster, Eventbrite, Spotify, Apple Music, YouTube, Last.fm, Wikidata, MusicBrainz and Google Places, or replay recorded fixtures with the keys stripped (`core/tests/fixtures/`). The suite must pass with outbound network blocked.
+- **Tests never touch the network.** Mock Google Sheets (`gog`), venue websites, Anthropic, Ticketmaster, Eventbrite, Spotify, Apple Music, YouTube, Last.fm, Wikidata, MusicBrainz, OpenStreetMap (Nominatim and Overpass) and Google Places, or replay recorded fixtures with the keys stripped (`core/tests/fixtures/`). The suite must pass with outbound network blocked.
 - **When a real run contradicts the design**, update the change's design and tasks. Don't paper over it in code.
 
 ## Code style

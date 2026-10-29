@@ -168,6 +168,7 @@ These run in this order. Each one depends on the one before it:
 | `check_event_sources` | weekly | free, but it crawls every venue's site, so don't run it more often |
 | `match_ticketmaster_venues` | weekly, after the source check | free (Ticketmaster allows 5,000 requests a day) |
 | `match_eventbrite_organizers` | weekly, after the source check | free (Eventbrite allows 2,000 requests an hour). It fetches the pages of venues that link Eventbrite, politely, and links only new venues unless given `--recheck` |
+| `lookup_venue_neighborhoods` | weekly, after the Eventbrite matching | free. It finds venues on OpenStreetMap (Nominatim, one request a second) by their own name and town, and reads their neighborhood, with Overpass for New York and DC. Only venues never looked up, or looked up a year ago; up to 300 a run |
 | `match_spotify_artists --limit 500` | daily, after `fetch_events` | free, but rate limited. It searches Spotify for artist names it hasn't seen, and for automatic matches more than 30 days old, half a second apart, taking about 4 minutes. Spotify doesn't publish its limits, but the number of searches is what counts, not their pace: about 650 half a second apart (2026-10-27) and about 680 two seconds apart (2026-10-28) each got the app blocked for about a day. The block applies to the whole developer account, so a dev app's runs use up production's allowance too. 500 a morning stays under it, and clears a first run's backlog of about 2,700 names in about six days. When blocked, a run stops at once and keeps what it found, and the next morning's carries on. After the backlog, each morning searches only new names |
 | `match_apple_music_artists --limit 1000` | daily, after the Spotify matching | free with the Developer Program membership. Like the Spotify matching, but also looks up each matched artist's top song. Requests go half a second apart, and a long rate-limit block stops the run the same way. It does nothing until the MusicKit key is set |
 | `resolve_artists_with_lastfm --limit 300` | daily, after the Apple Music matching | free. For names several Spotify or Apple Music artists share, it reads Last.fm (half a second apart) and MusicBrainz (a second apart), taking up to about 8 minutes. It does nothing until `LASTFM_API_KEY` is set |
@@ -339,6 +340,18 @@ Once a metro area is chosen, the filter also offers a multi-select of the metro'
 PO-box-only ZIP codes aren't in the Census' ZIP areas, so the form suggests typing the town instead.
 
 The distances use the same venue coordinates as the day maps' pins, so the open Google Places question in the launch checklist covers them too.
+
+## Neighborhoods
+
+Events at city venues show their neighborhood, such as "Boston (West End), MA", and once a town is chosen in the filter, visitors can narrow it to some of its neighborhoods.
+
+**Where they come from:** `lookup_venue_neighborhoods` searches OpenStreetMap's Nominatim for each venue by its own name, town and state. It accepts a result only when the name and town match, and takes the familiar neighborhood name from its address ("suburb" or "quarter" first, skipping historic districts, boroughs and counties). Where OpenStreetMap marks neighborhoods only as points, as in New York and DC, it asks Overpass for the nearest one. No Google data is sent: the venue's location is OpenStreetMap's own.
+
+**Running it:** the weekly job looks up venues never looked up, or looked up over a year ago, up to 300 a run. No key is needed; requests carry the contact user agent (`API_CONTACT_EMAIL`). Overpass's public servers are often busy, so a venue that needs it is retried, then left for the next week.
+
+**Correcting one:** in the venue admin's "Neighborhood" section, type a neighborhood, or tick "no neighborhood". Lookups keep an editor's choice. Filter the list by "neighborhood source" to review them.
+
+**The credit:** OpenStreetMap's data is ODbL, which asks for "© OpenStreetMap contributors", linked to its copyright page. It's in every page's footer, and on `/privacy`.
 
 ## Calendar feeds
 

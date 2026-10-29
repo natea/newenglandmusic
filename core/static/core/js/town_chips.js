@@ -3,22 +3,24 @@
 // beside the chosen towns, each a chip with an x to remove it. the multi-select stays in the
 // form, hidden, and is what's submitted: adding or removing a town changes it, and the form's
 // own change handler submits.
-document.querySelectorAll('form.geoFilter select[name="town"][multiple]').forEach(function (select) {
+// the neighborhoods under the chosen towns get the same chips (data-add-label names the list)
+document.querySelectorAll('form.geoFilter select[multiple]').forEach(function (select) {
+  const addLabel = select.dataset.addLabel || "add one";
   const box = document.createElement("span");
   box.className = "town-chips";
 
   const add = document.createElement("select");
-  add.className = "town-add";
-  add.setAttribute("aria-label", "add a town");
+  add.className = select.name + "-add";
+  add.setAttribute("aria-label", addLabel);
   const prompt = document.createElement("option");
   prompt.value = "";
-  prompt.textContent = select.selectedOptions.length ? "add another town" : "add a town";
+  prompt.textContent = select.selectedOptions.length ? addLabel.replace(/^add an? /, "add another ") : addLabel;
   add.appendChild(prompt);
 
   [...select.options].forEach(function (option) {
     if (option.selected) {
       const chip = document.createElement("span");
-      chip.className = "town-chip";
+      chip.className = "town-chip " + select.name + "-chip";
       chip.textContent = option.textContent;
       const remove = document.createElement("button");
       remove.type = "button";

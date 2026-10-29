@@ -12,8 +12,12 @@ class PrivacyPageTestCase(TestCase):
         self.assertContains(response, "saved_shows")
         self.assertContains(response, "<code>near</code>")
         self.assertContains(response, "Gazetteer files")
+        self.assertContains(response, "OpenStreetMap")
 
     def test_footer_link(self):
         for url in ("/", "/saved", "/submit-event", "/privacy"):
             with self.subTest(url=url):
-                self.assertContains(self.client.get(url), '<a href="/privacy">Privacy</a>')
+                response = self.client.get(url)
+                self.assertContains(response, '<a href="/privacy">Privacy</a>')
+                self.assertContains(response, 'href="https://www.openstreetmap.org/copyright"')
+                self.assertContains(response, "© OpenStreetMap contributors")

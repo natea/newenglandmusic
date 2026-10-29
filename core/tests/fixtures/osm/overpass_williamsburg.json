@@ -1,0 +1,35 @@
+{
+ "version": 0.6,
+ "elements": [
+  {
+   "type": "node",
+   "id": 1,
+   "lat": 40.7182,
+   "lon": -73.9571,
+   "tags": {
+    "place": "neighbourhood",
+    "name": "Williamsburg"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2,
+   "lat": 40.729,
+   "lon": -73.9538,
+   "tags": {
+    "place": "neighbourhood",
+    "name": "Greenpoint"
+   }
+  },
+  {
+   "type": "node",
+   "id": 3,
+   "lat": 40.6782,
+   "lon": -73.9442,
+   "tags": {
+    "place": "suburb",
+    "name": "Brooklyn"
+   }
+  }
+ ]
+}

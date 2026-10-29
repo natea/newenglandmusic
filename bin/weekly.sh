@@ -8,4 +8,6 @@ source "$(dirname "$0")/steps.sh"
 step python manage.py check_event_sources --workers 8
 step python manage.py match_ticketmaster_venues
 step python manage.py match_eventbrite_organizers
+# venues' neighborhoods from openstreetmap: only venues never looked up, or a year ago
+step python manage.py lookup_venue_neighborhoods
 finish

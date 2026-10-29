@@ -36,6 +36,7 @@ WEEKLY = [
     "manage.py check_event_sources --workers 8",
     "manage.py match_ticketmaster_venues",
     "manage.py match_eventbrite_organizers",
+    "manage.py lookup_venue_neighborhoods",
 ]
 
 
@@ -144,7 +145,7 @@ class RenderConfigurationTestCase(SimpleTestCase):
         )
         self.assertEqual(
             self.keys_from_web(weekly),
-            {"DJANGO_SECRET_KEY", "TICKETMASTER_API_KEY", "EVENTBRITE_API_KEY"},
+            {"DJANGO_SECRET_KEY", "TICKETMASTER_API_KEY", "EVENTBRITE_API_KEY", "API_CONTACT_EMAIL"},
         )
         for job in (daily, weekly):
             database = next(var for var in job["envVars"] if var["key"] == "DATABASE_URL")

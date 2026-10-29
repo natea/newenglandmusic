@@ -54,6 +54,8 @@ class GeoFilter:
     metro: GeoArea | None = None
     # (town, state code) pairs within the metro, in the venues' own spelling
     towns: list = field(default_factory=list)
+    # (neighborhood, town, state code) within the chosen towns (lookup_venue_neighborhoods)
+    neighborhoods: list = field(default_factory=list)
 
     @property
     def areas(self):
@@ -71,7 +73,22 @@ class GeoFilter:
             for town, state in self.towns:
                 towns_q |= Q(**{f"{prefix}city_town__iexact": town, f"{prefix}state": state})
             q &= towns_q
+        if self.neighborhoods:
+            neighborhoods_q = Q()
+            for neighborhood, town, state in self.neighborhoods:
+                neighborhoods_q |= Q(
+                    **{
+                        f"{prefix}neighborhood__iexact": neighborhood,
+                        f"{prefix}city_town__iexact": town,
+                        f"{prefix}state": state,
+                    }
+                )
+            q &= neighborhoods_q
         return q
+
+    @property
+    def neighborhood_labels(self):
+        return [neighborhood_label(*triple) for triple in self.neighborhoods]
 
     @property
     def town_labels(self):
@@ -82,6 +99,7 @@ class GeoFilter:
         return urlencode(
             [(param, getattr(self, param).slug) for param in FILTER_PARAMS if getattr(self, param)]
             + [("town", label) for label in self.town_labels]
+            + [("neighborhood", label) for label in self.neighborhood_labels]
         )
 
 
@@ -101,6 +119,28 @@ def metro_towns(metro):
         if key not in towns or (spelling[:1].isupper() and not towns[key][0][:1].isupper()):
             towns[key] = (spelling, state)
     return sorted(towns.values(), key=lambda pair: (pair[0].casefold(), pair[1]))
+
+
+def neighborhood_label(neighborhood, town, state):
+    return f"{neighborhood}, {town}, {state}"
+
+
+def town_neighborhoods(towns):
+    """the (neighborhood, town, state) of the venues in these (town, state) pairs, sorted"""
+    from core.models import Venue
+
+    if not towns:
+        return []
+    towns_q = Q()
+    for town, state in towns:
+        towns_q |= Q(city_town__iexact=town, state=state)
+    found = {}
+    rows = Venue.objects.filter(towns_q).exclude(neighborhood="").values_list("neighborhood", "city_town", "state")
+    spelling = {(t.casefold(), s): t for t, s in towns}
+    for neighborhood, town, state in rows:
+        town = spelling.get((town.strip().casefold(), state), town.strip())
+        found.setdefault((neighborhood.casefold(), town.casefold(), state), (neighborhood, town, state))
+    return sorted(found.values(), key=lambda triple: (triple[0].casefold(), triple[1].casefold()))
 
 
 def metro_fits_state(metro, state):
@@ -125,6 +165,11 @@ def parse_geo_filter(querydict):
         # only the metro's own towns: a town from elsewhere, or a metro that changed, drops it
         known = {town_label(town, state).casefold(): (town, state) for town, state in metro_towns(geo_filter.metro)}
         geo_filter.towns = [known[label.casefold()] for label in dict.fromkeys(wanted) if label.casefold() in known]
+    wanted = [value.strip() for value in querydict.getlist("neighborhood") if value.strip()] if hasattr(querydict, "getlist") else []
+    if geo_filter.towns and wanted:
+        # only the chosen towns' neighborhoods: one from another town, or a town dropped, drops it
+        known = {neighborhood_label(*triple).casefold(): triple for triple in town_neighborhoods(geo_filter.towns)}
+        geo_filter.neighborhoods = [known[label.casefold()] for label in dict.fromkeys(wanted) if label.casefold() in known]
     return geo_filter
 
 
@@ -149,7 +194,7 @@ def geo_filter_for_request(request):
     bar, and any link copied from it, shows what's being filtered.
     """
     params = request.GET
-    given = [param for param in (*FILTER_PARAMS, "town") if param in params]
+    given = [param for param in (*FILTER_PARAMS, "town", "neighborhood") if param in params]
     # "clear" is the show-all link; all-empty values are the form set to "All"
     if "clear" in params or (given and not any(params[param].strip() for param in given)):
         return GeoFilter(), CookieAction.CLEAR

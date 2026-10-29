@@ -44,9 +44,23 @@
         {% endcomment %}
         <label class="town-filter">
           towns
-          <select name="town" multiple size="{% if metro_towns|length > 6 %}6{% else %}{{ metro_towns|length }}{% endif %}">
+          <select name="town" multiple data-add-label="add a town" size="{% if metro_towns|length > 6 %}6{% else %}{{ metro_towns|length }}{% endif %}">
             {% for town in metro_towns %}
               <option value="{{ town }}" {% if town in geo_filter.town_labels %}selected{% endif %}>{{ town }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endif %}
+      {% if town_neighborhoods %}
+        {% comment %}
+          the chosen towns' neighborhoods (from openstreetmap): choose none for the whole
+          towns. chips with js, like the towns
+        {% endcomment %}
+        <label class="neighborhood-filter">
+          neighborhoods
+          <select name="neighborhood" multiple data-add-label="add a neighborhood" size="{% if town_neighborhoods|length > 6 %}6{% else %}{{ town_neighborhoods|length }}{% endif %}">
+            {% for neighborhood in town_neighborhoods %}
+              <option value="{{ neighborhood }}" {% if neighborhood in geo_filter.neighborhood_labels %}selected{% endif %}>{{ neighborhood }}</option>
             {% endfor %}
           </select>
         </label>

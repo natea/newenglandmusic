@@ -334,6 +334,18 @@ class Venue(models.Model):
     place_latitude = models.FloatField(null=True, blank=True)
     place_longitude = models.FloatField(null=True, blank=True)
 
+    # the neighborhood the venue is in, from openstreetmap (lookup_venue_neighborhoods), or an
+    # editor's; storable under odbl, credited in the footer
+    class NeighborhoodSource(models.TextChoices):
+        ADDRESS = "address", "OpenStreetMap address"
+        OVERPASS = "overpass", "Nearest OpenStreetMap neighborhood"
+        EDITOR = "editor", "Editor"
+        NONE = "none", "None found"
+
+    neighborhood = models.CharField(max_length=128, blank=True, default="")
+    neighborhood_source = models.CharField(max_length=8, choices=NeighborhoodSource.choices, blank=True, default="")
+    neighborhood_checked_at = models.DateTimeField(null=True, blank=True)
+
     state = models.CharField(max_length=2, blank=True, default="")
     city_town = models.CharField(max_length=255, blank=True, default="")
     county = models.CharField(max_length=255, blank=True, default="")
@@ -379,7 +391,9 @@ class Venue(models.Model):
 
     @property
     def location(self):
-        return ", ".join(part for part in [self.city_town, self.state] if part)
+        """"Boston, MA", or "Boston (West End), MA" when its neighborhood is known"""
+        town = f"{self.city_town} ({self.neighborhood})" if self.city_town and self.neighborhood else self.city_town
+        return ", ".join(part for part in [town, self.state] if part)
 
     @property
     def has_confident_place(self):

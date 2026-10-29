@@ -432,7 +432,22 @@ class FetchStatusFilter(SimpleListFilter):
         return queryset
 
 
+class VenueAdminForm(forms.ModelForm):
+    no_neighborhood = forms.BooleanField(
+        required=False,
+        help_text="this venue isn't in a neighborhood worth naming: later lookups leave it blank",
+    )
+
+    class Meta:
+        model = Venue
+        fields = "__all__"
+        help_texts = {
+            "neighborhood": "type one to set it by hand; later lookups keep an editor's neighborhood",
+        }
+
+
 class VenueAdmin(admin.ModelAdmin):
+    form = VenueAdminForm
     # links typed without a scheme get https, which django 6 makes the default
     formfield_overrides = {URLField: {"assume_scheme": "https"}}
     list_display = (
@@ -460,6 +475,7 @@ class VenueAdmin(admin.ModelAdmin):
         LinkedToEventbriteFilter,
         FetchStatusFilter,
         "place_lookup_status",
+        "neighborhood_source",
     )
     search_fields = (
         "name",
@@ -525,10 +541,28 @@ class VenueAdmin(admin.ModelAdmin):
                 )
             },
         ),
+        # from openstreetmap (lookup_venue_neighborhoods), or an editor's
+        (
+            "Neighborhood (from OpenStreetMap, not the sheet)",
+            {"fields": ("neighborhood", "no_neighborhood", "neighborhood_source", "neighborhood_checked_at")},
+        ),
         ("Event sources", {"fields": ("ticketmaster_venue_id", "eventbrite_organizer_id")}),
         ("Event fetching", {"fields": ("fetch_status_details",)}),
     )
-    readonly_fields = ("fetch_status_details", "place_on_google_maps")
+    readonly_fields = ("fetch_status_details", "place_on_google_maps", "neighborhood_source", "neighborhood_checked_at")
+
+    def save_model(self, request, venue, form, change):
+        """a neighborhood typed here, or "no neighborhood", is the editor's: lookups keep it"""
+        if form.cleaned_data.get("no_neighborhood"):
+            venue.neighborhood = ""
+            venue.neighborhood_source = Venue.NeighborhoodSource.EDITOR
+            venue.neighborhood_checked_at = timezone.now()
+        elif "neighborhood" in form.changed_data:
+            venue.neighborhood = venue.neighborhood.strip()
+            venue.neighborhood_source = Venue.NeighborhoodSource.EDITOR if venue.neighborhood else ""
+            venue.neighborhood_checked_at = timezone.now() if venue.neighborhood else None
+        # save() re-renders the venue's events, whose stored html shows the neighborhood
+        super().save_model(request, venue, form, change)
 
     # google's terms don't let us store a place's name or address, so this shows the live
     # place for judging a match

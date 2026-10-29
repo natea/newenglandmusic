@@ -14,7 +14,7 @@ In cities, a town name says little about where a show is: "Boston" covers Allsto
   - **The order:** prefer the familiar division ("suburb" or "quarter", such as South End or West End), then "neighbourhood".
   - **Dropped:** names that are a historic district, the town itself, a borough or a county, such as "Brooklyn" or "Kings County".
 - **A fallback for New York and DC.** Where OpenStreetMap marks neighborhoods only as points, as in New York and DC, the command asks the Overpass API for the nearest neighborhood point within 1.5 km of the venue, such as Williamsburg or Shaw.
-- **Neighborhoods on events.** An event at a venue with a neighborhood shows it after the town, such as "@ Big Night Live, Boston (West End)".
+- **Neighborhoods on events.** An event at a venue with a neighborhood shows it after the town, such as "@ Big Night Live, Boston (West End), MA".
 - **A neighborhood filter.** Once a town is chosen in the town filter, visitors can narrow it to some of its neighborhoods, as removable chips like the towns. It uses a new `neighborhood` URL parameter.
 - **Editors can correct it.** In the venue admin, an editor can set a venue's neighborhood, or mark it as having none, and later runs keep the editor's choice.
 - **When it runs.** The weekly job looks up venues that have never been looked up, or were looked up more than a year ago. That's about 730 lookups once, at Nominatim's limit of one request a second, then only new venues.

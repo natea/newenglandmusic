@@ -253,6 +253,12 @@ services:
           type: web
           name: newenglandmusic
           envVarKey: EVENTBRITE_API_KEY
+      # the contact email openstreetmap's services ask for (lookup_venue_neighborhoods)
+      - key: API_CONTACT_EMAIL
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: API_CONTACT_EMAIL
       # inherited from nyc noise and unused, but the settings require them
       - key: PROD_INTERNAL_API_SERVER
         value: https://nyc-noise.com/

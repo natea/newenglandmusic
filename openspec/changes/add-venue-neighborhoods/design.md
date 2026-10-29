@@ -41,7 +41,7 @@
 **3. The Overpass fallback.**
 - **The query:** `node(around:1500,<lat>,<lon>)["place"~"^(neighbourhood|suburb|quarter)$"];out;`, sent by POST.
 - **The answer:** the nearest node by haversine distance, if its name is usable.
-- **When:** only when the address gives no usable name, so mostly New York and DC.
+- **When:** only when the address gives no usable name and the venue is in New York (any borough) or Washington, DC (`POINT_NEIGHBORHOOD_TOWNS`). The first dry run (2026-10-29) asked Overpass for small-town venues too, such as one in Danbury, CT, and its busy servers cost over two minutes each. Elsewhere, an address without a neighborhood means there's none worth naming.
 - **Busy servers:** retry after 5, 15 and 45 s, then the mirror `overpass.private.coffee`, then leave the venue due.
 
 **4. Storage.**
@@ -78,6 +78,10 @@
 4. The weekly job takes over.
 
 **Rollback:** blank the neighborhoods (one admin action), which re-renders the venues' events.
+
+**First dry run (2026-10-29, Connecticut's small cities first):** of 9 venues, 1 got a neighborhood (BRYAC, "Black Rock" in Bridgeport), 1 was found with no neighborhood, and 6 aren't on OpenStreetMap at all (Park City Music Hall, RoadRunner Kitchen + Bar, Bleacher's Bar…). Small-town venues are often missing from OpenStreetMap, which matters little: neighborhoods are mostly a city thing.
+
+**Second dry run (2026-10-29, Massachusetts, 30 venues from Allston to Boston):** 15 got a neighborhood from their address, all right where checked (Paradise Rock Club: Packard's Corner; House of Blues, MGM Music Hall and The Bebop: Fenway-Kenmore; Orpheum Theatre: Downtown; Capitol Theatre: East Arlington), 2 were found with none, and 13 aren't on OpenStreetMap by name, including well-known rooms (Big Night Live, Royale, Rockwood Music Hall, The Beehive) and every Porchfest. Editors can fill in the important ones; a later change could look up the misses by OpenStreetMap or Census coordinates.
 
 ## Open Questions
 

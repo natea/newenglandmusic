@@ -1,0 +1,18 @@
+[
+ {
+  "place_id": 1,
+  "osm_type": "node",
+  "lat": "41.3036",
+  "lon": "-72.9229",
+  "name": "Cafe Nine",
+  "display_name": "Cafe Nine",
+  "address": {
+   "neighbourhood": "Ninth Square Historic District",
+   "suburb": "Dixwell",
+   "city": "New Haven",
+   "state": "Connecticut",
+   "ISO3166-2-lvl4": "US-CT",
+   "country_code": "us"
+  }
+ }
+]

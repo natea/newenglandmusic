@@ -1,0 +1,17 @@
+[
+ {
+  "place_id": 1,
+  "osm_type": "node",
+  "lat": "42.3736",
+  "lon": "-71.119",
+  "name": "Cambridge",
+  "display_name": "Cambridge",
+  "address": {
+   "highway": "Cambridge",
+   "city": "Cambridge",
+   "state": "Massachusetts",
+   "ISO3166-2-lvl4": "US-MA",
+   "country_code": "us"
+  }
+ }
+]
