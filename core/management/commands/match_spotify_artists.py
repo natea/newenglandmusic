@@ -191,7 +191,8 @@ class Command(RecordedCommand, BaseCommand):
         return new
 
     def is_editors(self, link):
-        return link is not None and link.source == SpotifyArtistLink.Source.EDITOR
+        # an evidence link is kept like an editor's (resolve_artists_with_lastfm)
+        return link is not None and link.source in (SpotifyArtistLink.Source.EDITOR, SpotifyArtistLink.Source.EVIDENCE)
 
     def is_due(self, link, now):
         if link is None:

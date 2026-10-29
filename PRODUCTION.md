@@ -42,6 +42,7 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 - `GOOGLE_SERVICE_ACCOUNT_JSON`: the sheet sync's service-account key (see "Reading the sheet on a server").
 - `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`: a Spotify app's credentials, for the listing's play buttons (see "Spotify play buttons"). The web service uses them too, because saving an event renders its buttons.
 - `APPLE_MUSIC_TEAM_ID`, `APPLE_MUSIC_KEY_ID`, `APPLE_MUSIC_PRIVATE_KEY`, `APPLE_MUSIC_PREVIEWS`: a MusicKit key, and the switch that shows the Apple Music buttons (see "Apple Music play buttons").
+- `LASTFM_API_KEY`: a Last.fm API account's key, for the artist matching's evidence (see "Last.fm evidence").
 - `YOUTUBE_API_KEY`, `YOUTUBE_PREVIEWS`: a Google Cloud key restricted to YouTube Data API v3, and the switch that shows the YouTube buttons (see "YouTube play buttons").
 
 **Optional:**
@@ -168,7 +169,8 @@ These run in this order. Each one depends on the one before it:
 | `match_eventbrite_organizers` | weekly, after the source check | free (Eventbrite allows 2,000 requests an hour). It fetches the pages of venues that link Eventbrite, politely, and links only new venues unless given `--recheck` |
 | `match_spotify_artists --limit 500` | daily, after `fetch_events` | free, but rate limited. It searches Spotify for artist names it hasn't seen, and for automatic matches more than 30 days old, half a second apart, taking about 4 minutes. Spotify doesn't publish its limits, but the number of searches is what counts, not their pace: about 650 half a second apart (2026-10-27) and about 680 two seconds apart (2026-10-28) each got the app blocked for about a day. The block applies to the whole developer account, so a dev app's runs use up production's allowance too. 500 a morning stays under it, and clears a first run's backlog of about 2,700 names in about six days. When blocked, a run stops at once and keeps what it found, and the next morning's carries on. After the backlog, each morning searches only new names |
 | `match_apple_music_artists --limit 1000` | daily, after the Spotify matching | free with the Developer Program membership. Like the Spotify matching, but also looks up each matched artist's top song. Requests go half a second apart, and a long rate-limit block stops the run the same way. It does nothing until the MusicKit key is set |
-| `match_youtube_artists --limit 90` | daily, after the Apple Music matching | free within YouTube Data API v3's 10,000 units a day. It matches only artists already matched on Spotify or Apple Music: first through Wikidata and MusicBrainz, then at most 90 searches for their Apple top song (101 units each). It does nothing until `YOUTUBE_API_KEY` is set |
+| `resolve_artists_with_lastfm --limit 300` | daily, after the Apple Music matching | free. For names several Spotify or Apple Music artists share, it reads Last.fm (half a second apart) and MusicBrainz (a second apart), taking up to about 8 minutes. It does nothing until `LASTFM_API_KEY` is set |
+| `match_youtube_artists --limit 90` | daily, after the Last.fm resolving | free within YouTube Data API v3's 10,000 units a day. It matches only artists already matched on Spotify or Apple Music: first through Wikidata and MusicBrainz, then at most 90 searches for their Last.fm top track (101 units each). It does nothing until `YOUTUBE_API_KEY` is set |
 | `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster and Eventbrite: a few hundred requests each |
 
 ### How they run on Render
@@ -255,7 +257,9 @@ Next to each Spotify button, an Apple Music button opens Apple's player for the 
 Next to the Spotify and Apple Music buttons, a YouTube button opens YouTube's own player, from `youtube-nocookie.com`.
 - **Who gets a button:** an artist gets one only when the match is certain. They must already be matched on Spotify or Apple Music, and one of these must tie them to the YouTube channel or video:
   - a Wikidata or MusicBrainz entry that links their Spotify or Apple ID to the channel;
-  - their Apple Music top song on their own channel, or on their "<artist> - Topic" channel, with the same song and album.
+  - the most-played track on their Last.fm page, on their own channel or their "<artist> - Topic" channel, with the same song (and, for a Topic video, the same album).
+
+  The song never comes from Apple Music or Spotify. Apple's developer license (§3.3.6 D) allows MusicKit calls only "for purposes … facilitating access to Your end users' Apple Music subscriptions", and forbids using its "music-related text … separately from music playback". Spotify allows its metadata to be used only with its content. Song matches made before 2026-10-28 used Apple's top songs; a migration marked them (`song_source` "apple"), and the next run matches them again with the Last.fm track.
 - **What it plays:**
   - the confirmed song's video;
   - or, for a channel found through Wikidata or MusicBrainz, the channel's uploads.
@@ -283,6 +287,36 @@ Next to the Spotify and Apple Music buttons, a YouTube button opens YouTube's ow
 **The terms:**
 - YouTube's Developer Policies require a privacy policy that says the site uses YouTube API Services and links to Google's Privacy Policy, and a link to YouTube's Terms of Service. `/privacy` does this, and every page's footer links to it.
 - The Required Minimum Functionality rules forbid changing the player or putting anything over it, and require it to be at least 200 × 200 px. That's why custom-skin players such as csPlayer aren't used.
+
+## Last.fm evidence
+
+Last.fm is read behind the scenes, and nothing from it appears on the site.
+
+**Shared names:** `resolve_artists_with_lastfm` settles names that several Spotify or Apple Music artists share, which the matching leaves "ambiguous". It reads the name's Last.fm page for its MusicBrainz ID, then MusicBrainz for that act's Spotify and Apple Music links. It matches the name to the linked artist only when MusicBrainz names the act as we do, links exactly one artist on that service, and the act is either:
+- **local:** MusicBrainz's area, or the Last.fm bio, names a state or town where the site has venues;
+- **dominant:** at least 100,000 Last.fm listeners, and a bio that doesn't say several acts share the name.
+
+**How resolved links are kept:**
+- **Marked "evidence":** the Spotify and Apple Music matching then treat them like an editor's link. They don't search for them or change their artist.
+- **Re-checked monthly:** each one is checked again after 30 days, and set back to ambiguous if the evidence is gone.
+- **Undo:** `resolve_artists_with_lastfm --revert` sets them all back. To review them, filter the links in the admin by source.
+
+**YouTube songs:** `match_youtube_artists` searches YouTube for the most-played track on the name's Last.fm page, and checks its album, unless the page says several acts share the name (see "YouTube play buttons").
+
+**Setting up the key:**
+1. Create an API account at [last.fm/api/account/create](https://www.last.fm/api/account/create). Only the API key is used, not the secret.
+2. Set `LASTFM_API_KEY` locally in `.env`, and on Render on the web service, then run a blueprint sync so the daily job gets it too.
+3. Run `resolve_artists_with_lastfm --dry-run --limit 30`, and check the proposed matches.
+
+Last.fm takes the key only as a URL parameter, so the client never prints or logs a request URL.
+
+**The terms (last.fm/api/tos):**
+- non-commercial use only;
+- Last.fm credited, with a link;
+- written approval for public pages that use the API;
+- at most 100 MB of its data held at any time.
+
+Nothing from Last.fm is displayed or stored, but its data decides which buttons appear, so ask before going public (see the launch checklist).
 
 ## Calendar feeds
 
@@ -322,6 +356,7 @@ If the key ever leaks, delete it on the account's **Keys** tab and create a new 
 - [ ] the domain pointed at the host, and HTTPS working
 - [ ] `ALLOWED_HOSTS` and `SITE_URL` match the domain
 - [ ] the API keys restricted: Places to its API, YouTube to YouTube Data API v3, Protomaps to the domain
+- [ ] Last.fm asked (partners@last.fm) whether using its data only as matching evidence, with nothing displayed, needs its written approval or a credit, under its non-commercial terms.
 - [ ] YouTube's Developer Policies met: `/privacy` linked from every page. The policies also say users must agree to the privacy policy before using the site. Decide whether a footer link is enough for a public listing.
 - [x] the scheduled jobs added (the sheet's service account set up first): running on Render since 2026-10-26
 - [ ] Eventbrite's API terms checked for attribution and caching rules, since events imported from it are shown on the site

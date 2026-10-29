@@ -105,8 +105,9 @@ class Command(RecordedCommand, BaseCommand):
             done += 1
             link = links.get(key)
             try:
-                if link is not None and link.source == Source.EDITOR:
-                    # an editor's artist stands; only its top song is refreshed
+                if link is not None and link.source in (Source.EDITOR, Source.EVIDENCE):
+                    # an editor's artist stands, as does one settled on last.fm evidence
+                    # (resolve_artists_with_lastfm); only its top song is refreshed
                     status, artist_id = link.status, link.apple_artist_id
                 else:
                     status, artist_id = search_result(client, key, names[key])

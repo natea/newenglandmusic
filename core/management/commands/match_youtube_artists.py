@@ -1,10 +1,11 @@
 import datetime
 
-from core import apple_music
-from core.apple_music import AppleMusicClient, AppleMusicError
+from core.artist_evidence import shares_name
 from core.artist_matching import normalize
 from core.artist_names import event_artist_names
 from core.job_runs import RecordedCommand
+from core.lastfm import LastFm, LastFmError, LastFmStopped
+from core.lastfm import api_key as lastfm_key
 from core.models import AppleMusicArtistLink, SpotifyArtistLink, YouTubeArtistLink
 from core.music_ids import MusicBrainzBusy, MusicIds, MusicIdsError
 from core.spotify_links import rebake_events_naming, upcoming_music_events
@@ -25,7 +26,10 @@ only names already matched on spotify or apple music are considered, and each is
 only on evidence that ties youtube to that artist (see core/youtube_links.py):
 1. wikidata or musicbrainz links its spotify or apple music id to a youtube channel, which
    exists. sources that disagree make it ambiguous;
-2. else, its apple music top song is on youtube from the artist's own or topic channel.
+2. else, the most-played track on its last.fm page is on youtube from the artist's own or
+   topic channel, unless the page says several acts share the name. apple music's terms
+   (developer program license 3.3.6 d) and spotify's don't allow their songs to be used to
+   find music elsewhere, so neither is asked.
 anything else is recorded as not found. matches are re-checked after RECHECK_AFTER, as
 youtube's policies ask: a video that's gone or can't be embedded anymore loses its button.
 links for names no upcoming event has named for FORGET_AFTER are deleted.
@@ -41,6 +45,14 @@ DEFAULT_LIMIT = 90
 Status = YouTubeArtistLink.Status
 Evidence = YouTubeArtistLink.Evidence
 Source = YouTubeArtistLink.Source
+
+
+SONG_EVIDENCE = {Evidence.TOPIC_SONG, Evidence.CHANNEL_SONG}
+
+
+def needs_rematch(link):
+    """an automatic song match found with apple music's top song: matched again from scratch"""
+    return link.source == Source.AUTO and link.evidence in SONG_EVIDENCE and link.song_source == "apple"
 
 
 def id_linked_channel(wikidata, musicbrainz):
@@ -78,8 +90,8 @@ class Command(RecordedCommand, BaseCommand):
         self.now = timezone.now()
         self.youtube = YouTubeClient(key)
         self.music_ids = MusicIds()
-        credentials = apple_music.credentials()
-        self.apple = AppleMusicClient(*credentials) if credentials else None
+        self.lastfm = LastFm(lastfm_key()) if lastfm_key() else None
+        self.lastfm_stopped = False
         self.counts = {
             "considered": 0, "searched": 0, "matched by wikidata": 0, "matched by musicbrainz": 0,
             "matched by topic song": 0, "matched by channel song": 0, "ambiguous": 0, "not found": 0,
@@ -139,28 +151,39 @@ class Command(RecordedCommand, BaseCommand):
                         channel, evidence = by_id
                         self.record(k, names[k], Status.MATCHED, evidence, channel, "", links.get(k))
                         continue
-                    song = self.top_song(apple.get(k))
+                    # the song comes from last.fm, never apple music or spotify: their terms
+                    # don't allow their data to be used to find music elsewhere
+                    try:
+                        song = self.lastfm_song(names[k])
+                    except LastFmStopped:
+                        # left as it is, for the next run
+                        self.counts["left for the next run"] += 1
+                        continue
+                    except LastFmError as e:
+                        self.counts["failed"] += 1
+                        self.stdout.write(self.style.WARNING(f"  {names[k]}: last.fm failed: {e}"))
+                        continue
                     if not song or not song["name"]:
                         self.record(k, names[k], Status.NOT_FOUND, "", "", "", links.get(k))
                         continue
                     if searches_left <= 0:
-                        self.counts["left for the next run"] = len(to_match) - index
+                        self.counts["left for the next run"] += len(to_match) - index
                         break
                     searches_left -= 1
                     self.counts["searched"] += 1
                     found = self.search_song(k, names[k], song)
                 except YouTubeQuotaExceeded as e:
                     self.counts["failed"] += 1
-                    self.counts["left for the next run"] = len(to_match) - index
+                    self.counts["left for the next run"] += len(to_match) - index
                     stopped = str(e)
                     self.stdout.write(self.style.WARNING(f"  {names[k]}: {e}; stopping this run"))
                     break
                 except YouTubeKeyRejected as e:
                     self.counts["failed"] += 1
-                    self.counts["left for the next run"] = len(to_match) - index
+                    self.counts["left for the next run"] += len(to_match) - index
                     self.rejected = str(e)
                     break
-                except (YouTubeError, MusicIdsError, AppleMusicError) as e:
+                except (YouTubeError, MusicIdsError) as e:
                     self.counts["failed"] += 1
                     self.stdout.write(self.style.WARNING(f"  {names[k]}: failed: {e}"))
                     continue
@@ -187,6 +210,8 @@ class Command(RecordedCommand, BaseCommand):
     def is_due(self, link):
         if link is None:
             return True
+        if needs_rematch(link):
+            return True
         if link.source == Source.EDITOR and link.status != Status.MATCHED:
             # an editor's "no youtube", or a match that went away: theirs to fix
             return False
@@ -197,7 +222,7 @@ class Command(RecordedCommand, BaseCommand):
         re-check a due match's video or channel; whether that settled the name. an automatic
         link whose video or channel is gone is matched again from scratch
         """
-        if link is None or link.status != Status.MATCHED:
+        if link is None or link.status != Status.MATCHED or needs_rematch(link):
             return False
         try:
             if link.video_id:
@@ -257,10 +282,28 @@ class Command(RecordedCommand, BaseCommand):
             self.stdout.write(self.style.WARNING(f"  {e}; carrying on without musicbrainz this run"))
             return set()
 
-    def top_song(self, apple_artist_id):
-        if not apple_artist_id or self.apple is None:
+    def lastfm_song(self, name):
+        """
+        {"name", "album_name"}: the most-played track on the name's last.fm page, and its
+        album; None when there's no page, no tracks, or the page says several acts share the
+        name, since its tracks could then be another act's. raises LastFmError when last.fm
+        can't be asked, so the name is left as it is rather than recorded as not found
+        """
+        if self.lastfm is None:
             return None
-        return self.apple.top_song(apple_artist_id)
+        if self.lastfm_stopped:
+            raise LastFmStopped("last.fm stopped earlier this run")
+        try:
+            info = self.lastfm.artist_info(name)
+            if not info or shares_name(info["bio"]):
+                return None
+            track = self.lastfm.top_track(name)
+        except LastFmStopped as e:
+            # the rest of the run makes no song searches, only id-linked matches
+            self.lastfm_stopped = True
+            self.stdout.write(self.style.WARNING(f"  {e}; carrying on without last.fm this run"))
+            raise
+        return {"name": track["name"], "album_name": track["album"]} if track else None
 
     def search_song(self, k, name, song):
         ids = self.youtube.search_videos(f"{name} {song['name']}")
@@ -283,4 +326,7 @@ class Command(RecordedCommand, BaseCommand):
             if status == Status.MATCHED or (old is not None and old.status == Status.MATCHED):
                 self.changed.add(k)
         if not self.dry_run:
-            YouTubeArtistLink.objects.update_or_create(name_key=k, defaults={**values, "source": Source.AUTO})
+            song_source = "lastfm" if evidence in SONG_EVIDENCE else ""
+            YouTubeArtistLink.objects.update_or_create(
+                name_key=k, defaults={**values, "source": Source.AUTO, "song_source": song_source}
+            )

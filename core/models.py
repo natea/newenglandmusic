@@ -652,6 +652,8 @@ class SpotifyArtistLink(models.Model):
     class Source(models.TextChoices):
         AUTO = "auto", "Automatic"
         EDITOR = "editor", "Editor"
+        # settled on last.fm and musicbrainz evidence (resolve_artists_with_lastfm): kept like an editor's
+        EVIDENCE = "evidence", "Last.fm and MusicBrainz evidence"
 
     # core.artist_matching.normalize() of the name as our events write it
     name_key = models.CharField(max_length=255, unique=True)
@@ -662,6 +664,8 @@ class SpotifyArtistLink(models.Model):
     checked_at = models.DateTimeField()
     # the last run that found the name on an upcoming event; links unseen for 30 days go
     last_seen_at = models.DateTimeField()
+    # when resolve_artists_with_lastfm last looked at the link: it looks at each once a month
+    evidence_checked_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name_key
@@ -680,6 +684,8 @@ class AppleMusicArtistLink(models.Model):
     class Source(models.TextChoices):
         AUTO = "auto", "Automatic"
         EDITOR = "editor", "Editor"
+        # settled on last.fm and musicbrainz evidence (resolve_artists_with_lastfm): kept like an editor's
+        EVIDENCE = "evidence", "Last.fm and MusicBrainz evidence"
 
     # core.artist_matching.normalize() of the name as our events write it
     name_key = models.CharField(max_length=255, unique=True)
@@ -693,6 +699,8 @@ class AppleMusicArtistLink(models.Model):
     checked_at = models.DateTimeField()
     # the last run that found the name on an upcoming event; links unseen for 30 days go
     last_seen_at = models.DateTimeField()
+    # when resolve_artists_with_lastfm last looked at the link: it looks at each once a month
+    evidence_checked_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name_key
@@ -729,6 +737,9 @@ class YouTubeArtistLink(models.Model):
     channel_id = models.CharField(max_length=32, blank=True, default="")
     # blank for a channel matched by id alone: its button plays the channel's uploads
     video_id = models.CharField(max_length=16, blank=True, default="")
+    # which service gave the song a song match was found with: "lastfm", or "apple" for the
+    # matches made before apple music's terms ruled its songs out (these get matched again)
+    song_source = models.CharField(max_length=8, blank=True, default="")
     # an editor's link is never re-matched or overwritten; it's still re-checked
     source = models.CharField(max_length=8, choices=Source.choices, default=Source.AUTO)
     checked_at = models.DateTimeField()

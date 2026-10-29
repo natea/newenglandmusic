@@ -16,6 +16,9 @@ step python manage.py fetch_events --all
 step python manage.py match_spotify_artists --limit 500
 # does nothing until the musickit key is set (see PRODUCTION.md)
 step python manage.py match_apple_music_artists --limit 1000
+# settles names several spotify or apple music artists share, on last.fm and musicbrainz
+# evidence; does nothing until LASTFM_API_KEY is set
+step python manage.py resolve_artists_with_lastfm --limit 300
 # last, as it confirms artists the spotify and apple music matching found. 90 song searches
 # stay within youtube's 10,000 free daily units (101 each); does nothing until
 # YOUTUBE_API_KEY is set

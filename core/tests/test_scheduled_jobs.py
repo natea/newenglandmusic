@@ -29,6 +29,7 @@ DAILY = [
     "manage.py fetch_events --all",
     "manage.py match_spotify_artists --limit 500",
     "manage.py match_apple_music_artists --limit 1000",
+    "manage.py resolve_artists_with_lastfm --limit 300",
     "manage.py match_youtube_artists --limit 90",
 ]
 WEEKLY = [
@@ -137,6 +138,7 @@ class RenderConfigurationTestCase(SimpleTestCase):
                 "APPLE_MUSIC_PREVIEWS",
                 "YOUTUBE_API_KEY",
                 "YOUTUBE_PREVIEWS",
+                "LASTFM_API_KEY",
             },
         )
         self.assertEqual(

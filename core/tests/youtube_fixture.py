@@ -5,6 +5,7 @@ request leaves the test. the key is a made-up one.
 """
 
 import json
+import uuid
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -22,6 +23,31 @@ DINOSAUR_SPOTIFY = "267VY6GX5LyU5c9M85ECZQ"
 DINOSAUR_CHANNEL = "UCfo74Lcf9bcQJd2MMq-XBzw"
 BALLROOM_TOPIC = "UCBallroomThievesTopic01"
 BALLROOM_VIDEO = "arChErS0001"
+
+
+# musicbrainz areas by name: a state's iso code, or the area it's "part of". Windsor here is
+# Windsor, Ontario, as MusicBrainz's area for The Blue Stones is
+AREAS = {
+    "Massachusetts": {"iso": "US-MA"},
+    "Connecticut": {"iso": "US-CT"},
+    "Middlesex County": {"parent": "Massachusetts"},
+    "Somerville": {"parent": "Middlesex County"},
+    "Boston": {"parent": "Suffolk County"},
+    "Suffolk County": {"parent": "Massachusetts"},
+    "Ontario": {"iso": "CA-ON"},
+    "Essex County": {"parent": "Ontario"},
+    "Windsor": {"parent": "Essex County"},
+    "England": {"iso": "GB-ENG"},
+    "Brighton": {"parent": "England"},
+}
+
+
+def area_id(name):
+    """a stable fake musicbrainz id for an area's name"""
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"area:{name}"))
+
+
+AREA_NAMES = {area_id(name): name for name in AREAS}
 
 
 def fixture(name):
@@ -56,7 +82,7 @@ class FakeWeb:
     `musicbrainz` (spotify id -> [youtube urls]). anything else finds nothing
     """
 
-    def __init__(self, searches=None, videos=None, channels=(), wikidata=None, musicbrainz=None, musicbrainz_503s=0, forbidden=False):
+    def __init__(self, searches=None, videos=None, channels=(), wikidata=None, musicbrainz=None, musicbrainz_503s=0, forbidden=False, mb_artists=None):
         self.searches = dict(searches or {})
         self.videos = dict(videos or {})
         self.channels = set(channels)
@@ -66,6 +92,8 @@ class FakeWeb:
         self.musicbrainz_503s = musicbrainz_503s
         # youtube refuses the key, as it does a referrer-restricted one from a server
         self.forbidden = forbidden
+        # musicbrainz artists by mbid: {"name", "area", "begin_area", "urls"}
+        self.mb_artists = dict(mb_artists or {})
         self.requests = []
         self.sleeps = []
         self.now = 1_800_000_000.0
@@ -118,7 +146,26 @@ class FakeWeb:
             if spotify_id not in self.musicbrainz:
                 return response(404, {"error": "Not Found"})
             return response(200, {"relations": [{"type": "free streaming", "artist": {"id": f"mbid-{spotify_id}"}}]})
-        spotify_id = url.rsplit("/", 1)[1].removeprefix("mbid-")
+        mbid = url.rsplit("/", 1)[1]
+        if "/area/" in url:
+            name = AREA_NAMES.get(mbid)
+            if name is None:
+                return response(200, {"id": mbid, "name": "somewhere", "relations": []})
+            area = AREAS[name]
+            relations = [{"type": "part of", "direction": "backward", "area": {"id": area_id(area["parent"]), "name": area["parent"]}}] if "parent" in area else []
+            return response(200, {"id": mbid, "name": name, "iso-3166-2-codes": [area["iso"]] if "iso" in area else [], "relations": relations})
+        if mbid in self.mb_artists:
+            found = self.mb_artists[mbid]
+            return response(200, {
+                "id": mbid,
+                "name": found["name"],
+                "area": {"id": area_id(found["area"]), "name": found["area"]} if found.get("area") else None,
+                "begin-area": {"id": area_id(found["begin_area"]), "name": found["begin_area"]} if found.get("begin_area") else None,
+                "relations": [{"type": "free streaming", "url": {"resource": u}} for u in found.get("urls", [])],
+            })
+        if not mbid.startswith("mbid-"):
+            return response(404, {"error": "Not Found"})
+        spotify_id = mbid.removeprefix("mbid-")
         return response(200, {"relations": [{"type": "youtube", "url": {"resource": u}} for u in self.musicbrainz.get(spotify_id, [])]})
 
     @property

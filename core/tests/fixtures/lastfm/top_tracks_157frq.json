@@ -1,0 +1,24 @@
+{
+ "toptracks": {
+  "track": [
+   {
+    "name": "Spine",
+    "playcount": "100",
+    "listeners": "50",
+    "artist": {
+     "name": "157frq"
+    },
+    "@attr": {
+     "rank": "1"
+    }
+   }
+  ],
+  "@attr": {
+   "artist": "157frq",
+   "page": "1",
+   "perPage": "1",
+   "totalPages": "40",
+   "total": "40"
+  }
+ }
+}

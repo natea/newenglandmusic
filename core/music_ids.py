@@ -29,6 +29,12 @@ SPOTIFY_ID_RE = re.compile(r"^[0-9A-Za-z]{22}$")
 APPLE_ID_RE = re.compile(r"^\d+$")
 CHANNEL_ID_RE = re.compile(r"^UC[\w-]{22}$")
 CHANNEL_URL_RE = re.compile(r"^https?://(?:www\.)?youtube\.com/channel/(UC[\w-]{22})/?$")
+SPOTIFY_ARTIST_URL_RE = re.compile(r"^https?://open\.spotify\.com/artist/([0-9A-Za-z]{22})/?$")
+APPLE_ARTIST_URL_RE = re.compile(r"^https?://(?:itunes|music)\.apple\.com/[a-z]{2}/artist/(?:[^/?#]+/)?(?:id)?(\d+)(?:[/?#].*)?$")
+# a city's state is usually two "part of" links up (city, county, state); five allows for
+# boroughs and districts
+AREA_STEPS = 5
+MBID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 
 class MusicIdsError(Exception):
@@ -45,6 +51,8 @@ class MusicIds:
         self.sleep = sleep
         self.clock = clock
         self.last_musicbrainz_at = None
+        # area id -> its state's iso code, as found this run
+        self.areas = {}
 
     def wikidata_channels(self, spotify_ids=(), apple_ids=()):
         """{("spotify" or "apple", id): {channel ids}} for the ids wikidata links to youtube"""
@@ -94,6 +102,61 @@ class MusicIds:
             if match:
                 channels.add(match.group(1))
         return channels
+
+    def artist(self, mbid):
+        """
+        {"name", "areas", "spotify", "apple"} for a musicbrainz artist: its name, the names of
+        its area and begin area, and the spotify and apple music artist ids its links give.
+        None when musicbrainz has no such artist
+        """
+        if not MBID_RE.match(mbid or ""):
+            return None
+        data = self.musicbrainz(f"artist/{mbid}", inc="url-rels")
+        if data is None:
+            return None
+        spotify, apple = set(), set()
+        for relation in data.get("relations") or []:
+            resource = ((relation.get("url") or {}).get("resource")) or ""
+            for pattern, found in ((SPOTIFY_ARTIST_URL_RE, spotify), (APPLE_ARTIST_URL_RE, apple)):
+                match = pattern.match(resource)
+                if match:
+                    found.add(match.group(1))
+        areas = [
+            {"id": area.get("id") or "", "name": area["name"]}
+            for area in (data.get("area"), data.get("begin-area"))
+            if area and area.get("name")
+        ]
+        return {"name": data.get("name") or "", "areas": areas, "spotify": spotify, "apple": apple}
+
+    def area_subdivision(self, area_id, steps=AREA_STEPS):
+        """
+        the iso 3166-2 code ("US-MA", "CA-ON") of the state or province an area is in,
+        following musicbrainz's "part of" links up from a city or county; "" when there's
+        none within `steps`. a town's name alone says nothing: Windsor, Ontario and
+        Windsor, Connecticut are both "Windsor"
+        """
+        seen = []
+        while area_id and MBID_RE.match(area_id) and len(seen) < steps:
+            if area_id in self.areas:
+                code = self.areas[area_id]
+                break
+            seen.append(area_id)
+            data = self.musicbrainz(f"area/{area_id}", inc="area-rels") or {}
+            codes = data.get("iso-3166-2-codes") or []
+            if codes:
+                code = codes[0]
+                break
+            parents = [
+                r["area"]["id"]
+                for r in data.get("relations") or []
+                if r.get("type") == "part of" and r.get("direction") == "backward" and (r.get("area") or {}).get("id")
+            ]
+            area_id = parents[0] if parents else ""
+        else:
+            code = ""
+        for visited in seen:
+            self.areas[visited] = code
+        return code
 
     def musicbrainz(self, path, **params):
         """musicbrainz's answer, or None when it has no such thing"""

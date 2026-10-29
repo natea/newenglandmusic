@@ -77,6 +77,10 @@ services:
         sync: false
       - key: YOUTUBE_PREVIEWS
         sync: false
+      # last.fm, read behind the scenes as evidence for the artist matching: an api
+      # account's key (the secret isn't needed)
+      - key: LASTFM_API_KEY
+        sync: false
       # inherited from nyc noise and unused by this site, but the settings require them
       - key: PROD_INTERNAL_API_SERVER
         value: https://nyc-noise.com/
@@ -185,6 +189,12 @@ services:
           type: web
           name: newenglandmusic
           envVarKey: YOUTUBE_PREVIEWS
+      # last.fm evidence for the artist matching
+      - key: LASTFM_API_KEY
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: LASTFM_API_KEY
       # inherited from nyc noise and unused, but the settings require them
       - key: PROD_INTERNAL_API_SERVER
         value: https://nyc-noise.com/

@@ -4,7 +4,8 @@ from unittest import mock
 
 from core.models import AppleMusicArtistLink, Event, JobRun, SpotifyArtistLink, YouTubeArtistLink
 from core.tests import apple_music_fixture
-from core.tests.apple_music_fixture import FakeAppleMusic
+from core.tests import lastfm_fixture
+from core.tests.lastfm_fixture import FakeLastFm
 from core.tests.youtube_fixture import (
     BALLROOM_SPOTIFY,
     BALLROOM_TOPIC,
@@ -25,7 +26,6 @@ from django.utils import timezone
 
 Status, Evidence, Source = YouTubeArtistLink.Status, YouTubeArtistLink.Evidence, YouTubeArtistLink.Source
 BALLROOM_APPLE = "489634654"
-BALLROOM_SONGS = {BALLROOM_APPLE: apple_music_fixture.fixture("top_songs.json")}
 BALLROOM_QUERY = "The Ballroom Thieves Archers"
 
 
@@ -69,11 +69,22 @@ def topic_video(video_id=BALLROOM_VIDEO, embeddable=True):
 class CommandTestCase(TestCase):
     def setUp(self):
         self.enterContext(mock.patch.dict("os.environ", {**SWITCHED_ON, **apple_music_fixture.CREDENTIALS}))
-        self.apple = FakeAppleMusic(songs=BALLROOM_SONGS)
+        # apple music is never asked: its terms rule its songs out for finding music elsewhere
+        self.apple_requests = []
+        self.enterContext(
+            mock.patch("core.apple_music.AppleMusicClient.get", side_effect=lambda *a, **k: self.apple_requests.append(a))
+        )
+        # knows only the ballroom thieves' top track, unless a test adds more
+        self.lastfm = FakeLastFm()
+        self.lastfm.add_song("The Ballroom Thieves", "Archers", "A Wolf in the Doorway")
 
     def run_command(self, web, *args):
         out = StringIO()
-        with web.patch(), self.apple.patch("core.management.commands.match_youtube_artists.AppleMusicClient"):
+        with (
+            web.patch(),
+            self.lastfm.patch("core.management.commands.match_youtube_artists.LastFm"),
+            mock.patch.dict("os.environ", lastfm_fixture.CONFIGURED),
+        ):
             call_command("match_youtube_artists", *args, stdout=out)
         return out.getvalue()
 
@@ -230,10 +241,9 @@ class SongTestCase(CommandTestCase):
     def test_same_name_different_band(self):
         upcoming_event("Epicenter")
         apple("epicenter", "100000077")
-        self.apple = FakeAppleMusic(songs={"100000077": apple_music_fixture.top_songs("200000001", "300000001")})
-        # the fake's top song is called "A Song"
+        self.lastfm.add_song("Epicenter", "Glass Hours", "Glass Hours")
         live = video("epi00000001", "UCEpicenterBand000000001", "Epicenter", "Epicenter - Live at the Fest")
-        web = FakeWeb(searches={"Epicenter A Song": ["epi00000001"]}, videos={"epi00000001": live})
+        web = FakeWeb(searches={"Epicenter Glass Hours": ["epi00000001"]}, videos={"epi00000001": live})
         self.run_command(web)
         self.assertEqual(YouTubeArtistLink.objects.get(name_key="epicenter").status, Status.NOT_FOUND)
 
@@ -277,13 +287,8 @@ class QuotaTestCase(CommandTestCase):
             name = f"Band Number {i:03d}"
             upcoming_event(name)
             apple(f"band number {i:03d}", str(500000 + i))
+            self.lastfm.add_song(name, "A Song", "An Album")
             searches[f"{name} A Song"] = []
-        self.apple = FakeAppleMusic(
-            songs={
-                **BALLROOM_SONGS,
-                **{str(500000 + i): apple_music_fixture.top_songs("200000001", "300000001") for i in range(count)},
-            }
-        )
         return searches
 
     def test_limit_reached(self):
@@ -360,3 +365,140 @@ class RefreshTestCase(CommandTestCase):
         link("gone band", days_ago=31)
         self.run_command(FakeWeb())
         self.assertFalse(YouTubeArtistLink.objects.filter(name_key="gone band").exists())
+
+
+class LastFmSongTestCase(CommandTestCase):
+    def spotify_only(self):
+        upcoming_event("157frq")
+        spotify("157frq", "157frqSpotifyArtist001")
+
+    def own_video(self):
+        return video("0Hr00AfSxNI", "UCSi9rQAM9Fuc7YCAsETd2gg", "157frq", "157frq - Spine (Official Music Video)")
+
+    def test_spotify_only_artist_confirmed_with_its_lastfm_top_track(self):
+        self.spotify_only()
+        self.lastfm = FakeLastFm(
+            pages={"157frq": lastfm_fixture.fixture("no_mbid.json")},
+            tracks={"157frq": lastfm_fixture.fixture("top_tracks_157frq.json")},
+            albums={("157frq", "Spine"): lastfm_fixture.fixture("track_spine.json")},
+        )
+        web = FakeWeb(searches={"157frq Spine": ["0Hr00AfSxNI"]}, videos={"0Hr00AfSxNI": self.own_video()})
+        self.run_command(web)
+        found = YouTubeArtistLink.objects.get(name_key="157frq")
+        self.assertEqual((found.status, found.evidence, found.video_id), (Status.MATCHED, Evidence.CHANNEL_SONG, "0Hr00AfSxNI"))
+        stored = " ".join(str(v) for v in YouTubeArtistLink.objects.values().get().values())
+        self.assertNotIn("Spine", stored)
+
+    def test_spotify_only_artist_whose_lastfm_page_is_shared(self):
+        self.spotify_only()
+        self.lastfm = FakeLastFm(
+            pages={"157frq": lastfm_fixture.page("157frq", bio="There are at least two bands using the name 157frq.")},
+            tracks={"157frq": lastfm_fixture.fixture("top_tracks_157frq.json")},
+        )
+        web = FakeWeb(searches={"157frq Spine": ["0Hr00AfSxNI"]}, videos={"0Hr00AfSxNI": self.own_video()})
+        self.run_command(web)
+        self.assertEqual(web.search_queries, [])
+        self.assertEqual(YouTubeArtistLink.objects.get(name_key="157frq").status, Status.NOT_FOUND)
+        self.assertNotIn("artist.getTopTracks", self.lastfm.methods)
+
+    def test_spotify_only_artist_with_no_top_tracks(self):
+        self.spotify_only()
+        self.lastfm = FakeLastFm(
+            pages={"157frq": lastfm_fixture.fixture("no_mbid.json")},
+            tracks={"157frq": lastfm_fixture.fixture("no_top_tracks.json")},
+        )
+        web = FakeWeb()
+        self.run_command(web)
+        self.assertEqual(web.search_queries, [])
+        self.assertEqual(YouTubeArtistLink.objects.get(name_key="157frq").status, Status.NOT_FOUND)
+
+    def test_lastfm_rate_limit_leaves_song_names_for_the_next_run(self):
+        self.spotify_only()
+        self.ballroom()
+        upcoming_event("Dinosaur Jr.")
+        spotify("dinosaur jr", DINOSAUR_SPOTIFY)
+        self.lastfm.pages["157frq"] = lastfm_fixture.fixture("rate_limited.json")
+        web = FakeWeb(
+            searches={BALLROOM_QUERY: [BALLROOM_VIDEO]}, videos={BALLROOM_VIDEO: topic_video()},
+            wikidata={("P1902", DINOSAUR_SPOTIFY): [DINOSAUR_CHANNEL]}, channels={DINOSAUR_CHANNEL},
+        )
+        out = self.run_command(web)
+        self.assertIn("carrying on without last.fm", out)
+        # id-linked matches carry on; names needing a song are left, not marked not found
+        self.assertEqual(YouTubeArtistLink.objects.get(name_key="dinosaur jr").status, Status.MATCHED)
+        self.assertFalse(YouTubeArtistLink.objects.filter(name_key__in=["157frq", "ballroom thieves"]).exists())
+        self.assertEqual(web.search_queries, [])
+
+    def test_apple_music_data_isnt_used(self):
+        self.ballroom()
+        web = FakeWeb(searches={BALLROOM_QUERY: [BALLROOM_VIDEO]}, videos={BALLROOM_VIDEO: topic_video()})
+        self.run_command(web)
+        self.assertEqual(self.apple_requests, [])
+        self.assertIn("artist.getTopTracks", self.lastfm.methods)
+        found = YouTubeArtistLink.objects.get(name_key="ballroom thieves")
+        self.assertEqual((found.evidence, found.song_source), (Evidence.TOPIC_SONG, "lastfm"))
+
+    def test_topic_video_with_no_album_from_lastfm(self):
+        self.ballroom()
+        self.lastfm.add_song("The Ballroom Thieves", "Archers")
+        web = FakeWeb(searches={BALLROOM_QUERY: [BALLROOM_VIDEO]}, videos={BALLROOM_VIDEO: topic_video()})
+        self.run_command(web)
+        self.assertEqual(YouTubeArtistLink.objects.get(name_key="ballroom thieves").status, Status.NOT_FOUND)
+
+    def test_shared_lastfm_page_for_an_apple_matched_name(self):
+        self.ballroom()
+        self.lastfm.add_song("The Ballroom Thieves", "Archers", "A Wolf in the Doorway", bio="There are at least two bands using the name.")
+        web = FakeWeb(searches={BALLROOM_QUERY: [BALLROOM_VIDEO]}, videos={BALLROOM_VIDEO: topic_video()})
+        self.run_command(web)
+        self.assertEqual(web.search_queries, [])
+        self.assertEqual(YouTubeArtistLink.objects.get(name_key="ballroom thieves").status, Status.NOT_FOUND)
+
+
+class RematchTestCase(CommandTestCase):
+    def test_old_match_confirmed_again(self):
+        self.ballroom()
+        link("ballroom thieves", days_ago=2, song_source="apple")
+        web = FakeWeb(searches={BALLROOM_QUERY: [BALLROOM_VIDEO]}, videos={BALLROOM_VIDEO: topic_video()})
+        self.run_command(web)
+        found = YouTubeArtistLink.objects.get(name_key="ballroom thieves")
+        self.assertEqual((found.status, found.video_id, found.song_source), (Status.MATCHED, BALLROOM_VIDEO, "lastfm"))
+        self.assertGreater(found.checked_at, when(1))
+        self.assertEqual(web.search_queries, [BALLROOM_QUERY])
+
+    def test_old_match_not_confirmed(self):
+        self.ballroom()
+        link("ballroom thieves", days_ago=2, song_source="apple")
+        event = Event.objects.get(artists="The Ballroom Thieves")
+        event.save()
+        event.refresh_from_db()
+        self.assertIn("youtube-play", event.baked_html_template)
+        self.lastfm = FakeLastFm()
+        self.run_command(FakeWeb())
+        self.assertEqual(YouTubeArtistLink.objects.get(name_key="ballroom thieves").status, Status.NOT_FOUND)
+        event.refresh_from_db()
+        self.assertNotIn("youtube-play", event.baked_html_template)
+
+    def test_other_links_unaffected(self):
+        self.ballroom()
+        link("ballroom thieves", days_ago=2, source=Source.EDITOR, evidence=Evidence.EDITOR, song_source="apple")
+        upcoming_event("Dinosaur Jr.")
+        spotify("dinosaur jr", DINOSAUR_SPOTIFY)
+        link("dinosaur jr", days_ago=2, evidence=Evidence.WIKIDATA, channel_id=DINOSAUR_CHANNEL, video_id="")
+        web = FakeWeb()
+        self.run_command(web)
+        self.assertEqual(web.requests, [])
+
+    def test_migration_marks_the_old_song_matches(self):
+        from importlib import import_module
+
+        from django.apps import apps
+
+        link("old topic", evidence=Evidence.TOPIC_SONG)
+        link("old channel", evidence=Evidence.CHANNEL_SONG)
+        link("by wikidata", evidence=Evidence.WIKIDATA)
+        link("by editor", evidence=Evidence.CHANNEL_SONG, source=Source.EDITOR)
+        import_module("core.migrations.0090_youtube_link_song_source").mark_apple_song_matches(apps, None)
+        self.assertEqual(
+            dict(YouTubeArtistLink.objects.values_list("name_key", "song_source")),
+            {"old topic": "apple", "old channel": "apple", "by wikidata": "", "by editor": ""},
+        )

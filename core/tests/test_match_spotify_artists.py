@@ -10,6 +10,7 @@ from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 
 Status = SpotifyArtistLink.Status
+Source = SpotifyArtistLink.Source
 
 
 def upcoming_event(title=None, artists=None, days=3, **fields):
@@ -130,7 +131,7 @@ class StorageTestCase(TestCase):
         self.run_command(FakeSpotify({"The Ballroom Thieves": fixture("search_unique.json")}))
         row = SpotifyArtistLink.objects.values().get()
         self.assertEqual(
-            set(row), {"id", "name_key", "status", "spotify_artist_id", "source", "checked_at", "last_seen_at"}
+            set(row), {"id", "name_key", "status", "spotify_artist_id", "source", "checked_at", "last_seen_at", "evidence_checked_at"}
         )
         # spotify's spelling, genres and urls aren't kept anywhere in the row
         self.assertNotIn("indie folk", str(row))
@@ -397,3 +398,16 @@ class ClientTestCase(SimpleTestCase):
         self.assertEqual(parse_artist_id("spotify:artist:abc123"), "abc123")
         self.assertIsNone(parse_artist_id("https://example.com/band"))
         self.assertIsNone(parse_artist_id("https://open.spotify.com/album/abc123"))
+
+
+@mock.patch.dict("os.environ", CREDENTIALS)
+class EvidenceLinkTestCase(TestCase):
+    def test_spotify_matching_leaves_an_evidence_link_alone(self):
+        upcoming_event(artists="Bonobo")
+        link("bonobo", days_ago=31, spotify_artist_id="0cmWgDlu9CwTgxPhf403hb", source=Source.EVIDENCE)
+        spotify = FakeSpotify({"Bonobo": fixture("search_same_name.json")})
+        with spotify.patch():
+            call_command("match_spotify_artists", stdout=StringIO())
+        self.assertEqual(spotify.searches, [])
+        found = SpotifyArtistLink.objects.get(name_key="bonobo")
+        self.assertEqual((found.status, found.spotify_artist_id, found.source), (Status.MATCHED, "0cmWgDlu9CwTgxPhf403hb", Source.EVIDENCE))

@@ -169,7 +169,7 @@ class RefreshTestCase(CommandTestCase):
         self.assertEqual(
             set(row),
             {"id", "name_key", "status", "apple_artist_id", "top_song_id", "top_album_id", "source",
-             "checked_at", "last_seen_at"},
+             "checked_at", "last_seen_at", "evidence_checked_at"},
         )
         self.assertNotIn("Archers", str(row))
 
@@ -239,4 +239,17 @@ class RateLimitTestCase(CommandTestCase):
             JobRun.objects.get(command="match_apple_music_artists").summary,
             [["searched", 3], ["matched", 1], ["ambiguous", 1], ["not found", 1], ["deleted", 1], ["failed", 0],
              ["left for the next run", 0]],
+        )
+
+
+class EvidenceLinkTestCase(CommandTestCase):
+    def test_keeps_its_artist_but_refreshes_its_top_song(self):
+        upcoming_event(artists="The Ballroom Thieves")
+        link("ballroom thieves", days_ago=31, apple_artist_id="489634654", source=Source.EVIDENCE)
+        apple = FakeAppleMusic({"The Ballroom Thieves": fixture("search_same_name.json")}, BALLROOM_SONGS)
+        self.run_command(apple)
+        self.assertEqual(apple.searches, [])
+        found = AppleMusicArtistLink.objects.get(name_key="ballroom thieves")
+        self.assertEqual(
+            (found.apple_artist_id, found.top_song_id, found.source), ("489634654", "964625539", Source.EVIDENCE)
         )
