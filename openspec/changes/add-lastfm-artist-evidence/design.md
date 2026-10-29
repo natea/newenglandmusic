@@ -92,6 +92,8 @@ Tests check that no error text contains the key.
 - **YouTube:** `FakeWeb` answers searches and video lookups for the Last.fm route. The tests patch `AppleMusicClient` in `match_youtube_artists` to fail if it's ever made, to show that no Apple request is made.
 - **The daily job:** `test_scheduled_jobs.py`'s `DAILY` list gains the step.
 
+**Reasons in the report.** Every line says why a link was matched or stays ambiguous, naming the source that decided it, so a run can be checked by reading it. The report is also kept in each run's `JobRun` record in the admin, so listener counts and area names end up there. That's a run log, not link data, and is small; the "nothing stored" rule is about the links.
+
 ## Risks / Trade-offs
 
 - **[A wrong MBID on Last.fm]** → Last.fm's editors sometimes link the wrong act. Requiring the MusicBrainz name to equal ours, and exactly one linked artist on the service, catches most cases. Editors can override, and the 30-day re-check catches fixes made upstream.

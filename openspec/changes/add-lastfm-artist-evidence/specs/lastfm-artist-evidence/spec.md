@@ -14,7 +14,7 @@ It SHALL match the link to the linked artist (the Spotify link to the Spotify ar
   - **local:** the MusicBrainz area or begin area is a US state where the site has a venue, or is part of one, following MusicBrainz's "part of" links from a city or county up to the state, at most five steps. A town's name SHALL NOT decide this, since many towns share names with places elsewhere, such as Windsor, Ontario and Windsor, Connecticut. Or: the Last.fm bio names such a state, in full or as "<town>, <state code>", and doesn't say several acts share the name. A town named alone in a bio SHALL NOT count, since many town names are also surnames or words;
   - **dominant:** the Last.fm page has at least 100,000 listeners, and its bio doesn't say several acts share the name ("There are at least two…", "There are several…", "There are 2…", or a numbered list of acts).
 
-Otherwise the link SHALL stay ambiguous. A matched link SHALL be recorded with the source "evidence". An Apple Music link matched this way SHALL get its top song looked up, as an editor's does. Matching a link SHALL re-render the stored HTML of the upcoming events that name it. `--dry-run` SHALL report what would be matched and why, and save nothing.
+Otherwise the link SHALL stay ambiguous. A matched link SHALL be recorded with the source "evidence". An Apple Music link matched this way SHALL get its top song looked up, as an editor's does. Matching a link SHALL re-render the stored HTML of the upcoming events that name it. Each line of the report SHALL say why, and which source decided it: the rule that matched (such as "dominant: 2,121,800 Last.fm listeners", or "local: MusicBrainz area Erie (US-PA)"), or why the link stays ambiguous (no Last.fm page, no MusicBrainz ID on it, no MusicBrainz artist for the ID, a different name on MusicBrainz, a shared-name note on Last.fm, no single linked artist on the service, or neither local nor dominant, with the listener count and areas). `--dry-run` SHALL report the same lines, and save nothing.
 
 #### Scenario: Local act
 - **WHEN** "DJ Lucas" is ambiguous on Spotify, its Last.fm page has a MusicBrainz ID whose artist is named "DJ Lucas", has the area "Massachusetts", and links one Spotify artist, and the site has venues in MA
@@ -55,6 +55,10 @@ Otherwise the link SHALL stay ambiguous. A matched link SHALL be recorded with t
 #### Scenario: Apple Music link resolved
 - **WHEN** an ambiguous Apple Music link is resolved to artist 489634654
 - **THEN** it is matched with source "evidence", its top song is looked up, and its events show the Apple Music button
+
+#### Scenario: Every line says why
+- **WHEN** a run considers Bonobo (dominant), Dead Weight (shared name), Deuces Wild (2,032 listeners, from Germany), 157frq (no MusicBrainz ID) and a name with no Last.fm page
+- **THEN** each line gives its reason, such as "Deuces Wild: Spotify stays ambiguous (neither local nor dominant: 2,032 Last.fm listeners, MusicBrainz area Germany)"
 
 #### Scenario: Recently considered
 - **WHEN** an ambiguous link was considered 10 days ago and stayed ambiguous
