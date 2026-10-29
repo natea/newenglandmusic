@@ -23,6 +23,7 @@ class ReviewReasonsAdminTestCase(TestCase):
         self.dewey = review("$3 Dewey's", ["name"], 0.4)
         self.merriweather = review("Merriweather Post Pavilion", ["state", "distance"], 38.2)
         self.unrecorded = review("Old Review", [], None)
+        self.park = review("Spicket River Brewery", ["type"], 1.5)
         Venue.objects.create(name="Paradise Rock Club", place_lookup_status=Status.CONFIDENT)
 
     def changelist(self, query=""):
@@ -33,12 +34,15 @@ class ReviewReasonsAdminTestCase(TestCase):
         self.assertIn("name differs · 0.4 km away", html)
         self.assertIn("in another state · 38.2 km away (over 25)", html)
         self.assertIn("not recorded (run lookup_venue_places --review)", html)
+        self.assertIn("not a venue · 1.5 km away", html)
 
     def test_filter_by_reason(self):
         names = {v.name for v in self.changelist("?review_reason=state").context["cl"].result_list}
         self.assertEqual(names, {"Merriweather Post Pavilion"})
         names = {v.name for v in self.changelist("?review_reason=name").context["cl"].result_list}
         self.assertEqual(names, {"$3 Dewey's"})
+        names = {v.name for v in self.changelist("?review_reason=type").context["cl"].result_list}
+        self.assertEqual(names, {"Spicket River Brewery"})
 
     def test_actions_clear_the_reasons(self):
         url = reverse("admin:core_venue_changelist")

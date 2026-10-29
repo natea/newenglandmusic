@@ -35,9 +35,18 @@ Deploy, then run `lookup_venue_places --review --dry-run` to see how many review
 - **Wrong, because a name of only noise words was contained:** "The Music Hall" (Portsmouth) matched "The Music Hall Lounge", its separate small venue. Before this change "lounge" wasn't a noise word, so the two didn't match.
 - **Doubtful:** "The Brick House" to "The Brick Bar & Grill", "Union Square Tavern" to "Union Tavern", "The Walnut Street Cafe" to "Walnut Street Coffee Cafe", and "Bent Nails Bistro" to "Bent Nails Roadhouse" (9.4 km).
 
-This contradicts the risk analysis above, which relied on the state and distance checks: all six are within 10 km. Two fixes to decide on:
+This contradicts the risk analysis above, which relied on the state and distance checks: all six are within 10 km. Two fixes, both built (task 2.2):
 
-1. **A name of only noise words must match exactly.** When normalizing leaves nothing and the whole name is used, require the two names to be equal rather than one contained in the other. That fixes The Music Hall.
-2. **Reject places that aren't venues.** Ask Places for `places.types` (part of the same Pro field set, so no extra cost) and send a result typed as a park, natural feature or locality to review. That fixes Spicket River.
+1. **A name of only noise words must match exactly.** When normalizing leaves nothing and the whole name is used, require the two names to be equal rather than one contained in the other. That fixes The Music Hall. A leading "the" is ignored, so "The Music Hall" still matches "Music Hall".
+2. **Reject places that aren't venues.** Ask Places for `places.types` (part of the same Pro field set, so no extra cost) and send a result typed as a park, natural feature or locality to review. That fixes Spicket River. A place also typed as a venue ("event_venue" with "park", for an amphitheatre in a park) still counts, and so does one with no types. The types are used during the run and never stored, and the failed check is recorded as the reason "type" ("not a venue" in the admin).
 
 The doubtful four need an admin's judgment either way. The 135 still in review are mostly festivals and Porchfests mapped to a town or park, which are right to stay in review, plus run-together words that this change doesn't handle ("Kung Fu Neck Tie" vs "Kung Fu Necktie", "No Fun" vs "NoFun", "Game Time" vs "Gametime Lanes").
+
+### Checking the two fixes against Google (2026-10-29)
+
+A dry run of the 41 loosened matches with the fixes, against live results, needed two adjustments:
+
+- **Google adds the town to some names.** For Portsmouth's music hall it returned "The Music Hall, Portsmouth, NH", the main hall at 28 Chestnut St, which an exact match rejected. A name of only noise words now matches when the other name's extra words are only the venue's town and state (`names_match(..., place_words=...)`, which the Places lookup passes and Ticketmaster and Eventbrite don't). It still rejects "The Music Hall Lounge".
+- **Google typed the Spicket River Greenway `hiking_area` and `sports_activity_location`**, not `park`. `sports_activity_location` is a parent type a stadium has too, so it now says nothing either way, like `point_of_interest`; a stadium still counts by its own `stadium` type.
+
+With both, the dry run made The Music Hall confident on the right place and sent Spicket River Brewery to review as "not a venue". Google's top result for that search is "Rapscallion Brick Oven Pizza and Brewery", a live-music brewpub, which may be the venue the sheet means. The other 39 matches stayed confident, including the four doubtful ones, which pass both fixes and need an admin. Three of the 41 are permanently closed on Google: Cultured Cafe (V0034), Shayna B's By The Sea (V0067) and Farmer's Table Cafe (V0482).

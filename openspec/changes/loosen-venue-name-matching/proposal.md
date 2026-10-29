@@ -33,3 +33,5 @@ None.
 - **Code:** `core/venue_matching.py` (`normalize_name`, `names_match`), with tests. No model, migration or dependency.
 - **Risk:** a looser name check could match a different business at nearly the same name. The state and distance checks still apply, and Ticketmaster linking keeps its own 1 km limit and "same name preferred" rule.
 - **Depends on** `explain-place-reviews` only for measuring: run `--review --dry-run` before and after, and compare the counts of name-only reviews.
+
+- **Added after the first run (2026-10-29):** a name of only noise words must match exactly, and a place Google types only as a park, town or the like needs review, as "not a venue". See design.md's findings.

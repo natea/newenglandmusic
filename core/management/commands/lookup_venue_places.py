@@ -3,7 +3,7 @@ import os
 
 from core.job_runs import RecordedCommand
 from core.models import Event, Venue
-from core.places import PlaceNotFound, PlacesClient, PlacesError
+from core.places import PlaceNotFound, PlacesClient, PlacesError, is_venue
 from core.utils_event_caching import bake_event_html
 from core.venue_matching import distance_km, names_match
 from django.core.management.base import BaseCommand, CommandError
@@ -55,6 +55,11 @@ DEFAULT_MAX_AGE_DAYS = 25
 CLOSED = "CLOSED_PERMANENTLY"
 
 
+def same_name(venue, result):
+    """google often adds the town to a name ("The Music Hall, Portsmouth, NH")"""
+    return names_match(venue.name, result["name"], place_words=f"{venue.city_town} {venue.state}")
+
+
 def match_result(venue, results):
     """returns (status, the result to save or None, its distance from the venue in km)"""
     if not results:
@@ -66,7 +71,7 @@ def match_result(venue, results):
     for result in results:
         km = distance(result)
         nearby = venue.latitude is None or (km is not None and km <= MAX_DISTANCE_KM)
-        if names_match(venue.name, result["name"]) and result["state"] == venue.state and nearby:
+        if same_name(venue, result) and result["state"] == venue.state and nearby and is_venue(result):
             return Venue.PlaceLookupStatus.CONFIDENT, result, km
     return Venue.PlaceLookupStatus.REVIEW, results[0], distance(results[0])
 
@@ -74,16 +79,19 @@ def match_result(venue, results):
 def review_reasons(venue, result, km):
     """
     the checks a result failed, in a fixed order: "name" (it isn't the venue's name),
-    "state" (it's in another state), "distance" (it's over MAX_DISTANCE_KM away). our own
+    "state" (it's in another state), "distance" (it's over MAX_DISTANCE_KM away), "type"
+    (google types it as a park, a town or the like, not a venue). our own
     judgment of the match, kept so the admin can say why a venue needs review
     """
     reasons = []
-    if not names_match(venue.name, result["name"]):
+    if not same_name(venue, result):
         reasons.append("name")
     if result["state"] != venue.state:
         reasons.append("state")
     if venue.latitude is not None and (km is None or km > MAX_DISTANCE_KM):
         reasons.append("distance")
+    if not is_venue(result):
+        reasons.append("type")
     return reasons
 
 

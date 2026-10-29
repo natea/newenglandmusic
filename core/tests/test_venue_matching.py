@@ -72,6 +72,18 @@ class NameMatchingTestCase(SimpleTestCase):
         ):
             self.assertFalse(names_match(ours, theirs), (ours, theirs))
 
+    def test_name_of_only_noise_words_must_be_equal(self):
+        # portsmouth's music hall isn't its separate small venue, the music hall lounge
+        self.assertFalse(names_match("The Music Hall", "The Music Hall Lounge"))
+        self.assertTrue(names_match("The Music Hall", "Music Hall"))
+        self.assertTrue(names_match("The Music Hall", "THE MUSIC HALL"))
+        # google often adds the town and state, which the venue's own may be ignored for
+        self.assertTrue(names_match("The Music Hall", "The Music Hall, Portsmouth, NH", place_words="Portsmouth NH"))
+        self.assertFalse(names_match("The Music Hall", "The Music Hall, Portsmouth, NH"))
+        self.assertFalse(names_match("The Music Hall", "The Music Hall Lounge", place_words="Portsmouth NH"))
+        # a name with words of its own still matches by containing
+        self.assertTrue(names_match("MGM Music Hall", "MGM Music Hall at Fenway"))
+
     def test_distance_km(self):
         # paradise rock club to the orpheum, about 4.5 km
         self.assertAlmostEqual(distance_km(*PARADISE, 42.3558, -71.0610), 4.83, places=1)

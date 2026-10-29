@@ -436,7 +436,9 @@ class FetchStatusFilter(SimpleListFilter):
         return queryset
 
 
-REVIEW_REASON_WORDS = {"name": "name differs", "state": "in another state", "distance": "too far"}
+REVIEW_REASON_WORDS = {
+    "name": "name differs", "state": "in another state", "distance": "too far", "type": "not a venue",
+}
 
 
 def google_place_name(place_id):

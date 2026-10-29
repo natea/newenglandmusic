@@ -432,6 +432,37 @@ class ReviewReasonsTestCase(LookupVenuePlacesTestCase):
         self.assertEqual(venue.place_review_reasons, ["distance"])
         self.assertAlmostEqual(venue.place_distance_km, 40, delta=1)
 
+    def test_park_with_the_venues_name_needs_review(self):
+        # "Spicket River Brewery" matched "Spicket River Greenway", a park (2026-10-29): with
+        # "club" a noise word, "Paradise Rock Park" passes the name check the same way
+        output = self.run_lookup(results={"Paradise Rock Club": [place("Paradise Rock Park", types=["park", "point_of_interest"])]})
+        venue = Venue.objects.get(pk=self.paradise.pk)
+        self.assertEqual(venue.place_lookup_status, Venue.PlaceLookupStatus.REVIEW)
+        self.assertEqual(venue.place_review_reasons, ["type"])
+        self.assertIn("[failed: type]", output)
+
+    def test_place_typed_only_as_a_park_and_named_otherwise(self):
+        self.run_lookup(results={"Paradise Rock Club": [place("Agganis Green", types=["park", "establishment"])]})
+        self.assertEqual(Venue.objects.get(pk=self.paradise.pk).place_review_reasons, ["name", "type"])
+
+    def test_town_added_to_a_noise_word_name_is_confident(self):
+        # google returned "The Music Hall, Portsmouth, NH" for portsmouth's music hall (2026-10-29)
+        hall = Venue.objects.create(
+            sheet_id="V0492", name="The Music Hall", city_town="Portsmouth", state="NH",
+            latitude=43.0769, longitude=-70.7581, is_active=True,
+        )
+        self.run_lookup("--sheet-ids", "V0492", results={"The Music Hall": [
+            place("The Music Hall Lounge", state="NH", lat=43.0772, lng=-70.7585),
+            place("The Music Hall, Portsmouth, NH", state="NH", lat=43.0766, lng=-70.7579),
+        ]})
+        hall.refresh_from_db()
+        self.assertEqual(hall.place_lookup_status, Venue.PlaceLookupStatus.CONFIDENT)
+        self.assertEqual(hall.place_id, "id-The Music Hall, Portsmouth, NH")
+
+    def test_venue_in_a_park_is_confident(self):
+        self.run_lookup(results={"Paradise Rock Club": [place("Paradise Rock Club", types=["event_venue", "park"])]})
+        self.assertEqual(Venue.objects.get(pk=self.paradise.pk).place_lookup_status, Venue.PlaceLookupStatus.CONFIDENT)
+
     def test_wrong_place_states_its_reason(self):
         self.run_lookup(results=self.recorded_results)
         # columbia, md is in another state, and over 25 km from the sheet's washington

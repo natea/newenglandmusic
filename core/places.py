@@ -26,6 +26,8 @@ PRO_FIELDS = (
     "places.location",
     "places.businessStatus",
     "places.addressComponents",
+    # part of the same "pro" fields, so free to add: tells a park from a venue
+    "places.types",
 )
 # only what a refresh stores or reports
 DETAILS_FIELDS = ("id", "location", "businessStatus")
@@ -64,7 +66,31 @@ def to_place_dict(place):
         "latitude": location.get("latitude"),
         "longitude": location.get("longitude"),
         "business_status": place.get("businessStatus", ""),
+        "types": place.get("types") or [],
     }
+
+
+# google's place types that aren't a venue. a park or a town matched by name
+# ("Spicket River Brewery" to "Spicket River Greenway", 2026-10-29) goes to review
+NON_VENUE_TYPES = {
+    "park", "state_park", "national_park", "hiking_area", "natural_feature", "locality",
+    "sublocality", "neighborhood", "political", "route", "postal_code", "country",
+    "administrative_area_level_1", "administrative_area_level_2", "administrative_area_level_3",
+}
+# types that say nothing either way: every place has the first two, and
+# "sports_activity_location" is a parent type, on the spicket river greenway as on a stadium
+# (which is also typed "stadium")
+GENERIC_TYPES = {"point_of_interest", "establishment", "tourist_attraction", "sports_activity_location"}
+
+
+def is_venue(place):
+    """
+    false when google types the place as only a park, a town or the like; a place typed as
+    a venue too (an amphitheatre in a park, "event_venue" and "park") is one, and so is a
+    place without types
+    """
+    types = set(place.get("types") or [])
+    return not (types & NON_VENUE_TYPES) or bool(types - NON_VENUE_TYPES - GENERIC_TYPES)
 
 
 class PlacesClient:

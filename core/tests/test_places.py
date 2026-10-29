@@ -119,6 +119,7 @@ class SearchPlaceTestCase(SimpleTestCase):
                 "latitude": None,
                 "longitude": None,
                 "business_status": "",
+                "types": [],
             },
         )
 
@@ -176,3 +177,33 @@ class PlaceNameTestCase(SimpleTestCase):
     def test_place_without_a_name(self):
         client, _, _ = client_with(response(data={}))
         self.assertEqual(client.place_name("ChIJx"), "")
+
+
+class IsVenueTestCase(SimpleTestCase):
+    def test_parks_and_towns_are_not_venues(self):
+        for types in (
+            ["park", "tourist_attraction", "point_of_interest", "establishment"],
+            ["locality", "political"],
+            ["natural_feature", "establishment"],
+            # how google typed the spicket river greenway (2026-10-29)
+            ["hiking_area", "sports_activity_location", "point_of_interest", "establishment"],
+        ):
+            self.assertFalse(places.is_venue({"types": types}), types)
+
+    def test_venues(self):
+        for types in (
+            ["bar", "point_of_interest", "establishment"],
+            # an amphitheatre in a park is still a venue
+            ["event_venue", "park", "point_of_interest"],
+            ["point_of_interest", "establishment"],
+            ["stadium", "sports_activity_location", "point_of_interest"],
+            [],
+        ):
+            self.assertTrue(places.is_venue({"types": types}), types)
+        self.assertTrue(places.is_venue({}))
+
+    def test_search_asks_for_types_and_returns_them(self):
+        client, session, _ = client_with(response(data={"places": [{"id": "x", "types": ["park"]}]}))
+        self.assertEqual(client.search_place("Spicket River Brewery, Lawrence, MA")[0]["types"], ["park"])
+        mask = session.request.call_args.kwargs["headers"]["X-Goog-FieldMask"]
+        self.assertIn("places.types", mask.split(","))

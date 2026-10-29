@@ -18,10 +18,10 @@ ABBREVIATIONS = {"st": "street", "ave": "avenue", "rd": "road"}
 ABBREVIATION_RE = re.compile(r"\b(st|ave|rd)\b")
 
 
-def normalize_name(name):
+def cleaned(name):
     """
-    lowercase words without accents, punctuation, a trailing "(...)", or words like "the"
-    and "club"; apostrophes join their words ("eddie's" -> "eddies") and st/ave/rd are spelled out
+    lowercase words, without accents, punctuation or a trailing "(...)"; apostrophes join
+    their words ("eddie's" -> "eddies") and st/ave/rd are spelled out
     """
     name = unicodedata.normalize("NFKD", name)
     name = "".join(c for c in name if not unicodedata.combining(c))
@@ -29,9 +29,17 @@ def normalize_name(name):
     name = re.sub(r"['’]", "", name)
     name = re.sub(r"(?<=\S)\s*\([^()]*\)\s*$", "", name)
     name = re.sub(r"[^\w\s]", " ", name)
-    name = ABBREVIATION_RE.sub(lambda m: ABBREVIATIONS[m.group(1)], " ".join(name.split()))
-    words = NAME_NOISE_RE.sub(" ", name)
-    return " ".join(words.split()) or name
+    return ABBREVIATION_RE.sub(lambda m: ABBREVIATIONS[m.group(1)], " ".join(name.split()))
+
+
+def only_noise_words(cleaned_name):
+    return not NAME_NOISE_RE.sub(" ", cleaned_name).strip()
+
+
+def normalize_name(name):
+    """the cleaned name without words like "the" and "club", or all of it if that's all it is"""
+    name = cleaned(name)
+    return " ".join(NAME_NOISE_RE.sub(" ", name).split()) or name
 
 
 def spelling_variants(name):
@@ -46,10 +54,21 @@ def spelling_variants(name):
     return [name] if swapped == name else [name, swapped]
 
 
-def names_match(a, b):
-    """equal, or one's words appear in a row in the other's"""
+def names_match(a, b, place_words=""):
+    """
+    equal, or one's words appear in a row in the other's. a name of only noise words must be
+    equal, ignoring "the" and any words of `place_words` (the venue's town and
+    state): "The Music Hall" matches "The Music Hall, Portsmouth, NH" but not "The Music Hall
+    Lounge", a separate venue (2026-10-29)
+    """
+    full_a, full_b = cleaned(a), cleaned(b)
     a, b = normalize_name(a), normalize_name(b)
-    return bool(a and b) and (f" {a} " in f" {b} " or f" {b} " in f" {a} ")
+    if not (a and b):
+        return False
+    if only_noise_words(full_a) or only_noise_words(full_b):
+        ignored = {"the", *normalize_name(place_words).split()}
+        return [w for w in full_a.split() if w not in ignored] == [w for w in full_b.split() if w not in ignored]
+    return f" {a} " in f" {b} " or f" {b} " in f" {a} "
 
 
 def distance_km(lat1, lon1, lat2, lon2):
