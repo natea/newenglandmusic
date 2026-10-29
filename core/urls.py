@@ -11,7 +11,7 @@ from .views.event_redirect import event_redirect
 from .views.event_submission import EventCreateView
 from .views.index import index, past_month_archive
 from .views.internal_db_dump import internal_db_dump
-from .views.location import set_location
+from .views.location import set_location, suggest_locations
 from .views.saved_shows import saved_shows, toggle_saved_show
 
 urlpatterns = [
@@ -32,6 +32,7 @@ urlpatterns = [
     # other urls
     path("submit-event", EventCreateView.as_view(), name="submit_event"),
     path("location", set_location, name="set_location"),
+    path("location/suggest", suggest_locations, name="suggest_locations"),
     path("privacy", TemplateView.as_view(template_name="core/privacy.html"), name="privacy"),
     path("saved", saved_shows, name="saved_shows"),
     path("saved/toggle/<int:event_id>", toggle_saved_show, name="toggle_saved_show"),

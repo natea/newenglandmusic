@@ -144,3 +144,41 @@ def format_miles(distance):
     if tenths < 10:
         return f"{tenths:.1f} mi away"
     return f"{round(distance)} mi away"
+
+
+MAX_SUGGESTIONS = 8
+
+
+def suggest(text, limit=MAX_SUGGESTIONS):
+    """
+    places starting with what's been typed, for the location field's suggestions: zip codes
+    for digits, else towns, those with venues first, then those in states the site covers,
+    then the rest, alphabetically within each
+    """
+    from core.models import CensusPlace
+
+    text = (text or "").strip()
+    if len(text) < 2:
+        return []
+    if text.isdigit():
+        zips = CensusPlace.objects.filter(kind=CensusPlace.Kind.ZIP, name__startswith=text).order_by("name")
+        return list(zips.values_list("name", flat=True)[:limit])
+    key = normalize(text)
+    if not key:
+        return []
+    towns = CensusPlace.objects.filter(kind=CensusPlace.Kind.TOWN, search_key__startswith=key)
+    with_venues = {(k, state) for k, state in venue_towns() if k.startswith(key)}
+    covered = covered_states()
+    found, seen = [], set()
+
+    def add(places):
+        for place in places:
+            label = town_label(place)
+            if label not in seen and len(found) < limit:
+                seen.add(label)
+                found.append(label)
+
+    add(sorted((p for p in towns.filter(state__in={s for _, s in with_venues}) if (p.search_key, p.state) in with_venues), key=lambda p: (p.name, p.state)))
+    add(towns.filter(state__in=covered).order_by("name", "state")[: limit * 2])
+    add(towns.exclude(state__in=covered).order_by("name", "state")[:limit])
+    return found

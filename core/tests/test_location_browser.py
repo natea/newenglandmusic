@@ -48,3 +48,10 @@ class LocationBrowserTestCase(BrowserTestCase):
         page.click("form.locationForm .use-my-location")
         page.wait_for_selector("text=didn't give a location")
         self.assertEqual(page.locator(".event-distance").count(), 0)
+
+    def test_suggestions_fill_as_you_type(self):
+        _, page = self.open_page("/", context=self.context())
+        page.type('form.locationForm input[name="q"]', "som", delay=30)
+        page.wait_for_function("() => document.querySelectorAll('#location-suggestions option').length > 0")
+        options = page.eval_on_selector_all("#location-suggestions option", "els => els.map(e => e.value)")
+        self.assertIn("Somerville, MA", options)

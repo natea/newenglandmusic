@@ -6,11 +6,11 @@ page they came from.
 """
 
 from django.contrib import messages
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.utils.http import url_has_allowed_host_and_scheme
 
-from ..location import COOKIE_MAX_AGE, COOKIE_NAME, DEVICE_LABEL, encode, resolve, rounded
+from ..location import COOKIE_MAX_AGE, COOKIE_NAME, DEVICE_LABEL, encode, resolve, rounded, suggest
 
 NOT_FOUND = "We couldn't find {place}. Try a town name, such as \"Somerville, MA\", or another ZIP code."
 NO_POSITION = "Your device didn't give a location. Try typing your ZIP code or town instead."
@@ -52,3 +52,8 @@ def set_location(request):
         location = found
     response.set_cookie(COOKIE_NAME, encode(location), max_age=COOKIE_MAX_AGE, samesite="Lax")
     return response
+
+
+def suggest_locations(request):
+    """the location field's suggestions for what's been typed, as {"suggestions": [...]}"""
+    return JsonResponse({"suggestions": suggest(request.GET.get("q", ""))})

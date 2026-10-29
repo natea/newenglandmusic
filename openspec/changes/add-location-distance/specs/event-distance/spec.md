@@ -44,6 +44,26 @@ A visitor's text SHALL be looked up as:
 - **WHEN** a Census file can't be downloaded
 - **THEN** the command fails with a message, and the table is unchanged
 
+### Requirement: The location field suggests towns as you type
+With JavaScript, typing two or more characters in the location field SHALL suggest up to eight places from the Census table, in the browser's own suggestion list. They're shown as "<town>, <state>", or as a ZIP code when the text is digits. A suggestion SHALL be chosen by the same rules as a typed place, so choosing one sets that exact place. The suggestions SHALL come from `/location/suggest?q=…`, which returns them as JSON:
+- towns whose name starts with the text;
+- towns with venues on the site first, then towns in states where the site has venues, then the rest, alphabetically within each;
+- for digits, ZIP codes starting with them.
+
+Without JavaScript, the field SHALL work as a plain text field.
+
+#### Scenario: Suggestions while typing
+- **WHEN** a visitor types "som"
+- **THEN** "Somerville, MA" is suggested first, as the town with venues, followed by other Somervilles and towns starting with "Som", at most eight
+
+#### Scenario: ZIP prefix
+- **WHEN** a visitor types "0214"
+- **THEN** ZIP codes starting with 0214 are suggested, such as "02144"
+
+#### Scenario: Too short
+- **WHEN** a visitor has typed one character
+- **THEN** nothing is suggested
+
 ### Requirement: Visitors can set and clear their location
 The listing, month archive and saved shows pages SHALL offer a location form: a text field for a ZIP code or town, and a "Use my location" button. The form SHALL work without JavaScript for typed places. "Use my location" SHALL need JavaScript. It SHALL ask the browser for the device's position only when pressed, and send it rounded to three decimal places (about 100 m).
 

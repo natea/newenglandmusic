@@ -12,7 +12,9 @@
     {% endif %}
     <label>
       {% if location %}change{% else %}near{% endif %}
-      <input type="text" name="q" placeholder="ZIP code or town" autocomplete="postal-code" size="16">
+      <input type="text" name="q" placeholder="ZIP code or town" autocomplete="off" list="location-suggestions" size="16">
+      {# filled from /location/suggest as the visitor types (core/js/location.js) #}
+      <datalist id="location-suggestions"></datalist>
     </label>
     <button type="submit">Go</button>
     <button type="button" class="use-my-location" hidden>Use my location</button>

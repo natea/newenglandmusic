@@ -52,3 +52,33 @@ class LocationViewTestCase(TestCase):
         with CaptureQueriesContext(connection) as queries:
             self.client.get("/location", {"q": "Somerville, MA"})
         self.assertFalse([q for q in queries.captured_queries if q["sql"].lstrip().upper().startswith(("INSERT", "UPDATE"))])
+
+
+class SuggestTestCase(TestCase):
+    def setUp(self):
+        census_places()
+        Venue.objects.create(name="Aeronaut", state="MA", city_town="Somerville")
+        Venue.objects.create(name="a maine venue", state="ME", city_town="Portland")
+
+    def suggestions(self, q):
+        response = self.client.get("/location/suggest", {"q": q})
+        self.assertEqual(response.status_code, 200)
+        return response.json()["suggestions"]
+
+    def test_suggestions_while_typing(self):
+        found = self.suggestions("som")
+        self.assertEqual(found[0], "Somerville, MA")
+        self.assertIn("Somerville, ME", found)
+        self.assertLessEqual(len(found), 8)
+
+    def test_zip_prefix(self):
+        self.assertEqual(self.suggestions("0214"), ["02144"])
+        self.assertEqual(self.suggestions("021"), ["02139", "02144"])
+
+    def test_too_short(self):
+        self.assertEqual(self.suggestions("s"), [])
+        self.assertEqual(self.suggestions(""), [])
+
+    def test_a_suggestion_sets_that_place(self):
+        response = self.client.get("/location", {"q": "Somerville, ME"})
+        self.assertEqual(decode(response.cookies[COOKIE_NAME].value).label, "Somerville, ME")

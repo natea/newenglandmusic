@@ -46,6 +46,11 @@
   - the calendar feed.
 - [x] 4.2 Add the town multi-select to `core/templates/core/geo_filter_form.html`, shown when a metro is chosen. Verify with render tests for the towns offered and the selected towns. Also check that it submits without JavaScript, and that changing the metro drops other metros' towns.
 
+## 4b. Friendlier controls
+
+- [x] 4b.1 Add `/location/suggest?q=` (JSON, up to eight suggestions, ranked: towns with venues, then covered states, then the rest; ZIP prefixes for digits) and fill a `<datalist>` for the location field from it as the visitor types (debounced). Verify with view tests for suggestions while typing, ZIP prefix and too short, and a Playwright test of the suggestion list being filled.
+- [x] 4b.2 Turn the town multi-select into an "add a town" list with removable chips (`core/static/core/js/town_chips.js`), keeping the plain multi-select without JavaScript. Verify with a Playwright test for adding and removing towns, and with the existing render tests still passing.
+
 ## 5. Docs and check
 
 - [x] 5.1 Add the Census data and the location cookie to `/privacy`. Add `load_census_gazetteer` to PRODUCTION.md and AGENTS.md: how often to run it (once a year, and at setup) and the data's source. Add the Google-coordinates note to the launch checklist item. Verify with the privacy page test and by reading the docs.
