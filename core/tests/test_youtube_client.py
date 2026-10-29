@@ -95,6 +95,8 @@ class MusicIdsTestCase(SimpleTestCase):
         web = FakeWeb(musicbrainz={DINOSAUR_SPOTIFY: [f"https://www.youtube.com/channel/{DINOSAUR_CHANNEL}", "https://www.youtube.com/@dinosaurjr"]})
         self.assertEqual(web.music_ids().musicbrainz_channels(DINOSAUR_SPOTIFY), {DINOSAUR_CHANNEL})
         self.assertTrue(all("venue-db-event-check/1.0" in r.headers["User-Agent"] for r in web.requests))
+        # musicbrainz asks for a way to reach us
+        self.assertTrue(all("newenglandmusic843@gmail.com" in r.headers["User-Agent"] for r in web.requests))
 
     def test_musicbrainz_no_link(self):
         web = FakeWeb()
