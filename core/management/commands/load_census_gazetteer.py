@@ -6,6 +6,7 @@ import zipfile
 import requests
 from core.artist_matching import normalize
 from core.models import CensusPlace
+from core.user_agent import USER_AGENT
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
@@ -25,7 +26,6 @@ once at setup and again each year (see PRODUCTION.md).
 
 DEFAULT_YEAR = 2026
 URL = "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/{year}_Gazetteer/{year}_Gaz_{name}.zip"
-USER_AGENT = "venue-db-event-check/1.0 (+https://newenglandmusic.onrender.com)"
 TIMEOUT_SECONDS = 120
 ZIP_FILE = "zcta_national"
 # county subdivisions first: in new england they're the towns people mean
