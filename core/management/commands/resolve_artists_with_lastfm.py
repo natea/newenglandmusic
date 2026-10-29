@@ -46,19 +46,33 @@ ID_FIELDS = {"spotify": "spotify_artist_id", "apple": "apple_artist_id"}
 
 
 def verdict(key, info, artist, places, music_ids):
-    """("local" or "dominant", why) when the evidence names this act as ours, else None"""
-    if not info or not artist or normalize(artist["name"]) != key:
-        return None
+    """
+    ("local" or "dominant", why) when the evidence names this act as ours, else (None, why
+    not), so every line of the report says which source decided it
+    """
+    if not info:
+        return None, "no Last.fm page"
+    if not info["mbid"]:
+        return None, "the Last.fm page has no MusicBrainz ID"
+    if not artist:
+        return None, "MusicBrainz has no artist for the Last.fm page's ID"
+    if normalize(artist["name"]) != key:
+        return None, f'MusicBrainz calls the Last.fm page\'s act "{artist["name"]}"'
+    areas = []
     for area in artist["areas"]:
         code = music_ids.area_subdivision(area["id"])
         if is_covered_subdivision(code, places):
-            return "local", f"musicbrainz area {area['name']} ({code})"
+            return "local", f"MusicBrainz area {area['name']} ({code})"
+        areas.append(f"{area['name']} ({code})" if code else area["name"])
     # a shared page's bio describes several acts, so its places could be any of theirs
-    if not shares_name(info["bio"]) and names_covered_place(info["bio"], places):
-        return "local", "last.fm bio names a covered state"
+    if shares_name(info["bio"]):
+        return None, "Last.fm says several acts share the name"
+    if names_covered_place(info["bio"], places):
+        return "local", "the Last.fm bio names a covered state"
     if is_dominant(info["listeners"], info["bio"]):
-        return "dominant", f"{info['listeners']:,} last.fm listeners"
-    return None
+        return "dominant", f"{info['listeners']:,} Last.fm listeners"
+    where = f"MusicBrainz area {', '.join(areas)}" if areas else "no MusicBrainz area"
+    return None, f"neither local nor dominant: {info['listeners']:,} Last.fm listeners, {where}"
 
 
 class Command(RecordedCommand, BaseCommand):
@@ -145,8 +159,10 @@ class Command(RecordedCommand, BaseCommand):
         model = MODELS[service]
         ids = (artist or {}).get(service) or set()
         label = "Spotify" if service == "spotify" else "Apple Music"
-        if found and len(ids) == 1:
-            kind, why = found
+        kind, why = found
+        if kind and len(ids) != 1:
+            why = f"MusicBrainz links {'no' if not ids else len(ids)} {label} artist{'' if len(ids) == 1 else 's'}"
+        if kind and len(ids) == 1:
             artist_id = next(iter(ids))
             was_evidence = link.source == model.Source.EVIDENCE
             values = {
@@ -166,12 +182,12 @@ class Command(RecordedCommand, BaseCommand):
             return
         if link.source == model.Source.EVIDENCE:
             self.counts["reverted"] += 1
-            self.stdout.write(f"  {name}: {label} evidence gone; ambiguous again")
+            self.stdout.write(f"  {name}: {label} evidence gone, ambiguous again ({why})")
             self.changed.add(link.name_key)
             self.save(model, link, self.ambiguous(service, model))
             return
         self.counts["stayed ambiguous"] += 1
-        self.stdout.write(f"  {name}: {label} stays ambiguous")
+        self.stdout.write(f"  {name}: {label} stays ambiguous ({why})")
         self.save(model, link, {"evidence_checked_at": self.now})
 
     def top_song(self, name, artist_id):

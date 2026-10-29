@@ -17,7 +17,7 @@ COMMAND = "core.management.commands.resolve_artists_with_lastfm"
 LUCAS_MBID = "7f1b5a39-3f4b-4f8e-9a4e-1f0c2d1d6a11"
 BONOBO_MBID = "9a709693-b4f8-4da9-8cc1-038c911a61be"
 DEAD_WEIGHT_MBID = "1d2c3b4a-0000-4000-8000-00000000dead"
-DEUCES_MBID = "2e3d4c5b-0000-4000-8000-0000000deuce"
+DEUCES_MBID = "2e3d4c5b-0000-4000-8000-00000000dec5"
 LUCAS_SPOTIFY = "4DjLucasSpotifyArtist01"[:22]
 BONOBO_SPOTIFY = "0cmWgDlu9CwTgxPhf403hb"
 
@@ -273,3 +273,30 @@ class LocalRuleTestCase(ResolveTestCase):
         self.web.mb_artists[mbid] = {"name": "Small Town Band", "area": "Somerville", "urls": [spotify_url("1SmallTownBandSpot0001")]}
         self.run_command()
         self.assertEqual(self.link("small town band").status, Status.MATCHED)
+
+
+class ReasonsTestCase(ResolveTestCase):
+    def test_every_line_says_why(self):
+        self.event("Bonobo, Dead Weight, Deuces Wild, 157frq, Nobody Here")
+        for key in ("bonobo", "dead weight", "deuces wild", "157frq", "nobody here"):
+            ambiguous(key)
+        ambiguous("bonobo", model=AppleMusicArtistLink)
+        self.web.mb_artists[BONOBO_MBID]["urls"] = [spotify_url(BONOBO_SPOTIFY)]
+        out = self.run_command("--dry-run")
+        self.assertIn("Bonobo: Spotify 0cmWgDlu9CwTgxPhf403hb (dominant: 2,121,800 Last.fm listeners)", out)
+        self.assertIn("Bonobo: Apple Music stays ambiguous (MusicBrainz links no Apple Music artists)", out)
+        self.assertIn("Dead Weight: Spotify stays ambiguous (Last.fm says several acts share the name)", out)
+        self.assertIn("Deuces Wild: Spotify stays ambiguous (neither local nor dominant: 2,032 Last.fm listeners, MusicBrainz area Germany)", out)
+        self.assertIn("157frq: Spotify stays ambiguous (the Last.fm page has no MusicBrainz ID)", out)
+        self.assertIn("Nobody Here: Spotify stays ambiguous (no Last.fm page)", out)
+
+    def test_different_name_reason(self):
+        self.event("Bonobo")
+        ambiguous("bonobo")
+        self.web.mb_artists[BONOBO_MBID]["name"] = "Bonobo Orchestra"
+        self.assertIn('stays ambiguous (MusicBrainz calls the Last.fm page\'s act "Bonobo Orchestra")', self.run_command("--dry-run"))
+
+    def test_local_reason_names_the_state(self):
+        self.event("DJ Lucas")
+        ambiguous("dj lucas")
+        self.assertIn("(local: MusicBrainz area Massachusetts (US-MA))", self.run_command("--dry-run"))
