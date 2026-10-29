@@ -183,6 +183,12 @@ These run in this order. Each one depends on the one before it:
 - **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed sheet sync leaves the venues as they were, and they can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.
 - **Builds:** the jobs build with `bin/build-job.sh`, which only installs the requirements. Only the web service migrates. Like the web service, they deploy a commit only once CI passes.
 - **Setting them up:** after `render.yaml` changes on `main`, run a blueprint sync in the Render dashboard (the blueprint's page, **Manual Sync**). It shows the services it will create and their cost for approval.
+- **New variables for the jobs: set them on the web service first.** A job's variable that copies the web service's (`fromService` with an `envVarKey`) makes the blueprint sync fail when the web service doesn't have that variable yet. The sync fails within a second, and Render doesn't say why. That happened on 2026-10-27, when the Apple Music variables were pushed before they were set on the web service, and on 2026-10-28 with `YOUTUBE_PREVIEWS`. So:
+  1. set the new variable on the web service (even to a placeholder, such as `false` for a switch);
+  2. then push the `render.yaml` that copies it to the jobs;
+  3. check that the blueprint's sync succeeded.
+  
+  If a sync has already failed, set the missing variable on the web service, then press **Manual Sync**.
 - **Running one now:** trigger a run from the job's page in the dashboard, or with `render jobs create <service id> --start-command ./bin/daily.sh`. A manual run cancels one that's already running.
 - **Cost:** each job is billed by the second of running time on `0.5c-512mb`, with a $1 minimum a month, so about $2 a month for both, plus the Anthropic usage above.
 
