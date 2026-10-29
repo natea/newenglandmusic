@@ -26,3 +26,18 @@
 ## Migration Plan
 
 Deploy, then run `lookup_venue_places --review --dry-run` to see how many reviews would clear, then without `--dry-run` (about 180 Places searches, with approval), locally and on Render.
+
+## Findings from the first run (2026-10-29)
+
+`lookup_venue_places --review`, run locally against the 176 review venues (the before and after are in `logs/place-status-2026-10-29-loosen-comparison.csv`), made 41 confident. 35 were right, such as "Night Shift Brewery" to "Night Shift Brewing - Everett", "Cafe 641" to "Café 641", and "Hillside Johnny's" to "Hillside Johnnys". Six were wrong or doubtful, and were put back to review by hand:
+
+- **Wrong, because dropping a noise word left a place name:** "Spicket River Brewery" matched "Spicket River Greenway", a park.
+- **Wrong, because a name of only noise words was contained:** "The Music Hall" (Portsmouth) matched "The Music Hall Lounge", its separate small venue. Before this change "lounge" wasn't a noise word, so the two didn't match.
+- **Doubtful:** "The Brick House" to "The Brick Bar & Grill", "Union Square Tavern" to "Union Tavern", "The Walnut Street Cafe" to "Walnut Street Coffee Cafe", and "Bent Nails Bistro" to "Bent Nails Roadhouse" (9.4 km).
+
+This contradicts the risk analysis above, which relied on the state and distance checks: all six are within 10 km. Two fixes to decide on:
+
+1. **A name of only noise words must match exactly.** When normalizing leaves nothing and the whole name is used, require the two names to be equal rather than one contained in the other. That fixes The Music Hall.
+2. **Reject places that aren't venues.** Ask Places for `places.types` (part of the same Pro field set, so no extra cost) and send a result typed as a park, natural feature or locality to review. That fixes Spicket River.
+
+The doubtful four need an admin's judgment either way. The 135 still in review are mostly festivals and Porchfests mapped to a town or park, which are right to stay in review, plus run-together words that this change doesn't handle ("Kung Fu Neck Tie" vs "Kung Fu Necktie", "No Fun" vs "NoFun", "Game Time" vs "Gametime Lanes").
