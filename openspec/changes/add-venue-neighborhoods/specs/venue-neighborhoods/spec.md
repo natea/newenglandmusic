@@ -40,7 +40,7 @@ From the accepted result's address, the command SHALL choose, in this order, the
 - **THEN** no name from the address is used, and the nearest-point fallback is tried
 
 ### Requirement: Where neighborhoods are only points, the nearest one is used
-When the address gives no usable name, and the venue is in a town where OpenStreetMap marks neighborhoods only as points (New York, its boroughs, and Washington, DC), the command SHALL ask Overpass for nodes tagged `place=neighbourhood`, `place=suburb` or `place=quarter` within 1.5 km of the result's location, and use the nearest one's name, if it's usable. Overpass SHALL be retried after 5, 15 and 45 seconds on a timeout or a 429, 502, 503 or 504, and tried on a mirror after that. When it still fails, the venue SHALL be left due, for the next run.
+When the address gives no usable name, and the venue is in a town where OpenStreetMap marks neighborhoods only as points (New York, its boroughs, and Washington, DC), the command SHALL ask Overpass for nodes tagged `place=neighbourhood`, `place=suburb` or `place=quarter` within 1.5 km of the result's location, and use the nearest one's name, if it's usable. Overpass SHALL be retried after 5, 15 and 45 seconds on a timeout or a 429, 502, 503 or 504, and tried on a mirror after that. When it still fails, the venue SHALL be left due, for the next run, and the rest of the run SHALL NOT ask Overpass again: venues that need it SHALL also be left due.
 
 #### Scenario: Williamsburg
 - **WHEN** the Brooklyn venue's nearest neighborhood point is "Williamsburg", 400 m away
@@ -51,8 +51,8 @@ When the address gives no usable name, and the venue is in a town where OpenStre
 - **THEN** Overpass isn't asked, and the venue is recorded as found with no neighborhood
 
 #### Scenario: Overpass busy
-- **WHEN** Overpass and its mirror time out on every try
-- **THEN** the venue is unchanged and still due, and the run carries on
+- **WHEN** Overpass and its mirror time out on every try, for the first of two Brooklyn venues
+- **THEN** both venues are unchanged and still due, Overpass is asked for the first only, and the run carries on with the other venues
 
 ### Requirement: Lookups are polite and the run stops cleanly
 Nominatim SHALL get at most one request a second, and every request SHALL send the site's contact user agent. On a Nominatim 429 or 403, the run SHALL stop, keep what it found, and report the venues left. Neighborhoods SHALL be saved with `queryset.update()`, and only venues whose neighborhood changed SHALL have their events re-rendered. The run SHALL record a `JobRun` with counts of venues looked up, found, given a neighborhood (from the address or from Overpass), not found, failed and left.

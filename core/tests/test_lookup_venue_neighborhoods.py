@@ -162,3 +162,20 @@ class PointNeighborhoodTownsTestCase(LookupTestCase):
         venue("Century", "Philadelphia", "PA")
         self.run_command("--state", "pa")
         self.assertEqual([r.params["q"] for r in self.osm.requests if r.method == "GET"], ["Century, Philadelphia, PA"])
+
+
+class OverpassDownTestCase(LookupTestCase):
+    def test_not_asked_again_after_it_stays_busy(self):
+        venue("18th Ward Brewing", "Brooklyn", "NY")
+        second = Venue.objects.create(name="18th Ward Brewing", city_town="Brooklyn", state="NY", is_active=True, sheet_id="V2")
+        big_night = venue("Big Night Live", "Boston", "MA")
+        self.osm.overpass = [response(504)]
+        out = self.run_command()
+        # one venue's worth of tries (four on each server), not two
+        self.assertEqual(len(self.osm.overpass_requests), 8)
+        self.assertIn("not asking it again this run", out)
+        self.assertEqual(Venue.objects.filter(city_town="Brooklyn", neighborhood_checked_at__isnull=True).count(), 2)
+        big_night.refresh_from_db()
+        self.assertEqual(big_night.neighborhood, "West End")
+        run = JobRun.objects.get(command="lookup_venue_neighborhoods")
+        self.assertEqual(dict(run.summary)["left for the next run"], 2)

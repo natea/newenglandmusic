@@ -31,7 +31,8 @@ where openstreetmap marks neighborhoods only as points, overpass finds the neare
 
 a venue is due when it was never looked up or was looked up over RECHECK_AFTER ago, unless
 an editor set its neighborhood. nominatim refusing us stops the run, keeping what it found;
-overpass staying busy leaves that venue due for the next run.
+overpass staying busy leaves that venue due for the next run, and the rest of the run doesn't
+ask it again.
 """
 
 RECHECK_AFTER = datetime.timedelta(days=365)
@@ -66,6 +67,9 @@ class Command(RecordedCommand, BaseCommand):
             )
         venues = list(venues.order_by("state", "city_town", "name")[: options["limit"]])
         osm = OsmClient()
+        # once overpass has stayed busy for one venue, the rest of the run doesn't ask it: its
+        # retries cost minutes a venue (2026-10-29), and those venues just wait for the next run
+        self.overpass_down = False
 
         heading = "would record" if self.dry_run else "recorded"
         self.stdout.write(self.style.MIGRATE_HEADING(f"{heading} ({len(venues)} venues due)"))
@@ -81,7 +85,10 @@ class Command(RecordedCommand, BaseCommand):
                 break
             except OverpassUnavailable as e:
                 self.counts["left for the next run"] += 1
-                self.stdout.write(self.style.WARNING(f"  {venue.name}: {e}; left for the next run"))
+                if not self.overpass_down:
+                    self.overpass_down = True
+                    self.stdout.write(self.style.WARNING(f"  {e}; not asking it again this run"))
+                self.stdout.write(self.style.WARNING(f"  {venue.name}: needs overpass; left for the next run"))
                 continue
             except OsmError as e:
                 self.counts["failed"] += 1
@@ -105,6 +112,8 @@ class Command(RecordedCommand, BaseCommand):
             return name, Source.ADDRESS, "from the address"
         # neighborhoods mapped only as points (new york, dc) aren't in any address
         if has_point_neighborhoods(venue.city_town, venue.state):
+            if self.overpass_down:
+                raise OverpassUnavailable("overpass was busy earlier this run")
             name = osm.nearest_neighborhood(float(result["lat"]), float(result["lon"]), venue.city_town)
             if name:
                 return name, Source.OVERPASS, "from overpass"
