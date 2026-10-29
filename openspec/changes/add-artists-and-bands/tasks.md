@@ -1,11 +1,11 @@
 ## 1. Models
 
-- [ ] 1.1 Add the abstract `MusicAct` with the shared and MusicBrainz fields and `editor_fields`, `Artist`, `Band` and `BandMembership` (role, years, source, unique on band, artist and role), with a migration. Verify with model tests for an artist in two bands and a former member, and that `makemigrations --check` is clean.
+- [x] 1.1 Add the abstract `MusicAct` with the shared and MusicBrainz fields and `field_sources`, `Artist`, `Band` and `BandMembership` (role, years, source, unique on band, artist and role), with a migration. Verify with model tests for an artist in two bands and a former member, and that `makemigrations --check` is clean.
 
 ## 2. Import
 
-- [ ] 2.1 Add `core/artist_import.py`: parse the layout's rows from a CSV file or from sheet values, parse `Members` with roles, validate `Kind`, `State` and the Bandcamp URL, and create or update records and memberships without overwriting `editor_fields` or removing memberships. Verify with tests for importing a band with members, importing twice, the editor's change kept, a bad row, and an invalid Bandcamp URL.
-- [ ] 2.2 Add the `import_artists` command (`--csv`, or `--sheet` and `--tab`, and `--dry-run`), reading sheets as `sync_venues_from_gsheets` does, recorded as a `JobRun`. Verify with tests with `gog` and the service account mocked, and the dry run saving nothing.
+- [x] 2.1 Add `core/artist_import.py`: parse the layout's rows from a CSV file or from sheet values, parse `Members` with roles, validate `Kind`, `State` and the Bandcamp URL, and create or update records and memberships without overwriting a field an editor or MusicBrainz set (`field_sources`) or removing memberships. Verify with tests for importing a band with members, importing twice, the editor's change kept, a bad row, and an invalid Bandcamp URL.
+- [x] 2.2 Add the `import_artists` command (`--csv`, or `--sheet` and `--tab`, and `--dry-run`), reading sheets as `sync_venues_from_gsheets` does, recorded as a `JobRun`. Verify with tests with `gog` and the service account mocked, and the dry run saving nothing.
 
 ## 3. MusicBrainz enrichment
 
@@ -15,7 +15,7 @@
 
 ## 4. Admin
 
-- [ ] 4.1 Add `Artist` and `Band` admins: list columns, filters by state and status, name search, memberships inline on both, `editor_fields` set from changed fields, setting the MusicBrainz ID by hand (status "editor"), a "clear MusicBrainz match" action, and the genres' credit. Verify with admin tests for the inline, a hand-set ID surviving `--refresh`, and clearing.
+- [ ] 4.1 Add `Artist` and `Band` admins: list columns, filters by state and status, name search, memberships inline on both, `field_sources` marking changed fields as the editor's, setting the MusicBrainz ID by hand (status "editor"), a "clear MusicBrainz match" action, and the genres' credit. Verify with admin tests for the inline, a hand-set ID surviving `--refresh`, and clearing.
 
 ## 5. Docs and check
 
