@@ -1,6 +1,7 @@
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVectorField
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models.functions import Upper
 from django.urls import reverse
@@ -10,7 +11,7 @@ from solo.models import SingletonModel
 from tinymce import models as tinymce_models
 
 from core.artist_matching import normalize
-from core.artists import validate_bandcamp_url
+from core.artists import MBID_PATTERN, validate_bandcamp_url
 from core.utils_event_caching import bake_event_html
 from core.utils_static_page import refresh_searchable_static_page_bits
 
@@ -840,7 +841,10 @@ class MusicAct(models.Model):
     # and bandcamp link only when they're empty, so neither overwrites an editor's
     field_sources = models.JSONField(blank=True, default=dict)
 
-    musicbrainz_id = models.CharField(max_length=36, unique=True, null=True, blank=True)
+    musicbrainz_id = models.CharField(
+        max_length=36, unique=True, null=True, blank=True,
+        validators=[RegexValidator(MBID_PATTERN, "a MusicBrainz id, like 4fbf1a3d-a649-4f8e-9ddf-347f6ba2d307")],
+    )
     musicbrainz_status = models.CharField(max_length=16, choices=MusicBrainzStatus.choices, blank=True, default="")
     musicbrainz_checked_at = models.DateTimeField(null=True, blank=True)
     # musicbrainz's type ("Person", "Group", "Orchestra"…), country code, area and its

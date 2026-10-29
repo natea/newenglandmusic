@@ -2,7 +2,9 @@
 
 Many venues sell through ticketing platforms whose pages refuse our crawler, and AXS, Etix and Eventim offer no public listings API. SeatGeek lists shows across many primary sellers, so its free official API may cover the 21 Etix and 4 AXS venues, and others that neither Ticketmaster nor Eventbrite reaches.
 
-This was half of `add-eventbrite-seatgeek-sources`. It was split out on 2026-10-26, because SeatGeek hasn't yet approved the client ID the API needs, while the Eventbrite half (`add-eventbrite-source`) went ahead.
+This was half of `add-eventbrite-seatgeek-sources`. It was split out on 2026-10-26, while SeatGeek approved the developer account, and the Eventbrite half (`add-eventbrite-source`) went ahead and is archived. SeatGeek approved the account on 2026-10-29, and the client ID works.
+
+SeatGeek's API gives event details only: no ticket listings and no prices (SeatGeek's email of 2026-10-29, and an empty `stats` on real events). Its event links go to SeatGeek, which resells tickets.
 
 ## What Changes
 
@@ -12,8 +14,9 @@ This was half of `add-eventbrite-seatgeek-sources`. It was split out on 2026-10-
   - A matching command finds it by name and distance, the way `match_ticketmaster_venues` does.
   - `fetch_events` fetches that venue's upcoming concerts.
 - **Precedence:** SeatGeek comes last, after Ticketmaster and Eventbrite. Like them, it replaces the venue's ticketing-page scraping and AI extraction, but not its iCal feed or JSON-LD.
+- **Links:** a SeatGeek event's own SeatGeek link is stored, but not shown. The listing links to the venue's own ticket page (its Etix, AXS or other events page) instead, so nobody is sent to resale. SeatGeek events have no price.
 - **Admin:** the SeatGeek venue ID is editable on the venue page, searchable, and filterable ("linked to SeatGeek").
-- **Key:** the new setting `SEATGEEK_CLIENT_ID`, read from `.env`, is listed in `.env.example` and `PRODUCTION.md`. A missing key skips SeatGeek with a note.
+- **Key:** the new setting `SEATGEEK_CLIENT_ID`, read from `.env`, is listed in `.env.example` and `PRODUCTION.md`, and sent by HTTP Basic Auth, never in a URL. The client secret isn't needed for these endpoints. A missing key skips SeatGeek with a note.
 
 ## Capabilities
 
@@ -23,11 +26,11 @@ This was half of `add-eventbrite-seatgeek-sources`. It was split out on 2026-10-
 
 ### Modified Capabilities
 
-- `eventbrite-event-import` (once `add-eventbrite-source` is archived): the one-source-per-venue rule extends to SeatGeek. Until then, the precedence is stated in this change's own spec.
+None. Eventbrite's spec already gives Ticketmaster precedence over Eventbrite, and this change's own spec puts SeatGeek after both.
 
 ## Impact
 
-- **Depends on** `add-eventbrite-source`, for the precedence in `fetch_events` and the shared coverage command.
+- **Builds on** `add-eventbrite-source` (archived 2026-10-26), for the precedence in `fetch_events` and the shared coverage command.
 - **Models:** `Venue.seatgeek_venue_id`, blank by default and not synced from the sheet; `Event.Source.SEATGEEK`; one migration.
 - **Code:**
   - a new client `core/event_fetching/seatgeek.py`, modelled on `ticketmaster.py`
@@ -35,4 +38,4 @@ This was half of `add-eventbrite-seatgeek-sources`. It was split out on 2026-10-
   - a new command `match_seatgeek_venues`
   - `fetch_events` target selection and fetching; `measure_api_coverage`
 - **Tests:** recorded API responses with the client ID stripped, in `core/tests/fixtures/seatgeek/`, and mocked clients. No network.
-- **External services:** the free SeatGeek API. The user gets the client ID. Its terms on attribution, resale links and caching are checked before launch.
+- **External services:** the free SeatGeek API. Its terms on attribution and caching are checked before launch. The SeatGeek affiliate program is left out for now.

@@ -21,7 +21,7 @@ from django.core.validators import URLValidator
 from django.db import transaction
 
 from core.artist_matching import normalize
-from core.artists import is_bandcamp_url
+from core.artists import MBID_PATTERN, is_bandcamp_url
 from core.models import Artist, Band, BandMembership
 
 COLUMNS = ("Act_ID", "Name", "Kind", "Members", "Town", "State", "Website", "Bandcamp", "MusicBrainz_ID", "Notes")
@@ -37,7 +37,7 @@ FIELD_COLUMNS = {
     "notes": "Notes",
 }
 IMPORT = "import"
-MBID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+MBID_RE = re.compile(MBID_PATTERN)
 STATE_RE = re.compile(r"^[A-Z]{2}$")
 # "Kim Gordon (bass, vocals)" -> name, role
 MEMBER_RE = re.compile(r"^(?P<name>[^()]+?)\s*(?:\((?P<role>[^()]*)\))?$")
@@ -67,13 +67,28 @@ def rows_from_csv(file):
     return [{(k or "").strip(): (v or "") for k, v in row.items()} for row in csv.DictReader(file)]
 
 
-def parse_members(text):
-    """"A (bass); B" -> [("A", "bass"), ("B", "")]"""
+def split_members(text):
+    """the list split at semicolons outside parentheses: "A (bass; vocals); B" is two"""
+    parts, depth, current = [], 0, ""
+    for char in text or "":
+        depth += {"(": 1, ")": -1}.get(char, 0)
+        if char == ";" and depth <= 0:
+            parts.append(current)
+            current, depth = "", 0
+        else:
+            current += char
+    return [part.strip() for part in parts + [current] if part.strip()]
+
+
+def parse_members(text, problem=None):
+    """"A (bass); B" -> [("A", "bass"), ("B", "")]; an entry it can't read is reported"""
     members = []
-    for part in (text or "").split(";"):
-        match = MEMBER_RE.match(part.strip())
+    for part in split_members(text):
+        match = MEMBER_RE.match(part)
         if match and match["name"].strip():
             members.append((" ".join(match["name"].split()), " ".join((match["role"] or "").split())))
+        elif problem:
+            problem(f"member {part!r} isn't a name with an optional (role); skipped")
     return members
 
 
@@ -193,7 +208,7 @@ def import_row(number, row, report):
     label = f"{act_id} {record.name}"
     (report.created if created else report.updated if changed else report.unchanged).append(label)
 
-    members = parse_members(row.get("Members"))
+    members = parse_members(row.get("Members"), problem)
     if members and kind == "artist":
         problem("Members is for bands; ignored for an artist")
     elif members:

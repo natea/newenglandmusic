@@ -27,9 +27,21 @@ class ParseMembersTestCase(SimpleTestCase):
             [("Jonah Furman", "bass, vocals"), ("Aaron Mendelsohn", ""), ("Ben Grigg", "drums")],
         )
         self.assertEqual(parse_members(""), [])
+        # a semicolon inside a role's parentheses doesn't split the member
+        self.assertEqual(parse_members("Sadie Dupuis (guitar; vocals); Darl Ferm"), [("Sadie Dupuis", "guitar; vocals"), ("Darl Ferm", "")])
+
+    def test_an_entry_it_cant_read_is_reported(self):
+        problems = []
+        self.assertEqual(parse_members("A (bass)); B", problems.append), [("B", "")])
+        self.assertEqual(problems, ["member 'A (bass))' isn't a name with an optional (role); skipped"])
 
 
 class ImportArtistsTestCase(TestCase):
+    def test_a_member_it_cant_read_is_a_reported_problem(self):
+        report = import_rows(rows('A0007,Odd,band,"(bass); Real Person",,,,,,\n'))
+        self.assertEqual(report.problems, [(2, "A0007", "member '(bass)' isn't a name with an optional (role); skipped")])
+        self.assertEqual(list(Band.objects.get().members.values_list("name", flat=True)), ["Real Person"])
+
     def test_importing_a_band_with_members(self):
         report = import_rows(rows(KRILL))
         band = Band.objects.get(act_id="A0001")

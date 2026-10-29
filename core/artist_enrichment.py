@@ -5,8 +5,8 @@ members.
 
 a search is accepted only for a candidate whose name (or an alias) is the record's and
 whose type is the record's kind, and:
-- when it's the only one, unless musicbrainz places it in another state or country than
-  the record's (its fuzzy search finds "Horse" from england for any band called horse);
+- when it's the only one, unless the record is local and musicbrainz places it only
+  outside the us (its fuzzy search finds "Horse" from england for any band called horse);
 - when there are several, the one in a state the site covers, or else the one whose
   musicbrainz id last.fm's page for the name gives, unless that page says several acts
   share the name.
@@ -63,21 +63,27 @@ class Matcher:
             covered_states = {f"US-{code}" for code in covered_places()["states"]}
         self.covered_states = covered_states
 
-    def subdivision(self, candidate):
-        """the iso code of the state its area or begin area is in ("US-MA"), or "" """
+    def places(self, candidate):
+        """the iso codes of the states its area and begin area are in ({"US-MA", "US-OH"})"""
+        codes = set()
         for key in ("area", "begin-area"):
             area_id = (candidate.get(key) or {}).get("id")
             code = self.musicbrainz.area_subdivision(area_id) if area_id else ""
             if code:
-                return code
-        return ""
+                codes.add(code)
+        return codes
 
-    def placed_elsewhere(self, candidate, record):
+    def placed_abroad(self, candidate, record):
+        """
+        whether musicbrainz places a local record's lone candidate only outside the us. not
+        another us state: acts move, and a sample run (2026-10-29) found kim deal in boston,
+        born in dayton, and mal blum in new york, each the only person with the name
+        """
         if not record.state:
             return False
-        code = self.subdivision(candidate)
-        if code:
-            return code != f"US-{record.state}"
+        codes = self.places(candidate)
+        if codes:
+            return not any(code.startswith("US-") for code in codes)
         country = candidate.get("country") or ""
         return bool(country) and country != "US"
 
@@ -96,10 +102,10 @@ class Matcher:
         if not candidates:
             return Status.NOT_FOUND, None
         if len(candidates) == 1:
-            if self.placed_elsewhere(candidates[0], record):
+            if self.placed_abroad(candidates[0], record):
                 return Status.NOT_FOUND, None
             return Status.MATCHED, candidates[0]["id"]
-        covered = [c for c in candidates if self.subdivision(c) in self.covered_states]
+        covered = [c for c in candidates if self.places(c) & self.covered_states]
         if len(covered) == 1:
             return Status.MATCHED, covered[0]["id"]
         chosen = self.from_lastfm(record, candidates)
@@ -150,7 +156,9 @@ def members(details):
 def apply_details(record, details, status):
     """store what musicbrainz says about the record (not saved)"""
     life = details.get("life-span") or {}
-    record.musicbrainz_id = details["id"]
+    if status != Status.EDITOR:
+        # musicbrainz answers a merged artist's old id with the new one; an editor's id stays
+        record.musicbrainz_id = details["id"]
     record.musicbrainz_status = status
     record.mb_type = details.get("type") or ""
     record.country = (details.get("country") or "")[:2]

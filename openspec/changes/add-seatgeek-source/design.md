@@ -3,7 +3,12 @@
 - **Split from `add-eventbrite-seatgeek-sources`** on 2026-10-26. The Eventbrite half, now `add-eventbrite-source`, adds the pattern this follows for a second API: an organizer link on the venue, an `eventbrite` event source, precedence in `fetch_events.select_targets`, and `eventbrite failed:` problem notes.
 - **The Ticketmaster pattern:** `match_ticketmaster_venues` links venues using `core/venue_matching.py` (`names_match`, `distance_km`, `spelling_variants`) and its own `find_match`, preferring listings with events. `fetch_ticketmaster` records failures as `ticketmaster failed:` notes, which `is_problem` recognises by prefix.
 - **Platform counts from the saved source checks:** etix 21, dice 10, tixr 9, axs 4; the rest are smaller.
-- **What the API offers** (from third-party documentation, to be confirmed in task group 1): a free client ID, passed as a query parameter. It offers `/2/venues` (search by name and location) and `/2/events?venue.id=…`, with taxonomies that tell concerts apart from other events.
+- **What the API offers** (SeatGeek's developer docs, read 2026-10-29, and two test requests):
+  - a free client ID, sent as a query parameter or by HTTP Basic Auth; the secret is optional
+  - `/2/venues`, filtered by `city`, `state`, `postal_code` or `q`, returning `location`, `address` and `url`
+  - `/2/events`, filtered by `venue.id` (several IDs separated by commas), `datetime_utc.gte` and `taxonomies.name`, paged by `per_page` and `page`
+- **What it doesn't offer:** no ticket listings and no prices; `stats` comes back empty. No images either: public responses leave them out, and the API grants no licence to them. An event's `links` name resale sites (StubHub, RapidSeats) without URLs, and `integrated` names the primary seller (e.g. Ticketmaster) and its event ID, never a link to the Etix or AXS page.
+- **`/events` is capped at 10,000 results** from 2026-01-01. SeatGeek recommends its Bulk Catalog API instead: hourly JSONL dumps of events, venues and performers, and a feed of changes from the last hour. Queries for a few venues stay far below the cap.
 
 ## Goals / Non-Goals
 
@@ -13,7 +18,10 @@
 - No duplicate events when a venue is reachable more than one way.
 
 **Non-Goals:**
-- Resale prices. SeatGeek's price fields may reflect resale listings, so they're used only for the price bucket, as Ticketmaster's are.
+- Prices. SeatGeek's API returns none, so SeatGeek events have no price bucket.
+- Sending people to SeatGeek. Its pages sell resale tickets; see the link decision below.
+- SeatGeek's affiliate program (held off on 2026-10-29).
+- SeatGeek's images, which the API neither returns nor licenses.
 - Searching SeatGeek for venues we don't list.
 
 ## Decisions
@@ -24,14 +32,17 @@
 
 **SeatGeek comes last in the precedence.** A venue's source becomes the first linked API: Ticketmaster, then Eventbrite, then SeatGeek, never over iCal or JSON-LD. SeatGeek is the broadest, but includes resale, so it only fills gaps. Its events get the `external_id` prefix `seatgeek:` and the `seatgeek` event source.
 
-**Failures and keys.** `seatgeek failed:` is added to `PROBLEM_PREFIXES`. The client follows `TicketmasterClient`. The client ID has to go in the query string, so the client strips it from any error message or log line, and it is never printed.
+**SeatGeek links are stored, not shown (decided 2026-10-29).** An event's SeatGeek `url` goes in `Event.source_url`, which the site never displays; admins see it on the event. Its `hyperlink` and `ticket_hyperlink` are the venue's own ticket page instead: the venue's events page from its saved source check (`VenueEventSource.events_page`, usually its Etix, AXS or other listing), or else the venue's website. SeatGeek gives no per-event link to the primary seller, so the link is to the venue's listing, not the show. Ticketmaster and Eventbrite events keep linking to the show, since those are the primary sellers.
+
+**Failures and keys.** `seatgeek failed:` is added to `PROBLEM_PREFIXES`. The client follows `TicketmasterClient`. It sends the client ID by HTTP Basic Auth, so the ID is never in a URL, error message or log line. `SEATGEEK_CLIENT_SECRET` is in `.env` but not used: the public endpoints don't need it.
 
 **Testing:** recorded JSON responses in `core/tests/fixtures/seatgeek/` with the client ID stripped, replayed through a fake session; `fetch_events` tests patch the client. The suite runs with outbound network blocked.
 
 ## Risks / Trade-offs
 
-- [SeatGeek lists resale tickets for shows sold elsewhere, so its links may point people to resale.] → It's last in precedence, its events link to SeatGeek's event page, and its terms are checked before launch. If that's unacceptable, it can be limited to venues with no other source.
-- [Approval may never come.] → Nothing else depends on this change; it can be dropped.
+- [SeatGeek resells tickets for shows sold elsewhere.] → Its links aren't shown; listings link to the venue's own ticket page.
+- [The venue's ticket page is a listing, not the show's page, so people have one more click.] → Accepted. If a SeatGeek event matches the venue's page later, a per-show link can replace it.
+- [A venue with no saved events page and no website gets no ticket link.] → The event is saved without one, for an admin to fill in.
 
 ## Migration Plan
 
@@ -43,5 +54,6 @@
 
 ## Open Questions
 
-- **Coverage:** how many failing venues SeatGeek covers. Answered by task group 1, once the client ID arrives.
-- **Terms:** do SeatGeek's API terms require attribution, or limit caching or links to resale? Checked before launch.
+- **Coverage:** how many failing venues SeatGeek covers. Answered by task group 1.
+- **Terms:** do SeatGeek's API terms require attribution, or limit caching? The developer docs don't say. Checked before launch.
+- **Bulk venues file:** would matching from the hourly venues dump be cheaper than a search per venue? Decided in task 2.2, once the coverage numbers show how many venues need matching.

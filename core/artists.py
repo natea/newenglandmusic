@@ -13,6 +13,9 @@ from urllib.parse import urlsplit
 from django.core.exceptions import ValidationError
 
 
+MBID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+
+
 def is_bandcamp_url(url):
     """an https url on bandcamp.com or one of its subdomains ("krill.bandcamp.com")"""
     try:

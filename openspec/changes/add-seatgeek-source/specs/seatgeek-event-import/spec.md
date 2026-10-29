@@ -40,6 +40,25 @@ When `fetch_events` runs, a venue with a SeatGeek venue ID, and no Ticketmaster 
 - **WHEN** a SeatGeek venue has five upcoming events: three concerts, one comedy show and one sports event
 - **THEN** the three concerts are imported, and the report says two were left out
 
+### Requirement: SeatGeek events link to the venue's own ticket page
+
+A SeatGeek event SHALL store its SeatGeek page as its source URL, which the site SHALL NOT show. Its event link and ticket link SHALL be the venue's own events page from its saved source check, or else the venue's website, or else empty. A SeatGeek event SHALL have no price.
+
+#### Scenario: Venue sells through Etix
+
+- **WHEN** a SeatGeek event is imported for a venue whose saved events page is its Etix listing
+- **THEN** the event's link and ticket link are that Etix page, its source URL is the SeatGeek page, and it has no price
+
+#### Scenario: No saved events page
+
+- **WHEN** a SeatGeek event is imported for a venue with a website but no saved events page
+- **THEN** the event's link and ticket link are the venue's website
+
+#### Scenario: SeatGeek link not shown
+
+- **WHEN** an approved SeatGeek event is shown on the site
+- **THEN** the page has no link to SeatGeek
+
 ### Requirement: Only one API source per venue
 
 A venue linked to more than one events API SHALL be fetched from exactly one, in this order: Ticketmaster, Eventbrite, SeatGeek.

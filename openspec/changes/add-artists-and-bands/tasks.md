@@ -15,8 +15,8 @@
 
 ## 4. Admin
 
-- [ ] 4.1 Add `Artist` and `Band` admins: list columns, filters by state and status, name search, memberships inline on both, `field_sources` marking changed fields as the editor's, setting the MusicBrainz ID by hand (status "editor"), a "clear MusicBrainz match" action, and the genres' credit. Verify with admin tests for the inline, a hand-set ID surviving `--refresh`, and clearing.
+- [x] 4.1 Add `Artist` and `Band` admins: list columns, filters by state and status, name search, memberships inline on both, `field_sources` marking changed fields as the editor's, setting the MusicBrainz ID by hand (status "editor"), a "clear MusicBrainz match" action, and the genres' credit. Verify with admin tests for the inline, a hand-set ID surviving `--refresh`, and clearing.
 
 ## 5. Docs and check
 
-- [ ] 5.1 Document the sheet layout, the two commands, and what may be stored from MusicBrainz, Last.fm and Bandcamp in PRODUCTION.md, and list MusicBrainz and Last.fm uses in AGENTS.md. Run the whole suite with outbound network blocked. Then, with approval, import a small sample sheet and run the enrichment with `--limit 20 --dry-run` locally, and check its matches by hand.
+- [x] 5.1 Document the sheet layout, the two commands, and what may be stored from MusicBrainz, Last.fm and Bandcamp in PRODUCTION.md, and list MusicBrainz and Last.fm uses in AGENTS.md. Run the whole suite with outbound network blocked. Then, with approval, import a small sample sheet and run the enrichment with `--limit 20 --dry-run` locally, and check its matches by hand.

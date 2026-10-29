@@ -84,6 +84,23 @@ class MatcherTestCase(TestCase):
         mb = FakeMusicBrainz(searches={"Horse": [candidate(HORSE_A, "Horse", area_id=LEEDS)]}, areas={LEEDS: "GB-LDS"})
         self.assertEqual(self.match(Band.objects.create(name="Horse", state="RI"), mb), (Status.NOT_FOUND, None))
 
+    def test_a_lone_namesake_in_another_us_state_is_accepted(self):
+        # kim deal lives in boston and was born in dayton; mal blum lives in new york
+        mb = FakeMusicBrainz(
+            searches={"Kim Deal": [{**candidate(HORSE_A, "Kim Deal", kind="Person", area_id="boston"), "begin-area": {"id": "dayton"}}]},
+            areas={"boston": "US-MA", "dayton": "US-OH"},
+        )
+        self.assertEqual(self.match(Artist.objects.create(name="Kim Deal", state="OH"), mb), (Status.MATCHED, HORSE_A))
+        mb = FakeMusicBrainz(searches={"Mal Blum": [candidate(HORSE_B, "Mal Blum", kind="Person", area_id="ny")]}, areas={"ny": "US-NY"})
+        self.assertEqual(self.match(Artist.objects.create(name="Mal Blum", state="MA"), mb), (Status.MATCHED, HORSE_B))
+
+    def test_a_covered_begin_area_picks_the_candidate(self):
+        mb = FakeMusicBrainz(
+            searches={"Horse": [candidate(HORSE_A, "Horse", area_id=LEEDS), {**candidate(HORSE_B, "Horse", area_id="la"), "begin-area": {"id": MA}}]},
+            areas={LEEDS: "GB-LDS", "la": "US-CA", MA: "US-RI"},
+        )
+        self.assertEqual(self.match(Band.objects.create(name="Horse"), mb), (Status.MATCHED, HORSE_B))
+
     def test_a_name_several_acts_share(self):
         mb = FakeMusicBrainz(searches={"Horse": [candidate(HORSE_A, "Horse"), candidate(HORSE_B, "Horse")]})
         self.assertEqual(self.match(Band.objects.create(name="Horse"), mb, FakeLastFm()), (Status.AMBIGUOUS, None))

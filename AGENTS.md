@@ -48,6 +48,10 @@ API keys live in `.env`, which is git-ignored:
 
 `load_census_gazetteer --year 2026` loads the Census Bureau's Gazetteer files (public domain) into `CensusPlace`, which the location form uses to turn a ZIP code or town into a point (`core/location.py`). Run it once at setup and once a year; it isn't part of the daily job. Tests build small Gazetteer zip files in `core/tests/census_fixture.py` instead of downloading.
 
+## Artists and bands
+
+`Artist`, `Band` and `BandMembership` (admin-only) are imported by `import_artists` from a CSV or a sheet tab keyed by `Act_ID`, and filled in by `enrich_artists_from_musicbrainz`. Store MusicBrainz's data, never Last.fm's (evidence only), and nothing from Bandcamp but a page URL: it forbids scraping. Who set each field is in `field_sources`; the import and enrichment never overwrite an editor's. Tests use `core/tests/musicbrainz_fixture.py`. See PRODUCTION.md.
+
 ## The pipeline
 
 These are management commands, run in this order:
@@ -78,7 +82,8 @@ Write the output of long command runs to `logs/`, never to a temporary or scratc
 - **Google Places Text Search:** 5,000 free calls a month for the default fields, and 1,000 with `--contact`. Rerunning lookups for every venue uses up that allowance, so look up only venues that need it.
 - **YouTube Data API v3:** free, 10,000 quota units a day. A search costs 100 and a video or channel lookup 1, so `match_youtube_artists` caps itself at 90 song searches a run.
 - **Last.fm API:** free for non-commercial use, no published limit beyond not making several calls a second; the client waits half a second between requests. Nothing from Last.fm may be shown on the site without Last.fm's written approval, and nothing from it is stored.
-- **Wikidata and MusicBrainz:** free and keyless. MusicBrainz asks for one request a second and a user agent with contact details.
+- **Wikidata and MusicBrainz:** free and keyless. MusicBrainz asks for one request a second and a user agent with contact details. Enriching artists and bands takes about 2 seconds a record.
+- **Bandcamp:** no API we can use, and scraping is forbidden. Store only page URLs.
 - **Ask before a run that spends money** beyond a small sample. Prefer `--dry-run` and `--limit` / `--sheet-ids` first.
 - **Crawl politely:** obey robots.txt and send the honest user agent `venue-db-event-check/1.0`. Repeated full crawls get the crawler blocked.
 
