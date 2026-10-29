@@ -2,6 +2,7 @@ import datetime
 from io import StringIO
 from unittest import mock
 
+from core.music_ids import MUSICBRAINZ_TRIES
 from core.models import AppleMusicArtistLink, Event, JobRun, SpotifyArtistLink, YouTubeArtistLink
 from core.tests import apple_music_fixture
 from core.tests import lastfm_fixture
@@ -178,7 +179,7 @@ class IdLinkTestCase(CommandTestCase):
         self.assertIn("carrying on without musicbrainz", out)
         self.assertEqual(YouTubeArtistLink.objects.get(name_key="dinosaur jr").status, Status.MATCHED)
         # asked only until it gave up
-        self.assertEqual(len([r for r in web.requests if "musicbrainz" in r.url]), 4)
+        self.assertEqual(len([r for r in web.requests if "musicbrainz" in r.url]), MUSICBRAINZ_TRIES)
 
     def test_rejected_key_stops_the_run(self):
         upcoming_event("Dinosaur Jr.")

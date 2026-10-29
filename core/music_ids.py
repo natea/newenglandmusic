@@ -21,8 +21,12 @@ MUSICBRAINZ_URL = "https://musicbrainz.org/ws/2/"
 TIMEOUT_SECONDS = 30
 WIKIDATA_BATCH = 200
 MUSICBRAINZ_SECONDS_BETWEEN_REQUESTS = 1.1
-# musicbrainz answers 503 when it's busy or we're too fast: wait 2, 4, then 8 seconds
-MUSICBRAINZ_TRIES = 4
+# musicbrainz answers 503 when it's busy or we're too fast. most come from its global limiter
+# shedding load ("X-RateLimit-Zone: global", "Retry-After: 0"), which refused about one
+# request in four on 2026-10-29 whatever our pace, so four tries stopped runs every few dozen
+# names: keep trying for about two minutes
+MUSICBRAINZ_WAITS = (2, 4, 8, 15, 30, 30, 30)
+MUSICBRAINZ_TRIES = len(MUSICBRAINZ_WAITS) + 1
 # wikidata's properties: spotify artist id, apple music artist id (us), youtube channel id
 SPOTIFY_PROPERTY, APPLE_PROPERTY, YOUTUBE_PROPERTY = "P1902", "P2850", "P2397"
 # only ids of these shapes go into a query, so nothing we didn't make can change it
@@ -35,6 +39,9 @@ APPLE_ARTIST_URL_RE = re.compile(r"^https?://(?:itunes|music)\.apple\.com/[a-z]{
 # a city's state is usually two "part of" links up (city, county, state); five allows for
 # boroughs and districts
 AREA_STEPS = 5
+SEARCH_LIMIT = 10
+# characters lucene gives a meaning, escaped in a searched name
+LUCENE_SPECIAL_RE = re.compile(r'[+\-&|!(){}\[\]^"~*?:\\/]')
 MBID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 
@@ -129,6 +136,26 @@ class MusicIds:
         ]
         return {"name": data.get("name") or "", "areas": areas, "spotify": spotify, "apple": apple}
 
+    def search_artists(self, name, kind, limit=SEARCH_LIMIT):
+        """
+        musicbrainz's candidates for an artist ("person") or band ("group") with this name:
+        its search, with the name quoted, which also matches aliases. each is musicbrainz's
+        own dict ("id", "name", "type", "area", "aliases", "life-span"…)
+        """
+        escaped = LUCENE_SPECIAL_RE.sub(lambda m: "\\" + m.group(0), name)
+        query = f'artist:"{escaped}" AND type:{kind}'
+        data = self.musicbrainz("artist", query=query, limit=limit) or {}
+        return data.get("artists") or []
+
+    def artist_details(self, mbid):
+        """
+        a musicbrainz artist with its relationships (a band's members), url links and
+        genres, or None when there's no such artist
+        """
+        if not MBID_RE.match(mbid or ""):
+            return None
+        return self.musicbrainz(f"artist/{mbid}", inc="artist-rels+url-rels+genres+aliases")
+
     def area_subdivision(self, area_id, steps=AREA_STEPS):
         """
         the iso 3166-2 code ("US-MA", "CA-ON") of the state or province an area is in,
@@ -183,5 +210,5 @@ class MusicIds:
             if response.status_code != 503:
                 raise MusicIdsError(f"musicbrainz: HTTP {response.status_code}")
             if attempt < MUSICBRAINZ_TRIES:
-                self.sleep(2**attempt)
+                self.sleep(MUSICBRAINZ_WAITS[attempt - 1])
         raise MusicBrainzBusy(f"musicbrainz: HTTP 503 after {MUSICBRAINZ_TRIES} tries")

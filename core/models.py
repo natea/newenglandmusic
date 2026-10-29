@@ -1,6 +1,7 @@
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVectorField
+from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models.functions import Upper
 from django.urls import reverse
@@ -9,6 +10,8 @@ from ordered_model.models import OrderedModel
 from solo.models import SingletonModel
 from tinymce import models as tinymce_models
 
+from core.artist_matching import normalize
+from core.artists import MBID_PATTERN, validate_bandcamp_url
 from core.utils_event_caching import bake_event_html
 from core.utils_static_page import refresh_searchable_static_page_bits
 
@@ -815,3 +818,158 @@ class CensusPlace(models.Model):
 
     def __str__(self):
         return f"{self.name}, {self.state}" if self.state else self.name
+
+
+class MusicAct(models.Model):
+    """
+    what an Artist and a Band share: who the act is, where it's from, its own links, and
+    what musicbrainz says about it (enrich_artists_from_musicbrainz). admin-only for now:
+    nothing here is shown to visitors, and events still name artists by text.
+
+    musicbrainz's core data (artists, their areas and dates, relationships and urls) is
+    public domain (cc0); its genre tags are supplementary data under cc by-nc-sa, kept with
+    credit. nothing from last.fm or bandcamp is stored (see core/artists.py).
+    """
+
+    class MusicBrainzStatus(models.TextChoices):
+        MATCHED = "matched", "Matched"
+        AMBIGUOUS = "ambiguous", "Several MusicBrainz artists with this name"
+        NOT_FOUND = "not_found", "Not on MusicBrainz"
+        # an editor set the id: enrichment looks it up, and never replaces it
+        EDITOR = "editor", "Set by an editor"
+
+    name = models.CharField(max_length=255)
+    # core.artist_matching.normalize() of the name, to match members and musicbrainz names
+    name_key = models.CharField(max_length=255, db_index=True, editable=False)
+    # the import's Act_ID; blank for acts made as members or by musicbrainz
+    act_id = models.CharField(max_length=32, unique=True, null=True, blank=True)
+    city_town = models.CharField(max_length=100, blank=True, default="")
+    state = models.CharField(max_length=2, blank=True, default="")
+    website = models.URLField(blank=True, default="")
+    bandcamp_url = models.URLField(blank=True, default="", validators=[validate_bandcamp_url])
+    notes = models.TextField(blank=True, default="")
+    # who set each field, {"website": "editor"}: "import", "musicbrainz" or "editor". the
+    # import writes only a field that's unset or its own, and musicbrainz fills the website
+    # and bandcamp link only when they're empty, so neither overwrites an editor's
+    field_sources = models.JSONField(blank=True, default=dict)
+
+    musicbrainz_id = models.CharField(
+        max_length=36, unique=True, null=True, blank=True,
+        validators=[RegexValidator(MBID_PATTERN, "a MusicBrainz id, like 4fbf1a3d-a649-4f8e-9ddf-347f6ba2d307")],
+    )
+    musicbrainz_status = models.CharField(max_length=16, choices=MusicBrainzStatus.choices, blank=True, default="")
+    musicbrainz_checked_at = models.DateTimeField(null=True, blank=True)
+    # musicbrainz's type ("Person", "Group", "Orchestra"…), country code, area and its
+    # partial dates ("1994", "1994-05")
+    mb_type = models.CharField(max_length=32, blank=True, default="")
+    country = models.CharField(max_length=2, blank=True, default="")
+    area = models.CharField(max_length=255, blank=True, default="")
+    begin_date = models.CharField(max_length=10, blank=True, default="")
+    end_date = models.CharField(max_length=10, blank=True, default="")
+    genres = ArrayField(models.CharField(max_length=100), blank=True, default=list)
+    wikidata_id = models.CharField(max_length=16, blank=True, default="")
+    discogs_url = models.URLField(blank=True, default="")
+    # musicbrainz's short note telling same-named acts apart ("Boston indie rock band"), cc0
+    disambiguation = models.CharField(max_length=255, blank=True, default="")
+    # the opening paragraph of the act's english wikipedia article, found through its
+    # wikidata id: cc by-sa 4.0, kept word for word and credited wherever it's shown, with
+    # a link to the article and the licence (see core/wikipedia.py)
+    wikipedia_extract = models.TextField(blank=True, default="")
+    wikipedia_url = models.URLField(max_length=500, blank=True, default="")
+    wikipedia_revision = models.CharField(max_length=32, blank=True, default="")
+    wikipedia_fetched_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+        ordering = ("name",)
+
+    def save(self, *args, **kwargs):
+        self.name_key = normalize(self.name)
+        if self.act_id == "":
+            self.act_id = None
+        if self.musicbrainz_id == "":
+            self.musicbrainz_id = None
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+
+class Artist(MusicAct):
+    """a person or solo act, who may be a member of bands"""
+
+
+class Band(MusicAct):
+    """a group, whose members are Artists"""
+
+    members = models.ManyToManyField(Artist, through="BandMembership", related_name="bands")
+
+
+class BandMembership(models.Model):
+    class Source(models.TextChoices):
+        IMPORT = "import", "Import"
+        MUSICBRAINZ = "musicbrainz", "MusicBrainz"
+        EDITOR = "editor", "Editor"
+
+    band = models.ForeignKey(Band, on_delete=models.CASCADE, related_name="memberships")
+    artist = models.ForeignKey(Artist, on_delete=models.CASCADE, related_name="memberships")
+    # free text, such as "bass, vocals": musicbrainz's instrument names fit it
+    role = models.CharField(max_length=255, blank=True, default="")
+    begin_year = models.PositiveSmallIntegerField(null=True, blank=True)
+    end_year = models.PositiveSmallIntegerField(null=True, blank=True)
+    source = models.CharField(max_length=16, choices=Source.choices, default=Source.EDITOR)
+
+    class Meta:
+        ordering = ("band", "begin_year", "artist__name")
+        # one person can hold two roles in a band, but not the same one twice
+        constraints = [models.UniqueConstraint(fields=["band", "artist", "role"], name="unique_band_member_role")]
+
+    @property
+    def is_former(self):
+        return self.end_year is not None
+
+    def __str__(self):
+        role = f" ({self.role})" if self.role else ""
+        return f"{self.artist} in {self.band}{role}"
+
+
+class EventPerformer(models.Model):
+    """
+    an artist or band on an event's bill, in billing order (add-artists-from-events).
+    links from the event's Artists text are rebuilt when it changes (see
+    core/event_performers.py); an editor's stay. nothing visitors see reads these yet
+    """
+
+    class Source(models.TextChoices):
+        NAMES = "names", "From the artists text"
+        EDITOR = "editor", "Editor"
+
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="performers")
+    artist = models.ForeignKey(
+        Artist, on_delete=models.CASCADE, null=True, blank=True, related_name="performances",
+        help_text="an artist or a band, not both. a link from the artists text comes back while its name is in the text: take the name out to unlink it",
+    )
+    band = models.ForeignKey(Band, on_delete=models.CASCADE, null=True, blank=True, related_name="performances")
+    order = models.PositiveSmallIntegerField(default=0)
+    source = models.CharField(max_length=8, choices=Source.choices, default=Source.EDITOR)
+
+    class Meta:
+        ordering = ("event", "order", "pk")
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(artist__isnull=False, band__isnull=True) | models.Q(artist__isnull=True, band__isnull=False)),
+                name="performer_is_an_artist_or_a_band",
+            ),
+            models.UniqueConstraint(fields=["event", "artist"], name="unique_event_artist"),
+            models.UniqueConstraint(fields=["event", "band"], name="unique_event_band"),
+        ]
+
+    @property
+    def act(self):
+        return self.artist or self.band
+
+    def __str__(self):
+        return f"{self.act} at {self.event_id}"

@@ -168,3 +168,6 @@ cython_debug/
 
 # scss compiled by `manage.py compilescss` (served compiled in dev by django-sass-processor)
 core/static/core/scss/*.css
+
+# review lists and other run output written next to the logs
+logs/*.csv

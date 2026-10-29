@@ -1,5 +1,6 @@
 import os
 import re
+from urllib.parse import unquote
 from datetime import date
 
 from dateutil import relativedelta
@@ -22,12 +23,18 @@ from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filt
 from . import apple_music, youtube
 from .places import PlacesClient, PlacesError
 from .spotify import parse_artist_id
+from .wikipedia import LICENSE_URL
 from .spotify_links import rebake_events_naming
 from .artist_matching import normalize
 from .job_runs import DIDNT_FINISH, STALE_AFTER, outcome
 from .models import (
     AllEventProxy,
     AppleMusicArtistLink,
+    Artist,
+    Band,
+    BandMembership,
+    EventPerformer,
+    MusicAct,
     YouTubeArtistLink,
     DateMessage,
     EmailSubscriber,
@@ -191,7 +198,34 @@ class KindListFilter(SimpleListFilter):
         return queryset
 
 
+class EventPerformerInline(admin.TabularInline):
+    """an event's artists and bands, in billing order (add-artists-from-events)"""
+
+    model = EventPerformer
+    extra = 0
+    fields = ("order", "artist", "band", "source")
+    readonly_fields = ("source",)
+    autocomplete_fields = ("artist", "band")
+    verbose_name = "performer"
+    verbose_name_plural = "performers"
+    classes = ("collapse",)
+
+
 class EventAdmin(admin.ModelAdmin):
+    inlines = [EventPerformerInline]
+
+    def save_formset(self, request, form, formset, change):
+        # a performer added here is the editor's, and stays when the text is linked again
+        if formset.model is EventPerformer:
+            # save(commit=False) gives the new and changed rows: an editor's now
+            for performer in formset.save(commit=False):
+                performer.source = EventPerformer.Source.EDITOR
+                performer.save()
+            for performer in formset.deleted_objects:
+                performer.delete()
+            return
+        super().save_formset(request, form, formset, change)
+
     # links typed without a scheme get https, which django 6 makes the default
     formfield_overrides = {URLField: {"assume_scheme": "https"}}
     list_per_page = 500
@@ -1289,3 +1323,144 @@ class YouTubeArtistLinkAdmin(admin.ModelAdmin):
 
 
 admin.site.register(YouTubeArtistLink, YouTubeArtistLinkAdmin)
+
+
+# artists and bands (add-artists-and-bands): admin-only records, imported by import_artists
+# and filled in by enrich_artists_from_musicbrainz
+
+MUSICBRAINZ_FIELDS = (
+    "mb_type", "country", "area", "begin_date", "end_date", "genres", "wikidata_id", "discogs_url",
+    "disambiguation",
+)
+WIKIPEDIA_FIELDS = ("wikipedia_extract", "wikipedia_url", "wikipedia_revision", "wikipedia_fetched_at")
+
+
+class BandMembershipInline(admin.TabularInline):
+    model = BandMembership
+    extra = 0
+    fields = ("artist", "role", "begin_year", "end_year", "source")
+    readonly_fields = ("source",)
+    autocomplete_fields = ("artist",)
+
+
+class ArtistMembershipInline(BandMembershipInline):
+    """the bands an artist is in, on the artist's page"""
+
+    fields = ("band", "role", "begin_year", "end_year", "source")
+    autocomplete_fields = ("band",)
+    verbose_name = "band"
+    verbose_name_plural = "bands"
+
+
+class MusicActAdmin(admin.ModelAdmin):
+    list_display = ("name", "city_town", "state", "musicbrainz_status", "musicbrainz_page", "act_id")
+    list_filter = ("state", "musicbrainz_status")
+    search_fields = ("name", "act_id", "musicbrainz_id")
+    actions = ["clear_musicbrainz_match"]
+    readonly_fields = (
+        "musicbrainz_status", "musicbrainz_checked_at", "musicbrainz_page", "genres_from_musicbrainz",
+        *[f for f in MUSICBRAINZ_FIELDS if f != "genres"], "field_sources", "introduction_from_wikipedia",
+    )
+    fieldsets = (
+        (None, {"fields": ("name", "act_id", "city_town", "state", "website", "bandcamp_url", "notes")}),
+        (
+            "MusicBrainz",
+            {
+                "description": "set the MusicBrainz id to choose the artist by hand; enrichment then looks it up and never replaces it",
+                "fields": (
+                    "musicbrainz_id", "musicbrainz_status", "musicbrainz_checked_at", "musicbrainz_page", "mb_type",
+                    "disambiguation", "country", "area", "begin_date", "end_date", "genres_from_musicbrainz",
+                    "wikidata_id", "discogs_url",
+                ),
+            },
+        ),
+        ("Introduction", {"fields": ("introduction_from_wikipedia",)}),
+        ("Who set what", {"fields": ("field_sources",), "classes": ("collapse",)}),
+    )
+
+    @admin.display(description="MusicBrainz")
+    def musicbrainz_page(self, act):
+        if not act.musicbrainz_id:
+            return "-"
+        return format_html(
+            '<a href="https://musicbrainz.org/artist/{}" target="_blank" rel="noopener">{}</a>',
+            act.musicbrainz_id, act.musicbrainz_id,
+        )
+
+    @admin.display(description="genres")
+    def genres_from_musicbrainz(self, act):
+        # musicbrainz's genre tags are supplementary data, cc by-nc-sa: credited where shown
+        if not act.genres:
+            return "-"
+        return format_html(
+            '{} <span class="help">(genres from <a href="https://musicbrainz.org/doc/About/Data_License">MusicBrainz</a>, CC BY-NC-SA)</span>',
+            ", ".join(act.genres),
+        )
+
+    @admin.display(description="from Wikipedia")
+    def introduction_from_wikipedia(self, act):
+        # cc by-sa 4.0: shown word for word, with a link to the article and the licence
+        if not act.wikipedia_extract:
+            return "-"
+        return format_html(
+            '<p>{}</p><p class="help">From the Wikipedia article <a href="{}" target="_blank" rel="noopener">{}</a>, '
+            'under <a href="{}" target="_blank" rel="noopener">CC BY-SA 4.0</a> (fetched {})</p>',
+            act.wikipedia_extract, act.wikipedia_url, unquote(act.wikipedia_url.rsplit("/", 1)[-1]).replace("_", " "),
+            LICENSE_URL, act.wikipedia_fetched_at.date() if act.wikipedia_fetched_at else "",
+        )
+
+    def save_model(self, request, act, form, change):
+        """what an editor changes is theirs: the import leaves it, and a musicbrainz id they
+        set is looked up by the next enrichment and never replaced"""
+        for name in form.changed_data:
+            act.field_sources[name] = "editor"
+        if "musicbrainz_id" in form.changed_data:
+            if act.musicbrainz_id:
+                act.musicbrainz_status = MusicAct.MusicBrainzStatus.EDITOR
+                act.musicbrainz_checked_at = None
+            else:
+                clear_musicbrainz(act)
+        super().save_model(request, act, form, change)
+
+    def save_formset(self, request, form, formset, change):
+        # a membership added here is the editor's
+        for membership in formset.save(commit=False):
+            if membership.pk is None:
+                membership.source = BandMembership.Source.EDITOR
+            membership.save()
+        for membership in formset.deleted_objects:
+            membership.delete()
+
+    @admin.action(description="Clear MusicBrainz match (the next enrichment searches again)")
+    def clear_musicbrainz_match(self, request, queryset):
+        for act in queryset:
+            clear_musicbrainz(act)
+            act.save()
+
+
+def clear_musicbrainz(act):
+    """forget the musicbrainz match and what it filled in, so the next run searches again"""
+    act.musicbrainz_id = None
+    act.musicbrainz_status = ""
+    act.musicbrainz_checked_at = None
+    for name in MUSICBRAINZ_FIELDS:
+        setattr(act, name, [] if name == "genres" else "")
+    # found through musicbrainz's wikidata link, so it goes with it
+    for name in WIKIPEDIA_FIELDS:
+        setattr(act, name, None if name == "wikipedia_fetched_at" else "")
+    for name in ("website", "bandcamp_url"):
+        if act.field_sources.get(name) == "musicbrainz":
+            setattr(act, name, "")
+    act.field_sources = {k: v for k, v in act.field_sources.items() if v != "musicbrainz" and k != "musicbrainz_id"}
+
+
+class ArtistAdmin(MusicActAdmin):
+    inlines = [ArtistMembershipInline]
+
+
+class BandAdmin(MusicActAdmin):
+    inlines = [BandMembershipInline]
+
+
+admin.site.register(Artist, ArtistAdmin)
+admin.site.register(Band, BandAdmin)

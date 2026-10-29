@@ -14,6 +14,7 @@ from core.event_fetching.spider import SCRAPY_SETTINGS, VenueEventsSpider
 from core.event_fetching.ticket_links import find_ticket_links, match_show
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.event_fetching.ticketmaster import to_event_dict as ticketmaster_event
+from core.event_performers import link_from_names, names_to_records
 from core.event_sources import event_source_row
 from core.management.commands.check_event_sources import TIMEOUT_SECONDS, robots_allows
 from core.management.commands.match_eventbrite_organizers import polite_session
@@ -239,10 +240,12 @@ def existing_copy(venue_pk, starttime, title, saved_ids):
     return next((event for event in candidates if normalized_title(event.title) == key), None)
 
 
-def save_event(venue_pk, source, source_url, data, dry_run, saved_ids=frozenset()):
+def save_event(venue_pk, source, source_url, data, dry_run, saved_ids=frozenset(), records=None):
     """
     returns ("created", "updated" or "skipped"; the event's kind). saved_ids are the
-    external ids this run has already saved
+    external ids this run has already saved. the event is linked to the artists and bands
+    its artists text names (records: core.event_performers.names_to_records(), built once
+    a run)
     """
     external_id = data["external_id"][:255]
     if not data["title"] and not data["artists"]:
@@ -281,6 +284,7 @@ def save_event(venue_pk, source, source_url, data, dry_run, saved_ids=frozenset(
 
     if not dry_run:
         event.save()
+        link_from_names(event, records)
     return ("created" if created else "updated"), event.kind
 
 
@@ -862,13 +866,15 @@ class Command(RecordedCommand, BaseCommand):
         totals = defaultdict(int)
         kind_totals = defaultdict(int)
         saved_ids = set()
+        # which artist or band each name is, for linking the events saved below
+        records = names_to_records()
         for target, unique in chosen:
             found = events_by_venue[target["sheet_id"]]
             outcomes = defaultdict(int)
             hidden = []
             for source, source_url, data in unique:
                 outcome, kind = save_event(
-                    target["venue_pk"], source, source_url, data, dry_run, saved_ids
+                    target["venue_pk"], source, source_url, data, dry_run, saved_ids, records
                 )
                 saved_ids.add(data["external_id"][:255])
                 outcomes[outcome] += 1

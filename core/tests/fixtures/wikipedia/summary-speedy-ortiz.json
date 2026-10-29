@@ -1,0 +1,49 @@
+{
+ "type": "standard",
+ "title": "Speedy Ortiz",
+ "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Speedy Ortiz</span></span>",
+ "namespace": {
+  "id": 0,
+  "text": ""
+ },
+ "wikibase_item": "Q17091953",
+ "titles": {
+  "canonical": "Speedy_Ortiz",
+  "normalized": "Speedy Ortiz",
+  "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Speedy Ortiz</span></span>"
+ },
+ "pageid": 40098939,
+ "thumbnail": {
+  "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/Speedy_Ortiz-16_%2831423880307%29.jpg/330px-Speedy_Ortiz-16_%2831423880307%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+  "width": 330,
+  "height": 220
+ },
+ "originalimage": {
+  "source": "https://upload.wikimedia.org/wikipedia/commons/8/89/Speedy_Ortiz-16_%2831423880307%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
+  "width": 1125,
+  "height": 750
+ },
+ "lang": "en",
+ "dir": "ltr",
+ "revision": "1360371502",
+ "tid": "90b9cef4-6d16-11f1-bdd9-a86867b44279",
+ "timestamp": "2026-06-21T02:11:51Z",
+ "description": "American indie rock band",
+ "description_source": "local",
+ "content_urls": {
+  "desktop": {
+   "page": "https://en.wikipedia.org/wiki/Speedy_Ortiz",
+   "revisions": "https://en.wikipedia.org/wiki/Speedy_Ortiz?action=history",
+   "edit": "https://en.wikipedia.org/wiki/Speedy_Ortiz?action=edit",
+   "talk": "https://en.wikipedia.org/wiki/Talk:Speedy_Ortiz"
+  },
+  "mobile": {
+   "page": "https://en.wikipedia.org/wiki/Speedy_Ortiz",
+   "revisions": "https://en.wikipedia.org/wiki/Special:History/Speedy_Ortiz",
+   "edit": "https://en.wikipedia.org/wiki/Speedy_Ortiz?action=edit",
+   "talk": "https://en.wikipedia.org/wiki/Talk:Speedy_Ortiz"
+  }
+ },
+ "extract": "Speedy Ortiz is an American indie rock band from Northampton, Massachusetts, United States. Originally a solo project for founder Sadie Dupuis, from 2011 a full band incarnation has released three EPs and three LPs mostly on Carpark Records. As of 2022, the band consists of Dupuis, Audrey Zee Whitesides, Andy Molholt, and Joey Doubek.",
+ "extract_html": "<p><b>Speedy Ortiz</b> is an American indie rock band from Northampton, Massachusetts, United States. Originally a solo project for founder Sadie Dupuis, from 2011 a full band incarnation has released three EPs and three LPs mostly on Carpark Records. As of 2022, the band consists of Dupuis, Audrey Zee Whitesides, Andy Molholt, and Joey Doubek.</p>"
+}

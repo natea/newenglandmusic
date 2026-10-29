@@ -1,0 +1,573 @@
+{
+ "created": "2026-10-29T20:39:36.369Z",
+ "count": 326,
+ "offset": 0,
+ "artists": [
+  {
+   "id": "71f754c0-f2d1-4a54-8d70-cc0ee409ca00",
+   "type": "Group",
+   "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+   "score": 100,
+   "name": "Crazy Horse",
+   "sort-name": "Crazy Horse",
+   "country": "US",
+   "area": {
+    "id": "489ce91b-6658-3307-9877-795b68554c98",
+    "type": "Country",
+    "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+    "name": "United States",
+    "sort-name": "United States",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "begin-area": {
+    "id": "1f40c6e1-47ba-4e35-996f-fe6ee5840e62",
+    "type": "City",
+    "type-id": "6fd8f29a-3d0a-32fc-980d-ea697b69da78",
+    "name": "Los Angeles",
+    "sort-name": "Los Angeles",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "disambiguation": "American rock band often working with Neil Young",
+   "isnis": [
+    "0000000122601729"
+   ],
+   "life-span": {
+    "begin": "1969",
+    "ended": null
+   },
+   "tags": [
+    {
+     "count": 1,
+     "name": "hard rock"
+    },
+    {
+     "count": 1,
+     "name": "folk rock"
+    },
+    {
+     "count": 1,
+     "name": "psychedelic rock"
+    }
+   ]
+  },
+  {
+   "id": "30850b74-ee4d-4cd3-a920-40c72ddb2f20",
+   "type": "Group",
+   "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+   "score": 78,
+   "name": "Iron Horse",
+   "sort-name": "Iron Horse",
+   "country": "US",
+   "area": {
+    "id": "489ce91b-6658-3307-9877-795b68554c98",
+    "type": "Country",
+    "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+    "name": "United States",
+    "sort-name": "United States",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "begin-area": {
+    "id": "cffc0190-1aa2-489f-b6f9-43b9a9e01a91",
+    "type": "Subdivision",
+    "type-id": "fd3d44c5-80a1-3842-9745-2c4972d35afa",
+    "name": "Alabama",
+    "sort-name": "Alabama",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "disambiguation": "bluegrass band from Alabama",
+   "isnis": [
+    "0000000115122877"
+   ],
+   "life-span": {
+    "begin": "2000",
+    "ended": null
+   },
+   "aliases": [
+    {
+     "sort-name": "Fade To Bluegrass",
+     "name": "Fade To Bluegrass",
+     "locale": null,
+     "type": null,
+     "primary": null,
+     "begin-date": null,
+     "end-date": null
+    }
+   ],
+   "tags": [
+    {
+     "count": 1,
+     "name": "country"
+    },
+    {
+     "count": 2,
+     "name": "bluegrass"
+    }
+   ]
+  },
+  {
+   "id": "0c6b687a-1225-47a1-b6a9-55381755ecf4",
+   "type": "Group",
+   "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+   "score": 77,
+   "name": "HORSE the band",
+   "sort-name": "HORSE the band",
+   "country": "US",
+   "area": {
+    "id": "489ce91b-6658-3307-9877-795b68554c98",
+    "type": "Country",
+    "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+    "name": "United States",
+    "sort-name": "United States",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "begin-area": {
+    "id": "10c367fb-8da9-47f5-8443-931debab0edc",
+    "type": "City",
+    "type-id": "6fd8f29a-3d0a-32fc-980d-ea697b69da78",
+    "name": "Lake Forest",
+    "sort-name": "Lake Forest",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "life-span": {
+    "begin": "1998",
+    "ended": null
+   },
+   "aliases": [
+    {
+     "sort-name": "HORSE the band",
+     "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+     "name": "HORSE the band",
+     "locale": "en",
+     "type": "Artist name",
+     "primary": true,
+     "begin-date": null,
+     "end-date": null
+    },
+    {
+     "sort-name": "Wicked Decision",
+     "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+     "name": "Wicked Decision",
+     "locale": null,
+     "type": "Search hint",
+     "primary": null,
+     "begin-date": null,
+     "end-date": null
+    },
+    {
+     "sort-name": "Horse",
+     "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+     "name": "Horse",
+     "locale": "en",
+     "type": "Artist name",
+     "primary": null,
+     "begin-date": "1998",
+     "end-date": "1999-07-06"
+    }
+   ],
+   "tags": [
+    {
+     "count": 2,
+     "name": "hardcore punk"
+    },
+    {
+     "count": 2,
+     "name": "post-hardcore"
+    },
+    {
+     "count": 3,
+     "name": "punk"
+    },
+    {
+     "count": 2,
+     "name": "punk rock"
+    },
+    {
+     "count": 2,
+     "name": "bitcore"
+    },
+    {
+     "count": 2,
+     "name": "nerdcore"
+    },
+    {
+     "count": 1,
+     "name": "hardcore"
+    },
+    {
+     "count": 1,
+     "name": "experimental"
+    },
+    {
+     "count": 3,
+     "name": "nintendocore"
+    },
+    {
+     "count": -1,
+     "name": "rock and indie"
+    },
+    {
+     "count": -1,
+     "name": "post hardcore"
+    },
+    {
+     "count": 2,
+     "name": "electronicore"
+    },
+    {
+     "count": 4,
+     "name": "metalcore"
+    },
+    {
+     "count": 2,
+     "name": "chiptune"
+    }
+   ]
+  },
+  {
+   "id": "3ab39ae8-599e-4d70-8902-894dcfcf4092",
+   "type": "Group",
+   "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+   "score": 76,
+   "name": "Caligula’s Horse",
+   "sort-name": "Caligula’s Horse",
+   "country": "AU",
+   "area": {
+    "id": "106e0bec-b638-3b37-b731-f53d507dc00e",
+    "type": "Country",
+    "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+    "name": "Australia",
+    "sort-name": "Australia",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "begin-area": {
+    "id": "782d4fa5-dfbf-4558-87bf-c41043f5a2a1",
+    "type": "City",
+    "type-id": "6fd8f29a-3d0a-32fc-980d-ea697b69da78",
+    "name": "Brisbane",
+    "sort-name": "Brisbane",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "isnis": [
+    "0000000471048204"
+   ],
+   "life-span": {
+    "begin": "2011-04-28",
+    "ended": null
+   },
+   "aliases": [
+    {
+     "sort-name": "Caligulas Horse",
+     "type-id": "1937e404-b981-3cb7-8151-4c86ebfc8d8e",
+     "name": "Caligulas Horse",
+     "locale": null,
+     "type": "Search hint",
+     "primary": null,
+     "begin-date": null,
+     "end-date": null
+    }
+   ],
+   "tags": [
+    {
+     "count": 1,
+     "name": "progressive rock"
+    },
+    {
+     "count": 4,
+     "name": "progressive metal"
+    }
+   ]
+  },
+  {
+   "id": "6efe2782-6926-41f6-b246-bdd60f997b8b",
+   "type": "Group",
+   "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+   "score": 75,
+   "name": "Horse Lords",
+   "sort-name": "Horse Lords",
+   "area": {
+    "id": "2fb5445d-3987-49fe-957a-f730a7acc4a2",
+    "type": "City",
+    "type-id": "6fd8f29a-3d0a-32fc-980d-ea697b69da78",
+    "name": "Baltimore",
+    "sort-name": "Baltimore",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "isnis": [
+    "0000000469389544"
+   ],
+   "life-span": {
+    "ended": null
+   },
+   "tags": [
+    {
+     "count": 0,
+     "name": "rock"
+    },
+    {
+     "count": 1,
+     "name": "post-rock"
+    },
+    {
+     "count": 1,
+     "name": "krautrock"
+    },
+    {
+     "count": 1,
+     "name": "experimental"
+    },
+    {
+     "count": 1,
+     "name": "math rock"
+    },
+    {
+     "count": 1,
+     "name": "experimental rock"
+    },
+    {
+     "count": 1,
+     "name": "avant-garde"
+    },
+    {
+     "count": 1,
+     "name": "avant-garde rock"
+    },
+    {
+     "count": 1,
+     "name": "avant-prog"
+    },
+    {
+     "count": 1,
+     "name": "microtonal"
+    },
+    {
+     "count": 1,
+     "name": "totalism"
+    }
+   ]
+  },
+  {
+   "id": "20efa62f-4f98-4bdd-abcc-3e6cfb90d271",
+   "type": "Group",
+   "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+   "score": 74,
+   "name": "Horse Feathers",
+   "sort-name": "Horse Feathers",
+   "country": "US",
+   "area": {
+    "id": "489ce91b-6658-3307-9877-795b68554c98",
+    "type": "Country",
+    "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+    "name": "United States",
+    "sort-name": "United States",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "begin-area": {
+    "id": "2b748d6e-bc1c-4434-9f7b-ecd6332bc557",
+    "type": "City",
+    "type-id": "6fd8f29a-3d0a-32fc-980d-ea697b69da78",
+    "name": "Portland",
+    "sort-name": "Portland",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "life-span": {
+    "begin": "2004",
+    "ended": null
+   }
+  },
+  {
+   "id": "211680e9-b738-4dda-b135-355b9e6d4dac",
+   "type": "Group",
+   "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+   "score": 74,
+   "name": "Dead Horse",
+   "sort-name": "Dead Horse",
+   "country": "US",
+   "area": {
+    "id": "489ce91b-6658-3307-9877-795b68554c98",
+    "type": "Country",
+    "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+    "name": "United States",
+    "sort-name": "United States",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "disambiguation": "Pasadena, TX metal band",
+   "life-span": {
+    "begin": "1988",
+    "end": "1996",
+    "ended": true
+   },
+   "tags": [
+    {
+     "count": 1,
+     "name": "thrash metal"
+    },
+    {
+     "count": 1,
+     "name": "death metal"
+    },
+    {
+     "count": 1,
+     "name": "crossover thrash"
+    }
+   ]
+  },
+  {
+   "id": "462e8abc-a26b-4e6d-b909-75b8453fd03a",
+   "type": "Group",
+   "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+   "score": 74,
+   "name": "An Horse",
+   "sort-name": "An Horse",
+   "country": "AU",
+   "area": {
+    "id": "106e0bec-b638-3b37-b731-f53d507dc00e",
+    "type": "Country",
+    "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+    "name": "Australia",
+    "sort-name": "Australia",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "begin-area": {
+    "id": "782d4fa5-dfbf-4558-87bf-c41043f5a2a1",
+    "type": "City",
+    "type-id": "6fd8f29a-3d0a-32fc-980d-ea697b69da78",
+    "name": "Brisbane",
+    "sort-name": "Brisbane",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "disambiguation": "Australian band",
+   "life-span": {
+    "begin": "2007",
+    "ended": null
+   },
+   "tags": [
+    {
+     "count": 1,
+     "name": "indie pop"
+    }
+   ]
+  },
+  {
+   "id": "4eab2682-5728-4d7b-8406-9b70f1ebae02",
+   "type": "Group",
+   "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+   "score": 74,
+   "name": "Horse",
+   "sort-name": "Horse",
+   "country": "GB",
+   "area": {
+    "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+    "type": "Country",
+    "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+    "name": "United Kingdom",
+    "sort-name": "United Kingdom",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "disambiguation": "UK psychedelic band, late 60s/early 70s",
+   "life-span": {
+    "begin": "1968",
+    "end": "1971",
+    "ended": true
+   },
+   "tags": [
+    {
+     "count": 1,
+     "name": "hard rock"
+    },
+    {
+     "count": 1,
+     "name": "heavy psych"
+    }
+   ]
+  },
+  {
+   "id": "a2f155c0-3321-4d51-a854-e0795cfda350",
+   "type": "Group",
+   "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+   "score": 73,
+   "name": "Wild Horse",
+   "sort-name": "Wild Horse",
+   "area": {
+    "id": "61b6a12e-4751-4fe3-b40d-ecb84f29736c",
+    "type": "Subdivision",
+    "type-id": "fd3d44c5-80a1-3842-9745-2c4972d35afa",
+    "name": "East Sussex",
+    "sort-name": "East Sussex",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "begin-area": {
+    "id": "61b6a12e-4751-4fe3-b40d-ecb84f29736c",
+    "type": "Subdivision",
+    "type-id": "fd3d44c5-80a1-3842-9745-2c4972d35afa",
+    "name": "East Sussex",
+    "sort-name": "East Sussex",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "disambiguation": "UK Indie pop band",
+   "life-span": {
+    "begin": "2013-03-21",
+    "ended": null
+   },
+   "tags": [
+    {
+     "count": 0,
+     "name": "rock indie rock wild horse"
+    },
+    {
+     "count": 1,
+     "name": "pop"
+    },
+    {
+     "count": 1,
+     "name": "rock"
+    },
+    {
+     "count": 1,
+     "name": "alternative pop"
+    },
+    {
+     "count": 1,
+     "name": "indie"
+    },
+    {
+     "count": 1,
+     "name": "indie pop"
+    }
+   ]
+  }
+ ]
+}

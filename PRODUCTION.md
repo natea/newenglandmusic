@@ -372,8 +372,58 @@ SeatGeek's API fills in venues whose ticketing pages (Etix, AXS and others) refu
   Only the venue's own site is read, never Etix or AXS. A site that can't be read is a note in the report, not a problem.
 - **JSON-LD.** SeatGeek replaces a venue's JSON-LD only in a run where it has more concerts than the JSON-LD found upcoming events, since some venues' JSON-LD is a single show's page (Town Ballroom: 1 against 14). Venues with good JSON-LD keep it, with its prices and descriptions (Ardmore Music Hall: 47 against 22). The report gives both counts.
 - **Linking venues.** Run `match_seatgeek_venues --dry-run`, then without `--dry-run`. Venues it can't link with certainty are listed with their candidates; set the SeatGeek venue ID on the venue's admin page by hand. Matching is by name and distance, as for Ticketmaster.
-- **Precedence.** A venue is fetched from one API only: Ticketmaster, then Eventbrite, then SeatGeek. Like Eventbrite, SeatGeek replaces a venue's ticketing pages and AI extraction, but not its iCal feed or JSON-LD.
+- **Precedence.** A venue is fetched from one API only: Ticketmaster, then Eventbrite, then SeatGeek. Like Eventbrite, SeatGeek replaces a venue's ticketing pages and AI extraction, but not its iCal feed, and its JSON-LD only as above.
 - **Affiliate program.** SeatGeek's partner program would add an `aid` to its links. Held off on 2026-10-29, and moot while the site doesn't link to SeatGeek.
+
+## Artists and bands
+
+`Artist` (a person or solo act) and `Band` records, with memberships, are admin-only for now, at `/admin/core/artist/` and `/admin/core/band/`: nothing is shown to visitors, and events still name artists by text. Neither command runs on a schedule.
+
+**Importing.** Make a CSV file, or a Google Sheet tab, with this header row:
+
+```
+Act_ID,Name,Kind,Members,Town,State,Website,Bandcamp,MusicBrainz_ID,Notes
+```
+
+- `Act_ID` (required, such as A0001) keys the row, so never change it.
+- `Kind` is `artist` or `band`.
+- A band's `Members` are separated by semicolons, each with an optional role in parentheses: `Jonah Furman (bass, vocals); Aaron Mendelsohn (guitar)`.
+- `State` is a two-letter code; `Bandcamp` must be a `bandcamp.com` page; `MusicBrainz_ID`, if known, saves a search.
+
+```sh
+venv/bin/python manage.py import_artists --csv acts.csv --dry-run
+venv/bin/python manage.py import_artists --sheet <sheet id> --tab "Acts"
+```
+
+A sheet is read like the venue sheet: with `gog` locally, and with the service account on Render (share the sheet with its email). The import never deletes a record or a membership, and never overwrites a field an editor changed or MusicBrainz filled in.
+
+**Enriching from MusicBrainz.**
+
+```sh
+venv/bin/python manage.py enrich_artists_from_musicbrainz --limit 20 --dry-run
+```
+
+It finds each record's MusicBrainz artist and stores its ID, type, country, area, dates, genres, links (official site, Bandcamp, Wikidata, Discogs) and a band's members. It accepts a search only for an exact name of the right kind; a name several acts share needs evidence (a covered state, or Last.fm's page naming the MusicBrainz ID), else it's marked "ambiguous". About 2 seconds a record, at MusicBrainz's one request a second. In the admin, set a record's MusicBrainz ID by hand to settle it (later runs keep it), or use "Clear MusicBrainz match" to search again.
+
+**Introductions.** Enrichment also keeps MusicBrainz's short disambiguation note ("Boston indie rock band"), and, for an act MusicBrainz links to Wikidata, the opening paragraph of its English Wikipedia article (two more requests: Wikidata for the article's title, Wikipedia's summary for its text). It's accepted only when it's an ordinary article of that Wikidata item, and a later run that finds no article removes it. Most small local acts have none.
+
+**From the events' Artists column.** `import_artists_from_events` makes records from the names approved events give, and links the events to them:
+
+```sh
+venv/bin/python manage.py import_artists_from_events --limit 50 --dry-run
+venv/bin/python manage.py import_artists_from_events
+venv/bin/python manage.py enrich_artists_from_musicbrainz
+```
+
+Each name is searched on MusicBrainz as a person and as a group; one that's exactly one kind becomes that record with its MusicBrainz ID, and the enrichment fills in the rest. Every other name (both kinds, several with no evidence, or not on MusicBrainz) is written to `logs/artists-from-events-review-<date>.csv` instead, in the import layout with `Act_ID` and `Kind` blank: fill those in and run `import_artists --csv` with it, then this command again to link the events. Names already a record, and placeholders, are skipped, most-named first; about two searches a name.
+
+**Event performers.** An event's page in the admin lists its artists and bands in billing order, under "performers". They're linked from the Artists text, by this command and by `fetch_events` for each event it saves, when exactly one artist or band has the name. Add, remove or reorder them there; what an editor adds stays. A link from the text comes back while its name is in the text, so take the name out to unlink it. The text itself stays, and nothing visitors see reads the performers yet.
+
+**What may be kept:**
+- **Wikipedia:** its text is CC BY-SA 4.0. It's kept word for word, with the article's link and revision, and must be credited wherever it's shown: "From the Wikipedia article <link>, under CC BY-SA 4.0 <licence link>", as the admin does. Don't edit it, and don't keep the summary's images, which have their own licences.
+- **MusicBrainz:** its core data (artists, areas, dates, relationships and URLs) is public domain (CC0). Its genre tags are supplementary data under CC BY-NC-SA: kept, admin-only, credited.
+- **Last.fm:** nothing. Its answer only helps choose between MusicBrainz artists, as its terms require.
+- **Bandcamp:** only a link. It has no public API (only labels and merch partners get one), and its acceptable use policy forbids scraping, so nothing is ever requested from it, through a scraping service or otherwise.
 
 ## Calendar feeds
 

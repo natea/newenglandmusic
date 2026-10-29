@@ -1,0 +1,594 @@
+{
+ "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+ "end-area": null,
+ "type": "Group",
+ "area": {
+  "type": null,
+  "iso-3166-1-codes": [
+   "US"
+  ],
+  "sort-name": "United States",
+  "id": "489ce91b-6658-3307-9877-795b68554c98",
+  "name": "United States",
+  "type-id": null,
+  "disambiguation": ""
+ },
+ "gender": null,
+ "gender-id": null,
+ "country": "US",
+ "relations": [
+  {
+   "source-credit": "",
+   "artist": {
+    "sort-name": "Doubek, Joey",
+    "type": "Person",
+    "name": "Joey Doubek",
+    "id": "b3893545-e6ba-4354-8440-694f844f3519",
+    "country": null,
+    "disambiguation": "member of Mass Movement Of The Moth, Hume, The Guilt, Speedy Ortiz, Danke, Pinkwash",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "attribute-values": {},
+   "attribute-ids": {},
+   "target-credit": "",
+   "type": "member of band",
+   "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+   "ended": false,
+   "begin": null,
+   "target-type": "artist",
+   "end": null,
+   "attributes": [],
+   "direction": "backward"
+  },
+  {
+   "type": "member of band",
+   "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+   "ended": false,
+   "attribute-credits": {},
+   "begin": null,
+   "target-type": "artist",
+   "attributes": [
+    "banjo",
+    "cello",
+    "guitar",
+    "lead vocals",
+    "original",
+    "piano"
+   ],
+   "end": null,
+   "direction": "backward",
+   "source-credit": "",
+   "artist": {
+    "disambiguation": "",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "name": "Sadie Dupuis",
+    "country": "US",
+    "id": "ce4c71b5-9588-48e7-8c31-c55d64cd9383",
+    "sort-name": "Dupuis, Sadie",
+    "type": "Person"
+   },
+   "attribute-values": {},
+   "attribute-ids": {
+    "banjo": "6bf88fc7-a235-4d95-a910-a4ce4a4853c6",
+    "lead vocals": "8e2a3255-87c2-4809-a174-98cb3704f1a5",
+    "cello": "0db03a60-1142-4b25-ab1b-72027d0dc357",
+    "original": "4fd3b255-a7d7-4424-9a63-40fa543b601c",
+    "piano": "b3eac5f9-7859-4416-ac39-7154e2e8d348",
+    "guitar": "63021302-86cd-4aee-80df-2270d54f4978"
+   },
+   "target-credit": ""
+  },
+  {
+   "type": "member of band",
+   "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+   "begin": null,
+   "target-type": "artist",
+   "end": null,
+   "attributes": [],
+   "ended": false,
+   "direction": "backward",
+   "source-credit": "",
+   "artist": {
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "disambiguation": "US indie rock guitarist/keyboards",
+    "id": "4804c3f8-0099-419a-8360-59ed014d72c6",
+    "country": "US",
+    "name": "Andy Molholt",
+    "type": "Person",
+    "sort-name": "Molholt, Andy"
+   },
+   "attribute-values": {},
+   "attribute-ids": {},
+   "target-credit": ""
+  },
+  {
+   "artist": {
+    "name": "Darl Ferm",
+    "id": "ceb9786e-2603-4742-8fb0-a6adc06ee178",
+    "country": null,
+    "disambiguation": "",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Ferm, Darl",
+    "type": "Person"
+   },
+   "source-credit": "",
+   "target-credit": "",
+   "attribute-ids": {},
+   "attribute-values": {},
+   "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+   "type": "member of band",
+   "direction": "backward",
+   "ended": true,
+   "target-type": "artist",
+   "end": null,
+   "attributes": [],
+   "begin": null
+  },
+  {
+   "type": "member of band",
+   "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+   "target-type": "artist",
+   "attributes": [],
+   "end": null,
+   "begin": null,
+   "ended": true,
+   "direction": "backward",
+   "artist": {
+    "type": "Person",
+    "sort-name": "McKnight, Devin",
+    "country": null,
+    "id": "7c8318fc-7e3e-4be1-a4b8-6f37f4538632",
+    "name": "Devin McKnight",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "disambiguation": "singer, songwriter and guitarist in Maneka, former guitarist for the bands Speedy Ortiz and Grass Is Green"
+   },
+   "source-credit": "",
+   "attribute-ids": {},
+   "attribute-values": {},
+   "target-credit": ""
+  },
+  {
+   "direction": "backward",
+   "ended": true,
+   "begin": null,
+   "end": null,
+   "target-type": "artist",
+   "attributes": [],
+   "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+   "type": "member of band",
+   "target-credit": "",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "source-credit": "",
+   "artist": {
+    "id": "e3e4c504-a83d-4f4b-affe-cdaf12f0f9ea",
+    "country": "US",
+    "name": "Matt Robidoux",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "disambiguation": "",
+    "type": "Person",
+    "sort-name": "Robidoux, Matt"
+   }
+  },
+  {
+   "source-credit": "",
+   "target-credit": "",
+   "attribute-ids": {},
+   "attribute-values": {},
+   "type-id": "6b3e3c85-0002-4f34-aca6-80ace0d7e846",
+   "type": "allmusic",
+   "url": {
+    "resource": "https://www.allmusic.com/artist/mn0003081478",
+    "id": "42205e8e-6bdb-4fae-8e30-6a942b0fb92f"
+   },
+   "direction": "forward",
+   "target-type": "url",
+   "end": null,
+   "attributes": [],
+   "begin": null,
+   "ended": false
+  },
+  {
+   "type": "bandcamp",
+   "url": {
+    "id": "f3624d1b-f553-4c87-becb-ccf292a0e5a0",
+    "resource": "https://speedyortiz.bandcamp.com/"
+   },
+   "type-id": "c550166e-0548-4a18-b1d4-e2ae423a3e88",
+   "ended": false,
+   "target-type": "url",
+   "end": null,
+   "attributes": [],
+   "begin": null,
+   "direction": "forward",
+   "source-credit": "",
+   "attribute-ids": {},
+   "attribute-values": {},
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "source-credit": "",
+   "direction": "forward",
+   "ended": false,
+   "begin": null,
+   "target-type": "url",
+   "attributes": [],
+   "end": null,
+   "type-id": "04a5b104-a4c2-4bac-99a1-7b837c37d9e4",
+   "type": "discogs",
+   "url": {
+    "id": "04b1f371-c597-417e-859a-602bccff39e8",
+    "resource": "https://www.discogs.com/artist/2847690"
+   }
+  },
+  {
+   "source-credit": "",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "target-credit": "",
+   "type": "free streaming",
+   "url": {
+    "id": "c69a4c84-7ffd-4535-a79c-9837dafee572",
+    "resource": "https://open.spotify.com/artist/6YHfq8Pg3lZPo1u0PaQ8ob"
+   },
+   "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+   "ended": false,
+   "begin": null,
+   "target-type": "url",
+   "end": null,
+   "attributes": [],
+   "direction": "forward"
+  },
+  {
+   "source-credit": "",
+   "target-credit": "",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+   "url": {
+    "resource": "https://www.deezer.com/artist/4742521",
+    "id": "9aec2bd0-5694-40c4-a8b7-81262cfcd6c6"
+   },
+   "type": "free streaming",
+   "direction": "forward",
+   "ended": false,
+   "begin": null,
+   "attributes": [],
+   "target-type": "url",
+   "end": null
+  },
+  {
+   "target-credit": "",
+   "attribute-ids": {},
+   "attribute-values": {},
+   "source-credit": "",
+   "direction": "forward",
+   "target-type": "url",
+   "attributes": [],
+   "end": null,
+   "begin": null,
+   "ended": false,
+   "type-id": "94c8b0cc-4477-4106-932c-da60e63de61c",
+   "url": {
+    "id": "d007f6fa-6e6c-4beb-affc-6905a163ca33",
+    "resource": "https://www.imdb.com/name/nm9775072/"
+   },
+   "type": "IMDb"
+  },
+  {
+   "target-credit": "",
+   "attribute-ids": {},
+   "attribute-values": {},
+   "source-credit": "",
+   "direction": "forward",
+   "attributes": [],
+   "target-type": "url",
+   "end": null,
+   "begin": null,
+   "ended": false,
+   "type-id": "08db8098-c0df-4b78-82c3-c8697b4bba7f",
+   "url": {
+    "resource": "https://www.last.fm/music/Speedy+Ortiz",
+    "id": "d44ad5f3-6de9-4481-8e99-0d894fcf83aa"
+   },
+   "type": "last.fm"
+  },
+  {
+   "type-id": "fe33d22f-c3b0-4d68-bd53-a856badf2b15",
+   "type": "official homepage",
+   "url": {
+    "resource": "https://speedyortiz.com/",
+    "id": "05db7797-1474-4c8f-87b7-4d1f4f668089"
+   },
+   "direction": "forward",
+   "target-type": "url",
+   "attributes": [],
+   "end": null,
+   "begin": null,
+   "ended": false,
+   "source-credit": "",
+   "target-credit": "",
+   "attribute-ids": {},
+   "attribute-values": {}
+  },
+  {
+   "begin": null,
+   "target-type": "url",
+   "attributes": [],
+   "end": null,
+   "ended": false,
+   "direction": "forward",
+   "type": "other databases",
+   "url": {
+    "id": "a62795bc-67e1-4dc8-956d-586c40cdebd5",
+    "resource": "https://rateyourmusic.com/artist/speedy-ortiz"
+   },
+   "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "target-credit": "",
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "target-credit": "",
+   "url": {
+    "id": "11586a06-0cae-4fe9-b3ad-6021d68d8f64",
+    "resource": "https://www.musik-sammler.de/artist/speedy-ortiz/"
+   },
+   "type": "other databases",
+   "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+   "begin": null,
+   "target-type": "url",
+   "attributes": [],
+   "end": null,
+   "ended": false,
+   "direction": "forward"
+  },
+  {
+   "target-credit": "",
+   "attribute-ids": {},
+   "attribute-values": {},
+   "source-credit": "",
+   "direction": "forward",
+   "ended": false,
+   "target-type": "url",
+   "attributes": [],
+   "end": null,
+   "begin": null,
+   "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+   "type": "other databases",
+   "url": {
+    "id": "c5f01250-5ce4-4446-8411-08d0df5e90a3",
+    "resource": "https://www.worldcat.org/identities/lccn-no2017031435/"
+   }
+  },
+  {
+   "direction": "forward",
+   "ended": false,
+   "begin": null,
+   "target-type": "url",
+   "end": null,
+   "attributes": [],
+   "type-id": "79c5b84d-a206-4f4c-9832-78c028c312c3",
+   "type": "secondhandsongs",
+   "url": {
+    "id": "5ea4207c-9aa2-4f95-b34d-c0654ec11b50",
+    "resource": "https://secondhandsongs.com/artist/111602"
+   },
+   "target-credit": "",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "target-credit": "",
+   "type": "setlistfm",
+   "url": {
+    "resource": "https://www.setlist.fm/setlists/speedy-ortiz-33dd30d9.html",
+    "id": "789db879-fda8-422c-ae80-f25a7c0edbc1"
+   },
+   "type-id": "bf5d0d5e-27a1-4e94-9df7-3cdc67b3b207",
+   "begin": null,
+   "target-type": "url",
+   "attributes": [],
+   "end": null,
+   "ended": false,
+   "direction": "forward"
+  },
+  {
+   "url": {
+    "resource": "https://twitter.com/sad13",
+    "id": "2ae76a27-18f7-44c6-ac62-28f642cc4824"
+   },
+   "type": "social network",
+   "type-id": "99429741-f3f6-484b-84f8-23af51991770",
+   "ended": false,
+   "begin": null,
+   "target-type": "url",
+   "attributes": [],
+   "end": null,
+   "direction": "forward",
+   "source-credit": "",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "target-credit": ""
+  },
+  {
+   "target-credit": "",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "source-credit": "",
+   "direction": "forward",
+   "begin": null,
+   "target-type": "url",
+   "end": null,
+   "attributes": [],
+   "ended": false,
+   "type-id": "99429741-f3f6-484b-84f8-23af51991770",
+   "type": "social network",
+   "url": {
+    "id": "dccb800f-1e60-46c5-9234-bed5a987b3d5",
+    "resource": "https://www.facebook.com/speedyortiz"
+   }
+  },
+  {
+   "url": {
+    "id": "1f06b470-d4f4-4373-913f-34ba1af1642b",
+    "resource": "https://www.instagram.com/sad13/"
+   },
+   "type": "social network",
+   "type-id": "99429741-f3f6-484b-84f8-23af51991770",
+   "ended": false,
+   "begin": null,
+   "target-type": "url",
+   "attributes": [],
+   "end": null,
+   "direction": "forward",
+   "source-credit": "",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "target-credit": ""
+  },
+  {
+   "source-credit": "",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "target-credit": "",
+   "type": "songkick",
+   "url": {
+    "resource": "https://www.songkick.com/artists/4921278",
+    "id": "61bc1b56-fb9f-4cb4-b76f-963995bd2ae6"
+   },
+   "type-id": "aac9c4bc-a5b9-30b8-9839-e3ac314c6e58",
+   "begin": null,
+   "attributes": [],
+   "target-type": "url",
+   "end": null,
+   "ended": false,
+   "direction": "forward"
+  },
+  {
+   "type-id": "89e4a949-0976-440d-bda1-5f772c1e5710",
+   "type": "soundcloud",
+   "url": {
+    "resource": "https://soundcloud.com/speedy-ortiz-official",
+    "id": "a0a32614-c1ff-48c5-aaa1-04b46fd56f91"
+   },
+   "direction": "forward",
+   "target-type": "url",
+   "end": null,
+   "attributes": [],
+   "begin": null,
+   "ended": false,
+   "source-credit": "",
+   "target-credit": "",
+   "attribute-ids": {},
+   "attribute-values": {}
+  },
+  {
+   "url": {
+    "id": "5fffecb6-4050-41fe-9dc6-5f6aed6275a5",
+    "resource": "http://viaf.org/viaf/396148996204959752893"
+   },
+   "type": "VIAF",
+   "type-id": "e8571dcc-35d4-4e91-a577-a3382fd84460",
+   "ended": false,
+   "target-type": "url",
+   "attributes": [],
+   "end": null,
+   "begin": null,
+   "direction": "forward",
+   "source-credit": "",
+   "attribute-ids": {},
+   "attribute-values": {},
+   "target-credit": ""
+  },
+  {
+   "type-id": "689870a4-a1e4-4912-b17f-7b2664215698",
+   "type": "wikidata",
+   "url": {
+    "resource": "https://www.wikidata.org/wiki/Q17091953",
+    "id": "214163db-5d28-42d9-9db6-5841e67bbaf2"
+   },
+   "direction": "forward",
+   "begin": null,
+   "attributes": [],
+   "target-type": "url",
+   "end": null,
+   "ended": false,
+   "source-credit": "",
+   "target-credit": "",
+   "attribute-values": {},
+   "attribute-ids": {}
+  },
+  {
+   "direction": "forward",
+   "ended": false,
+   "target-type": "url",
+   "end": null,
+   "attributes": [],
+   "begin": null,
+   "type-id": "29651736-fa6d-48e4-aadc-a557c6add1cb",
+   "type": "wikipedia",
+   "url": {
+    "resource": "https://en.wikipedia.org/wiki/Speedy_Ortiz",
+    "id": "0ad3d231-fa78-4209-966b-6d870f13cda0"
+   },
+   "target-credit": "",
+   "attribute-ids": {},
+   "attribute-values": {},
+   "source-credit": ""
+  }
+ ],
+ "life-span": {
+  "begin": "2011",
+  "end": null,
+  "ended": false
+ },
+ "genres": [
+  {
+   "name": "alternative rock",
+   "id": "ceeaa283-5d7b-4202-8d1d-e25d116b2a18",
+   "count": 1,
+   "disambiguation": ""
+  },
+  {
+   "count": 1,
+   "disambiguation": "",
+   "id": "ccd19ebf-052c-4afe-8ad9-fbb0a73f94a7",
+   "name": "indie rock"
+  },
+  {
+   "name": "noise pop",
+   "id": "1208a8e7-e5bd-4891-9f81-9a9fdfceeb39",
+   "count": 2,
+   "disambiguation": ""
+  }
+ ],
+ "name": "Speedy Ortiz",
+ "isnis": [
+  "0000000471421160"
+ ],
+ "id": "4fbf1a3d-a649-4f8e-9ddf-347f6ba2d307",
+ "ipis": [],
+ "sort-name": "Speedy Ortiz",
+ "disambiguation": "",
+ "aliases": [],
+ "begin-area": {
+  "type-id": null,
+  "disambiguation": "",
+  "id": "f244bbd0-850e-4948-b288-3e10fcf39f34",
+  "name": "Northampton",
+  "type": null,
+  "sort-name": "Northampton"
+ }
+}
