@@ -50,7 +50,7 @@ API keys live in `.env`, which is git-ignored:
 
 ## Artists and bands
 
-`Artist`, `Band` and `BandMembership` (admin-only) are imported by `import_artists` from a CSV or a sheet tab keyed by `Act_ID`, and filled in by `enrich_artists_from_musicbrainz`. Store MusicBrainz's data, never Last.fm's (evidence only), and nothing from Bandcamp but a page URL: it forbids scraping. Wikipedia's opening paragraph is kept word for word and credited (CC BY-SA 4.0) wherever it's shown. Who set each field is in `field_sources`; the import and enrichment never overwrite an editor's. Tests use `core/tests/musicbrainz_fixture.py`. See PRODUCTION.md.
+`Artist`, `Band` and `BandMembership` (admin-only) are imported by `import_artists` from a CSV or a sheet tab keyed by `Act_ID`, and filled in by `enrich_artists_from_musicbrainz`. Store MusicBrainz's data, never Last.fm's (evidence only), and nothing from Bandcamp but a page URL: it forbids scraping. Wikipedia's opening paragraph is kept word for word and credited (CC BY-SA 4.0) wherever it's shown. Who set each field is in `field_sources`; the import and enrichment never overwrite an editor's. `import_artists_from_events` makes records from approved events' Artists text (MusicBrainz deciding artist or band; the rest go on a review CSV), and `EventPerformer` links events to them in billing order, alongside the text, which stays. Tests use `core/tests/musicbrainz_fixture.py`. See PRODUCTION.md.
 
 ## The pipeline
 

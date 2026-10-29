@@ -2,7 +2,7 @@ import json
 from io import StringIO
 from unittest import mock
 
-from core.artist_enrichment import Matcher, enrich, links, members
+from core.artist_enrichment import BOTH_KINDS, NOT_ON_MUSICBRAINZ, SEVERAL, Matcher, choose_kind, enrich, links, members
 from core.management.commands import enrich_artists_from_musicbrainz as command
 from core.models import Artist, Band, BandMembership, JobRun, MusicAct
 from core.music_ids import MUSICBRAINZ_SECONDS_BETWEEN_REQUESTS, MusicIds
@@ -381,3 +381,27 @@ class IntroductionTestCase(TestCase):
         band.refresh_from_db()
         self.assertEqual((status, band.musicbrainz_id, band.wikipedia_extract), (Status.MATCHED, SPEEDY_ORTIZ, text))
         self.assertEqual(self.problems, ["Speedy Ortiz: wikidata: HTTP 503; kept its earlier wikipedia text"])
+
+
+class ChooseKindTestCase(TestCase):
+    def kind(self, name, searches, lastfm=None):
+        mb = FakeMusicBrainz(searches=searches)
+        return choose_kind(name, Matcher(mb, lastfm=lastfm, covered_states={"US-MA"}))
+
+    def test_a_band(self):
+        self.assertEqual(choose_kind("Speedy Ortiz", Matcher(FakeMusicBrainz(), covered_states=set())), (Band, SPEEDY_ORTIZ, ""))
+
+    def test_a_person(self):
+        found = self.kind("Kim Deal", {"Kim Deal": [candidate(HORSE_A, "Kim Deal", kind="Person")]})
+        self.assertEqual(found, (Artist, HORSE_A, ""))
+
+    def test_both(self):
+        both = [candidate(HORSE_A, "Horse", kind="Person"), candidate(HORSE_B, "Horse")]
+        self.assertEqual(self.kind("Horse", {"Horse": both}), (None, None, BOTH_KINDS))
+
+    def test_several_with_no_evidence(self):
+        several = [candidate(HORSE_A, "Horse"), candidate(HORSE_B, "Horse")]
+        self.assertEqual(self.kind("Horse", {"Horse": several}, FakeLastFm()), (None, None, SEVERAL))
+
+    def test_not_found(self):
+        self.assertEqual(self.kind("Dana and Alden", {}), (None, None, NOT_ON_MUSICBRAINZ))

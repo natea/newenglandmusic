@@ -287,3 +287,33 @@ def due(model, refresh=False):
     """the records to look up: not checked yet, or all with refresh"""
     records = model.objects.order_by("name")
     return records if refresh else records.filter(Q(musicbrainz_checked_at__isnull=True))
+
+
+# why a name from the events goes on the review list instead of becoming a record
+BOTH_KINDS = "both a person and a group"
+SEVERAL = "several with this name"
+NOT_ON_MUSICBRAINZ = "not on MusicBrainz"
+
+
+def choose_kind(name, matcher):
+    """
+    what a name from the events is on musicbrainz (import_artists_from_events): (Artist or
+    Band, its musicbrainz id, "") when it's settled as exactly one kind, else (None, None,
+    the reason). both kinds are searched with the matcher's rules; a name with no state
+    isn't checked for being placed abroad, as touring acts play local venues
+    """
+    found = {}
+    for model in (Band, Artist):
+        record = model(name=name)
+        record.name_key = normalize(name)
+        found[model] = matcher.choose(record)
+    (band_status, band_id), (artist_status, artist_id) = found[Band], found[Artist]
+    if Status.AMBIGUOUS in (band_status, artist_status):
+        return None, None, SEVERAL
+    if band_status == Status.MATCHED and artist_status == Status.MATCHED:
+        return None, None, BOTH_KINDS
+    if band_status == Status.MATCHED:
+        return Band, band_id, ""
+    if artist_status == Status.MATCHED:
+        return Artist, artist_id, ""
+    return None, None, NOT_ON_MUSICBRAINZ

@@ -33,6 +33,7 @@ from .models import (
     Artist,
     Band,
     BandMembership,
+    EventPerformer,
     MusicAct,
     YouTubeArtistLink,
     DateMessage,
@@ -197,7 +198,34 @@ class KindListFilter(SimpleListFilter):
         return queryset
 
 
+class EventPerformerInline(admin.TabularInline):
+    """an event's artists and bands, in billing order (add-artists-from-events)"""
+
+    model = EventPerformer
+    extra = 0
+    fields = ("order", "artist", "band", "source")
+    readonly_fields = ("source",)
+    autocomplete_fields = ("artist", "band")
+    verbose_name = "performer"
+    verbose_name_plural = "performers"
+    classes = ("collapse",)
+
+
 class EventAdmin(admin.ModelAdmin):
+    inlines = [EventPerformerInline]
+
+    def save_formset(self, request, form, formset, change):
+        # a performer added here is the editor's, and stays when the text is linked again
+        if formset.model is EventPerformer:
+            # save(commit=False) gives the new and changed rows: an editor's now
+            for performer in formset.save(commit=False):
+                performer.source = EventPerformer.Source.EDITOR
+                performer.save()
+            for performer in formset.deleted_objects:
+                performer.delete()
+            return
+        super().save_formset(request, form, formset, change)
+
     # links typed without a scheme get https, which django 6 makes the default
     formfield_overrides = {URLField: {"assume_scheme": "https"}}
     list_per_page = 500

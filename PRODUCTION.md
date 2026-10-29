@@ -388,6 +388,18 @@ It finds each record's MusicBrainz artist and stores its ID, type, country, area
 
 **Introductions.** Enrichment also keeps MusicBrainz's short disambiguation note ("Boston indie rock band"), and, for an act MusicBrainz links to Wikidata, the opening paragraph of its English Wikipedia article (two more requests: Wikidata for the article's title, Wikipedia's summary for its text). It's accepted only when it's an ordinary article of that Wikidata item, and a later run that finds no article removes it. Most small local acts have none.
 
+**From the events' Artists column.** `import_artists_from_events` makes records from the names approved events give, and links the events to them:
+
+```sh
+venv/bin/python manage.py import_artists_from_events --limit 50 --dry-run
+venv/bin/python manage.py import_artists_from_events
+venv/bin/python manage.py enrich_artists_from_musicbrainz
+```
+
+Each name is searched on MusicBrainz as a person and as a group; one that's exactly one kind becomes that record with its MusicBrainz ID, and the enrichment fills in the rest. Every other name (both kinds, several with no evidence, or not on MusicBrainz) is written to `logs/artists-from-events-review-<date>.csv` instead, in the import layout with `Act_ID` and `Kind` blank: fill those in and run `import_artists --csv` with it, then this command again to link the events. Names already a record, and placeholders, are skipped, most-named first; about two searches a name.
+
+**Event performers.** An event's page in the admin lists its artists and bands in billing order, under "performers". They're linked from the Artists text, by this command and by `fetch_events` for each event it saves, when exactly one artist or band has the name. Add, remove or reorder them there; what an editor adds stays. A link from the text comes back while its name is in the text, so take the name out to unlink it. The text itself stays, and nothing visitors see reads the performers yet.
+
 **What may be kept:**
 - **Wikipedia:** its text is CC BY-SA 4.0. It's kept word for word, with the article's link and revision, and must be credited wherever it's shown: "From the Wikipedia article <link>, under CC BY-SA 4.0 <licence link>", as the admin does. Don't edit it, and don't keep the summary's images, which have their own licences.
 - **MusicBrainz:** its core data (artists, areas, dates, relationships and URLs) is public domain (CC0). Its genre tags are supplementary data under CC BY-NC-SA: kept, admin-only, credited.

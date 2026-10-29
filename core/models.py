@@ -922,3 +922,42 @@ class BandMembership(models.Model):
     def __str__(self):
         role = f" ({self.role})" if self.role else ""
         return f"{self.artist} in {self.band}{role}"
+
+
+class EventPerformer(models.Model):
+    """
+    an artist or band on an event's bill, in billing order (add-artists-from-events).
+    links from the event's Artists text are rebuilt when it changes (see
+    core/event_performers.py); an editor's stay. nothing visitors see reads these yet
+    """
+
+    class Source(models.TextChoices):
+        NAMES = "names", "From the artists text"
+        EDITOR = "editor", "Editor"
+
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="performers")
+    artist = models.ForeignKey(
+        Artist, on_delete=models.CASCADE, null=True, blank=True, related_name="performances",
+        help_text="an artist or a band, not both. a link from the artists text comes back while its name is in the text: take the name out to unlink it",
+    )
+    band = models.ForeignKey(Band, on_delete=models.CASCADE, null=True, blank=True, related_name="performances")
+    order = models.PositiveSmallIntegerField(default=0)
+    source = models.CharField(max_length=8, choices=Source.choices, default=Source.EDITOR)
+
+    class Meta:
+        ordering = ("event", "order", "pk")
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(artist__isnull=False, band__isnull=True) | models.Q(artist__isnull=True, band__isnull=False)),
+                name="performer_is_an_artist_or_a_band",
+            ),
+            models.UniqueConstraint(fields=["event", "artist"], name="unique_event_artist"),
+            models.UniqueConstraint(fields=["event", "band"], name="unique_event_band"),
+        ]
+
+    @property
+    def act(self):
+        return self.artist or self.band
+
+    def __str__(self):
+        return f"{self.act} at {self.event_id}"
