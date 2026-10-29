@@ -162,3 +162,6 @@ class EventPerformerAdminTestCase(TestCase):
         html = self.client.get(reverse("admin:core_alleventproxy_change", args=[self.event.pk])).content.decode()
         self.assertIn("performers-TOTAL_FORMS", html)
         self.assertIn("take the name out to unlink it", html)
+        # open, not collapsed
+        inline = self.admin.get_inline_instances(self.request, self.event)[0]
+        self.assertNotIn("collapse", inline.classes or ())

@@ -208,7 +208,6 @@ class EventPerformerInline(admin.TabularInline):
     autocomplete_fields = ("artist", "band")
     verbose_name = "performer"
     verbose_name_plural = "performers"
-    classes = ("collapse",)
 
 
 class EventAdmin(admin.ModelAdmin):
