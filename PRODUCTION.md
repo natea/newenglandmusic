@@ -212,6 +212,7 @@ Google's terms allow storing a place ID indefinitely and its coordinates for up 
 - **Refreshing:** the daily `--refresh-stale` run re-fetches coordinates by place ID before they're 30 days old.
 - **Expiry:** every run deletes coordinates older than 30 days, even if its requests fail. The venue then uses its sheet coordinates until a refresh succeeds.
 - **Why a venue needs review:** for a match needing review, the lookup also records which of its checks the top result failed (name, state, more than 25 km away) and its distance from the sheet's town. These are our own judgments, not Places content, and the distance is deleted with the coordinates. The venue admin shows them in a "why review" column, such as "name differs · 0.4 km away", and filters by them. Venues marked for review before this existed show "not recorded": run `lookup_venue_places --review` once (one Places search per review venue, about 180, inside the free tier; try `--dry-run --limit 20` first) to fill them in.
+- **Google's name for a review venue:** the venue admin shows it live, since it can't be stored. A review venue's page looks it up when it opens, and the list has a "show Google's name" link per review venue, looked up only on a click. Each is one Place Details request for the name alone, counted in the same free 5,000 a month; loading the list costs nothing.
 
 ## Spotify play buttons
 

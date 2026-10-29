@@ -9,7 +9,8 @@ month, then $32 per 1,000).
 google's terms allow storing a place id indefinitely and its coordinates for 30 days, and
 nothing else: a search result's name, address and status are used while a lookup runs
 (to judge the match, and report closed venues) but never saved. place_details refreshes
-a stored id's coordinates (see lookup_venue_places --refresh-stale).
+a stored id's coordinates (see lookup_venue_places --refresh-stale), and place_name shows
+an admin a review venue's place, to judge the match: it's shown, never saved.
 """
 
 import time
@@ -28,6 +29,8 @@ PRO_FIELDS = (
 )
 # only what a refresh stores or reports
 DETAILS_FIELDS = ("id", "location", "businessStatus")
+# the name alone, for the venue admin (a "pro" field: one request per review venue looked at)
+NAME_FIELDS = ("displayName",)
 MAX_RESULTS = 3
 BIAS_RADIUS_METERS = 30_000
 MIN_SECONDS_BETWEEN_REQUESTS = 0.2
@@ -131,3 +134,8 @@ class PlacesClient:
             "longitude": location.get("longitude"),
             "business_status": place.get("businessStatus", ""),
         }
+
+    def place_name(self, place_id):
+        """a place's name on google right now"""
+        place = self.request("GET", DETAILS_URL.format(place_id=place_id), "place details", NAME_FIELDS)
+        return (place.get("displayName") or {}).get("text", "")

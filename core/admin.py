@@ -1,3 +1,4 @@
+import os
 import re
 from datetime import date
 
@@ -7,7 +8,9 @@ from django import forms
 from django.contrib import messages
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q, URLField
-from django.urls import reverse
+from django.http import Http404, HttpResponse
+from django.shortcuts import get_object_or_404
+from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join, urlize
 from django.utils.safestring import mark_safe
@@ -17,6 +20,7 @@ from tinymce.widgets import TinyMCE
 
 from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filter
 from . import apple_music, youtube
+from .places import PlacesClient, PlacesError
 from .spotify import parse_artist_id
 from .spotify_links import rebake_events_naming
 from .artist_matching import normalize
@@ -435,6 +439,20 @@ class FetchStatusFilter(SimpleListFilter):
 REVIEW_REASON_WORDS = {"name": "name differs", "state": "in another state", "distance": "too far"}
 
 
+def google_place_name(place_id):
+    """
+    a place's name on google right now, or why it couldn't be asked: shown to an admin
+    judging a review match, never saved, since google's terms let us store only the id
+    """
+    api_key = os.environ.get("GOOGLE_PLACES_API_KEY")
+    if not api_key:
+        return "GOOGLE_PLACES_API_KEY isn't set"
+    try:
+        return PlacesClient(api_key).place_name(place_id) or "(no name on google)"
+    except PlacesError as e:
+        return f"couldn't ask google ({e})"
+
+
 class PlaceReviewReasonFilter(SimpleListFilter):
     """why a venue's google match needs review (lookup_venue_places)"""
 
@@ -483,6 +501,7 @@ class VenueAdmin(admin.ModelAdmin):
         "sheet_id",
         "last_fetch",
         "why_review",
+        "google_name_link",
     )
     list_display_links = ("name",)
     list_filter = (
@@ -556,6 +575,7 @@ class VenueAdmin(admin.ModelAdmin):
                 "fields": (
                     "place_lookup_status",
                     "why_review",
+                    "google_name",
                     "place_looked_up_at",
                     "place_id",
                     "place_on_google_maps",
@@ -573,8 +593,31 @@ class VenueAdmin(admin.ModelAdmin):
         ("Event fetching", {"fields": ("fetch_status_details",)}),
     )
     readonly_fields = (
-        "fetch_status_details", "place_on_google_maps", "why_review", "neighborhood_source", "neighborhood_checked_at",
+        "fetch_status_details", "place_on_google_maps", "why_review", "google_name", "neighborhood_source",
+        "neighborhood_checked_at",
     )
+
+    class Media:
+        js = ["core/admin/google-name.js"]
+
+    def get_urls(self):
+        name = f"{self.model._meta.app_label}_{self.model._meta.model_name}_google_name"
+        return [
+            path("<int:pk>/google-name/", self.admin_site.admin_view(self.google_name_view), name=name),
+            *super().get_urls(),
+        ]
+
+    def google_name_view(self, request, pk):
+        """a review venue's place name on google, asked for when an admin clicks for it"""
+        venue = get_object_or_404(Venue, pk=pk)
+        if not self.has_view_permission(request, venue):
+            raise Http404
+        if venue.place_lookup_status != Venue.PlaceLookupStatus.REVIEW or not venue.place_id:
+            raise Http404("only a match needing review is looked up")
+        response = HttpResponse(google_place_name(venue.place_id), content_type="text/plain; charset=utf-8")
+        # google's content mustn't be kept, by a browser either
+        response["Cache-Control"] = "no-store"
+        return response
 
     def save_model(self, request, venue, form, change):
         """a neighborhood typed here, or "no neighborhood", is the editor's: lookups keep it"""
@@ -605,6 +648,25 @@ class VenueAdmin(admin.ModelAdmin):
         elif "distance" in reasons:
             words.append(REVIEW_REASON_WORDS["distance"])
         return " · ".join(words)
+
+    @admin.display(description="google's name")
+    def google_name(self, venue):
+        """on the venue's page: asked for live, and only for a match needing review"""
+        if venue.place_lookup_status != Venue.PlaceLookupStatus.REVIEW or not venue.place_id:
+            return "-"
+        return google_place_name(venue.place_id)
+
+    @admin.display(description="google's place")
+    def google_name_link(self, venue):
+        """in the list: nothing is asked of google until the admin clicks, for that venue"""
+        if venue.place_lookup_status != Venue.PlaceLookupStatus.REVIEW or not venue.place_id:
+            return ""
+        return format_html(
+            '<a href="{}" data-google-name>show Google\'s name</a> · '
+            '<a href="https://www.google.com/maps/place/?q=place_id:{}" target="_blank" rel="noopener">map</a>',
+            reverse("admin:core_venue_google_name", args=[venue.pk]),
+            venue.place_id,
+        )
 
     @admin.display(description="on google maps")
     def place_on_google_maps(self, venue):
