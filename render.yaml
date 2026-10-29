@@ -149,6 +149,11 @@ services:
           type: web
           name: newenglandmusic
           envVarKey: EVENTBRITE_API_KEY
+      - key: SEATGEEK_CLIENT_ID
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: SEATGEEK_CLIENT_ID
       # spotify matching, and new events rendering their play buttons
       - key: SPOTIFY_CLIENT_ID
         fromService:
@@ -253,6 +258,11 @@ services:
           type: web
           name: newenglandmusic
           envVarKey: EVENTBRITE_API_KEY
+      - key: SEATGEEK_CLIENT_ID
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: SEATGEEK_CLIENT_ID
       # the contact email openstreetmap's services ask for (lookup_venue_neighborhoods)
       - key: API_CONTACT_EMAIL
         fromService:
