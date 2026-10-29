@@ -20,3 +20,10 @@
 ## 5. Docs and check
 
 - [x] 5.1 Document the sheet layout, the two commands, and what may be stored from MusicBrainz, Last.fm and Bandcamp in PRODUCTION.md, and list MusicBrainz and Last.fm uses in AGENTS.md. Run the whole suite with outbound network blocked. Then, with approval, import a small sample sheet and run the enrichment with `--limit 20 --dry-run` locally, and check its matches by hand.
+
+## 6. Introductions from MusicBrainz and Wikipedia
+
+- [ ] 6.1 Add `disambiguation`, `wikipedia_extract`, `wikipedia_url`, `wikipedia_revision` and `wikipedia_fetched_at` to `MusicAct`, with a migration. Store MusicBrainz's disambiguation in enrichment. Verify with an enrichment test using the recorded fixture.
+- [ ] 6.2 Add `core/wikipedia.py`: the English article's title for a Wikidata ID, and an article's summary, paced, with the contact user agent; record fixtures in `core/tests/fixtures/wikipedia/`. Verify with client tests for the requests, the user agent and the pace.
+- [ ] 6.3 After a match with a Wikidata ID, fetch and store the opening paragraph as the design says, accepting only an ordinary article of that Wikidata item, removing earlier text when there's none, and reporting a failure without failing the match. Show it in the admin with its credit. Verify with tests for an act with an article, one without, the wrong article, a failed request, no image stored, and the credit in the admin.
+- [ ] 6.4 Document the Wikipedia text and its credit in PRODUCTION.md, run the whole suite with outbound network blocked, and run the sample enrichment's dry run again to check the introductions by hand.

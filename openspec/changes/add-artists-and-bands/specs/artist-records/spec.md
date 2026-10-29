@@ -61,6 +61,21 @@ The site SHALL keep `Artist` records, for a person or solo act, and `Band` recor
 - **WHEN** MusicBrainz lists a member who is already an artist with that MusicBrainz ID
 - **THEN** that artist is linked, not duplicated
 
+### Requirement: Introductions from MusicBrainz and Wikipedia
+Enrichment SHALL store a matched record's MusicBrainz disambiguation note. For a matched record with a Wikidata ID, it SHALL find the English Wikipedia article Wikidata links to it, fetch that article's summary, and store its opening paragraph as plain text, word for word, with the article's URL, its revision and the time it was fetched; it SHALL accept the summary only when it's an ordinary article (not a disambiguation page) and Wikipedia says the article belongs to that Wikidata item. A record with no Wikidata ID or no English article SHALL have no Wikipedia text, and a later run that finds none SHALL remove an earlier one. No image from Wikipedia SHALL be stored. Wherever the text is shown, it SHALL be credited with a link to the article and to the CC BY-SA 4.0 licence. Requests to Wikidata and Wikipedia SHALL send the contact user agent and be paced.
+
+#### Scenario: An act with a Wikipedia article
+- **WHEN** a band matches the MusicBrainz group Speedy Ortiz, which links to a Wikidata item whose English article is "Speedy Ortiz"
+- **THEN** the band stores the article's opening paragraph ("Speedy Ortiz is an American indie rock band from Northampton, Massachusetts…"), its URL and revision, and the admin shows it credited to Wikipedia under CC BY-SA 4.0
+
+#### Scenario: A local act without an article
+- **WHEN** a band's MusicBrainz artist has no Wikidata link, or its Wikidata item has no English article
+- **THEN** the band stores only MusicBrainz's disambiguation note, and makes no request to Wikipedia
+
+#### Scenario: The wrong article
+- **WHEN** Wikipedia's summary is a disambiguation page, or belongs to another Wikidata item
+- **THEN** nothing from it is stored
+
 ### Requirement: Last.fm is evidence only
 When a name matches several MusicBrainz candidates of the right kind, enrichment MAY ask Last.fm about the name, and SHALL accept a candidate when Last.fm's page for the name gives that candidate's MusicBrainz ID and its bio doesn't say several acts share the name, or when exactly one candidate's MusicBrainz area or begin area is in a state the site covers. Nothing from Last.fm SHALL be stored or shown: not its bio, listeners, tags, images or URLs. Without a Last.fm key, enrichment SHALL go on without this evidence.
 
