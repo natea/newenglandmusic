@@ -7,4 +7,4 @@
 
 - [x] 2.1 Run the whole suite with outbound network blocked. Then run `lookup_venue_places --review --dry-run` locally (with approval for its ~180 Places searches) and record how many review venues would now be confident. Verify by hand that a sample of them are the right places.
 - [x] 2.2 Decide on the two fixes in design.md's findings (exact match for a name of only noise words; sending parks and other non-venues to review), then update the spec and build them with tests.
-- [ ] 2.3 Run `lookup_venue_places --review` on Render (about 140 Places searches, with approval).
+- [x] 2.3 Run `lookup_venue_places --review` on Render (about 140 Places searches, with approval).
