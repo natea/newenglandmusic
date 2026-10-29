@@ -16,6 +16,7 @@ The site knows venues as records but artists only as names on events, held per n
 - Public artist or band pages, and anything shown to visitors.
 - Linking events to these records; events keep naming artists by text, and the Spotify, Apple Music and YouTube links stay keyed by name.
 - A scheduled import or enrichment. Both are run by hand for now.
+- **Later: Bandcamp's embedded player.** Bandcamp offers an embed code on every album and track page ("Share / Embed"), which shows Bandcamp's own player, served by Bandcamp, the way it intends its music to be shown elsewhere. A later change, with the public pages, can let an editor (or the act) paste that code for a record, keep only the album or track ID it names, and show the player on the act's page. Nothing would be read from Bandcamp to get it. Using a scraping service instead (such as ScrapingBee's "Bandcamp API") was ruled out on 2026-10-29: it's still scraping, which Bandcamp's acceptable use policy forbids, and it hides who's asking, which the site's crawling rules don't allow.
 
 ## Capabilities
 

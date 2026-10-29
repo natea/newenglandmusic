@@ -32,6 +32,10 @@ Artists exist today only as names: `core/artist_names.py` splits an event's titl
 
 Migrate. Make the sheet in the layout above, import it with `--dry-run` first, then for real; then run the enrichment with `--limit 20 --dry-run`, check the matches, and run it for the rest. Nothing runs on a schedule yet.
 
+## Later
+
+**Bandcamp's embedded player**, with the public pages. Bandcamp's "Share / Embed" code is an iframe from `bandcamp.com/EmbeddedPlayer/album=<id>/...` (or `track=<id>`). An editor or the act pastes it; the site keeps only the album or track ID, validated as digits, and renders Bandcamp's player itself, so no pasted HTML is stored or shown. Bandcamp serves the player and its music, and no request is made to Bandcamp to find the ID. Nothing in this change depends on it.
+
 ## Open Questions
 
 - Should a membership's role be a free text field, or chosen from a list of instruments? (Free text here; MusicBrainz's instrument names fit it.)
