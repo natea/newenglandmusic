@@ -1,4 +1,5 @@
 from core.artist_evidence import covered_places, is_covered_subdivision, is_dominant, names_covered_place, shares_name
+from core.user_agent import user_agent
 from core.lastfm import MIN_SECONDS_BETWEEN_REQUESTS, LastFmError, LastFmStopped
 from core.models import Venue
 from core.tests.lastfm_fixture import TEST_KEY, FakeLastFm, fixture, response
@@ -16,7 +17,7 @@ class LastFmClientTestCase(SimpleTestCase):
         request = lastfm.requests[0]
         self.assertEqual(request.params["autocorrect"], 0)
         self.assertIn("venue-db-event-check/1.0", request.headers["User-Agent"])
-        self.assertIn("newenglandmusic843@gmail.com", request.headers["User-Agent"])
+        self.assertEqual(request.headers["User-Agent"], user_agent())
 
     def test_no_such_artist(self):
         self.assertIsNone(FakeLastFm().client().artist_info("DJ Maltese"))

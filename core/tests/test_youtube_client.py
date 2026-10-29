@@ -11,6 +11,9 @@ from core.tests.youtube_fixture import (
 )
 from core.music_ids import MusicBrainzBusy
 from core.youtube import YouTubeError, YouTubeKeyRejected, YouTubeQuotaExceeded, parse_link, uploads_playlist
+from unittest import mock
+
+from core.user_agent import user_agent
 from django.test import SimpleTestCase
 
 
@@ -95,8 +98,15 @@ class MusicIdsTestCase(SimpleTestCase):
         web = FakeWeb(musicbrainz={DINOSAUR_SPOTIFY: [f"https://www.youtube.com/channel/{DINOSAUR_CHANNEL}", "https://www.youtube.com/@dinosaurjr"]})
         self.assertEqual(web.music_ids().musicbrainz_channels(DINOSAUR_SPOTIFY), {DINOSAUR_CHANNEL})
         self.assertTrue(all("venue-db-event-check/1.0" in r.headers["User-Agent"] for r in web.requests))
-        # musicbrainz asks for a way to reach us
-        self.assertTrue(all("newenglandmusic843@gmail.com" in r.headers["User-Agent"] for r in web.requests))
+        # musicbrainz asks for a way to reach us: API_CONTACT_EMAIL
+
+    def test_contact_email_from_the_environment(self):
+        web = FakeWeb(musicbrainz={DINOSAUR_SPOTIFY: []})
+        with mock.patch.dict("os.environ", {"API_CONTACT_EMAIL": "someone@example.org"}):
+            web.music_ids().musicbrainz_channels(DINOSAUR_SPOTIFY)
+        self.assertTrue(all(r.headers["User-Agent"].endswith("; someone@example.org )") for r in web.requests))
+        with mock.patch.dict("os.environ", {"API_CONTACT_EMAIL": ""}):
+            self.assertEqual(user_agent(), "venue-db-event-check/1.0 ( https://newenglandmusic.onrender.com )")
 
     def test_musicbrainz_no_link(self):
         web = FakeWeb()

@@ -75,6 +75,9 @@ services:
       # the switch that shows them ("true"), set once the matches are reviewed
       - key: YOUTUBE_API_KEY
         sync: false
+      # the email the api clients' user agent gives (core/user_agent.py); not secret
+      - key: API_CONTACT_EMAIL
+        sync: false
       - key: YOUTUBE_PREVIEWS
         sync: false
       # last.fm, read behind the scenes as evidence for the artist matching: an api
@@ -179,6 +182,11 @@ services:
           name: newenglandmusic
           envVarKey: APPLE_MUSIC_PREVIEWS
       # youtube matching, and new events rendering their play buttons
+      - key: API_CONTACT_EMAIL
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: API_CONTACT_EMAIL
       - key: YOUTUBE_API_KEY
         fromService:
           type: web

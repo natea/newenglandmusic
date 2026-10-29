@@ -43,6 +43,7 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 - `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`: a Spotify app's credentials, for the listing's play buttons (see "Spotify play buttons"). The web service uses them too, because saving an event renders its buttons.
 - `APPLE_MUSIC_TEAM_ID`, `APPLE_MUSIC_KEY_ID`, `APPLE_MUSIC_PRIVATE_KEY`, `APPLE_MUSIC_PREVIEWS`: a MusicKit key, and the switch that shows the Apple Music buttons (see "Apple Music play buttons").
 - `LASTFM_API_KEY`: a Last.fm API account's key, for the artist matching's evidence (see "Last.fm evidence").
+- `API_CONTACT_EMAIL`: the email the API clients' user agent gives (MusicBrainz, Wikidata, Last.fm and the Census downloads), so a service can reach us before blocking us. Currently newenglandmusic843@gmail.com.
 - `YOUTUBE_API_KEY`, `YOUTUBE_PREVIEWS`: a Google Cloud key restricted to YouTube Data API v3, and the switch that shows the YouTube buttons (see "YouTube play buttons").
 
 **Optional:**

@@ -14,7 +14,7 @@ import time
 
 import requests
 
-from core.user_agent import USER_AGENT
+from core.user_agent import user_agent
 
 API_URL = "https://ws.audioscrobbler.com/2.0/"
 MIN_SECONDS_BETWEEN_REQUESTS = 0.5
@@ -58,7 +58,7 @@ class LastFm:
             response = self.session.get(
                 API_URL,
                 params={"method": method, "api_key": self.key, "format": "json", **params},
-                headers={"User-Agent": USER_AGENT},
+                headers={"User-Agent": user_agent()},
                 timeout=TIMEOUT_SECONDS,
             )
         except requests.RequestException as e:

@@ -137,6 +137,7 @@ class RenderConfigurationTestCase(SimpleTestCase):
                 "APPLE_MUSIC_PRIVATE_KEY",
                 "APPLE_MUSIC_PREVIEWS",
                 "YOUTUBE_API_KEY",
+                "API_CONTACT_EMAIL",
                 "YOUTUBE_PREVIEWS",
                 "LASTFM_API_KEY",
             },
