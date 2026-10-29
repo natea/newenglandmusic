@@ -1,0 +1,57 @@
+{
+ "created": "2026-10-29T20:39:13.897Z",
+ "count": 1,
+ "offset": 0,
+ "artists": [
+  {
+   "id": "4fbf1a3d-a649-4f8e-9ddf-347f6ba2d307",
+   "type": "Group",
+   "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+   "score": 100,
+   "name": "Speedy Ortiz",
+   "sort-name": "Speedy Ortiz",
+   "country": "US",
+   "area": {
+    "id": "489ce91b-6658-3307-9877-795b68554c98",
+    "type": "Country",
+    "type-id": "06dd0ae4-8c74-30bb-b43d-95dcedf961de",
+    "name": "United States",
+    "sort-name": "United States",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "begin-area": {
+    "id": "f244bbd0-850e-4948-b288-3e10fcf39f34",
+    "type": "City",
+    "type-id": "6fd8f29a-3d0a-32fc-980d-ea697b69da78",
+    "name": "Northampton",
+    "sort-name": "Northampton",
+    "life-span": {
+     "ended": null
+    }
+   },
+   "isnis": [
+    "0000000471421160"
+   ],
+   "life-span": {
+    "begin": "2011",
+    "ended": null
+   },
+   "tags": [
+    {
+     "count": 1,
+     "name": "alternative rock"
+    },
+    {
+     "count": 1,
+     "name": "indie rock"
+    },
+    {
+     "count": 2,
+     "name": "noise pop"
+    }
+   ]
+  }
+ ]
+}

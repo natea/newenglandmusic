@@ -35,6 +35,9 @@ APPLE_ARTIST_URL_RE = re.compile(r"^https?://(?:itunes|music)\.apple\.com/[a-z]{
 # a city's state is usually two "part of" links up (city, county, state); five allows for
 # boroughs and districts
 AREA_STEPS = 5
+SEARCH_LIMIT = 10
+# characters lucene gives a meaning, escaped in a searched name
+LUCENE_SPECIAL_RE = re.compile(r'[+\-&|!(){}\[\]^"~*?:\\/]')
 MBID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 
@@ -128,6 +131,26 @@ class MusicIds:
             if area and area.get("name")
         ]
         return {"name": data.get("name") or "", "areas": areas, "spotify": spotify, "apple": apple}
+
+    def search_artists(self, name, kind, limit=SEARCH_LIMIT):
+        """
+        musicbrainz's candidates for an artist ("person") or band ("group") with this name:
+        its search, with the name quoted, which also matches aliases. each is musicbrainz's
+        own dict ("id", "name", "type", "area", "aliases", "life-span"…)
+        """
+        escaped = LUCENE_SPECIAL_RE.sub(lambda m: "\\" + m.group(0), name)
+        query = f'artist:"{escaped}" AND type:{kind}'
+        data = self.musicbrainz("artist", query=query, limit=limit) or {}
+        return data.get("artists") or []
+
+    def artist_details(self, mbid):
+        """
+        a musicbrainz artist with its relationships (a band's members), url links and
+        genres, or None when there's no such artist
+        """
+        if not MBID_RE.match(mbid or ""):
+            return None
+        return self.musicbrainz(f"artist/{mbid}", inc="artist-rels+url-rels+genres+aliases")
 
     def area_subdivision(self, area_id, steps=AREA_STEPS):
         """

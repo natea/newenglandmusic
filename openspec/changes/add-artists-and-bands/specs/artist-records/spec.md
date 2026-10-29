@@ -12,11 +12,15 @@ The site SHALL keep `Artist` records, for a person or solo act, and `Band` recor
 - **THEN** the band lists the artist as a former member
 
 ### Requirement: Import from a CSV file or a Google Sheet tab
-`import_artists` SHALL read rows from a CSV file (`--csv <path>`) or a Google Sheet tab (`--sheet <id> --tab <name>`), in one layout with the columns `Act_ID`, `Name`, `Kind` ("artist" or "band"), `Members`, `Town`, `State`, `Website`, `Bandcamp`, `MusicBrainz_ID` and `Notes`. Rows SHALL be keyed by `Act_ID`: a row with a new ID creates a record, and one with a known ID updates it. `Members`, for a band, SHALL list its members separated by semicolons, each optionally followed by a role in parentheses ("Kim Gordon (bass)"); a member SHALL be matched to an existing artist with that name, or created. The import SHALL only set the fields its columns hold, SHALL NOT delete any record or membership, and SHALL NOT overwrite a field an editor or MusicBrainz set, nor remove a membership from MusicBrainz or an editor. A row it can't use (no ID, no name, an unknown kind) SHALL be reported and skipped. `--dry-run` SHALL report what it would do and save nothing. The sheet SHALL be read with the `gog` CLI locally and with the service account on a server, as the venue sheet is.
+`import_artists` SHALL read rows from a CSV file (`--csv <path>`) or a Google Sheet tab (`--sheet <id> --tab <name>`), in one layout with the columns `Act_ID`, `Name`, `Kind` ("artist" or "band"), `Members`, `Town`, `State`, `Website`, `Bandcamp`, `MusicBrainz_ID` and `Notes`. Rows SHALL be keyed by `Act_ID`: a row with a new ID creates a record, and one with a known ID updates it. `Members`, for a band, SHALL list its members separated by semicolons, each optionally followed by a role in parentheses ("Kim Gordon (bass)"); a member SHALL be matched to an existing artist with that name, or created. An artist's own row SHALL take over the record made for them as a member, when exactly one artist has that name and no `Act_ID`. The import SHALL only set the fields its columns hold, SHALL NOT delete any record or membership, and SHALL NOT overwrite a field an editor or MusicBrainz set, nor remove a membership from MusicBrainz or an editor. A row it can't use (no ID, no name, an unknown kind) SHALL be reported and skipped. `--dry-run` SHALL report what it would do and save nothing. The sheet SHALL be read with the `gog` CLI locally and with the service account on a server, as the venue sheet is.
 
 #### Scenario: Importing a band with members
 - **WHEN** a row has `Act_ID` A0001, `Name` "Krill", `Kind` "band" and `Members` "Jonah Furman (bass, vocals); Aaron Mendelsohn (guitar)"
 - **THEN** a band "Krill" exists with two member artists and their roles
+
+#### Scenario: A member with their own row
+- **WHEN** a band's row lists "Jonah Furman", and a later row A0004 is the artist "Jonah Furman"
+- **THEN** there is one Jonah Furman, with the `Act_ID` A0004, in the band
 
 #### Scenario: Importing again
 - **WHEN** the same sheet is imported twice
@@ -31,11 +35,15 @@ The site SHALL keep `Artist` records, for a person or solo act, and `Band` recor
 - **THEN** the import reports that row and skips it, and imports the others
 
 ### Requirement: Enrichment from MusicBrainz
-`enrich_artists_from_musicbrainz` SHALL find each artist's and band's MusicBrainz artist and store its ID, and from it: its type, country, area, begin and end dates, genres, and links to its official website, Bandcamp, Wikidata and Discogs. A record SHALL keep its own website or Bandcamp URL where it already has one. For a band, it SHALL add the members MusicBrainz lists, with their roles and years, as memberships with the source "musicbrainz", matching each member to an artist with that MusicBrainz ID, then to one with that name and no MusicBrainz ID, and otherwise creating one. A record with a MusicBrainz ID from the import or an editor SHALL be looked up by that ID rather than searched for. A search SHALL be accepted only when exactly one candidate's name matches the record's and it is the right kind (a person for an artist, a group for a band), or when the evidence below picks one; otherwise the record SHALL be marked "ambiguous" or "not found", with the time it was checked. It SHALL make at most one MusicBrainz request a second, send the contact user agent, accept `--limit`, `--refresh` and `--dry-run`, and skip records checked before unless refreshing.
+`enrich_artists_from_musicbrainz` SHALL find each artist's and band's MusicBrainz artist and store its ID, and from it: its type, country, area, begin and end dates, genres, and links to its official website, Bandcamp, Wikidata and Discogs. A record SHALL keep its own website or Bandcamp URL where it already has one. For a band, it SHALL add the members MusicBrainz lists, with their roles and years, as memberships with the source "musicbrainz", matching each member to an artist with that MusicBrainz ID, then to one with that name and no MusicBrainz ID, and otherwise creating one. A record with a MusicBrainz ID from the import or an editor SHALL be looked up by that ID rather than searched for. A search SHALL be accepted only when exactly one candidate's name (or alias) matches the record's and it is the right kind (a person for an artist, a group for a band) and MusicBrainz doesn't place it in another state or country than the record's, or when the evidence below picks one; otherwise the record SHALL be marked "ambiguous" or "not found", with the time it was checked. It SHALL make at most one MusicBrainz request a second, send the contact user agent, accept `--limit`, `--refresh` and `--dry-run`, and skip records checked before unless refreshing.
 
 #### Scenario: A clear match
 - **WHEN** a band "Krill" is searched for, and MusicBrainz has one group named "Krill", in Boston
 - **THEN** the band stores that MusicBrainz ID, its area, its dates and its links, and gains its listed members
+
+#### Scenario: A lone namesake elsewhere
+- **WHEN** a band "Horse" in Massachusetts is searched for, and MusicBrainz's only group named "Horse" is from the United Kingdom
+- **THEN** the band is marked "not found", and nothing from MusicBrainz is stored
 
 #### Scenario: A name several acts share
 - **WHEN** MusicBrainz has three groups named "Horse" and no evidence picks one

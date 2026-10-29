@@ -9,9 +9,9 @@
 
 ## 3. MusicBrainz enrichment
 
-- [ ] 3.1 Add artist search and lookup (`inc=artist-rels+url-rels+genres`) to the MusicBrainz client, with recorded fixtures in `core/tests/fixtures/musicbrainz/`. Verify with client tests for the request's paths, pace and user agent.
-- [ ] 3.2 Add matching: exact name or alias of the right type; with several candidates, a covered area, then Last.fm's MusicBrainz ID without a shared-name note; else ambiguous or not found. Verify with tests for a clear match, a shared name, a covered area, Last.fm picking one, and no Last.fm key.
-- [ ] 3.3 Add the `enrich_artists_from_musicbrainz` command (`--limit`, `--refresh`, `--dry-run`, a `JobRun`): store the fields and links, keep a record's own website and Bandcamp URL, look up a given ID instead of searching, and add members, matching them by MusicBrainz ID, then name, else creating them. Verify with tests for each enrichment scenario, that nothing from Last.fm is saved, and that no request goes to Bandcamp.
+- [x] 3.1 Add artist search and lookup (`inc=artist-rels+url-rels+genres`) to the MusicBrainz client, with recorded fixtures in `core/tests/fixtures/musicbrainz/`. Verify with client tests for the request's paths, pace and user agent.
+- [x] 3.2 Add matching: exact name or alias of the right type; with several candidates, a covered area, then Last.fm's MusicBrainz ID without a shared-name note; else ambiguous or not found. Verify with tests for a clear match, a shared name, a covered area, Last.fm picking one, and no Last.fm key.
+- [x] 3.3 Add the `enrich_artists_from_musicbrainz` command (`--limit`, `--refresh`, `--dry-run`, a `JobRun`): store the fields and links, keep a record's own website and Bandcamp URL, look up a given ID instead of searching, and add members, matching them by MusicBrainz ID, then name, else creating them. Verify with tests for each enrichment scenario, that nothing from Last.fm is saved, and that no request goes to Bandcamp.
 
 ## 4. Admin
 
