@@ -5,19 +5,33 @@ venue as one of ours: by name, and by distance.
 
 import math
 import re
+import unicodedata
 
-# words that venues' names often gain or lose between listings
+# words that venues' names often gain or lose between listings. the review reasons
+# (2026-10-29) showed 172 of 176 reviews failing on the name alone, mostly over these and
+# apostrophes ("Fast Eddie's Billiards" vs "Fast Eddies Billiards Cafe")
 NAME_NOISE_RE = re.compile(
-    r"\b(the|music hall|hall|club|theatre|theater|live|and|at)\b|presented by .*$"
+    r"\b(the|music hall|hall|club|theatre|theater|live|and|at|cafe|pub|bar|restaurant|grill"
+    r"|tavern|lounge|bistro|brewery|taproom)\b|presented by .*$"
 )
+ABBREVIATIONS = {"st": "street", "ave": "avenue", "rd": "road"}
+ABBREVIATION_RE = re.compile(r"\b(st|ave|rd)\b")
 
 
 def normalize_name(name):
-    """lowercase words, without punctuation or words like "the" and "club" """
+    """
+    lowercase words without accents, punctuation, a trailing "(...)", or words like "the"
+    and "club"; apostrophes join their words ("eddie's" -> "eddies") and st/ave/rd are spelled out
+    """
+    name = unicodedata.normalize("NFKD", name)
+    name = "".join(c for c in name if not unicodedata.combining(c))
     name = name.lower().replace("&", " and ")
+    name = re.sub(r"['’]", "", name)
+    name = re.sub(r"(?<=\S)\s*\([^()]*\)\s*$", "", name)
     name = re.sub(r"[^\w\s]", " ", name)
-    words = NAME_NOISE_RE.sub(" ", " ".join(name.split()))
-    return " ".join(words.split()) or " ".join(name.split())
+    name = ABBREVIATION_RE.sub(lambda m: ABBREVIATIONS[m.group(1)], " ".join(name.split()))
+    words = NAME_NOISE_RE.sub(" ", name)
+    return " ".join(words.split()) or name
 
 
 def spelling_variants(name):

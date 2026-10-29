@@ -424,6 +424,14 @@ class ReviewReasonsTestCase(LookupVenuePlacesTestCase):
         self.assertGreater(venue.place_distance_km, 25)
         self.assertIn("[failed: name, state, distance]", output)
 
+    def test_loosely_matching_name_far_away_still_needs_review(self):
+        # the looser name matching (loosen-venue-name-matching) doesn't relax the distance check
+        self.run_lookup(results={"Paradise Rock Club": [place("Paradise Rock Club Café (Boston)", lat=42.713, lng=-71.1321)]})
+        venue = Venue.objects.get(pk=self.paradise.pk)
+        self.assertEqual(venue.place_lookup_status, Venue.PlaceLookupStatus.REVIEW)
+        self.assertEqual(venue.place_review_reasons, ["distance"])
+        self.assertAlmostEqual(venue.place_distance_km, 40, delta=1)
+
     def test_wrong_place_states_its_reason(self):
         self.run_lookup(results=self.recorded_results)
         # columbia, md is in another state, and over 25 km from the sheet's washington

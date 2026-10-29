@@ -43,6 +43,35 @@ class NameMatchingTestCase(SimpleTestCase):
         self.assertEqual(normalize_name("The Club"), "the club")
         self.assertTrue(names_match("The Club", "The Club"))
 
+    def test_apostrophes_and_add_on_words(self):
+        self.assertTrue(names_match("Fast Eddie's Billiards", "Fast Eddies Billiards Cafe"))
+
+    def test_apostrophe_inside_a_word(self):
+        self.assertTrue(names_match("Shayna B's By The Sea", "Shayna Bs By The Sea"))
+        self.assertTrue(names_match("O'Brien's", "O’Briens Pub"))
+        self.assertTrue(names_match("O'Brien's", "O'Briens Pub"))
+
+    def test_accents(self):
+        self.assertTrue(names_match("Cultured Cafe", "The Remedy's Cultured Café"))
+
+    def test_street_abbreviations(self):
+        self.assertTrue(names_match("25 Central Street", "25 Central St"))
+        self.assertTrue(names_match("Main Ave Pub", "Main Avenue"))
+
+    def test_trailing_parenthetical(self):
+        self.assertTrue(names_match("Gametime Lanes", "Gametime Lanes & Entertainment (Amesbury Location)"))
+        # a name that's only a parenthetical keeps it
+        self.assertEqual(normalize_name("(Le Poisson Rouge)"), "le poisson rouge")
+
+    def test_different_places_still_differ(self):
+        for ours, theirs in (
+            ("Bleacher's Bar", "The Midway"),
+            ("Thompson Speedway", "Thompson Raceway"),
+            # "bar" goes only as a whole word
+            ("Barcade", "Arcade"),
+        ):
+            self.assertFalse(names_match(ours, theirs), (ours, theirs))
+
     def test_distance_km(self):
         # paradise rock club to the orpheum, about 4.5 km
         self.assertAlmostEqual(distance_km(*PARADISE, 42.3558, -71.0610), 4.83, places=1)
