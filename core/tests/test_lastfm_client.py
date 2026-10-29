@@ -16,6 +16,7 @@ class LastFmClientTestCase(SimpleTestCase):
         request = lastfm.requests[0]
         self.assertEqual(request.params["autocorrect"], 0)
         self.assertIn("venue-db-event-check/1.0", request.headers["User-Agent"])
+        self.assertIn("newenglandmusic843@gmail.com", request.headers["User-Agent"])
 
     def test_no_such_artist(self):
         self.assertIsNone(FakeLastFm().client().artist_info("DJ Maltese"))

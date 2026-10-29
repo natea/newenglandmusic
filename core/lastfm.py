@@ -14,8 +14,9 @@ import time
 
 import requests
 
+from core.user_agent import USER_AGENT
+
 API_URL = "https://ws.audioscrobbler.com/2.0/"
-USER_AGENT = "venue-db-event-check/1.0 (+https://newenglandmusic.onrender.com)"
 MIN_SECONDS_BETWEEN_REQUESTS = 0.5
 TIMEOUT_SECONDS = 20
 NOT_FOUND = 6
