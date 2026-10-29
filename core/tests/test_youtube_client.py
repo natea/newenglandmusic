@@ -122,7 +122,9 @@ class MusicIdsTestCase(SimpleTestCase):
         web = FakeWeb(musicbrainz_503s=10)
         with self.assertRaises(MusicBrainzBusy):
             web.music_ids().musicbrainz_channels(DINOSAUR_SPOTIFY)
-        self.assertEqual(len(web.requests), 4)
+        # about two minutes of tries before giving up
+        self.assertEqual(len(web.requests), 8)
+        self.assertEqual(web.sleeps, [2, 4, 8, 15, 30, 30, 30])
 
     def test_musicbrainz_paced(self):
         web = FakeWeb(musicbrainz={DINOSAUR_SPOTIFY: []})

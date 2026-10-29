@@ -45,3 +45,11 @@ A record without a state skips enrichment's "placed only outside the US" check, 
 ## Migration Plan
 
 Run locally with `--dry-run --limit 50`, check the decisions, then without `--dry-run`; then `enrich_artists_from_musicbrainz`. On Render, with approval, as one-off jobs in the same order.
+
+## The sample run (2026-10-29)
+
+`import_artists_from_events --limit 50 --dry-run` locally, on the 50 most-named names (output in `logs/artists-from-events-2026-10-29.log`, review list in `logs/artists-from-events-review-2026-10-29.csv`):
+- **MusicBrainz's global limiter** stopped the first two tries within a minute: about one request in four was refused with `X-RateLimit-Zone: global` and `Retry-After: 0`, load-shedding rather than our pace (our own limit had hundreds of requests to spare). The shared client (`core/music_ids.py`) now retries a 503 for about two minutes (waits of 2, 4, 8, 15, 30, 30 and 30 seconds) before giving up, which also helps the YouTube matching and the Last.fm resolving. The third try ran all 50 names without stopping.
+- **Decisions:** 25 records (Built To Spill, Bonerama, The Sheila Divine and Drew & Ellie Holcomb as bands; Evan Greer, Alaska Thunderfuck and DJ Carbo as artists) and 25 for review: 18 not on MusicBrainz (many local acts, "& friends" bills and duos), 3 both a person and a group (Soulless, Aviana, Chrysalis), 2 several with the name (Melt, Dread), and one network timeout (Conceal), which the next run retries.
+- **Checked by hand:** DJ Carbo ("Boston DJ", at Brighton Music Hall), Dropdead (Providence, at Fete Music Hall), Combust ("New York hardcore band", at Elsewhere), and the touring Briscoe (Austin), Hinayana (Austin) and Big Blitz (Pittsburgh) are all the acts the events mean.
+- **Events linked:** 61 approved events would link to the records.

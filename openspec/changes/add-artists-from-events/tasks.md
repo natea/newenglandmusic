@@ -14,4 +14,4 @@
 
 ## 4. Docs and check
 
-- [ ] 4.1 Document the command and the performers in PRODUCTION.md's "Artists and bands" section, and keep its review CSVs out of git. Run the whole suite with outbound network blocked. Then run it locally with `--dry-run --limit 50` and check a sample of its decisions by hand.
+- [x] 4.1 Document the command and the performers in PRODUCTION.md's "Artists and bands" section, and keep its review CSVs out of git. Run the whole suite with outbound network blocked. Then run it locally with `--dry-run --limit 50` and check a sample of its decisions by hand.
