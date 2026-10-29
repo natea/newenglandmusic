@@ -6,7 +6,7 @@ import zipfile
 import requests
 from core.artist_matching import normalize
 from core.models import CensusPlace
-from core.user_agent import USER_AGENT
+from core.user_agent import user_agent
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
@@ -102,7 +102,7 @@ class Command(BaseCommand):
     def download(self, http, year, name):
         url = URL.format(year=year, name=name)
         try:
-            response = http.get(url, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT_SECONDS)
+            response = http.get(url, headers={"User-Agent": user_agent()}, timeout=TIMEOUT_SECONDS)
         except requests.RequestException as e:
             raise CommandError(f"couldn't download {url}: {type(e).__name__}; the table is unchanged")
         if response.status_code != 200:
