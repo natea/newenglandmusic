@@ -42,6 +42,7 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 - `GOOGLE_SERVICE_ACCOUNT_JSON`: the sheet sync's service-account key (see "Reading the sheet on a server").
 - `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`: a Spotify app's credentials, for the listing's play buttons (see "Spotify play buttons"). The web service uses them too, because saving an event renders its buttons.
 - `APPLE_MUSIC_TEAM_ID`, `APPLE_MUSIC_KEY_ID`, `APPLE_MUSIC_PRIVATE_KEY`, `APPLE_MUSIC_PREVIEWS`: a MusicKit key, and the switch that shows the Apple Music buttons (see "Apple Music play buttons").
+- `API_CONTACT_EMAIL`: the email the API clients' user agent gives (MusicBrainz, Wikidata and, on later branches, Last.fm and the Census downloads), so a service can reach us before blocking us. Currently newenglandmusic843@gmail.com.
 - `YOUTUBE_API_KEY`, `YOUTUBE_PREVIEWS`: a Google Cloud key restricted to YouTube Data API v3, and the switch that shows the YouTube buttons (see "YouTube play buttons").
 
 **Optional:**
