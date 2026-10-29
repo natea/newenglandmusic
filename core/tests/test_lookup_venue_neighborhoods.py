@@ -45,7 +45,7 @@ class LookupTestCase(TestCase):
         self.run_command()
         century.refresh_from_db()
         nine.refresh_from_db()
-        self.assertEqual((century.neighborhood, nine.neighborhood), ("South Philadelphia", "Dixwell"))
+        self.assertEqual((century.neighborhood, nine.neighborhood), ("Grays Ferry", "Dixwell"))
 
     def test_williamsburg_from_overpass(self):
         ward = venue("18th Ward Brewing", "Brooklyn", "NY")

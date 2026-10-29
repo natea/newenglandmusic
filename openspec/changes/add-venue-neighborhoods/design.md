@@ -33,10 +33,10 @@
 - **Coverage:** a venue OpenStreetMap doesn't know by name gets no neighborhood. Coverage is measured by the first run (see Open Questions).
 
 **2. Choosing the name.**
-- **The order:** `suburb`, `quarter`, `neighbourhood`, `city_district`.
+- **The order:** `neighbourhood`, `quarter`, `suburb`, `city_district`, the smallest first. The first full run (2026-10-29) used suburb first, which gave "North Philadelphia" for six Philadelphia venues, including The Fillmore in Fishtown, and "Dixwell" for five downtown New Haven venues whose neighbourhood is "Downtown". So the order was reversed.
 - **Skipped:** names ending in "Historic District"; names equal to the town; names of New York's five boroughs; names ending in " County".
-- **Why this order:** suburb and quarter are the names people use (South End, West End, South Philadelphia). Neighbourhood is often a micro-area or a historic district.
-- **Alternative rejected:** the most specific name first, which gave "Five Sisters" over "South End" in Burlington.
+- **The trade-off:** a few cities get finer names than people use, such as Burlington's "Five Sisters" over "South End". Editors can override those.
+- **Also skipped:** community boards ("Manhattan Community Board 3"), which are administrative districts.
 
 **3. The Overpass fallback.**
 - **The query:** `node(around:1500,<lat>,<lon>)["place"~"^(neighbourhood|suburb|quarter)$"];out;`, sent by POST.

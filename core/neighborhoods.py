@@ -25,9 +25,11 @@ NOMINATIM_SECONDS_BETWEEN_REQUESTS = 1.0
 OVERPASS_WAITS = (5, 15, 45)
 OVERPASS_RETRY_STATUSES = {429, 502, 503, 504}
 NEAREST_RADIUS_M = 1500
-# the address keys that name a neighborhood, the familiar division first: "South End" over
-# its micro-area "Five Sisters" (burlington, 2026-10-28)
-NAME_KEYS = ("suburb", "quarter", "neighbourhood", "city_district")
+# the address keys that name a neighborhood, the smallest first. the first full run
+# (2026-10-29) preferred "suburb", which was too broad in philadelphia ("North Philadelphia"
+# for the fillmore in fishtown) and wrong in new haven ("Dixwell" for every downtown venue,
+# whose "neighbourhood" is "Downtown")
+NAME_KEYS = ("neighbourhood", "quarter", "suburb", "city_district")
 # the address keys a venue's town can be in: new york's venues' "town" is their borough
 TOWN_KEYS = ("city", "town", "village", "hamlet", "municipality", "suburb", "borough", "city_district")
 BOROUGHS = {"manhattan", "brooklyn", "queens", "bronx", "staten island"}
@@ -60,7 +62,10 @@ def usable(name, town):
         return False
     key = normalize(name)
     return not (
-        key.endswith("historic district")
+        # "Main Street Historic District No. 2" (hartford) too
+        "historic district" in key
+        # administrative districts, not neighborhoods ("Manhattan Community Board 3")
+        or "community board" in key
         or key == normalize(town)
         or key in BOROUGHS
         or key.endswith(" county")

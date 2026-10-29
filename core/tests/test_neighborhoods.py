@@ -10,9 +10,13 @@ from django.test import SimpleTestCase
 
 
 class NameRulesTestCase(SimpleTestCase):
-    def test_suburb_preferred(self):
+    def test_neighbourhood_preferred(self):
         address = fixture("century.json")[0]["address"]
-        self.assertEqual(choose_name(address, "Philadelphia"), "South Philadelphia")
+        self.assertEqual(choose_name(address, "Philadelphia"), "Grays Ferry")
+
+    def test_community_board_skipped(self):
+        address = {"neighbourhood": "Manhattan Community Board 3", "suburb": "Manhattan", "city": "New York"}
+        self.assertIsNone(choose_name(address, "New York"))
 
     def test_historic_district_skipped(self):
         address = fixture("cafe_nine.json")[0]["address"]
@@ -23,7 +27,7 @@ class NameRulesTestCase(SimpleTestCase):
         self.assertIsNone(choose_name(address, "Brooklyn"))
 
     def test_unusable_names(self):
-        for name in ("Boston", "Kings County", "Queens", "Ninth Square Historic District", "", None):
+        for name in ("Boston", "Kings County", "Queens", "Ninth Square Historic District", "Main Street Historic District No. 2", "", None):
             with self.subTest(name):
                 self.assertFalse(usable(name, "Boston"))
         self.assertTrue(usable("West End", "Boston"))

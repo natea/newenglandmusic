@@ -22,14 +22,19 @@ A venue SHALL be due when it was never looked up, or was looked up more than 365
 - **THEN** the requests to Nominatim and Overpass contain neither them nor its place ID
 
 ### Requirement: The neighborhood is the most familiar name OpenStreetMap gives
-From the accepted result's address, the command SHALL choose, in this order, the first usable value of "suburb", "quarter", "neighbourhood" and "city_district". A value SHALL NOT be usable when:
-- it ends in "Historic District";
+From the accepted result's address, the command SHALL choose, in this order, the first usable value of "neighbourhood", "quarter", "suburb" and "city_district", the smallest division first. A value SHALL NOT be usable when:
+- it names a historic district, such as "Ninth Square Historic District" or "Main Street Historic District No. 2";
+- it names a community board, such as "Manhattan Community Board 3";
 - it equals the venue's town;
 - it names a borough or county, such as "Brooklyn" for a venue in New York, or "Kings County".
 
-#### Scenario: Suburb preferred
+#### Scenario: Neighbourhood preferred
 - **WHEN** the address has the neighbourhood "Grays Ferry" and the suburb "South Philadelphia"
-- **THEN** the neighborhood is "South Philadelphia"
+- **THEN** the neighborhood is "Grays Ferry"
+
+#### Scenario: Community board skipped
+- **WHEN** the address has the neighbourhood "Manhattan Community Board 3"
+- **THEN** that name isn't used
 
 #### Scenario: Historic district skipped
 - **WHEN** the address has the neighbourhood "Ninth Square Historic District" and the suburb "Dixwell"
