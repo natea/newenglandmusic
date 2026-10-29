@@ -232,8 +232,13 @@ class EventAdmin(admin.ModelAdmin):
         "same_time_order_override",
         "user_submitted",
         "user_submission_email",
+        # where an imported event came from. a seatgeek page is shown only here, never on
+        # the site: seatgeek resells tickets
+        "source",
+        "get_source_link",
+        "external_id",
     )
-    readonly_fields = ("user_submitted",)
+    readonly_fields = ("user_submitted", "source", "get_source_link", "external_id")
     list_display_links = ("starttime",)
     # there are more save_* options that are being overriden
     # in templatetags/admin_save_buttons_override --
@@ -254,6 +259,7 @@ class EventAdmin(admin.ModelAdmin):
         *geo_area_list_filters(field_prefix="venue__"),
         "is_approved",
         "user_submitted",
+        "source",
     ]
     list_editable = ("same_time_order_override",)
     actions = ["mark_as_approved", "mark_as_unapproved", "mark_as_live_music", "mark_as_not_music"]
@@ -305,6 +311,13 @@ class EventAdmin(admin.ModelAdmin):
 
     get_venue_link.short_description = "Venue"
     get_venue_link.admin_order_field = "venue__name"
+
+    def get_source_link(self, obj):
+        if not obj.source_url:
+            return ""
+        return format_html('<a href="{}" target="_blank" rel="noopener">{}</a>', obj.source_url, obj.source_url)
+
+    get_source_link.short_description = "Source page"
 
     def get_description_as_text(self, obj):
         return mark_safe(obj.description) if obj.description else ""
@@ -407,6 +420,12 @@ class LinkedToEventbriteFilter(LinkedToTicketmasterFilter):
     title = "linked to Eventbrite"
     parameter_name = "eventbrite"
     field = "eventbrite_organizer_id"
+
+
+class LinkedToSeatGeekFilter(LinkedToTicketmasterFilter):
+    title = "linked to SeatGeek"
+    parameter_name = "seatgeek"
+    field = "seatgeek_venue_id"
 
 
 class FetchStatusFilter(SimpleListFilter):
@@ -515,6 +534,7 @@ class VenueAdmin(admin.ModelAdmin):
         "booking_type",
         LinkedToTicketmasterFilter,
         LinkedToEventbriteFilter,
+        LinkedToSeatGeekFilter,
         FetchStatusFilter,
         "place_lookup_status",
         PlaceReviewReasonFilter,
@@ -528,6 +548,7 @@ class VenueAdmin(admin.ModelAdmin):
         "sheet_id",
         "ticketmaster_venue_id",
         "eventbrite_organizer_id",
+        "seatgeek_venue_id",
     )
     ordering = ("name",)
     save_on_top = True
@@ -592,7 +613,10 @@ class VenueAdmin(admin.ModelAdmin):
             "Neighborhood (from OpenStreetMap, not the sheet)",
             {"fields": ("neighborhood", "no_neighborhood", "neighborhood_source", "neighborhood_checked_at")},
         ),
-        ("Event sources", {"fields": ("ticketmaster_venue_id", "eventbrite_organizer_id")}),
+        (
+            "Event sources",
+            {"fields": ("ticketmaster_venue_id", "eventbrite_organizer_id", "seatgeek_venue_id", "ticket_page_url")},
+        ),
         ("Event fetching", {"fields": ("fetch_status_details",)}),
     )
     readonly_fields = (

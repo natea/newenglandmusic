@@ -3,13 +3,20 @@ import re
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
+import requests
+
 from core.event_fetching.classification import classify
 from core.event_fetching.eventbrite import EventbriteClient, EventbriteError, is_at_venue
 from core.event_fetching.eventbrite import to_event_dict as eventbrite_event
+from core.event_fetching.seatgeek import SeatGeekClient, SeatGeekError
+from core.event_fetching.seatgeek import to_event_dict as seatgeek_event
 from core.event_fetching.spider import SCRAPY_SETTINGS, VenueEventsSpider
+from core.event_fetching.ticket_links import find_ticket_links, match_show
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.event_fetching.ticketmaster import to_event_dict as ticketmaster_event
 from core.event_sources import event_source_row
+from core.management.commands.check_event_sources import TIMEOUT_SECONDS, robots_allows
+from core.management.commands.match_eventbrite_organizers import polite_session
 from core.models import Event, Venue, VenueEventSource, VenueFetchStatus
 from core.job_runs import RecordedCommand
 from django.core.management.base import BaseCommand, CommandError
@@ -24,11 +31,12 @@ for an admin to review.
 
 run as:
 
-python manage.py fetch_events [--per-source 3 | --all] [--skip-ai] [--skip-ticketmaster] [--skip-eventbrite] [--dry-run]
+python manage.py fetch_events [--per-source 3 | --all] [--skip-ai] [--skip-ticketmaster] [--skip-eventbrite]
+    [--skip-seatgeek] [--dry-run]
 
 venues and how to fetch their events come from the results check_event_sources saved
 (VenueEventSource); a venue that has never been checked is skipped, unless it's linked to
-ticketmaster or eventbrite.
+ticketmaster, eventbrite or seatgeek.
 by default, the first --per-source venues of each kind are fetched (a pilot); --all
 fetches every venue whose events can be fetched in one of these ways:
 
@@ -49,10 +57,20 @@ fetches every venue whose events can be fetched in one of these ways:
   or ai source -- but not its ical feed or json-ld. events left over from the old source
   aren't removed, but counted in the report. pass --skip-eventbrite to fetch linked
   venues from their saved source instead.
+- seatgeek: the seatgeek api, for venues linked to a seatgeek venue (see
+  match_seatgeek_venues; needs SEATGEEK_CLIENT_ID), keeping only concerts. it comes last,
+  after eventbrite, and replaces the same sources eventbrite does, and a venue's json-ld
+  too in a run where seatgeek has more concerts than the json-ld found upcoming events.
+  seatgeek resells tickets, so the seatgeek page is kept only as the event's source_url,
+  which the site never shows. its events link instead to the show's own etix or axs page,
+  found on the venue's own events page (read once a run, obeying robots.txt), or else to
+  the venue's ticket page (Venue.ticket_page_url, filled in from a link there when blank),
+  or else its website. pass --skip-seatgeek to fetch linked venues from their saved source
+  instead.
 
 when a linked venue's ical feed or json-ld fails on a run (no events and an error, as when
 its site blocks the server), it's fetched from its api in that run instead: ticketmaster,
-then eventbrite. the failure is then only noted, not counted as a problem, and the
+then eventbrite, then seatgeek. the failure is then only noted, not counted as a problem, and the
 venue's ical events are kept, as the feed should work again.
 
 events are matched on external_id, so re-running updates events instead of duplicating
@@ -97,6 +115,7 @@ PROBLEM_PREFIXES = (
     "failed:",
     "ticketmaster failed:",
     "eventbrite failed:",
+    "seatgeek failed:",
     "ai extraction failed:",
 )
 
@@ -123,10 +142,13 @@ def make_target(venue, source, row=None):
         "ical_url": row.get("ical_url", ""),
         "ticketmaster_venue_id": venue.ticketmaster_venue_id or "",
         "eventbrite_organizer_id": venue.eventbrite_organizer_id or "",
+        "seatgeek_venue_id": venue.seatgeek_venue_id or "",
     }
 
 
-def select_targets(per_source, sheet_ids, all_venues, use_ticketmaster=True, use_eventbrite=True):
+def select_targets(
+    per_source, sheet_ids, all_venues, use_ticketmaster=True, use_eventbrite=True, use_seatgeek=True
+):
     sources = VenueEventSource.objects.select_related("venue").order_by("venue__sheet_id")
     if not sources.exists():
         raise CommandError("no event sources saved -- run check_event_sources first")
@@ -166,15 +188,19 @@ def select_targets(per_source, sheet_ids, all_venues, use_ticketmaster=True, use
         # covers more than its eventbrite listings
         elif use_eventbrite and venue.eventbrite_organizer_id and source not in ("ical", "json-ld"):
             source = "eventbrite"
+        # seatgeek lists resale too, so it only fills in where the others don't reach
+        elif use_seatgeek and venue.seatgeek_venue_id and source not in ("ical", "json-ld"):
+            source = "seatgeek"
         if source is not None:
             targets.append(make_target(venue, source, row))
 
     if sheet_ids or all_venues:
         # linked venues with no usable saved source, e.g. bot-blocked sites or never
-        # checked. ticketmaster first, so a venue linked to both is fetched from it
+        # checked. in order of precedence, so a venue linked to several is fetched from the first
         api_links = [
             ("ticketmaster", "ticketmaster_venue_id", use_ticketmaster),
             ("eventbrite", "eventbrite_organizer_id", use_eventbrite),
+            ("seatgeek", "seatgeek_venue_id", use_seatgeek),
         ]
         seen = {target["sheet_id"] for target in targets}
         for source, field, use in api_links:
@@ -285,6 +311,11 @@ class Command(RecordedCommand, BaseCommand):
             help="fetch venues linked to eventbrite from their saved source instead",
         )
         parser.add_argument(
+            "--skip-seatgeek",
+            action="store_true",
+            help="fetch venues linked to seatgeek from their saved source instead",
+        )
+        parser.add_argument(
             "--model",
             help="claude model for ai extraction (default: core.event_fetching.ai_extraction.MODEL)",
         )
@@ -300,6 +331,7 @@ class Command(RecordedCommand, BaseCommand):
             options["all"],
             use_ticketmaster=not options["skip_ticketmaster"],
             use_eventbrite=not options["skip_eventbrite"],
+            use_seatgeek=not options["skip_seatgeek"],
         )
         if not targets:
             raise CommandError("no venues to fetch")
@@ -315,8 +347,11 @@ class Command(RecordedCommand, BaseCommand):
         eventbrite_targets = [t for t in targets if t["source"] == "eventbrite"]
         self.fetch_from_eventbrite(eventbrite_targets, events_by_venue, notes_by_venue)
 
+        seatgeek_targets = [t for t in targets if t["source"] == "seatgeek"]
+        self.fetch_from_seatgeek(seatgeek_targets, events_by_venue, notes_by_venue, options["dry_run"])
+
         results = []
-        crawl_targets = [t for t in targets if t["source"] not in ("ticketmaster", "eventbrite")]
+        crawl_targets = [t for t in targets if t["source"] not in ("ticketmaster", "eventbrite", "seatgeek")]
         if crawl_targets:
             process = CrawlerProcess(settings=SCRAPY_SETTINGS)
             process.crawl(VenueEventsSpider, targets=crawl_targets, results=results)
@@ -339,7 +374,17 @@ class Command(RecordedCommand, BaseCommand):
             options["dry_run"],
             use_ticketmaster=not options["skip_ticketmaster"],
             use_eventbrite=not options["skip_eventbrite"],
+            use_seatgeek=not options["skip_seatgeek"],
         )
+        if not options["skip_seatgeek"]:
+            self.prefer_seatgeek_to_short_json_ld(
+                [t for t in crawl_targets if t["sheet_id"] not in fallen_back],
+                events_by_venue,
+                notes_by_venue,
+                options["dry_run"],
+                use_ticketmaster=not options["skip_ticketmaster"],
+                use_eventbrite=not options["skip_eventbrite"],
+            )
         # a venue fetched from its api instead needs no ai extraction too
         pages = [
             result
@@ -361,7 +406,7 @@ class Command(RecordedCommand, BaseCommand):
 
     def fall_back_to_apis(
         self, crawl_targets, results, events_by_venue, notes_by_venue, dry_run,
-        use_ticketmaster=True, use_eventbrite=True,
+        use_ticketmaster=True, use_eventbrite=True, use_seatgeek=True,
     ):
         """
         fetches linked venues whose ical feed or json-ld failed this run -- no events and
@@ -381,6 +426,8 @@ class Command(RecordedCommand, BaseCommand):
                 by_api["ticketmaster"].append(target)
             elif use_eventbrite and target["eventbrite_organizer_id"]:
                 by_api["eventbrite"].append(target)
+            elif use_seatgeek and target["seatgeek_venue_id"]:
+                by_api["seatgeek"].append(target)
 
         fetched = {}
         if by_api["ticketmaster"]:
@@ -391,8 +438,10 @@ class Command(RecordedCommand, BaseCommand):
                 fetched[sheet_id] = "ticketmaster"
         for sheet_id in self.fetch_from_eventbrite(by_api["eventbrite"], events_by_venue, notes_by_venue):
             fetched[sheet_id] = "eventbrite"
+        for sheet_id in self.fetch_from_seatgeek(by_api["seatgeek"], events_by_venue, notes_by_venue, dry_run):
+            fetched[sheet_id] = "seatgeek"
 
-        for target in by_api["ticketmaster"] + by_api["eventbrite"]:
+        for target in by_api["ticketmaster"] + by_api["eventbrite"] + by_api["seatgeek"]:
             api = fetched.get(target["sheet_id"])
             if api is None:
                 # the api failed too: both failures stay problems
@@ -500,6 +549,165 @@ class Command(RecordedCommand, BaseCommand):
             if leftover:
                 notes.append(
                     f"{leftover} unapproved events from the venue's earlier ticketing or ai "
+                    "source remain; remove any that duplicate these"
+                )
+        return fetched
+
+    def prefer_seatgeek_to_short_json_ld(
+        self, crawl_targets, events_by_venue, notes_by_venue, dry_run,
+        use_ticketmaster=True, use_eventbrite=True,
+    ):
+        """
+        uses seatgeek instead of a linked venue's json-ld when it has more concerts than the
+        json-ld found upcoming events: some venues' json-ld is a single show's page
+        """
+        now = timezone.now()
+        targets = [
+            target
+            for target in crawl_targets
+            if target["source"] == "json-ld"
+            and target["seatgeek_venue_id"]
+            # one api per venue: a ticketmaster or eventbrite link comes first
+            and not (use_ticketmaster and target["ticketmaster_venue_id"])
+            and not (use_eventbrite and target["eventbrite_organizer_id"])
+        ]
+        seatgeek_events = defaultdict(list)
+        seatgeek_notes = defaultdict(list)
+        fetched = self.fetch_from_seatgeek(targets, seatgeek_events, seatgeek_notes, dry_run)
+        for target in targets:
+            sheet_id = target["sheet_id"]
+            if sheet_id not in fetched:
+                # no client id, or seatgeek failed: the json-ld stands, and that's only a note
+                notes_by_venue[sheet_id] += [
+                    note.replace("seatgeek failed:", "seatgeek (to compare with json-ld) failed:")
+                    for note in seatgeek_notes[sheet_id]
+                ]
+                continue
+            # a crawl can find an event on more than one page
+            json_ld = len(
+                {event["external_id"] for _, _, event in events_by_venue[sheet_id] if event["starttime"] >= now}
+            )
+            seatgeek = len(seatgeek_events[sheet_id])
+            if seatgeek > json_ld:
+                events_by_venue[sheet_id] = seatgeek_events[sheet_id]
+                notes_by_venue[sheet_id] += seatgeek_notes[sheet_id]
+                notes_by_venue[sheet_id].append(
+                    f"json-ld found {json_ld} upcoming events and seatgeek {seatgeek} concerts, so seatgeek was used"
+                )
+                target["source"] = "seatgeek"
+            else:
+                # a ticket page filled in from the venue's site was saved either way
+                notes_by_venue[sheet_id] += [
+                    note for note in seatgeek_notes[sheet_id] if note.startswith("seatgeek: ticket page set")
+                ]
+                notes_by_venue[sheet_id].append(
+                    f"json-ld found {json_ld} upcoming events and seatgeek {seatgeek} concerts, so json-ld was kept"
+                )
+
+    def venue_ticket_links(self, session, target, venue):
+        """
+        the show links and venue links on the venue's own events page and its homepage --
+        a saved events page is sometimes a single show or a booking form, with one show link
+        or none. returns (None, a note) when neither can be read. only the venue's own pages
+        are read, never etix's or axs's
+        """
+        pages = [u for u in dict.fromkeys([target["events_page"], target["url"], venue.website]) if u][:2]
+        if not pages:
+            return None, "seatgeek: the venue has no events page to find its ticket links on"
+        shows, venues, failures, read = {}, [], [], False
+        for page in pages:
+            try:
+                if not robots_allows(session, page):
+                    failures.append(f"robots.txt disallows {page}")
+                    continue
+                response = session.get(page, timeout=TIMEOUT_SECONDS)
+            except requests.RequestException as e:
+                failures.append(f"couldn't read {page} ({type(e).__name__})")
+                continue
+            if response.status_code != 200:
+                failures.append(f"couldn't read {page} (HTTP {response.status_code})")
+                continue
+            read = True
+            page_shows, page_venues = find_ticket_links(response.text)
+            shows.update(page_shows)
+            venues += [v for v in page_venues if v not in venues]
+        if not read:
+            return None, f"seatgeek: no ticket links looked for: {'; '.join(failures)}"
+        return (shows, venues), ""
+
+    def fetch_from_seatgeek(self, targets, events_by_venue, notes_by_venue, dry_run=False):
+        """fetches targets from the seatgeek api; returns the sheet ids it fetched"""
+        fetched = set()
+        if not targets:
+            return fetched
+        client_id = os.environ.get("SEATGEEK_CLIENT_ID")
+        if not client_id:
+            for target in targets:
+                notes_by_venue[target["sheet_id"]].append("seatgeek skipped (no SEATGEEK_CLIENT_ID)")
+            return fetched
+
+        self.stdout.write(f"fetching {len(targets)} venues from the seatgeek api...")
+        client = SeatGeekClient(client_id)
+        session = polite_session()
+        venues = Venue.objects.in_bulk([target["venue_pk"] for target in targets])
+        for target in targets:
+            notes = notes_by_venue[target["sheet_id"]]
+            venue = venues[target["venue_pk"]]
+            try:
+                raw_events = client.venue_events(target["seatgeek_venue_id"])
+            except SeatGeekError as e:
+                notes.append(f"seatgeek failed: {e}")
+                continue
+            fetched.add(target["sheet_id"])
+
+            show_links, venue_links = {}, []
+            if raw_events:
+                found, note = self.venue_ticket_links(session, target, venue)
+                if found is None:
+                    notes.append(note)
+                else:
+                    show_links, venue_links = found
+            ticket_page = venue.ticket_page_url
+            # an editor's ticket page, or one filled in before, is never replaced
+            if not ticket_page and len(venue_links) == 1:
+                ticket_page = venue_links[0]
+                notes.append(f"seatgeek: ticket page set to {ticket_page}, from the venue's own site")
+                if not dry_run:
+                    # update() rather than save(): saving a venue rebakes all its events
+                    Venue.objects.filter(pk=venue.pk, ticket_page_url="").update(ticket_page_url=ticket_page)
+
+            # never seatgeek's own page, which resells tickets: the show's page on the
+            # venue's seller, or else the venue's
+            fallback_url = ticket_page or venue.website
+            events, own_pages = [], 0
+            for raw in raw_events:
+                headliner = next((p.get("name") for p in raw.get("performers") or [] if p.get("name")), "")
+                show_url = match_show(show_links, raw.get("title", ""), headliner)
+                event = seatgeek_event(raw, show_url or fallback_url)
+                if event:
+                    own_pages += bool(show_url)
+                    events.append((raw.get("url", ""), event))
+            # the seatgeek page is kept as the source url, which the site doesn't show
+            events_by_venue[target["sheet_id"]] += [
+                ("seatgeek", source_url, event) for source_url, event in events
+            ]
+            if len(events) < len(raw_events):
+                notes.append(
+                    f"seatgeek: {len(raw_events) - len(events)} non-music or undated events left out"
+                )
+            if events:
+                notes.append(f"seatgeek: {own_pages} of {len(events)} events link to the show's own ticket page")
+            if not fallback_url and own_pages < len(events):
+                notes.append("seatgeek: the venue has no ticket page or website, so some events have no link")
+            leftover = Event.all_objects.filter(
+                venue_id=target["venue_pk"],
+                source__in=[Event.Source.TICKETING, Event.Source.AI, Event.Source.JSON_LD],
+                is_approved=False,
+                starttime__gte=timezone.now(),
+            ).count()
+            if leftover:
+                notes.append(
+                    f"{leftover} unapproved events from the venue's earlier ticketing, ai or json-ld "
                     "source remain; remove any that duplicate these"
                 )
         return fetched

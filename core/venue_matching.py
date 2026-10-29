@@ -1,6 +1,6 @@
 """
-deciding whether a listing on another service (google places, ticketmaster) is the same
-venue as one of ours: by name, and by distance.
+deciding whether a listing on another service (google places, ticketmaster, seatgeek) is
+the same venue as one of ours: by name, and by distance.
 """
 
 import math
@@ -80,3 +80,48 @@ def distance_km(lat1, lon1, lat2, lon2):
         + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
     )
     return 6371 * 2 * math.asin(math.sqrt(a))
+
+
+# how far a listing on a ticketing api may be from our venue's location and still be it
+MAX_DISTANCE_KM = 1.0
+
+
+def find_match(venue, candidates):
+    """
+    which of `candidates` (venue dicts from the ticketmaster or seatgeek client) is the venue.
+    returns (outcome, match, candidates with their distances) where outcome is "linked",
+    "ambiguous" or "unmatched"
+    """
+    scored = [
+        {
+            **candidate,
+            # the google places location when it's a confident match; the sheet's own
+            # coordinates are only town centres
+            "distance_km": distance_km(
+                *venue.exact_location, candidate["latitude"], candidate["longitude"]
+            ),
+        }
+        for candidate in candidates
+    ]
+    if not scored:
+        return "unmatched", None, scored
+    near = [
+        c
+        for c in scored
+        if names_match(venue.name, c["name"])
+        and c["distance_km"] is not None
+        and c["distance_km"] <= MAX_DISTANCE_KM
+    ]
+    # a venue often has a second listing that actually sells its shows (ticketweb's
+    # "Off The Rails Music Venue" vs an empty "Off The Rails"): prefer listings with events
+    with_events = [c for c in near if c.get("upcoming_events")]
+    if with_events:
+        near = with_events
+    # prefer a listing with the venue's own name over ones that merely contain it,
+    # e.g. "Big Night Live" over "PLAY Boston at Big Night Live"
+    exact = [c for c in near if normalize_name(c["name"]) == normalize_name(venue.name)]
+    if len(exact) == 1:
+        return "linked", exact[0], scored
+    if not exact and len(near) == 1:
+        return "linked", near[0], scored
+    return "ambiguous", None, scored

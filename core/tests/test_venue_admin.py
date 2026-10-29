@@ -99,6 +99,55 @@ class VenueAdminEventbriteTestCase(TestCase):
         self.assertEqual(len(self.filtered(None)), 3)
 
 
+class VenueAdminSeatGeekTestCase(TestCase):
+    def setUp(self):
+        self.admin = VenueAdmin(Venue, AdminSite())
+        self.request = RequestFactory().get("/admin/core/venue/")
+        self.request.user = User.objects.create_superuser("admin", "a@example.com", "pw")
+        self.linked = Venue.objects.create(name="Linked", seatgeek_venue_id="11280")
+        self.unlinked = Venue.objects.create(name="Unlinked")
+        self.blank = Venue.objects.create(name="Blank", seatgeek_venue_id="")
+
+    def test_admin_sets_the_seatgeek_venue_and_ticket_page(self):
+        form_class = self.admin.get_form(self.request, self.unlinked)
+        data = {k: v for k, v in model_to_dict(self.unlinked).items() if v is not None}
+        data["genres"] = ""
+        data["seatgeek_venue_id"] = "11280"
+        data["ticket_page_url"] = "https://www.axs.com/venues/1234/the-sinclair"
+        form = form_class(data, instance=self.unlinked)
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        venue = Venue.objects.get(pk=self.unlinked.pk)
+        self.assertEqual(venue.seatgeek_venue_id, "11280")
+        self.assertEqual(venue.ticket_page_url, "https://www.axs.com/venues/1234/the-sinclair")
+
+    def test_admin_clears_the_seatgeek_venue(self):
+        form_class = self.admin.get_form(self.request, self.linked)
+        data = {k: v for k, v in model_to_dict(self.linked).items() if v is not None}
+        data["genres"] = ""
+        data["seatgeek_venue_id"] = ""
+        form = form_class(data, instance=self.linked)
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.assertIn(Venue.objects.get(pk=self.linked.pk).seatgeek_venue_id, ("", None))
+
+    def test_fields_are_in_the_admin_form(self):
+        fields = [f for _, options in self.admin.fieldsets for f in options["fields"]]
+        self.assertIn("seatgeek_venue_id", fields)
+        self.assertIn("ticket_page_url", fields)
+        self.assertIn("seatgeek_venue_id", self.admin.search_fields)
+
+    def filtered(self, value):
+        request = RequestFactory().get("/admin/core/venue/", {"seatgeek": value} if value else {})
+        request.user = self.request.user
+        changelist = self.admin.get_changelist_instance(request)
+        return set(changelist.get_queryset(request))
+
+    def test_linked_filter(self):
+        self.assertEqual(self.filtered("yes"), {self.linked})
+        self.assertEqual(self.filtered("no"), {self.unlinked, self.blank})
+
+
 class VenueAdminPlaceTestCase(TestCase):
     def setUp(self):
         self.admin = VenueAdmin(Venue, AdminSite())
@@ -189,6 +238,39 @@ class EventAdminVenueLinkTestCase(TestCase):
 
     def test_venue_column_sorts_by_name(self):
         self.assertEqual(EventAdmin.get_venue_link.admin_order_field, "venue__name")
+
+
+class EventAdminSourceTestCase(TestCase):
+    """where an imported event came from: shown to admins, and filterable"""
+
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+        self.seatgeek = Event.all_objects.create(
+            title="from seatgeek", starttime=timezone.now(), source="seatgeek",
+            source_url="https://seatgeek.com/show-tickets/18363578", external_id="seatgeek:18363578",
+        )
+        self.ticketmaster = Event.all_objects.create(
+            title="from ticketmaster", starttime=timezone.now(), source="ticketmaster", external_id="tm:1",
+        )
+
+    def test_event_page_shows_the_source_and_its_page(self):
+        response = self.client.get(f"/admin/core/alleventproxy/{self.seatgeek.pk}/change/")
+        self.assertContains(response, "SeatGeek API")
+        self.assertContains(response, "seatgeek:18363578")
+        self.assertContains(
+            response,
+            '<a href="https://seatgeek.com/show-tickets/18363578" target="_blank" rel="noopener">'
+            "https://seatgeek.com/show-tickets/18363578</a>",
+            html=True,
+        )
+
+    def test_source_is_read_only(self):
+        self.assertTrue({"source", "get_source_link", "external_id"} <= set(EventAdmin.readonly_fields))
+
+    def test_filter_by_source(self):
+        response = self.client.get("/admin/core/alleventproxy/", {"starttime": "all", "source__exact": "seatgeek"})
+        self.assertContains(response, "from seatgeek")
+        self.assertNotContains(response, "from ticketmaster")
 
 
 class VenueAdminFetchStatusTestCase(TestCase):

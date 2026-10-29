@@ -135,6 +135,7 @@ class Event(models.Model):
         AI = "ai", "AI extraction"
         TICKETMASTER = "ticketmaster", "Ticketmaster Discovery API"
         EVENTBRITE = "eventbrite", "Eventbrite API"
+        SEATGEEK = "seatgeek", "SeatGeek API"
 
     source = models.CharField(
         max_length=16, choices=Source.choices, blank=True, default=""
@@ -309,6 +310,17 @@ class Venue(models.Model):
     # for venues that sell their own shows on eventbrite
     eventbrite_organizer_id = models.CharField(
         max_length=64, null=True, blank=True, db_index=True, verbose_name="Eventbrite organizer ID"
+    )
+    # not from the sheet: set by the match_seatgeek_venues command or by hand, for venues
+    # whose ticketing pages (etix, axs) refuse our crawler. last of the apis in precedence
+    seatgeek_venue_id = models.CharField(
+        max_length=64, null=True, blank=True, db_index=True, verbose_name="SeatGeek venue ID"
+    )
+    # set by hand: where the venue sells its tickets, e.g. its etix or axs listing. seatgeek
+    # events link here (or else to the website), never to seatgeek, which resells tickets
+    ticket_page_url = models.URLField(
+        max_length=1000, blank=True, default="", verbose_name="ticket page",
+        help_text="The venue's own ticket listing (Etix, AXS...). SeatGeek events link here, or else to the website.",
     )
 
     name = models.CharField(max_length=255)
