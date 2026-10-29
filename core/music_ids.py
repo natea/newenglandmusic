@@ -14,7 +14,7 @@ import time
 
 import requests
 
-from core.user_agent import USER_AGENT
+from core.user_agent import user_agent
 
 WIKIDATA_URL = "https://query.wikidata.org/sparql"
 MUSICBRAINZ_URL = "https://musicbrainz.org/ws/2/"
@@ -76,7 +76,7 @@ class MusicIds:
             response = self.session.post(
                 WIKIDATA_URL,
                 data={"query": query},
-                headers={"Accept": "application/sparql-results+json", "User-Agent": USER_AGENT},
+                headers={"Accept": "application/sparql-results+json", "User-Agent": user_agent()},
                 timeout=TIMEOUT_SECONDS,
             )
         except requests.RequestException as e:
@@ -171,7 +171,7 @@ class MusicIds:
                 response = self.session.get(
                     MUSICBRAINZ_URL + path,
                     params={**params, "fmt": "json"},
-                    headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+                    headers={"User-Agent": user_agent(), "Accept": "application/json"},
                     timeout=TIMEOUT_SECONDS,
                 )
             except requests.RequestException as e:
