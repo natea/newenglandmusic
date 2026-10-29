@@ -40,6 +40,10 @@ API keys live in `.env`, which is git-ignored:
 - **On a server, the sheet sync reads the sheet with a service account** instead, when `GOOGLE_SERVICE_ACCOUNT_JSON` is set (`core/google_sheets.py`; setup in `PRODUCTION.md`). Never print or log that variable.
 - **The sheet's coordinates are town centres,** not venue locations. Use `Venue.exact_location`, which is the Google Places location when that match is confident.
 
+## Location lookups
+
+`load_census_gazetteer --year 2026` loads the Census Bureau's Gazetteer files (public domain) into `CensusPlace`, which the location form uses to turn a ZIP code or town into a point (`core/location.py`). Run it once at setup and once a year; it isn't part of the daily job. Tests build small Gazetteer zip files in `core/tests/census_fixture.py` instead of downloading.
+
 ## The pipeline
 
 These are management commands, run in this order:

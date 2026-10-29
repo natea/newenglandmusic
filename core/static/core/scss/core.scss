@@ -226,6 +226,14 @@ article {
     max-width: calc(100% - 4.6em);
   }
 
+  // how far the show is from the visitor's location (core/location.py)
+  .event-distance {
+    font-size: 0.85rem;
+    color: #555;
+    margin-left: 6px;
+    white-space: nowrap;
+  }
+
   .artist-previews {
     display: flex;
     flex-wrap: wrap;
@@ -545,4 +553,18 @@ main .search {
 
 .message.error {
   background-color: red;
+}
+
+// the location form for the events' distance labels (core/templates/core/location_form.html)
+.locationForm {
+  margin: 6px 0 10px;
+  font-size: 0.9rem;
+
+  .location-current {
+    margin-right: 6px;
+  }
+
+  .location-clear {
+    margin-right: 10px;
+  }
 }

@@ -318,6 +318,21 @@ Last.fm takes the key only as a URL parameter, so the client never prints or log
 
 Nothing from Last.fm is displayed or stored, but its data decides which buttons appear, so ask before going public (see the launch checklist).
 
+## Distances and towns
+
+A visitor can give a ZIP code or town, or press "Use my location". Each event at a located venue then shows how far away it is, such as "(0.5 mi away)". Events stay in time order. The location is kept only in the visitor's `near` cookie, rounded to about 100 m.
+
+Once a metro area is chosen, the filter also offers a multi-select of the metro's towns that have venues: `?metro=…&town=Somerville, MA&town=Cambridge, MA`. Calendar feeds take the same `town` values.
+
+**Loading the ZIP and town data:**
+- **What:** the Census Bureau's Gazetteer files (public domain): ZIP Code Tabulation Areas, county subdivisions (New England's towns) and places.
+- **When:** once at setup, then once a year when the Census publishes the next year's files. Run `python manage.py load_census_gazetteer --year 2026`, about 100,000 rows.
+- **Before it's loaded:** the location form stays hidden until the table has rows.
+
+PO-box-only ZIP codes aren't in the Census' ZIP areas, so the form suggests typing the town instead.
+
+The distances use the same venue coordinates as the day maps' pins, so the open Google Places question in the launch checklist covers them too.
+
 ## Calendar feeds
 
 `/calendar.ics` is an iCalendar feed that people can subscribe to in Google Calendar, Apple Calendar or Outlook. It takes the listing's `region`, `state` and `metro` parameters (for example `/calendar.ics?state=vermont`), and with none it covers the whole Northeast. It never uses a visitor's remembered filter.
@@ -363,4 +378,4 @@ If the key ever leaks, delete it on the account's **Keys** tab and create a new 
 - [ ] the first `fetch_events` run checked in `/admin/core/alleventproxy/` before events are approved
 - [ ] **before announcing or sharing the site:** Google Places terms met. Until then, keep the site unshared. As of 2026-10-25 it was deployed but kept private for this reason.
   - **Stored content:** done. Only place IDs and coordinates are stored, and coordinates are refreshed or deleted within 30 days (see Google Places terms above). The daily `--refresh-stale` job has to be running for pins to stay exact.
-  - **Maps (still open):** "Places API results displayed on a map must be shown on a Google Map". The day maps use Protomaps. The options: switch the day maps to the Google Maps JavaScript API, which has its own cost; pin venues from a geocoder whose results may be stored (US Census or OpenStreetMap) and use Places only for matching and the MAP link; or get a reading of the terms that allows the current maps. Each is a separate change.
+  - **Maps and distances (still open):** "Places API results displayed on a map must be shown on a Google Map". The day maps use Protomaps. The options: switch the day maps to the Google Maps JavaScript API, which has its own cost; pin venues from a geocoder whose results may be stored (US Census or OpenStreetMap) and use Places only for matching and the MAP link; or get a reading of the terms that allows the current maps. Each is a separate change.

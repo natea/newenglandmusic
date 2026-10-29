@@ -37,6 +37,20 @@
           {% endfor %}
         </select>
       </label>
+      {% if metro_towns %}
+        {% comment %}
+          the metro's towns that have venues: choose none for the whole metro. a plain
+          multi-select, so it works without js
+        {% endcomment %}
+        <label class="town-filter">
+          towns
+          <select name="town" multiple size="{% if metro_towns|length > 6 %}6{% else %}{{ metro_towns|length }}{% endif %}">
+            {% for town in metro_towns %}
+              <option value="{{ town }}" {% if town in geo_filter.town_labels %}selected{% endif %}>{{ town }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endif %}
     {% else %}
       {# a state with no metros (e.g. rhode island) still clears a stale metro #}
       <input type="hidden" name="metro" value="">

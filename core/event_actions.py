@@ -14,6 +14,8 @@ event's own text is escaped; ids are integers, and the urls' shapes are fixed (c
 """
 
 from django.utils.html import escape
+
+from core.location import format_miles, miles
 from django.utils.safestring import mark_safe
 
 PLACEHOLDER = "<!--event-actions-->"
@@ -31,8 +33,22 @@ def save_label(is_saved):
     return "Saved (click to remove)" if is_saved else "Save show"
 
 
-def actions_html(event, saved_ids, next_url):
-    """the event's icon row, with the save bookmark filled when the visitor saved the show"""
+def distance_html(event, location):
+    """how far the event's venue is from the visitor's location, or "" without either"""
+    venue = event.venue
+    if location is None or venue is None or event.venue_override:
+        return ""
+    latitude, longitude = venue.exact_location
+    if latitude is None or longitude is None:
+        return ""
+    return f'<span class="event-distance">({format_miles(miles(location.point, (latitude, longitude)))})</span>'
+
+
+def actions_html(event, saved_ids, next_url, location=None):
+    """
+    the event's icon row, with the save bookmark filled when the visitor saved the show, and
+    how far away it is when the visitor has given a location (core/location.py)
+    """
     pk = int(event.pk)
     parts = [
         f'<div class="event-actions"><a href="/event/{pk}/ics" class="ical" title="Download to your calendar (.ics)">{ICAL}</a>',
@@ -57,10 +73,11 @@ def actions_html(event, saved_ids, next_url):
         f'<form class="save-form" method="post" action="/saved/toggle/{pk}">'
         f'<input type="hidden" name="next" value="{escape(next_url)}#event-{pk}">'
         f'<button type="submit" class="save{" is-saved" if is_saved else ""}" data-event-id="{pk}" '
-        f'aria-pressed="{"true" if is_saved else "false"}" title="{save_label(is_saved)}">{SAVE}</button></form></div>'
+        f'aria-pressed="{"true" if is_saved else "false"}" title="{save_label(is_saved)}">{SAVE}</button></form>'
     )
+    parts.append(f"{distance_html(event, location)}</div>")
     return mark_safe("".join(parts))
 
 
-def with_actions(baked_html, event, saved_ids, next_url):
-    return baked_html.replace(PLACEHOLDER, actions_html(event, saved_ids, next_url), 1)
+def with_actions(baked_html, event, saved_ids, next_url, location=None):
+    return baked_html.replace(PLACEHOLDER, actions_html(event, saved_ids, next_url, location), 1)

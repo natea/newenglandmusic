@@ -751,3 +751,32 @@ class YouTubeArtistLink(models.Model):
 
     def __str__(self):
         return self.name_key
+
+
+class CensusPlace(models.Model):
+    """
+    a zip code area or a town from the census bureau's gazetteer files (public domain), for
+    turning what a visitor types into a location (core/location.py). loaded once a year by
+    load_census_gazetteer
+    """
+
+    class Kind(models.TextChoices):
+        ZIP = "zip", "ZIP code area"
+        TOWN = "town", "Town"
+
+    kind = models.CharField(max_length=4, choices=Kind.choices)
+    # the zip code, or the town's name without its census suffix ("Somerville", not
+    # "Somerville city")
+    name = models.CharField(max_length=128)
+    # the two-letter state code; blank for zip code areas, which the files don't place
+    state = models.CharField(max_length=2, blank=True, default="")
+    # core.artist_matching.normalize() of the name, which is how lookups compare
+    search_key = models.CharField(max_length=128)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+
+    class Meta:
+        indexes = [models.Index(fields=["kind", "search_key"])]
+
+    def __str__(self):
+        return f"{self.name}, {self.state}" if self.state else self.name

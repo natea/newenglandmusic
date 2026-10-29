@@ -1,0 +1,20 @@
+{% comment %}
+  where the visitor is, for the events' "(0.5 mi away)" labels (core/location.py). a plain
+  GET form, so a typed zip code or town works without js; "use my location" needs js
+  (core/js/location.js), so it stays hidden without it.
+{% endcomment %}
+{% if show %}
+  <form class="locationForm" method="get" action="/location">
+    <input type="hidden" name="next" value="{{ next }}">
+    {% if location %}
+      <span class="location-current">Distances from <b>{{ location.label }}</b></span>
+      <a href="/location?clear=1&amp;next={{ next|urlencode }}" class="location-clear">clear</a>
+    {% endif %}
+    <label>
+      {% if location %}change{% else %}near{% endif %}
+      <input type="text" name="q" placeholder="ZIP code or town" autocomplete="postal-code" size="16">
+    </label>
+    <button type="submit">Go</button>
+    <button type="button" class="use-my-location" hidden>Use my location</button>
+  </form>
+{% endif %}

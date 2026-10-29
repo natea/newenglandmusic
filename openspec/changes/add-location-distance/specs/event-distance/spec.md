@@ -10,7 +10,7 @@ Lets a visitor see how far each show is from them: from a ZIP code or town they 
 A visitor's text SHALL be looked up as:
 - **five digits:** a ZIP area by its code;
 - **"<town>, <state>":** a town by its name and state, where the state is a two-letter code or a full name, ignoring case, accents and punctuation;
-- **"<town>":** a town by its name, preferring towns in states where the site has venues. When several such towns match, the visitor SHALL be offered them to choose from.
+- **"<town>":** a town by its name. When exactly one of the matching towns has a venue on the site, it SHALL be chosen. Otherwise towns in states where the site has venues SHALL be preferred, and when several such towns match, the visitor SHALL be offered them to choose from.
 
 #### Scenario: ZIP code
 - **WHEN** a visitor enters "02144"
@@ -24,12 +24,16 @@ A visitor's text SHALL be looked up as:
 - **WHEN** a visitor enters "Hamden", and the only Hamdens are in CT and NY, where the site has venues in CT only
 - **THEN** the location is Hamden, CT
 
+#### Scenario: The town with venues
+- **WHEN** a visitor enters "Somerville", which is in MA, ME and NJ, where the site has venues in all three states but only Somerville, MA has one itself
+- **THEN** the location is Somerville, MA
+
 #### Scenario: Several towns with the name
 - **WHEN** a visitor enters "Springfield", and the site has venues in MA, VT and NJ, which each have a Springfield
 - **THEN** no location is set, and the visitor is offered "Springfield, MA", "Springfield, VT" and "Springfield, NJ" to choose from
 
 #### Scenario: Not found
-- **WHEN** a visitor enters "99999" or "Atlantis"
+- **WHEN** a visitor enters "99999" or "Xyzzyville"
 - **THEN** no location is set, and the page says the place wasn't found and suggests a town name or another ZIP code
 
 #### Scenario: Loading the data

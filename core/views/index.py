@@ -11,7 +11,9 @@ from ..geo_filters import (
     apply_cookie_action,
     geo_filter_for_request,
     metro_groups,
+    metro_towns,
     offered_areas,
+    town_label,
 )
 from ..models import DateMessage, Event, GeoArea, IndexPageMessages, StaticPage
 from ..opengraph import get_meta
@@ -191,6 +193,9 @@ def _get_events_page_for_month(
             "region_options": offered_areas(GeoArea.Kind.REGION),
             "state_options": offered_areas(GeoArea.Kind.STATE),
             "metro_groups": metro_groups(geo_filter.state),
+            "metro_towns": [town_label(town, state) for town, state in metro_towns(geo_filter.metro)]
+            if geo_filter.metro
+            else [],
             "calendar_links": subscribe_links(geo_filter),
             "no_matching_events": bool(geo_filter)
             and not any(day["events"] for day in grouped_events_as_list),

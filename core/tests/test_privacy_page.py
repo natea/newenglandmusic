@@ -10,6 +10,8 @@ class PrivacyPageTestCase(TestCase):
         self.assertContains(response, 'href="https://www.youtube.com/t/terms"')
         self.assertContains(response, "agree to be bound by the")
         self.assertContains(response, "saved_shows")
+        self.assertContains(response, "<code>near</code>")
+        self.assertContains(response, "Gazetteer files")
 
     def test_footer_link(self):
         for url in ("/", "/saved", "/submit-event", "/privacy"):

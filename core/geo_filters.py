@@ -10,9 +10,14 @@ area lists counties or cities, its county or its city is one of them:
 the listing pages and the admin both take the same url parameters:
 
     /?region=new-england&state=massachusetts&metro=ma-boston-metro-region
+
+a metro can be narrowed to some of its towns, by the venues' own town and state (not the
+sheet's metro city lists, so this keeps working if the areas move out of the sheet):
+
+    /?metro=ma-boston-metro-region&town=Somerville, MA&town=Cambridge, MA
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import urlencode
 
 from django.db.models import Q
@@ -47,6 +52,8 @@ class GeoFilter:
     region: GeoArea | None = None
     state: GeoArea | None = None
     metro: GeoArea | None = None
+    # (town, state code) pairs within the metro, in the venues' own spelling
+    towns: list = field(default_factory=list)
 
     @property
     def areas(self):
@@ -59,13 +66,41 @@ class GeoFilter:
         q = Q()
         for area in self.areas:
             q &= area_q(area, prefix=prefix)
+        if self.towns:
+            towns_q = Q()
+            for town, state in self.towns:
+                towns_q |= Q(**{f"{prefix}city_town__iexact": town, f"{prefix}state": state})
+            q &= towns_q
         return q
+
+    @property
+    def town_labels(self):
+        return [town_label(town, state) for town, state in self.towns]
 
     @property
     def query_string(self):
         return urlencode(
             [(param, getattr(self, param).slug) for param in FILTER_PARAMS if getattr(self, param)]
+            + [("town", label) for label in self.town_labels]
         )
+
+
+def town_label(town, state):
+    return f"{town}, {state}"
+
+
+def metro_towns(metro):
+    """the (town, state) of the metro's venues, one per town whatever its case, sorted"""
+    from core.models import Venue
+
+    towns = {}
+    rows = Venue.objects.filter(area_q(metro)).exclude(city_town="").values_list("city_town", "state")
+    for town, state in rows:
+        key, spelling = (town.strip().casefold(), state), town.strip()
+        # the sheet sometimes has "cambridge" beside "Cambridge": show the capitalized one
+        if key not in towns or (spelling[:1].isupper() and not towns[key][0][:1].isupper()):
+            towns[key] = (spelling, state)
+    return sorted(towns.values(), key=lambda pair: (pair[0].casefold(), pair[1]))
 
 
 def metro_fits_state(metro, state):
@@ -85,6 +120,11 @@ def parse_geo_filter(querydict):
             setattr(geo_filter, param, offered_areas(param).filter(slug=slug).first())
     if geo_filter.metro and not metro_fits_state(geo_filter.metro, geo_filter.state):
         geo_filter.metro = None
+    wanted = [value.strip() for value in querydict.getlist("town") if value.strip()] if hasattr(querydict, "getlist") else []
+    if geo_filter.metro and wanted:
+        # only the metro's own towns: a town from elsewhere, or a metro that changed, drops it
+        known = {town_label(town, state).casefold(): (town, state) for town, state in metro_towns(geo_filter.metro)}
+        geo_filter.towns = [known[label.casefold()] for label in dict.fromkeys(wanted) if label.casefold() in known]
     return geo_filter
 
 
@@ -109,7 +149,7 @@ def geo_filter_for_request(request):
     bar, and any link copied from it, shows what's being filtered.
     """
     params = request.GET
-    given = [param for param in FILTER_PARAMS if param in params]
+    given = [param for param in (*FILTER_PARAMS, "town") if param in params]
     # "clear" is the show-all link; all-empty values are the form set to "All"
     if "clear" in params or (given and not any(params[param].strip() for param in given)):
         return GeoFilter(), CookieAction.CLEAR

@@ -2,6 +2,7 @@
 
 {% load nyc_noise_date_formatting %}
 {% load event_actions %}
+{% load location_form %}
 
 {% comment %}
   the visitor's saved shows (core/views/saved_shows.py), grouped by date. each event is its
@@ -24,6 +25,8 @@
     Shows you save with the bookmark icon on any listing appear here. They're saved in this
     browser only.
   </p>
+
+  {% location_form %}
 
   {% comment %}
     one map of every saved show: map/map.html's "all" scope, labelled with each show's date

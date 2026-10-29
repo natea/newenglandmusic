@@ -3,6 +3,7 @@
 {% load static %}
 {% load nyc_noise_date_formatting %}
 {% load event_actions %}
+{% load location_form %}
 
 {% block head %}
   {% if protomaps_api_key %}
@@ -30,6 +31,7 @@
   {% endif %}
 
   {% include "core/geo_filter_form.html" %}
+  {% location_form %}
   {% include "core/calendar_subscribe.html" %}
 
   {% include "calendar/calendar.html" with calendar_dates=calendar_dates all_event_dates=all_event_dates geo_query=geo_query only %}
