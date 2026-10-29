@@ -432,6 +432,26 @@ class FetchStatusFilter(SimpleListFilter):
         return queryset
 
 
+REVIEW_REASON_WORDS = {"name": "name differs", "state": "in another state", "distance": "too far"}
+
+
+class PlaceReviewReasonFilter(SimpleListFilter):
+    """why a venue's google match needs review (lookup_venue_places)"""
+
+    title = "why review"
+    parameter_name = "review_reason"
+
+    def lookups(self, request, model_admin):
+        return list(REVIEW_REASON_WORDS.items())
+
+    def queryset(self, request, queryset):
+        if self.value() in REVIEW_REASON_WORDS:
+            return queryset.filter(
+                place_lookup_status=Venue.PlaceLookupStatus.REVIEW, place_review_reasons__contains=[self.value()]
+            )
+        return queryset
+
+
 class VenueAdminForm(forms.ModelForm):
     no_neighborhood = forms.BooleanField(
         required=False,
@@ -462,6 +482,7 @@ class VenueAdmin(admin.ModelAdmin):
         "age_policy",
         "sheet_id",
         "last_fetch",
+        "why_review",
     )
     list_display_links = ("name",)
     list_filter = (
@@ -475,6 +496,7 @@ class VenueAdmin(admin.ModelAdmin):
         LinkedToEventbriteFilter,
         FetchStatusFilter,
         "place_lookup_status",
+        PlaceReviewReasonFilter,
         "neighborhood_source",
     )
     search_fields = (
@@ -533,6 +555,7 @@ class VenueAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "place_lookup_status",
+                    "why_review",
                     "place_looked_up_at",
                     "place_id",
                     "place_on_google_maps",
@@ -549,7 +572,9 @@ class VenueAdmin(admin.ModelAdmin):
         ("Event sources", {"fields": ("ticketmaster_venue_id", "eventbrite_organizer_id")}),
         ("Event fetching", {"fields": ("fetch_status_details",)}),
     )
-    readonly_fields = ("fetch_status_details", "place_on_google_maps", "neighborhood_source", "neighborhood_checked_at")
+    readonly_fields = (
+        "fetch_status_details", "place_on_google_maps", "why_review", "neighborhood_source", "neighborhood_checked_at",
+    )
 
     def save_model(self, request, venue, form, change):
         """a neighborhood typed here, or "no neighborhood", is the editor's: lookups keep it"""
@@ -566,6 +591,21 @@ class VenueAdmin(admin.ModelAdmin):
 
     # google's terms don't let us store a place's name or address, so this shows the live
     # place for judging a match
+    @admin.display(description="why review")
+    def why_review(self, venue):
+        """the checks the match failed, in words: "name differs · 0.4 km away" """
+        if venue.place_lookup_status != Venue.PlaceLookupStatus.REVIEW:
+            return ""
+        reasons = list(venue.place_review_reasons or [])
+        if not reasons:
+            return "not recorded (run lookup_venue_places --review)"
+        words = [REVIEW_REASON_WORDS[r] for r in reasons if r in REVIEW_REASON_WORDS and r != "distance"]
+        if venue.place_distance_km is not None:
+            words.append(f"{venue.place_distance_km:g} km away" + (" (over 25)" if "distance" in reasons else ""))
+        elif "distance" in reasons:
+            words.append(REVIEW_REASON_WORDS["distance"])
+        return " · ".join(words)
+
     @admin.display(description="on google maps")
     def place_on_google_maps(self, venue):
         if not venue.place_id:
@@ -652,6 +692,8 @@ class VenueAdmin(admin.ModelAdmin):
         # save() rather than update(), so events' baked html picks up the new location
         for venue in queryset.exclude(place_id=""):
             venue.place_lookup_status = Venue.PlaceLookupStatus.CONFIDENT
+            venue.place_review_reasons = []
+            venue.place_distance_km = None
             venue.save()
 
     @admin.action(description="Clear place lookup")
@@ -661,6 +703,8 @@ class VenueAdmin(admin.ModelAdmin):
             venue.place_looked_up_at = None
             venue.place_id = ""
             venue.place_latitude = venue.place_longitude = None
+            venue.place_review_reasons = []
+            venue.place_distance_km = None
             venue.save()
 
 

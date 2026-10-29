@@ -211,6 +211,7 @@ Google's terms allow storing a place ID indefinitely and its coordinates for up 
 - **What's stored:** only each venue's place ID, coordinates, match status and when the coordinates were fetched. The name, address and open or closed status are used while a lookup runs, then discarded.
 - **Refreshing:** the daily `--refresh-stale` run re-fetches coordinates by place ID before they're 30 days old.
 - **Expiry:** every run deletes coordinates older than 30 days, even if its requests fail. The venue then uses its sheet coordinates until a refresh succeeds.
+- **Why a venue needs review:** for a match needing review, the lookup also records which of its checks the top result failed (name, state, more than 25 km away) and its distance from the sheet's town. These are our own judgments, not Places content, and the distance is deleted with the coordinates. The venue admin shows them in a "why review" column, such as "name differs · 0.4 km away", and filters by them. Venues marked for review before this existed show "not recorded": run `lookup_venue_places --review` once (one Places search per review venue, about 180, inside the free tier; try `--dry-run --limit 20` first) to fill them in.
 
 ## Spotify play buttons
 

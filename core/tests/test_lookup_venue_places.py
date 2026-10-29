@@ -107,8 +107,13 @@ class LookupVenuePlacesTestCase(TestCase):
         place_fields = {f.name for f in Venue._meta.get_fields() if f.name.startswith("place_")}
         self.assertEqual(
             place_fields,
-            {"place_lookup_status", "place_looked_up_at", "place_id", "place_latitude", "place_longitude"},
+            {
+                "place_lookup_status", "place_looked_up_at", "place_id", "place_latitude", "place_longitude",
+                # our own judgments of a review match, not places content
+                "place_review_reasons", "place_distance_km",
+            },
         )
+        self.assertEqual((venue.place_review_reasons, venue.place_distance_km), ([], None))
         self.assertAlmostEqual(venue.exact_location[0], 42.3518, places=3)
         # fields from the sheet are untouched
         self.assertEqual((venue.latitude, venue.age_policy, venue.is_active), (42.3529, "18+", True))
@@ -402,3 +407,60 @@ class RefreshAndExpiryTestCase(TestCase):
         self.assertEqual(Venue.objects.get(sheet_id="V0090").place_latitude, 1.0)
         self.assertIn("refreshed [dry run, not saved] (2)", output)
         self.assertIn("coordinates over 30 days old: would be deleted [dry run] (1)", output)
+
+
+class ReviewReasonsTestCase(LookupVenuePlacesTestCase):
+    def test_reasons_recorded(self):
+        # "$3 Dewey's" style: another name, the right state, 0.4 km away
+        self.run_lookup(results={"Paradise Rock Club": [place("Agganis Arena", lat=42.3529, lng=-71.1272)]})
+        venue = Venue.objects.get(pk=self.paradise.pk)
+        self.assertEqual(venue.place_lookup_status, Venue.PlaceLookupStatus.REVIEW)
+        self.assertEqual((venue.place_review_reasons, venue.place_distance_km), (["name"], 0.4))
+
+    def test_several_reasons(self):
+        output = self.run_lookup(results={"Paradise Rock Club": [place("Agganis Arena", state="NH", lat=42.6, lng=-71.5)]})
+        venue = Venue.objects.get(pk=self.paradise.pk)
+        self.assertEqual(venue.place_review_reasons, ["name", "state", "distance"])
+        self.assertGreater(venue.place_distance_km, 25)
+        self.assertIn("[failed: name, state, distance]", output)
+
+    def test_wrong_place_states_its_reason(self):
+        self.run_lookup(results=self.recorded_results)
+        # columbia, md is in another state, and over 25 km from the sheet's washington
+        self.assertEqual(Venue.objects.get(pk=self.merriweather.pk).place_review_reasons, ["state", "distance"])
+
+    def test_confident_match_has_no_reasons(self):
+        Venue.objects.filter(pk=self.paradise.pk).update(place_review_reasons=["name"], place_distance_km=3.0)
+        self.run_lookup("--refresh", results=self.recorded_results)
+        venue = Venue.objects.get(pk=self.paradise.pk)
+        self.assertEqual((venue.place_review_reasons, venue.place_distance_km), ([], None))
+
+    def test_distance_expires_with_the_coordinates(self):
+        Venue.objects.filter(pk=self.paradise.pk).update(
+            place_lookup_status=Venue.PlaceLookupStatus.REVIEW, place_id="id-x", place_latitude=42.35,
+            place_longitude=-71.12, place_looked_up_at=timezone.now() - datetime.timedelta(days=31),
+            place_review_reasons=["name"], place_distance_km=0.4,
+        )
+        self.run_lookup()
+        venue = Venue.objects.get(pk=self.paradise.pk)
+        self.assertEqual((venue.place_latitude, venue.place_distance_km), (None, None))
+        self.assertEqual(venue.place_review_reasons, ["name"])
+
+    def test_backfilling_the_reasons(self):
+        Venue.objects.filter(pk=self.paradise.pk).update(
+            place_lookup_status=Venue.PlaceLookupStatus.REVIEW, place_looked_up_at=timezone.now()
+        )
+        Venue.objects.filter(pk=self.merriweather.pk).update(
+            place_lookup_status=Venue.PlaceLookupStatus.CONFIDENT, place_looked_up_at=timezone.now()
+        )
+        self.run_lookup("--review", results={"Paradise Rock Club": [place("Agganis Arena")]})
+        self.assertEqual([text for text, _, _ in self.searches], ["Paradise Rock Club, Allston, MA"])
+        self.assertEqual(Venue.objects.get(pk=self.paradise.pk).place_review_reasons, ["name"])
+
+    def test_review_dry_run(self):
+        Venue.objects.filter(pk=self.paradise.pk).update(
+            place_lookup_status=Venue.PlaceLookupStatus.REVIEW, place_looked_up_at=timezone.now()
+        )
+        output = self.run_lookup("--review", "--dry-run", results={"Paradise Rock Club": [place("Agganis Arena")]})
+        self.assertIn("[failed: name]", output)
+        self.assertEqual(Venue.objects.get(pk=self.paradise.pk).place_review_reasons, [])

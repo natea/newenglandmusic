@@ -333,6 +333,12 @@ class Venue(models.Model):
     )
     place_latitude = models.FloatField(null=True, blank=True)
     place_longitude = models.FloatField(null=True, blank=True)
+    # why a match needs review: the checks the top result failed ("name", "state",
+    # "distance"), our own judgment, not google's content (lookup_venue_places)
+    place_review_reasons = ArrayField(models.CharField(max_length=8), blank=True, default=list)
+    # how far the reviewed place is from the sheet's coordinates; it comes from google's
+    # coordinates, so it's deleted with them after 30 days
+    place_distance_km = models.FloatField(null=True, blank=True)
 
     # the neighborhood the venue is in, from openstreetmap (lookup_venue_neighborhoods), or an
     # editor's; storable under odbl, credited in the footer

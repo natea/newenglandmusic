@@ -17,12 +17,15 @@ run as:
 
 python manage.py lookup_venue_places [--sheet-ids V0089,V0113 | --state MA] [--limit 20] [--refresh] [--dry-run]
 python manage.py lookup_venue_places --refresh-stale [--max-age-days 25] [--dry-run]
+python manage.py lookup_venue_places --review [--state MA] [--limit 20] [--dry-run]
 
 each active venue is searched for by name, town and state, biased toward its sheet
 coordinates. a result is a confident match only when its name matches the venue's, it's
 in the venue's state, and it's within MAX_DISTANCE_KM of the sheet coordinates -- only
 then is its location used (see Venue.exact_location). anything else is saved as needing
-review, for an admin to confirm or clear in the venue admin. venues already looked up are
+review, for an admin to confirm or clear in the venue admin, with the checks it failed
+(name, state, distance) and its distance, so the admin can say why. --review searches again
+only for venues needing review, to record those reasons for ones looked up before. venues already looked up are
 skipped unless --refresh is given.
 
 google's terms allow storing only the place id (indefinitely) and its coordinates (for
@@ -68,9 +71,37 @@ def match_result(venue, results):
     return Venue.PlaceLookupStatus.REVIEW, results[0], distance(results[0])
 
 
-def place_fields(status, result):
-    """only what google's terms let us keep: the place id and its coordinates"""
-    fields = {"place_lookup_status": status, "place_looked_up_at": timezone.now()}
+def review_reasons(venue, result, km):
+    """
+    the checks a result failed, in a fixed order: "name" (it isn't the venue's name),
+    "state" (it's in another state), "distance" (it's over MAX_DISTANCE_KM away). our own
+    judgment of the match, kept so the admin can say why a venue needs review
+    """
+    reasons = []
+    if not names_match(venue.name, result["name"]):
+        reasons.append("name")
+    if result["state"] != venue.state:
+        reasons.append("state")
+    if venue.latitude is not None and (km is None or km > MAX_DISTANCE_KM):
+        reasons.append("distance")
+    return reasons
+
+
+def place_fields(status, result, venue=None, km=None):
+    """
+    only what google's terms let us keep: the place id and its coordinates, plus, for a
+    match needing review, which checks it failed and its distance (deleted with the
+    coordinates)
+    """
+    fields = {
+        "place_lookup_status": status,
+        "place_looked_up_at": timezone.now(),
+        "place_review_reasons": [],
+        "place_distance_km": None,
+    }
+    if status == Venue.PlaceLookupStatus.REVIEW and result is not None and venue is not None:
+        fields["place_review_reasons"] = review_reasons(venue, result, km)
+        fields["place_distance_km"] = None if km is None else round(km, 1)
     if result is None:
         return fields
     fields.update(
@@ -87,6 +118,8 @@ CLEARED_LOOKUP = {
     "place_id": "",
     "place_latitude": None,
     "place_longitude": None,
+    "place_review_reasons": [],
+    "place_distance_km": None,
 }
 
 
@@ -122,7 +155,8 @@ def expire_stale_coordinates(dry_run=False):
     venues = list(coordinates_to_expire().order_by("sheet_id"))
     if not dry_run:
         for venue in venues:
-            save_venue(venue, {"place_latitude": None, "place_longitude": None})
+            # the distance comes from google's coordinates, so it goes with them
+            save_venue(venue, {"place_latitude": None, "place_longitude": None, "place_distance_km": None})
     return venues
 
 
@@ -133,6 +167,11 @@ class Command(RecordedCommand, BaseCommand):
         parser.add_argument("--limit", type=int)
         parser.add_argument(
             "--refresh", action="store_true", help="also look up venues looked up before"
+        )
+        parser.add_argument(
+            "--review",
+            action="store_true",
+            help="search again only for venues needing review, to record why (a one-off backfill)",
         )
         parser.add_argument(
             "--refresh-stale",
@@ -171,7 +210,10 @@ class Command(RecordedCommand, BaseCommand):
 
     def look_up(self, client, options):
         venues = self.selected_venues(options)
-        if not options["refresh"]:
+        if options["review"]:
+            # a one-off: search again for venues needing review, so they get their reasons
+            venues = venues.filter(place_lookup_status=Venue.PlaceLookupStatus.REVIEW)
+        elif not options["refresh"]:
             venues = venues.filter(place_lookup_status="")
         if options["limit"]:
             venues = venues[: options["limit"]]
@@ -197,7 +239,7 @@ class Command(RecordedCommand, BaseCommand):
             if result and result["business_status"] == CLOSED:
                 groups["closed"].append((venue, result, km))
             if not options["dry_run"]:
-                save_venue(venue, place_fields(status, result))
+                save_venue(venue, place_fields(status, result, venue, km))
 
         self.job_summary = [(group, len(items)) for group, items in groups.items()]
         self.report(groups, options["dry_run"])
@@ -286,7 +328,8 @@ class Command(RecordedCommand, BaseCommand):
 
         heading("needs review: confirm or clear in the venue admin" + suffix, groups["review"])
         for venue, result, km in groups["review"]:
-            self.stdout.write(f"  {describe(venue)} -> {describe_result(result, km)}")
+            why = ", ".join(review_reasons(venue, result, km)) or "-"
+            self.stdout.write(f"  {describe(venue)} -> {describe_result(result, km)} [failed: {why}]")
 
         heading("not found" + suffix, groups["not_found"])
         for venue, _, _ in groups["not_found"]:
