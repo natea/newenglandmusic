@@ -1,0 +1,102 @@
+{% extends 'core/base.html' %}
+{% load sass_tags %}
+
+{% block head %}
+  <link href="{% sass_src 'scss/band.scss' %}" rel="stylesheet" type="text/css" />
+  {% if noindex %}<meta name="robots" content="noindex">{% endif %}
+{% endblock head %}
+
+{% block content %}
+<article class="act" aria-labelledby="act-name">
+  <h1 class="act-tab" id="act-name">{{ act.name }}</h1>
+  <div class="act-card">
+    {% if meta_line %}<p class="act-meta">{{ meta_line }}</p>{% endif %}
+
+    {% if next_show %}
+      <p class="act-next">
+        <span class="act-next-when"><time datetime="{{ next_show.starttime|date:'c' }}">{{ next_show.starttime|date:'D, M j' }}</time>{% if not next_show.starttime_override %} · {{ next_show.starttime|time:'g:i a' }}{% endif %}</span>
+        <span><a href="{% url 'event_redirect' next_show.pk %}">{{ next_show.venue.name }}</a>{% if next_show.venue.location %}, {{ next_show.venue.location }}{% endif %}</span>
+        {% if more_shows %}<a class="act-next-more" href="#shows">{{ more_shows }} more show{{ more_shows|pluralize }}</a>{% endif %}
+      </p>
+    {% else %}
+      <p class="act-next act-next-none">No upcoming shows listed.</p>
+    {% endif %}
+
+    {% if current_members or former_members or bands or links or photo %}
+    <dl class="act-fields">
+      {% if current_members or former_members %}
+        <dt>Members</dt>
+        <dd>
+          {% if current_members %}
+          <ul class="act-people">
+            {% for artist, role, years, headshot in current_members %}
+              <li>{% if headshot %}<img src="{{ headshot.src }}" alt="{{ artist.name }}" width="48" height="48" loading="lazy">{% endif %}<span><a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% if role %} <span class="act-role">{{ role }}</span>{% endif %}{% if years %} <span class="act-years">{{ years }}</span>{% endif %}</span></li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+          {% if former_members %}
+          <p class="act-subhead">Former members</p>
+          <ul class="act-people act-people-former">
+            {% for artist, role, years, headshot in former_members %}
+              <li>{% if headshot %}<img src="{{ headshot.src }}" alt="{{ artist.name }}" width="48" height="48" loading="lazy">{% endif %}<span><a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% if role %} <span class="act-role">{{ role }}</span>{% endif %}{% if years %} <span class="act-years">{{ years }}</span>{% endif %}</span></li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </dd>
+      {% endif %}
+      {% if bands %}
+        <dt>Bands</dt>
+        <dd>
+          <ul class="act-people">
+            {% for band, role, years in bands %}
+              <li><span><a href="{{ band.get_absolute_url }}">{{ band.name }}</a>{% if role %} <span class="act-role">{{ role }}</span>{% endif %}{% if years %} <span class="act-years">{{ years }}</span>{% endif %}</span></li>
+            {% endfor %}
+          </ul>
+        </dd>
+      {% endif %}
+      {% if links %}
+        <dt>Links</dt>
+        <dd class="act-links">{% for label, url in links %}<a href="{{ url }}" rel="noopener" target="_blank">{{ label }}</a>{% if not forloop.last %} · {% endif %}{% endfor %}</dd>
+      {% endif %}
+      {% if photo %}
+        <dt>Photo</dt>
+        <dd>
+          <figure class="act-photo">
+            <img src="{{ photo.src }}" alt="{{ act.name }}">
+            <figcaption>Photo: {{ photo.author }}, {% if photo.license_url %}<a href="{{ photo.license_url }}" rel="noopener license" target="_blank">{{ photo.license }}</a>{% else %}{{ photo.license }}{% endif %}, via <a href="{{ photo.page }}" rel="noopener" target="_blank">Wikimedia Commons</a></figcaption>
+          </figure>
+        </dd>
+      {% endif %}
+    </dl>
+    {% endif %}
+
+    {% if act.wikipedia_extract %}
+      <div class="act-bio">
+        <p>{{ act.wikipedia_extract }}</p>
+        <p class="act-credit">From the Wikipedia article <a href="{{ act.wikipedia_url }}" rel="noopener" target="_blank">{{ act.name }}</a>, under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener license" target="_blank">CC BY-SA 4.0</a></p>
+      </div>
+    {% elif act.disambiguation %}
+      <div class="act-bio"><p>{{ act.disambiguation|capfirst }}.</p></div>
+    {% endif %}
+
+    {% if shows %}
+      <h2 id="shows">Upcoming shows</h2>
+      <ol class="act-shows">
+        {% for event in shows %}
+          <li>
+            <time datetime="{{ event.starttime|date:'c' }}">{{ event.starttime|date:'D, M j' }}</time>
+            <span><a href="{% url 'event_redirect' event.pk %}">{{ event.venue.name }}</a>{% if event.venue.location %}, {{ event.venue.location }}{% endif %}{% if event.is_cancelled %} <strong>(cancelled)</strong>{% endif %}</span>
+          </li>
+        {% endfor %}
+      </ol>
+    {% endif %}
+
+    {% if invitation or act.genres %}
+      <footer class="act-foot">
+        {% if invitation %}<p>Is this you? <a href="{{ invitation }}">Send us a photo, bio or links</a>.</p>{% endif %}
+        {% if act.genres %}<p>Genres from <a href="https://musicbrainz.org/artist/{{ act.musicbrainz_id }}" rel="noopener" target="_blank">MusicBrainz</a> (<a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="noopener license" target="_blank">CC BY-NC-SA</a>).</p>{% endif %}
+      </footer>
+    {% endif %}
+  </div>
+</article>
+{% endblock content %}

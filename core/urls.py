@@ -2,6 +2,7 @@ from django.conf import settings
 from django.urls import include, path, re_path
 from django.views.generic import TemplateView
 
+from .views.act_page import artist_page, band_page
 from .views.autocomplete import VenueAutocomplete
 from .views.calendar_feed import calendar_feed
 from .views.email_subscribe import email_subscribe
@@ -35,6 +36,8 @@ urlpatterns = [
     path("location/suggest", suggest_locations, name="suggest_locations"),
     path("privacy", TemplateView.as_view(template_name="core/privacy.html"), name="privacy"),
     path("saved", saved_shows, name="saved_shows"),
+    path("bands/<slug:slug>", band_page, name="band_page"),
+    path("artists/<slug:slug>", artist_page, name="artist_page"),
     path("saved/toggle/<int:event_id>", toggle_saved_show, name="toggle_saved_show"),
     path("calendar.ics", calendar_feed, name="calendar_feed"),
     path("event/<int:event_id>/gcal", event_gcal_redirect, name="event_gcal_redirect"),

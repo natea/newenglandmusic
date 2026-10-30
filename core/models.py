@@ -908,6 +908,9 @@ class MusicAct(models.Model):
             self.musicbrainz_id = None
         super().save(*args, **kwargs)
 
+    def get_absolute_url(self):
+        return reverse("band_page" if isinstance(self, Band) else "artist_page", kwargs={"slug": self.slug})
+
     def __str__(self):
         return self.name
 
