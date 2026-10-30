@@ -11,5 +11,5 @@
 
 ## 3. Check and finish
 
-- [ ] 3.1 Render a full band, a sparse band and an artist at 1440 and 390 wide with Playwright: no sideways scroll, next show in the first screen, images with alt text. Run Impeccable's detector on the new template and stylesheet, then its finish review against the direction contract, and record DESIGN.md with its documenter.
-- [ ] 3.2 Document the pages, the photo and licence rules and the invitation in PRODUCTION.md. Run the whole suite with outbound network blocked. Verify that it passes.
+- [x] 3.1 Render a full band, a sparse band and an artist at 1440 and 390 wide with Playwright: no sideways scroll, next show in the first screen, images with alt text. Run Impeccable's detector on the new template and stylesheet, then its finish review against the direction contract, and record DESIGN.md with its documenter.
+- [x] 3.2 Document the pages, the photo and licence rules and the invitation in PRODUCTION.md. Run the whole suite with outbound network blocked. Verify that it passes.
