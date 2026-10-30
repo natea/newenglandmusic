@@ -203,3 +203,56 @@ class ArtistMetaTestCase(TestCase):
         html = self.client.get(kim.get_absolute_url()).content.decode()
         self.assertIn("Artist · Dayton, OH", html)
         self.assertNotIn("since 1961", html)
+
+
+class FinishFixesTestCase(TestCase):
+    """the finish review's fixes (2026-10-29)"""
+
+    # the page tests' venues and helpers, without their tests
+    setUp, band, show, page, full_band = (
+        BandPageTestCase.setUp, BandPageTestCase.band, BandPageTestCase.show, BandPageTestCase.page, BandPageTestCase.full_band,
+    )
+
+    def test_shows_carry_the_calendars_save_and_calendar_actions(self):
+        band = self.full_band()
+        html = self.page(band).content.decode()
+        event_ids = [e.pk for e in Event.objects.filter(performers__band=band)]
+        for pk in event_ids:
+            self.assertIn(f'action="/saved/toggle/{pk}"', html)
+            self.assertIn(f'href="/event/{pk}/ics"', html)
+        self.assertIn(f'id="event-{event_ids[0]}"', html)
+
+    def test_one_show_isnt_listed_twice(self):
+        band = self.band()
+        self.show(band, self.norwalk, days(3))
+        html = self.page(band).content.decode()
+        self.assertIn("act-next", html)
+        self.assertNotIn("Upcoming shows", html)
+
+    def test_former_members_past_three_fold(self):
+        band = self.band()
+        for i in range(6):
+            BandMembership.objects.create(band=band, artist=Artist.objects.create(name=f"Former {i}"), begin_year=1990 + i, end_year=2000 + i)
+        response = self.page(band)
+        self.assertEqual(len(response.context["former_members"]), 3)
+        self.assertIn("<summary>3 more former members</summary>", response.content.decode())
+
+    def test_four_former_members_dont_fold_one(self):
+        band = self.band()
+        for i in range(4):
+            BandMembership.objects.create(band=band, artist=Artist.objects.create(name=f"Former {i}"), end_year=2000)
+        self.assertNotIn("<summary>", self.page(band).content.decode())
+
+    def test_the_wikipedia_credit_names_the_article(self):
+        html = self.page(self.full_band()).content.decode()
+        self.assertIn('rel="noopener" target="_blank">Built to Spill</a>, under', html)
+
+    def test_headshots_have_empty_alt_beside_the_named_link(self):
+        band = self.band()
+        kim = Artist.objects.create(name="Kim Deal", photo_file="Kim Deal Smoke.jpg", photo_license="CC BY 2.0")
+        BandMembership.objects.create(band=band, artist=kim, begin_year=1986)
+        BandMembership.objects.create(band=band, artist=Artist.objects.create(name="Joey Santiago"), begin_year=1986)
+        html = self.page(band).content.decode()
+        self.assertIn('alt="" width="48" height="48"', html)
+        # the member without a headshot keeps the column
+        self.assertIn('<span class="act-headshot-slot"></span>', html)

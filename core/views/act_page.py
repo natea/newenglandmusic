@@ -11,19 +11,24 @@ author and licence, and musicbrainz's genres (cc by-nc-sa).
 
 import os
 from dataclasses import dataclass
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
+from core.event_actions import actions_html
+from core.location import location_from_request
 from core.models import Artist, Band, Event
 from core.opengraph import get_meta
+from core.saved_shows import COOKIE_NAME, parse_saved
 from core.utils_datemath import beginning_of_day, get_current_new_york_datetime
 from core.wikipedia import commons_file_page, commons_thumbnail
 
 PHOTO_WIDTH = 640
 HEADSHOT_WIDTH = 96
+# former members past this many fold behind a summary, so the bio stays near the top
+FORMER_SHOWN = 3
 
 
 @dataclass
@@ -109,8 +114,18 @@ def invitation(request, act):
     return f"mailto:{email}?subject={quote(subject)}&body={quote(body)}"
 
 
+def wikipedia_title(act):
+    """the article's own title, from its url: "Built to Spill", not our "Built To Spill" """
+    return unquote(act.wikipedia_url.rstrip("/").rsplit("/", 1)[-1]).replace("_", " ") or act.name
+
+
 def act_page(request, act):
     shows = upcoming_shows(act)
+    # each show carries the calendar's own actions: calendar file, google, map, share, save
+    saved = set(parse_saved(request.COOKIES.get(COOKIE_NAME)))
+    location = location_from_request(request)
+    for event in shows:
+        event.actions = actions_html(event, saved, request.path, location)
     is_band = isinstance(act, Band)
     current, former = members_of(act) if is_band else ([], [])
     origin = origin_of(act)
@@ -133,10 +148,13 @@ def act_page(request, act):
             "next_show": shows[0] if shows else None,
             "more_shows": max(len(shows) - 1, 0),
             "current_members": current,
-            "former_members": former,
+            "former_members": former[:FORMER_SHOWN] if len(former) > FORMER_SHOWN + 1 else former,
+            "more_former_members": former[FORMER_SHOWN:] if len(former) > FORMER_SHOWN + 1 else [],
+            "members_have_headshots": any(entry[3] for entry in current + former),
             "bands": [] if is_band else bands_of(act),
             "links": links_of(act),
             "photo": photo_of(act, PHOTO_WIDTH),
+            "wikipedia_title": wikipedia_title(act) if act.wikipedia_url else "",
             "invitation": invitation(request, act),
             # thin pages stay out of search results until they have a show to point to
             "noindex": not shows,

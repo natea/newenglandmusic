@@ -419,10 +419,17 @@ Each name is searched on MusicBrainz as a person and as a group; one that's exac
 
 **Event performers.** An event's page in the admin lists its artists and bands in billing order, under "performers". They're linked from the Artists text, by this command and by `fetch_events` for each event it saves, when exactly one artist or band has the name. Add, remove or reorder them there; what an editor adds stays. A link from the text comes back while its name is in the text, so take the name out to unlink it. The text itself stays, and nothing visitors see reads the performers yet.
 
+**Band and artist pages.** Every band has a public page at `/bands/<slug>` and every artist at `/artists/<slug>` (the slug is made from the name; a clash gets `-2`). The page is an index card: the name on a purple tab, the next show under it, then members or bands, links (website, Bandcamp, Instagram, YouTube), a photo, the bio and every upcoming show. Only what an act has is drawn; a page missing a photo, bio or links invites the act to email them to `API_CONTACT_EMAIL`. Pages without an upcoming show are `noindex` and left out of the sitemap. On the calendar, a performer's name in a listing links to its page.
+
+- **Photos** come only from Wikimedia Commons under a free licence (public domain, CC0, CC BY or CC BY-SA), found through the act's Wikidata image. Only the file name, author, licence and licence link are kept; the page loads Commons' own thumbnail and credits it. To set one by hand, give the Commons file name and its credit in the venue admin's "Photo" section, and enrichment keeps it.
+- **Instagram and YouTube** come from MusicBrainz's links, then Wikidata; an editor's link always stays.
+- After deploying this, run `enrich_artists_from_musicbrainz --refresh` (photos and links for existing records, about two more requests each for those with a Wikidata item) and `resave_all_events` (the listings' performer links).
+
 **What may be kept:**
 - **Wikipedia:** its text is CC BY-SA 4.0. It's kept word for word, with the article's link and revision, and must be credited wherever it's shown: "From the Wikipedia article <link>, under CC BY-SA 4.0 <licence link>", as the admin does. Don't edit it, and don't keep the summary's images, which have their own licences.
 - **MusicBrainz:** its core data (artists, areas, dates, relationships and URLs) is public domain (CC0). Its genre tags are supplementary data under CC BY-NC-SA: kept, admin-only, credited.
 - **Last.fm:** nothing. Its answer only helps choose between MusicBrainz artists, as its terms require.
+- **Wikimedia Commons photos:** only a freely licensed file's name and credit; the image stays on Commons and is credited wherever it's shown.
 - **Bandcamp:** only a link. It has no public API (only labels and merch partners get one), and its acceptable use policy forbids scraping, so nothing is ever requested from it, through a scraping service or otherwise.
 
 ## Calendar feeds

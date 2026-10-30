@@ -360,16 +360,13 @@ article {
   font-size: 0.85rem;
 }
 
-// the event's link icons (core/event_actions.py): a row of their own below the text,
-// lined up with it like the play buttons, each icon named by its title on hover
-.event .event-actions {
-  flex-basis: 100%;
-  margin-left: 4.6em;
-  max-width: calc(100% - 4.6em);
+// the event's link icons (core/event_actions.py), each named by its title on hover. their
+// own look applies wherever the row appears (the calendar, band pages); the calendar's
+// layout is below
+.event-actions {
   display: flex;
   align-items: center;
   gap: 2px 10px;
-  margin-top: 4px;
 
   a,
   button {
@@ -417,6 +414,14 @@ article {
   .save.is-saved svg {
     fill: currentColor;
   }
+}
+
+// in a listing, a row of their own below the text, lined up with it like the play buttons
+.event .event-actions {
+  flex-basis: 100%;
+  margin-left: 4.6em;
+  max-width: calc(100% - 4.6em);
+  margin-top: 4px;
 }
 
 // the google calendar icon's two dots are filled, inside the symbol (core/icons.html)

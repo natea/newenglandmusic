@@ -18,6 +18,7 @@
         <span><a href="{% url 'event_redirect' next_show.pk %}">{{ next_show.venue.name }}</a>{% if next_show.venue.location %}, {{ next_show.venue.location }}{% endif %}</span>
         {% if more_shows %}<a class="act-next-more" href="#shows">{{ more_shows }} more show{{ more_shows|pluralize }}</a>{% endif %}
       </p>
+      <div class="act-next-actions" id="event-{{ next_show.pk }}">{{ next_show.actions }}</div>
     {% else %}
       <p class="act-next act-next-none">No upcoming shows listed.</p>
     {% endif %}
@@ -30,7 +31,7 @@
           {% if current_members %}
           <ul class="act-people">
             {% for artist, role, years, headshot in current_members %}
-              <li>{% if headshot %}<img src="{{ headshot.src }}" alt="{{ artist.name }}" width="48" height="48" loading="lazy">{% endif %}<span><a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% if role %} <span class="act-role">{{ role }}</span>{% endif %}{% if years %} <span class="act-years">{{ years }}</span>{% endif %}</span></li>
+              <li>{% if headshot %}<img src="{{ headshot.src }}" alt="" width="48" height="48" loading="lazy">{% elif members_have_headshots %}<span class="act-headshot-slot"></span>{% endif %}<span><a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% if role %} <span class="act-role">{{ role }}</span>{% endif %}{% if years %} <span class="act-years">{{ years }}</span>{% endif %}</span></li>
             {% endfor %}
           </ul>
           {% endif %}
@@ -38,9 +39,19 @@
           <p class="act-subhead">Former members</p>
           <ul class="act-people act-people-former">
             {% for artist, role, years, headshot in former_members %}
-              <li>{% if headshot %}<img src="{{ headshot.src }}" alt="{{ artist.name }}" width="48" height="48" loading="lazy">{% endif %}<span><a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% if role %} <span class="act-role">{{ role }}</span>{% endif %}{% if years %} <span class="act-years">{{ years }}</span>{% endif %}</span></li>
+              <li>{% if headshot %}<img src="{{ headshot.src }}" alt="" width="48" height="48" loading="lazy">{% elif members_have_headshots %}<span class="act-headshot-slot"></span>{% endif %}<span><a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% if role %} <span class="act-role">{{ role }}</span>{% endif %}{% if years %} <span class="act-years">{{ years }}</span>{% endif %}</span></li>
             {% endfor %}
           </ul>
+          {% if more_former_members %}
+          <details class="act-more-people">
+            <summary>{{ more_former_members|length }} more former member{{ more_former_members|length|pluralize }}</summary>
+            <ul class="act-people act-people-former">
+              {% for artist, role, years, headshot in more_former_members %}
+                <li>{% if headshot %}<img src="{{ headshot.src }}" alt="" width="48" height="48" loading="lazy">{% elif members_have_headshots %}<span class="act-headshot-slot"></span>{% endif %}<span><a href="{{ artist.get_absolute_url }}">{{ artist.name }}</a>{% if role %} <span class="act-role">{{ role }}</span>{% endif %}{% if years %} <span class="act-years">{{ years }}</span>{% endif %}</span></li>
+              {% endfor %}
+            </ul>
+          </details>
+          {% endif %}
           {% endif %}
         </dd>
       {% endif %}
@@ -72,20 +83,20 @@
 
     {% if act.wikipedia_extract %}
       <div class="act-bio">
-        <p>{{ act.wikipedia_extract }}</p>
-        <p class="act-credit">From the Wikipedia article <a href="{{ act.wikipedia_url }}" rel="noopener" target="_blank">{{ act.name }}</a>, under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener license" target="_blank">CC BY-SA 4.0</a></p>
+        <div class="act-ruled"><p>{{ act.wikipedia_extract }}</p></div>
+        <p class="act-credit">From the Wikipedia article <a href="{{ act.wikipedia_url }}" rel="noopener" target="_blank">{{ wikipedia_title }}</a>, under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener license" target="_blank">CC BY-SA 4.0</a></p>
       </div>
     {% elif act.disambiguation %}
-      <div class="act-bio"><p>{{ act.disambiguation|capfirst }}.</p></div>
+      <div class="act-bio"><div class="act-ruled"><p>{{ act.disambiguation|capfirst }}.</p></div></div>
     {% endif %}
 
-    {% if shows %}
+    {% if shows|length > 1 %}
       <h2 id="shows">Upcoming shows</h2>
       <ol class="act-shows">
         {% for event in shows %}
-          <li>
+          <li id="event-{{ event.pk }}">
             <time datetime="{{ event.starttime|date:'c' }}">{{ event.starttime|date:'D, M j' }}</time>
-            <span><a href="{% url 'event_redirect' event.pk %}">{{ event.venue.name }}</a>{% if event.venue.location %}, {{ event.venue.location }}{% endif %}{% if event.is_cancelled %} <strong>(cancelled)</strong>{% endif %}</span>
+            <span><a href="{% url 'event_redirect' event.pk %}">{{ event.venue.name }}</a>{% if event.venue.location %}, {{ event.venue.location }}{% endif %}{% if event.is_cancelled %} <strong>(cancelled)</strong>{% endif %}{{ event.actions }}</span>
           </li>
         {% endfor %}
       </ol>
