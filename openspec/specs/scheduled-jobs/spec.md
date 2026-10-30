@@ -14,11 +14,11 @@ The daily job SHALL run, in this order: `sync_venues_from_gsheets`, `lookup_venu
 - **THEN** the eight commands run in that order, and the job succeeds
 
 ### Requirement: The weekly job runs the source check and matching in order
-The weekly job SHALL run, in this order: `check_event_sources`, `match_ticketmaster_venues`, and `match_eventbrite_organizers`.
+The weekly job SHALL run, in this order: `check_event_sources`, `match_ticketmaster_venues`, `match_eventbrite_organizers`, `match_seatgeek_venues` and `lookup_venue_neighborhoods`.
 
 #### Scenario: Weekly run
 - **WHEN** the weekly job runs and every step succeeds
-- **THEN** the three commands run in that order, and the job succeeds
+- **THEN** the five commands run in that order, and the job succeeds
 
 ### Requirement: A failed step doesn't stop the job, but fails it
 When a step fails, the job SHALL still run the steps after it, and SHALL end with a failing exit status, naming the steps that failed.
