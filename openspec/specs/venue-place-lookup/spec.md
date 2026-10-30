@@ -13,7 +13,7 @@ The lookup SHALL search Google Places for each venue by name, town and state, bi
 - **THEN** the search text includes the venue's name, town and state, and the request is biased toward the venue's sheet coordinates
 
 ### Requirement: Only confident matches are used
-A result SHALL be stored as confident only when its name matches the venue's name, its address is in the venue's state, and it lies within 25 km of the venue's sheet coordinates (or the venue has none). Any other result SHALL be stored as needing review.
+A result SHALL be stored as confident only when its name matches the venue's name, its address is in the venue's state, and it lies within 25 km of the venue's sheet coordinates (or the venue has none). Any other result SHALL be stored as needing review, with the reasons: each check it failed, as "name" (the name doesn't match), "state" (it's in another state) or "distance" (it's more than 25 km away), and its distance from the venue's sheet coordinates in km, to one decimal place, when both have coordinates. A confident or not-found venue SHALL have no reasons and no distance.
 
 #### Scenario: Confident match
 - **WHEN** the top result is "Paradise Rock Club presented by Citizens" at 967 Commonwealth Ave, Boston, MA, 1 km from the sheet's coordinates
@@ -21,7 +21,15 @@ A result SHALL be stored as confident only when its name matches the venue's nam
 
 #### Scenario: Wrong place
 - **WHEN** the top result has a different name, is in another state, or is more than 25 km away
-- **THEN** it is saved as needing review and its coordinates are not used anywhere
+- **THEN** it is saved as needing review, with each failed check as a reason, and its coordinates are not used anywhere
+
+#### Scenario: Reasons recorded
+- **WHEN** the top result for "$3 Dewey's" in Portland, ME has a different name, is in Maine, and is 0.4 km from the sheet's coordinates
+- **THEN** it's saved as needing review with the reason "name" and the distance 0.4 km
+
+#### Scenario: Several reasons
+- **WHEN** the top result has a different name and is 38 km away in another state
+- **THEN** its reasons are "name", "state" and "distance", and its distance is 38.0 km
 
 #### Scenario: Nothing found
 - **WHEN** the search returns no places
@@ -65,7 +73,7 @@ The lookup SHALL skip venues already looked up unless told to refresh. It SHALL 
 - **THEN** the place's website and phone are never requested or saved, and there is no option to request them
 
 ### Requirement: Admins can settle uncertain matches
-The venue admin SHALL show the place ID, the looked-up coordinates, when they were fetched and a Google Maps link from the place ID. It SHALL filter by lookup status, and SHALL let an admin mark a match needing review as confident, or clear a venue's lookup.
+The venue admin SHALL show the place ID, the looked-up coordinates, when they were fetched and a Google Maps link from the place ID. It SHALL filter by lookup status, and SHALL let an admin mark a match needing review as confident, or clear a venue's lookup. For a match needing review, the list SHALL show a "Why review" column naming its reasons in words ("name differs", "in another state", "38 km away"), and SHALL filter by each reason. For a match needing review, the admin SHALL also show the place's name on Google, asked for by its place ID when needed and never stored: on the venue's page when it opens, and in the list only when the admin asks for that venue. Loading the list SHALL NOT ask Google for anything. Marking a match confident, or clearing a lookup, SHALL clear its reasons and distance.
 
 #### Scenario: Confirming a match
 - **WHEN** an admin marks a venue's review-needed match as confident
@@ -74,6 +82,28 @@ The venue admin SHALL show the place ID, the looked-up coordinates, when they we
 #### Scenario: Clearing a lookup
 - **WHEN** an admin clears a venue's lookup
 - **THEN** its looked-up fields are emptied and the next lookup run searches for it again
+
+#### Scenario: Why a venue needs review
+- **WHEN** an admin opens the venue list filtered to "Needs review"
+- **THEN** each venue shows why, such as "name differs · 0.4 km away" for $3 Dewey's
+
+#### Scenario: Google's name on the venue page
+- **WHEN** an admin opens "$3 Dewey's", a venue needing review
+- **THEN** the page shows Google's name for its place, "Three Dollar Deweys", and nothing is saved
+
+#### Scenario: Google's name in the list, on request
+- **WHEN** an admin loads the venue list
+- **THEN** Google is asked for nothing, and each venue needing review has a "show Google's name" link
+- **WHEN** the admin clicks it for "$3 Dewey's"
+- **THEN** Google is asked for that place's name alone, and it's shown in place of the link
+
+#### Scenario: Confident venues aren't looked up
+- **WHEN** an admin opens a venue whose match is confident
+- **THEN** Google isn't asked for its name
+
+#### Scenario: Filter by reason
+- **WHEN** an admin filters the list by the reason "in another state"
+- **THEN** only review venues whose match failed the state check are listed
 
 ### Requirement: Lookup needs an API key and handles failures
 The lookup SHALL stop with an error naming `GOOGLE_PLACES_API_KEY` when the key is not set. A failed request for one venue SHALL be reported without stopping the run, and the key SHALL NOT appear in any output.
@@ -91,9 +121,10 @@ For a looked-up venue, the lookup SHALL store only:
 - the Google place ID;
 - the place's latitude and longitude;
 - the match status;
-- the time the coordinates were fetched.
+- the time the coordinates were fetched;
+- for a match needing review, which of the lookup's checks it failed, and its distance from the sheet's coordinates. These are the site's own judgments about the match, not Places content. The distance SHALL be deleted whenever the coordinates are.
 
-No other Places content SHALL be stored: not the place's name, address, business status, Maps link, website or phone. That includes stored event HTML, which keeps only coordinates. The lookup MAY use other content while it runs, to judge a match and to report closed venues.
+No other Places content SHALL be stored: not the place's name, address, business status, Maps link, website or phone. That includes stored event HTML, which keeps only coordinates. The lookup MAY use other content while it runs, to judge a match and to report closed venues, and the venue admin MAY show a review venue's name on Google, fetched when an admin asks.
 
 #### Scenario: Confident match is stored
 - **WHEN** a lookup confidently matches "Paradise Rock Club" to a place
@@ -102,6 +133,10 @@ No other Places content SHALL be stored: not the place's name, address, business
 #### Scenario: No other content in the database
 - **WHEN** any venue has been looked up or refreshed
 - **THEN** its stored fields hold no place name, address, business status, Maps link, website or phone
+
+#### Scenario: Distance expires with the coordinates
+- **WHEN** a review venue's coordinates are deleted after 30 days
+- **THEN** its distance is deleted too, and its reasons stay
 
 ### Requirement: Stale coordinates are refreshed by place ID
 With `--refresh-stale`, the lookup SHALL re-fetch the coordinates of each venue that has a place ID and whose coordinates are older than `--max-age-days`, which defaults to 25 days. It SHALL use Place Details on the stored place ID, requesting only the place's ID, location and business status. It SHALL NOT re-run the name search, and SHALL keep the venue's match status. If Google returns a different ID for the place, the new ID SHALL be stored.
@@ -214,3 +249,14 @@ A Google Places result SHALL be confident only when Google doesn't type it solel
 #### Scenario: A venue in a park
 - **WHEN** a result with the venue's name is typed as both an event venue and a park
 - **THEN** the match is confident
+
+### Requirement: Review venues can be checked again for their reasons
+With `--review`, the lookup SHALL run the name search again for venues marked as needing review, and only those, and record the new result as a plain lookup would, including its reasons. It SHALL accept `--limit`, `--state` and `--dry-run` like a plain run. It SHALL NOT be part of the scheduled jobs.
+
+#### Scenario: Backfilling the reasons
+- **WHEN** `lookup_venue_places --review --limit 50` runs with 178 venues needing review and 500 others
+- **THEN** it searches for 50 of the review venues only, and records their status and reasons
+
+#### Scenario: Dry run
+- **WHEN** it runs with `--review --dry-run`
+- **THEN** it prints each venue's would-be status and reasons, and saves nothing
