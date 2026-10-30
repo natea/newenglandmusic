@@ -69,6 +69,17 @@ class ImportArtistsFromEventsTestCase(TestCase):
         self.assertEqual((row["Reason"], row["Events"]), ("not on MusicBrainz", "2"))
         self.assertIn("@ Paradise", row["Example_Event"])
 
+    def test_a_duo_billings_acts_looked_up(self):
+        event = self.event("Kim Deal & Speedy Ortiz")
+        self.event("Kim Deal & Dana Alden")
+        out = self.run_command()
+        self.assertIn("Kim Deal & Speedy Ortiz: not on MusicBrainz; looking up its acts", out)
+        self.assertTrue(Artist.objects.filter(name="Kim Deal").exists())
+        self.assertTrue(Band.objects.filter(name="Speedy Ortiz").exists())
+        self.assertEqual([p.act.name for p in event.performers.order_by("order")], ["Kim Deal", "Speedy Ortiz"])
+        # only the act not found is for review, not the billing
+        self.assertEqual([r["Name"] for r in self.review_rows()], ["Dana Alden"])
+
     def test_placeholders_repeats_and_existing_records_arent_searched(self):
         Band.objects.create(name="Krill")
         self.event("TBA, Krill, Kim Deal")

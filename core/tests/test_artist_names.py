@@ -97,6 +97,36 @@ class TitleTestCase(SimpleTestCase):
         self.assertEqual(names(title="AYĖL, Belen, DÀN, & Aydan Hill"), ["AYĖL", "Belen", "DÀN", "Aydan Hill"])
         self.assertEqual(names(artists="SixFoxWhiskey, Booyah, and The Hub"), ["SixFoxWhiskey", "Booyah", "The Hub"])
 
+    def test_one_sided_slash_and_dash(self):
+        self.assertEqual(
+            names(title="Sue Foley/ GA-20 Together for the Holidays- Sportsmens"),
+            ["Sue Foley", "GA-20 Together for the Holidays"],
+        )
+        self.assertEqual(names(title="AC/DC"), ["AC/DC"])
+
+    def test_w_slash_with_a_space_and_bracketed_notes(self):
+        self.assertEqual(
+            names(title="State Theatre Presents: Talib Kweli w / Graphic Melee [EARLY SHOW]"), ["Talib Kweli", "Graphic Melee"]
+        )
+
+    def test_and_friends_and_members_of(self):
+        self.assertEqual(names(artists="Alan Kaufman & friends"), ["Alan Kaufman"])
+        self.assertEqual(names(artists="members of SixFoxWhiskey, Booyah"), ["SixFoxWhiskey", "Booyah"])
+        self.assertEqual(names(title="Sammy Rae & The Friends"), ["Sammy Rae & The Friends"])
+
+    def test_a_comma_inside_a_tour_name(self):
+        self.assertEqual(names(title="Bo Staloch - The 'Too Big, Too Big' Tour"), ["Bo Staloch"])
+        self.assertEqual(names(title="Bo Staloch: The Too Big, Too Big Tour"), ["Bo Staloch"])
+
+    def test_evening_with_and_a_dash(self):
+        self.assertEqual(names(title="Evening With - John Splithoff Stripped Tour"), ["John Splithoff Stripped Tour"])
+
+    def test_a_weekday_and_a_genre_is_no_act(self):
+        self.assertEqual(names(title="Sunday Blues with Bruce Bears & Friends"), ["Bruce Bears"])
+
+    def test_the_music_of_is_no_act(self):
+        self.assertEqual(names(title="The music of Steely Dan"), [])
+
     def test_tour_name_with_no_separator_removed(self):
         self.assertEqual(names(title="Seb Lowe US 2027"), ["Seb Lowe"])
         self.assertEqual(names(title="Built to Spill Fall 2026 Tour"), ["Built to Spill"])

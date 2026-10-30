@@ -5,7 +5,7 @@ The system SHALL also take names from the event's title, after removing:
 - a leading presenter phrase, ending in "Presents:" or "presents";
 - a leading "An evening with".
 
-The title SHALL be split with the same separators as the artists text, and its names SHALL come before the artists text's names. A title name that names a kind of night rather than an act SHALL be dropped: one containing, ignoring case, "tribute", "party", "night", "festival", "open mic", "karaoke", "jam", "session", "brunch", "live music", "open stage", "series", "showcase", "christmas", "halloween", "intimate evening", "welcomes", "battle of the bands", "live" followed by a genre or "band" ("Live Jazz", "Live Band"), or a weekday in the plural ("Wednesdays"); one with a word ending in "fest" ("Porchfest"); or one that is only "free". "Tour" is not among them, so "Built to Spill Fall 2026 Tour" keeps its act. The check SHALL be made after the show name is removed (see the next requirement), so that a band's name survives a show name that calls it a tribute.
+The title SHALL be split with the same separators as the artists text, and its names SHALL come before the artists text's names. A title name that names a kind of night rather than an act SHALL be dropped: one containing, ignoring case, "tribute", "party", "night", "festival", "open mic", "karaoke", "jam", "session", "brunch", "live music", "open stage", "series", "showcase", "christmas", "halloween", "intimate evening", "welcomes", "battle of the bands", "music of", "songs of", "live" followed by a genre or "band" ("Live Jazz", "Live Band"), a weekday in the plural ("Wednesdays"), or a weekday followed by a genre ("Sunday Blues"); one with a word ending in "fest" ("Porchfest"); or one that is only "free". "Tour" is not among them, so "Built to Spill Fall 2026 Tour" keeps its act. The check SHALL be made after the show name is removed (see the next requirement), so that a band's name survives a show name that calls it a tribute.
 
 #### Scenario: Headliner only in the title
 - **WHEN** an event is titled "SHEBAD w/ Psymon Spine + Shadow Show", and its artists text is "SHEBAD, Psymon Spine"
@@ -19,6 +19,10 @@ The title SHALL be split with the same separators as the artists text, and its n
 - **WHEN** an event is titled "Dirty Deeds AC/DC Tribute", and its artists text is "Highway Kind"
 - **THEN** its only name is "Highway Kind"
 
+#### Scenario: A tribute named by "the music of"
+- **WHEN** an event is titled "The music of Steely Dan"
+- **THEN** its title gives no names
+
 #### Scenario: Tribute only in the show name
 - **WHEN** an event is titled "Damn the Torpedoes - a Tribute To Tom Petty"
 - **THEN** its name is "Damn the Torpedoes"
@@ -28,7 +32,7 @@ The title SHALL be split with the same separators as the artists text, and its n
 - **THEN** none of those titles gives a name, while "They Might Be Giants", "Free Throw", "Evening Hymns" and "Live Wire" each give theirs
 
 ### Requirement: A show or tour name after a dash or colon is dropped
-In each name, from the title or the artists text, everything from the first spaced dash (" - ", " – ", " — ", or a dash with a space before it) or colon followed by a space SHALL be dropped. That part names the show or tour, not the artist. A dash without a space before it, as in "GA-20" or "Jay-Z", SHALL be kept. Names after a separator that follows the show name SHALL still be taken. A tour named after the act with no dash or colon between, as in "Seb Lowe US 2027", SHALL also be dropped: a trailing run of years, "tour", and region or season words (US, UK, North, American, World, Fall, Summer and the like), only when the run has a year, or "tour" with a region or season, in it, and the word before it isn't a little word like "the" or "of".
+In each name, from the title or the artists text, everything from the first spaced dash (a dash with a space before or after it) or colon followed by a space SHALL be dropped. That part names the show or tour, not the artist. A dash with no space on either side, as in "GA-20" or "Jay-Z", SHALL be kept. Names after a separator that follows the show name SHALL still be taken, except a piece after a comma that ends in "tour", which is more of the show name ("Bo Staloch - The 'Too Big, Too Big' Tour"). A tour named after the act with no dash or colon between, as in "Seb Lowe US 2027", SHALL also be dropped: a trailing run of years, "tour", and region or season words (US, UK, North, American, World, Fall, Summer and the like), only when the run has a year, or "tour" with a region or season, in it, and the word before it isn't a little word like "the" or "of".
 
 #### Scenario: Show names dropped
 - **WHEN** events are titled "Còig - early show", "Corey Kent - Heartland Rock and Roll", "Dark Star Orchestra - Celebrating 45 Years of Reckoning" and "2hollis: The Pirouette Tour"
@@ -55,13 +59,13 @@ In each name, from the title or the artists text, everything from the first spac
 ### Requirement: Artist names come from the artists text, split on bill separators
 The system SHALL split an event's artists text into names at these separators:
 - commas and semicolons, taking a comma followed by "&" or "and" (a serial comma, as in "DÀN, & Aydan Hill") as one separator;
-- " / ", and "//" with or without spaces around it;
+- "/" with a space on at least one side ("Sue Foley/ GA-20"; "AC/DC" stays whole), and "//" with or without spaces around it;
 - " + ";
 - " x ", as in joint billings ("Dead Poet Society x Honey Revenge");
-- " w/ " and " with ";
+- " w/ " (also written "w /") and " with ";
 - " feat. ", " ft. " and " featuring ".
 
-It SHALL NOT split on "&" or "and" without a comma before it, because these appear inside band names. It SHALL trim each name, and remove from it a leading "with" and any trailing notes in parentheses that aren't part of the name: age limits such as "(18+)", "(21+)" or "(all ages)", and "(DJ set)", "(live set)", "(live)", "(acoustic)", "(solo)" or "(full band)". It SHALL drop empty names. Names SHALL keep the order they appear in, without duplicates.
+It SHALL NOT split on "&" or "and" without a comma before it, because these appear inside band names. It SHALL trim each name, and remove from it a leading "with" or "members of", a trailing "& friends", "and friends", "& guests", "& special guests" or "& band" ("Sammy Rae & The Friends" is a band, and stays whole), any trailing note in square brackets ("[EARLY SHOW]"), and any trailing notes in parentheses that aren't part of the name: age limits such as "(18+)", "(21+)" or "(all ages)", and "(DJ set)", "(live set)", "(live)", "(acoustic)", "(solo)" or "(full band)". It SHALL drop empty names. Names SHALL keep the order they appear in, without duplicates.
 
 #### Scenario: Comma-separated bill
 - **WHEN** an event's artists text is "Arto Vaun, Shadow Monster, Dyr Faser"
@@ -90,3 +94,19 @@ It SHALL NOT split on "&" or "and" without a comma before it, because these appe
 #### Scenario: Serial comma before the last name
 - **WHEN** one event is titled "AYĖL, Belen, DÀN, & Aydan Hill", and another's artists text is "SixFoxWhiskey, Booyah, and The Hub"
 - **THEN** the first's names are "AYĖL", "Belen", "DÀN" and "Aydan Hill", and the second's "SixFoxWhiskey", "Booyah" and "The Hub"
+
+#### Scenario: One-sided slashes and dashes
+- **WHEN** an event is titled "Sue Foley/ GA-20 Together for the Holidays- Sportsmens"
+- **THEN** its names are "Sue Foley" and "GA-20 Together for the Holidays"
+
+#### Scenario: "w /", bracketed notes, friends and members
+- **WHEN** one event is titled "State Theatre Presents: Talib Kweli w / Graphic Melee [EARLY SHOW]", and others' artists are "Alan Kaufman & friends" and "members of SixFoxWhiskey, Booyah"
+- **THEN** their names are "Talib Kweli" and "Graphic Melee"; "Alan Kaufman"; and "SixFoxWhiskey" and "Booyah"
+
+#### Scenario: A comma inside a tour name
+- **WHEN** events are titled "Bo Staloch - The 'Too Big, Too Big' Tour" and "Bo Staloch: The Too Big, Too Big Tour"
+- **THEN** each one's only name is "Bo Staloch"
+
+#### Scenario: "Evening With" and a weekday's genre
+- **WHEN** events are titled "Evening With - John Splithoff Stripped Tour" and "Sunday Blues with Bruce Bears & Friends"
+- **THEN** the first's name is "John Splithoff Stripped Tour", and the second's "Bruce Bears"

@@ -53,6 +53,11 @@ class LinkFromNamesTestCase(TestCase):
         self.assertEqual(performers(event), [("Pixies", "names")])
         self.assertEqual(Event.all_objects.get(pk=event.pk).artists, "Pixies, Dana and Alden, TBA")
 
+    def test_a_duo_billings_acts(self):
+        event = self.event("Kim Deal & Speedy Ortiz, Pile")
+        link_from_names(event)
+        self.assertEqual(performers(event), [("Kim Deal", "names"), ("Speedy Ortiz", "names"), ("Pile", "names")])
+
     def test_two_records_with_one_name(self):
         Artist.objects.create(name="Horse")
         Band.objects.create(name="Horse")

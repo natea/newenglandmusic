@@ -13,13 +13,15 @@ import re
 
 from core.artist_matching import normalize
 
-# a comma then "&" or "and" ends a list ("DÀN, & Aydan Hill"); "&" alone is inside names
+# a comma then "&" or "and" ends a list ("DÀN, & Aydan Hill"); "&" alone is inside names.
+# a slash needs a space on one side ("Sue Foley/ GA-20"), so "AC/DC" stays whole
 SEPARATOR_RE = re.compile(
-    r"\s*,\s*(?:&|and)\s+|\s*[,;]\s*|\s*//\s*|\s+/\s+|\s+\+\s+|\s+x\s+|\s+w/\s*|\s+with\s+|\s+(?:feat\.?|ft\.?|featuring)\s+",
+    r"\s*,\s*(?:&|and)\s+|\s*[,;]\s*|\s*//\s*|\s+/\s*|\s*/\s+|\s+\+\s+|\s+x\s+|\s+w\s*/\s*|\s+with\s+|\s+(?:feat\.?|ft\.?|featuring)\s+",
     re.IGNORECASE,
 )
-# "State Theatre Presents: The Ballroom Thieves", "An evening with Lake Street Dive"
-TITLE_PREFIX_RE = re.compile(r"^(?:.*?\bpresents\b\s*:?|an evening with)\s+", re.IGNORECASE)
+# "State Theatre Presents: The Ballroom Thieves", "An evening with Lake Street Dive",
+# "Evening With - John Splithoff"
+TITLE_PREFIX_RE = re.compile(r"^(?:.*?\bpresents\b\s*:?|(?:an\s+)?evening\s+with(?:\s*[-–—:])?)\s+", re.IGNORECASE)
 # titles that name a kind of night rather than its acts. the second line came from the
 # titles' names on 2026-10-29 ("Irish Session", "Jazz Jam", "Live Music at SAL's Birch Bar",
 # "Jazz Wednesdays", "WXPN Welcomes", "Porchfest", "A Celtic Christmas", "FREE", "Live Jazz"). "tour"
@@ -27,15 +29,16 @@ TITLE_PREFIX_RE = re.compile(r"^(?:.*?\bpresents\b\s*:?|an evening with)\s+", re
 TITLE_STOPWORDS_RE = re.compile(
     r"\b(?:tribute|party|night|festival|open mic|karaoke"
     r"|jams?|sessions?|brunch|live music|open stage|series|showcase|christmas|halloween|intimate evening"
-    r"|welcomes|battle of the bands|(?:mon|tues|wednes|thurs|fri|satur|sun)days"
+    r"|welcomes|battle of the bands|music of|songs of|(?:mon|tues|wednes|thurs|fri|satur|sun)days"
+    r"|(?:mon|tues|wednes|thurs|fri|satur|sun)day (?:blues|jazz|bluegrass|folk|funk|soul|swing)"
     r"|live (?:jazz|blues|bluegrass|folk|country|rock|soul|funk|acoustic|band|bands|entertainment))\b"
     r"|\w+fest\b|^\W*free\W*$",
     re.IGNORECASE,
 )
 # "Còig - early show", "Elderbrook - Heart On A Wire Tour", "2hollis: The Pirouette Tour":
 # after a spaced dash or a colon comes the show's name, not more of the artist's.
-# a dash needs a space before it, so "GA-20" and "Jay-Z" stay whole
-SUBTITLE_RE = re.compile(r"\s*:\s+|\s+[-–—]\s*|\s*[–—]\s+")
+# a dash needs a space on one side ("the Holidays- Sportsmens"), so "GA-20" and "Jay-Z" stay whole
+SUBTITLE_RE = re.compile(r"\s*:\s+|\s+[-–—]\s*|\s*[-–—]\s+")
 # "Connor Garvey & Ben Cosgrove": two acts billed together
 DUO_RE = re.compile(r"\s+(?:&|and)\s+", re.IGNORECASE)
 # "Chris Cote and his Band of These Guys": a leader and their backing band
@@ -44,15 +47,19 @@ BACKING_BAND_RE = re.compile(r"^(?:his|her|their)\b", re.IGNORECASE)
 # "BUFFALO TOM 3rd Annual charity concert". compared normalized
 OCCASION_WORDS = {
     "tour", "annual", "anniversary", "concert", "show", "celebration", "residency", "release",
-    "holiday", "christmas", "benefit", "charity", "reunion", "farewell", "birthday", "edition",
+    "holiday", "holidays", "christmas", "benefit", "charity", "reunion", "farewell", "birthday", "edition",
 }
 # "Rhiannon Hurst (21+)", "49th & Main (DJ Set)": notes after a name, not part of it.
-# "with Jacyn Tremblay": a bill that starts "with ..."
+# "Graphic Melee [EARLY SHOW]": a note in brackets is never part of a name.
+# "with Jacyn Tremblay", "members of SixFoxWhiskey": words before the name.
+# "Alan Kaufman & friends": the name and unnamed guests ("Sammy Rae & The Friends" is a band)
 TRAILING_NOTE_RE = re.compile(
-    r"\s*\(\s*(?:\d+\s*\+|all ages|dj set|live set|live|acoustic|solo|full band|sold out)\s*\)\s*$",
+    r"\s*\(\s*(?:\d+\s*\+|all ages|dj set|live set|live|acoustic|solo|full band|sold out)\s*\)\s*$"
+    r"|\s*\[[^\]]*\]\s*$",
     re.IGNORECASE,
 )
-LEADING_WITH_RE = re.compile(r"^with\s+", re.IGNORECASE)
+LEADING_WITH_RE = re.compile(r"^(?:with|members of)\s+", re.IGNORECASE)
+AND_FRIENDS_RE = re.compile(r"\s+(?:&|and|\+)\s+(?:friends|guests|special guests|band)$", re.IGNORECASE)
 # what bills say in place of a name, compared normalized
 PLACEHOLDERS = {"tba", "tbd", "special guest", "special guests", "and more", "more", "organization", "dj"}
 
@@ -98,12 +105,26 @@ def clean_name(name):
     # notes can stack: "Glass Halo (DJ Set) (21+)"
     while name != before:
         before, name = name, TRAILING_NOTE_RE.sub("", name)
-    return strip_tour_name(LEADING_WITH_RE.sub("", name).strip())
+    return strip_tour_name(AND_FRIENDS_RE.sub("", LEADING_WITH_RE.sub("", name).strip()))
+
+
+SHOW_NAME_END_RE = re.compile(r"\btours?\W*$", re.IGNORECASE)
 
 
 def split_names(text):
+    """
+    the names in a bill. after a show name, a comma piece ending "tour" is more of it: "Bo
+    Staloch - The 'Too Big, Too Big' Tour" names one act, but "Còig - early show, Highway
+    Kind" names two
+    """
     # str(): a title or artists value needn't be a string until the event is saved
-    names = (clean_name(name) for name in SEPARATOR_RE.split(str(text or "")))
+    pieces = re.split(f"({SEPARATOR_RE.pattern})", str(text or ""), flags=re.IGNORECASE)
+    names, in_show_name = [], False
+    for piece, separator in zip(pieces[::2], [""] + pieces[1::2]):
+        if in_show_name and separator.strip() == "," and SHOW_NAME_END_RE.search(piece):
+            continue
+        in_show_name = bool(SUBTITLE_RE.search(piece.strip()))
+        names.append(clean_name(piece))
     return [name for name in names if name]
 
 

@@ -16,7 +16,7 @@ from django.db import transaction
 import re
 
 from core.artist_matching import normalize
-from core.artist_names import SEPARATOR_RE, TITLE_PREFIX_RE, clean_name, event_artist_names, occasion_prefix
+from core.artist_names import SEPARATOR_RE, TITLE_PREFIX_RE, clean_name, event_artist_names, name_parts, occasion_prefix
 from core.models import Artist, Band, Event, EventPerformer
 
 Source = EventPerformer.Source
@@ -39,13 +39,24 @@ def performers_named(event, records):
     """
     named, seen = [], set()
     for name in event_artist_names(event):
-        key = normalize(name)
-        # "Built to Spill Fall 2026 Tour": a known name, then words naming an occasion
-        record = records.get(key) or records.get(occasion_prefix(key, records) or "")
-        if record is not None and (type(record), record.pk) not in seen:
-            seen.add((type(record), record.pk))
-            named.append(record)
+        for record in records_named(name, records):
+            if (type(record), record.pk) not in seen:
+                seen.add((type(record), record.pk))
+                named.append(record)
     return named
+
+
+def records_named(name, records):
+    """
+    the records one name is: itself; a known name then words naming an occasion ("Built to
+    Spill Fall 2026 Tour"); or, when it's neither, the acts of a duo billing ("Louis Cole &
+    Chiquita Magic"), those that are records
+    """
+    key = normalize(name)
+    record = records.get(key) or records.get(occasion_prefix(key, records) or "")
+    if record is not None:
+        return [record]
+    return [records[normalize(part)] for part in name_parts(name) if normalize(part) in records]
 
 
 def performer_keys(event):
@@ -72,9 +83,24 @@ def link_piece(piece, pages):
                 clean, url = " ".join(words[:n]), pages[prefix]
                 break
     if url is None:
-        return [(piece, None)]
+        return duo_parts(piece, clean, start, pages)
     end = start + len(clean)
     return [part for part in ((piece[:start], None), (piece[start:end], url), (piece[end:], None)) if part[0]]
+
+
+def duo_parts(piece, clean, start, pages):
+    """"Louis Cole & Chiquita Magic": each act of a duo billing linked, when it's a performer"""
+    parts, cursor = [], start
+    for part in name_parts(clean):
+        at = piece.find(part, cursor)
+        url = pages.get(normalize(part))
+        if at < 0 or url is None:
+            continue
+        parts += [(piece[cursor:at], None), (part, url)]
+        cursor = at + len(part)
+    if not parts:
+        return [(piece, None)]
+    return [part for part in [(piece[:start], None), *parts, (piece[cursor:], None)] if part[0]]
 
 
 def linked_parts(text, pages, title=False):

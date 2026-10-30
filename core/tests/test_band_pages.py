@@ -296,6 +296,12 @@ class TitleLinksTestCase(TestCase):
         html = self.listing(title="Built to Spill Fall 2026 Tour (SOLD OUT)")
         self.assertIn('<a class="performer" href="/bands/built-to-spill">Built to Spill</a> Fall 2026 Tour (SOLD OUT)', html)
 
+    def test_each_act_of_a_duo_billing_links(self):
+        html = self.listing(title="Axe Collector & Phantom Rider")
+        self.assertIn(
+            '<a class="performer" href="/bands/axe-collector">Axe Collector</a> &amp; <a class="performer" href="/bands/phantom-rider">Phantom Rider</a>', html
+        )
+
     def test_a_presenters_prefix_stays_plain(self):
         html = self.listing(title="AS220 Presents: Zipper")
         self.assertIn('AS220 Presents: <a class="performer" href="/bands/zipper">Zipper</a>', html)

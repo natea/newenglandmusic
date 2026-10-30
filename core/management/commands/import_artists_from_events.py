@@ -4,10 +4,10 @@ from collections import defaultdict
 from contextlib import nullcontext
 
 from core import lastfm
-from core.artist_enrichment import Matcher, choose_kind
+from core.artist_enrichment import NOT_ON_MUSICBRAINZ, Matcher, choose_kind
 from core.artist_import import COLUMNS
 from core.artist_matching import normalize
-from core.artist_names import event_artist_names
+from core.artist_names import event_artist_names, name_parts
 from core.event_performers import link_from_names, names_to_records
 from core.job_runs import RecordedCommand
 from core.management.commands.enrich_artists_from_musicbrainz import Command as EnrichCommand
@@ -31,6 +31,9 @@ choose_kind): one settled as exactly one kind becomes that record, with its musi
 for enrich_artists_from_musicbrainz to fill in. nothing is guessed: every other name is
 written to the review csv (logs/artists-from-events-review-<date>.csv), in import_artists'
 layout with Act_ID and Kind blank, for an editor to fill in and import.
+
+a duo billing that isn't on musicbrainz as a whole ("Louis Cole & Chiquita Magic") has
+each of its acts looked up instead, and only the acts not found go on the review list.
 
 names already an artist's or a band's, and placeholders ("TBA"), are skipped; the names most
 events give go first, so --limit covers the acts that matter most. about two searches a
@@ -91,8 +94,10 @@ class Command(RecordedCommand, BaseCommand):
         review = []
         heading = "would make" if dry_run else "made"
         self.stdout.write(self.style.MIGRATE_HEADING(f"{heading} ({len(names)} names to look up)"))
+        queued = existing | {key for key, entry in names}
         with transaction.atomic() if dry_run else nullcontext():
-            for key, entry in names:
+            while names:
+                key, entry = names.pop(0)
                 try:
                     model, mbid, reason = choose_kind(entry["name"], matcher)
                 except MusicBrainzBusy as e:
@@ -102,6 +107,14 @@ class Command(RecordedCommand, BaseCommand):
                 except MusicIdsError as e:
                     counts["failed"] += 1
                     self.stdout.write(self.style.WARNING(f"  {entry['name']}: {e}"))
+                    continue
+                if model is None and reason == NOT_ON_MUSICBRAINZ and name_parts(entry["name"]):
+                    # its acts go next, each looked up as a name of its own
+                    parts = [part for part in name_parts(entry["name"]) if normalize(part) not in queued]
+                    for part in reversed(parts):
+                        queued.add(normalize(part))
+                        names.insert(0, (normalize(part), {**entry, "name": part}))
+                    self.stdout.write(f"  {entry['name']}: not on MusicBrainz; looking up its acts")
                     continue
                 if model is None:
                     counts["for review"] += 1
