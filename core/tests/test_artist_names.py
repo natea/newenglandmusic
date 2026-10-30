@@ -73,10 +73,10 @@ class TitleTestCase(SimpleTestCase):
     def test_headliner_only_in_the_title(self):
         self.assertEqual(
             names(
-                title="SHEBAD w/ Psymon Spine + A Halloween Surprise",
+                title="SHEBAD w/ Psymon Spine + Shadow Show",
                 artists="SHEBAD, Psymon Spine",
             ),
-            ["SHEBAD", "Psymon Spine", "A Halloween Surprise"],
+            ["SHEBAD", "Psymon Spine", "Shadow Show"],
         )
 
     def test_presenter_prefix_removed(self):
@@ -180,3 +180,24 @@ class OccasionPrefixTestCase(SimpleTestCase):
 
     def test_whole_name_isnt_its_own_prefix(self):
         self.assertIsNone(occasion_prefix("buffalo tom", self.artists))
+
+
+class TitleStopwordsTestCase(SimpleTestCase):
+    """titles that name a kind of night, not an act (2026-10-29)"""
+
+    def test_kinds_of_night_name_no_one(self):
+        from core.artist_names import title_names
+
+        for title in (
+            "Irish Session", "Jazz Jam", "FREE", "Live Music at SAL's Birch Bar", "Jazz Wednesdays",
+            "A Celtic Christmas", "Porchfest", "WXPN Welcomes", "An Intimate Evening", "Local Artist Series",
+            "Jimmy's Jazz Brunch", "BATTLE of the BANDS",
+        ):
+            self.assertEqual(title_names(title), [], title)
+
+    def test_acts_still_count(self):
+        from core.artist_names import title_names
+
+        for title in ("They Might Be Giants", "Dropkick Murphys", "Free Throw", "Jamiroquai", "Evening Hymns"):
+            self.assertEqual(title_names(title), [title], title)
+        self.assertEqual(title_names("Built to Spill Fall 2026 Tour"), ["Built to Spill Fall 2026 Tour"])

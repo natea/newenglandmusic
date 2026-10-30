@@ -2,7 +2,7 @@
 the individual artists an event names, from its free-text title and artists fields, so each
 act on a bill can be looked up on its own (see match_spotify_artists):
 
-    event_artist_names(event)  # ["SHEBAD", "Psymon Spine", "A Halloween Surprise"]
+    event_artist_names(event)  # ["SHEBAD", "Psymon Spine", "Shadow Show"]
 
 "&" and "and" are never separators: they're inside too many band names ("Mumford & Sons").
 a duo billed together ("Connor Garvey & Ben Cosgrove") is split only when spotify has no
@@ -19,9 +19,16 @@ SEPARATOR_RE = re.compile(
 )
 # "State Theatre Presents: The Ballroom Thieves", "An evening with Lake Street Dive"
 TITLE_PREFIX_RE = re.compile(r"^(?:.*?\bpresents\b\s*:?|an evening with)\s+", re.IGNORECASE)
-# titles that name a kind of night rather than its acts
+# titles that name a kind of night rather than its acts. the second line came from the
+# titles' names on 2026-10-29 ("Irish Session", "Jazz Jam", "Live Music at SAL's Birch Bar",
+# "Jazz Wednesdays", "WXPN Welcomes", "Porchfest", "A Celtic Christmas", "FREE"). "tour"
+# isn't one: "Built to Spill Fall 2026 Tour" names its act (see occasion_prefix)
 TITLE_STOPWORDS_RE = re.compile(
-    r"\b(?:tribute|party|night|festival|open mic|karaoke)\b", re.IGNORECASE
+    r"\b(?:tribute|party|night|festival|open mic|karaoke"
+    r"|jams?|sessions?|brunch|live music|open stage|series|showcase|christmas|halloween|intimate evening"
+    r"|welcomes|battle of the bands|(?:mon|tues|wednes|thurs|fri|satur|sun)days)\b"
+    r"|\w+fest\b|^\W*free\W*$",
+    re.IGNORECASE,
 )
 # "Còig - early show", "Elderbrook - Heart On A Wire Tour", "2hollis: The Pirouette Tour":
 # after a spaced dash or a colon comes the show's name, not more of the artist's.
