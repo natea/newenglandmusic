@@ -42,15 +42,18 @@
       {% endcomment %}
 
       {% spaceless %}
-        {% if artist_parts %}
+        {% if title_parts or artist_parts %}
           {% comment %}
-            names that are performers link to their pages (add-band-pages), so the event's own
-            link covers only its title: links can't nest
+            an event with performers (add-band-pages): every performer's name, in the title or
+            the artists, links to its page, and the event's own page is the "info" link after
+            the venue, so no name links anywhere but to its act
           {% endcomment %}
           {% if event.title %}
-            {% if event.hyperlink %}<a href="{{ event.hyperlink }}" target="_blank">{% endif %}<span class='artist-present'>{{ event.title }}:&nbsp;</span>{% if event.hyperlink %}</a>{% endif %}
+            <span class='{% if event.artists %}artist-present{% else %}title-only{% endif %}'>{% for text, url in title_parts %}{% if url %}<a class="performer" href="{{ url }}">{{ text }}</a>{% else %}{{ text }}{% endif %}{% endfor %}{% if event.artists %}:&nbsp;{% endif %}</span>
           {% endif %}
-          <span class="artists">{% for text, url in artist_parts %}{% if url %}<a class="performer" href="{{ url }}">{{ text }}</a>{% else %}{{ text }}{% endif %}{% endfor %}</span>
+          {% if event.artists %}
+            <span class="artists">{% for text, url in artist_parts %}{% if url %}<a class="performer" href="{{ url }}">{{ text }}</a>{% else %}{{ text }}{% endif %}{% endfor %}</span>
+          {% endif %}
         {% else %}
           {% if event.hyperlink %}
             <a href="{{ event.hyperlink }}" target="_blank">
@@ -93,6 +96,10 @@
 
       {% else %}
         Unknown venue
+      {% endif %}
+
+      {% if event.hyperlink and title_parts or event.hyperlink and artist_parts %}
+        <a class="event-info" href="{{ event.hyperlink }}" target="_blank" rel="noopener">info ↗</a>
       {% endif %}
 
       {% comment %} "//" only between the parts there are: the links are in their own row {% endcomment %}

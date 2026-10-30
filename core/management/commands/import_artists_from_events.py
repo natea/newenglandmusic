@@ -7,7 +7,7 @@ from core import lastfm
 from core.artist_enrichment import Matcher, choose_kind
 from core.artist_import import COLUMNS
 from core.artist_matching import normalize
-from core.artist_names import is_placeholder, split_names
+from core.artist_names import event_artist_names
 from core.event_performers import link_from_names, names_to_records
 from core.job_runs import RecordedCommand
 from core.management.commands.enrich_artists_from_musicbrainz import Command as EnrichCommand
@@ -15,10 +15,12 @@ from core.models import Artist, Band, Event
 from core.music_ids import MusicBrainzBusy, MusicIds, MusicIdsError
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import Q
 
 """
-makes artist and band records from the names in approved events' artists column, then
-links every approved event to the records its names are.
+makes artist and band records from the names in approved events' titles and artists
+column, then links every approved event to the records its names are. titles count because
+every source puts the headliner there and leaves it out of the artists column.
 
 run as:
 
@@ -39,15 +41,21 @@ records made, and the next run starts where it left off.
 REVIEW_COLUMNS = (*COLUMNS, "Reason", "Events", "Example_Event")
 
 
+def named_events():
+    """approved events with a title or artists"""
+    return Event.objects.exclude(Q(artists=None) | Q(artists=""), Q(title=None) | Q(title=""))
+
+
 def event_names():
-    """{name_key: {"name", "events", "example"}} from approved events' artists, most-named first"""
+    """
+    {name_key: {"name", "events", "example"}} from approved events' titles and artists, most-
+    named first. titles count: every source puts the headliner there and leaves it out of
+    the artists (2026-10-29)
+    """
     found = {}
     counts = defaultdict(int)
-    events = Event.objects.exclude(artists=None).exclude(artists="").select_related("venue").order_by("starttime")
-    for event in events:
-        for name in split_names(event.artists):
-            if is_placeholder(name):
-                continue
+    for event in named_events().select_related("venue").order_by("starttime"):
+        for name in event_artist_names(event):
             key = normalize(name)
             counts[key] += 1
             if key not in found:
@@ -127,7 +135,7 @@ class Command(RecordedCommand, BaseCommand):
         records = names_to_records()
         linked = 0
         with transaction.atomic():
-            for event in Event.objects.exclude(artists=None).exclude(artists=""):
+            for event in named_events():
                 link_from_names(event, records)
                 linked += event.performers.exists()
         return linked

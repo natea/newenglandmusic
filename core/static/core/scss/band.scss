@@ -24,7 +24,8 @@ $quiet: #4f4b44;
     display: block;
   }
 
-  a {
+  // :where keeps this below the action icons' own colours (core.scss .event-actions a)
+  :where(a) {
     color: $link;
     text-underline-offset: 0.15em;
   }

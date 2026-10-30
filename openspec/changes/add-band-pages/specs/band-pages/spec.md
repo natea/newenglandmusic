@@ -78,11 +78,19 @@ A page missing a photo, a bio or links SHALL show one quiet line inviting the ac
 - **THEN** it shows the line inviting the band to send a photo, bio and links, linking an email to the contact address
 
 ### Requirement: Events link to their acts
-On the calendar, each name in an event's listing that is one of its performers SHALL link to that performer's page. Names that aren't performers SHALL stay plain text.
+On the calendar, each name in an event's listing, in its title or its artists, that is one of its performers SHALL link to that performer's page, including a performer's name that starts a longer title ("Built to Spill Fall 2026 Tour"). Names that aren't performers, and a presenter's prefix ("AS220 Presents:"), SHALL stay plain text. When an event has performers, its own page (the venue's listing) SHALL be a small "info" link after the venue, and no name SHALL link to it; an event without performers SHALL keep its listing as before.
 
 #### Scenario: A linked performer
 - **WHEN** an event's Artists are "Pixies, Dana and Alden" and Pixies is a performer
 - **THEN** "Pixies" links to `/bands/pixies` and "Dana and Alden" stays plain
+
+#### Scenario: The headliner in the title
+- **WHEN** an event titled "Axe Collector" has the Artists "Phantom Rider, Zipper, Anthropocene", and Axe Collector, Phantom Rider and Zipper are performers
+- **THEN** all three names link to their pages, Anthropocene stays plain, and the venue's page is the "info" link after the venue
+
+#### Scenario: No performers
+- **WHEN** an event has no performers
+- **THEN** its title links to its own page as before, with no "info" link
 
 ### Requirement: The page reads well on phones and to every visitor
 The page SHALL fit a 390px-wide screen with no sideways scrolling and the next show directly after the name; images SHALL have text alternatives naming the act or member; links and the card's fields SHALL be readable at the site's contrast; and the page SHALL have a title and description naming the act.

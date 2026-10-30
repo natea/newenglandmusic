@@ -16,7 +16,7 @@ from django.db import transaction
 import re
 
 from core.artist_matching import normalize
-from core.artist_names import SEPARATOR_RE, clean_name, is_placeholder, split_names
+from core.artist_names import SEPARATOR_RE, TITLE_PREFIX_RE, clean_name, event_artist_names, occasion_prefix
 from core.models import Artist, Band, Event, EventPerformer
 
 Source = EventPerformer.Source
@@ -32,10 +32,16 @@ def names_to_records():
 
 
 def performers_named(event, records):
-    """the records the event's Artists text names, in order, without repeats"""
+    """
+    the records the event names, in order, without repeats: its title's names first (where
+    every source puts the headliner, leaving it out of the artists text), then its artists
+    text's, as the spotify matching reads them (core/artist_names.event_artist_names)
+    """
     named, seen = [], set()
-    for name in split_names(event.artists):
-        record = None if is_placeholder(name) else records.get(normalize(name))
+    for name in event_artist_names(event):
+        key = normalize(name)
+        # "Built to Spill Fall 2026 Tour": a known name, then words naming an occasion
+        record = records.get(key) or records.get(occasion_prefix(key, records) or "")
         if record is not None and (type(record), record.pk) not in seen:
             seen.add((type(record), record.pk))
             named.append(record)
@@ -46,25 +52,66 @@ def performer_keys(event):
     return {(p.artist_id, p.band_id) for p in event.performers.all()}
 
 
-def artist_parts(event):
+def link_piece(piece, pages):
     """
-    the event's artists text as [(text, url or None)], separators and all, each name that's
-    one of its performers carrying that act's page, for the listing (core/event.html)
+    [(text, url or None)] for one name-sized piece of text: the name it is, when that's a
+    performer's ("Pixies (DJ Set)"), or the performer's name it starts with ("Built to Spill
+    Fall 2026 Tour"), linked; the rest plain
     """
-    text = str(event.artists or "")
-    if not text or not event.pk:
-        return []
-    pages = {
-        p.act.name_key: p.act.get_absolute_url()
-        for p in event.performers.select_related("artist", "band")
-    }
-    if not pages:
-        return []
-    parts = []
+    clean = clean_name(piece)
+    start = piece.find(clean) if clean else -1
+    if start < 0:
+        return [(piece, None)]
+    key = normalize(clean)
+    url = pages.get(key)
+    if url is None:
+        prefix = occasion_prefix(key, pages)
+        words = clean.split(" ")
+        for n in range(1, len(words)) if prefix else ():
+            if normalize(" ".join(words[:n])) == prefix:
+                clean, url = " ".join(words[:n]), pages[prefix]
+                break
+    if url is None:
+        return [(piece, None)]
+    end = start + len(clean)
+    return [part for part in ((piece[:start], None), (piece[start:end], url), (piece[end:], None)) if part[0]]
+
+
+def linked_parts(text, pages, title=False):
+    """text as [(text, url or None)], separators and all, each performer's name linked"""
+    text, parts = str(text or ""), []
+    if title:
+        # "State Theatre Presents: The Ballroom Thieves": the presenter isn't a name
+        prefix = TITLE_PREFIX_RE.match(text)
+        if prefix:
+            parts.append((prefix.group(0), None))
+            text = text[prefix.end():]
     for piece in re.split(f"({SEPARATOR_RE.pattern})", text, flags=re.IGNORECASE):
-        if piece:
-            parts.append((piece, pages.get(normalize(clean_name(piece))) if piece.strip() else None))
+        if not piece:
+            continue
+        if not piece.strip() or SEPARATOR_RE.fullmatch(piece):
+            parts.append((piece, None))
+        else:
+            parts.extend(link_piece(piece, pages))
     return parts
+
+
+def performer_pages(event):
+    """{name_key: page} for the event's performers, or {} for an unsaved event"""
+    if not event.pk:
+        return {}
+    return {p.act.name_key: p.act.get_absolute_url() for p in event.performers.select_related("artist", "band")}
+
+
+def listing_parts(event):
+    """
+    (title parts, artists parts) for the event's listing (core/event.html), each performer's
+    name linked to its page; ([], []) when it has no performers, and its listing is as before
+    """
+    pages = performer_pages(event)
+    if not pages:
+        return [], []
+    return linked_parts(event.title, pages, title=True), linked_parts(event.artists, pages)
 
 
 def rebake(event):

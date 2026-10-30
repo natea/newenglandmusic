@@ -26,9 +26,10 @@ class ImportArtistsFromEventsTestCase(TestCase):
         directory = tempfile.mkdtemp()
         self.review = os.path.join(directory, "review.csv")
 
-    def event(self, artists, approved=True):
+    def event(self, artists, approved=True, title=""):
+        # no title by default: a title's names count too (test_a_headliner_in_the_title)
         return Event.all_objects.create(
-            title="show", artists=artists, starttime=timezone.now(), venue=self.venue, is_approved=approved
+            title=title, artists=artists, starttime=timezone.now(), venue=self.venue, is_approved=approved
         )
 
     def run_command(self, *args, mb=None):
@@ -66,7 +67,7 @@ class ImportArtistsFromEventsTestCase(TestCase):
         self.run_command()
         row = next(r for r in self.review_rows() if r["Name"] == "Dana and Alden")
         self.assertEqual((row["Reason"], row["Events"]), ("not on MusicBrainz", "2"))
-        self.assertIn("show @ Paradise", row["Example_Event"])
+        self.assertIn("@ Paradise", row["Example_Event"])
 
     def test_placeholders_repeats_and_existing_records_arent_searched(self):
         Band.objects.create(name="Krill")
@@ -124,3 +125,19 @@ class ImportArtistsFromEventsTestCase(TestCase):
         report = import_rows(rows)
         self.assertEqual(report.problems, [])
         self.assertEqual(set(Band.objects.values_list("name", flat=True)), {"Horse", "Dana and Alden"})
+
+
+class TitleNamesTestCase(ImportArtistsFromEventsTestCase):
+    """every source puts the headliner in the title and leaves it out of the artists"""
+
+    def test_a_headliner_in_the_title(self):
+        event = self.event("Kim Deal", title="Speedy Ortiz")
+        self.run_command()
+        self.assertTrue(Band.objects.filter(name="Speedy Ortiz").exists())
+        self.assertEqual([p.act.name for p in event.performers.order_by("order")], ["Speedy Ortiz", "Kim Deal"])
+
+    def test_title_words_that_arent_names(self):
+        self.event("", title="Halloween Party")
+        self.event("", title="Open Mic Night")
+        self.run_command()
+        self.assertEqual(self.mb.calls, [])

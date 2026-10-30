@@ -18,7 +18,7 @@
 ### Not in this change
 
 - Replacing the Artists text, or reading performers instead of it anywhere visitors see: the event pages and the Spotify, Apple Music and YouTube play buttons keep reading the text, and stay keyed by name. That's for a later change, once most names have a record.
-- Names in event titles. Only the Artists column, as asked; titles hold tour names and show names, which the splitter can't always tell from acts.
+- (Changed on 2026-10-29, after building: titles count too. Every source puts the headliner in the title and leaves it out of the Artists column, so reading only that column skipped nearly every headliner; the title splitter the Spotify matching uses drops tour and show words.)
 - Splitting duo billings ("Connor Garvey & Ben Cosgrove"). The whole name is searched; if MusicBrainz doesn't know it, it goes on the review list.
 
 ## Capabilities

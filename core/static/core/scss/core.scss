@@ -416,6 +416,17 @@ article {
   }
 }
 
+// a performer's name links to its page (add-band-pages), bold like the artists even in a
+// title; the event's own page is then the small "info" link after the venue
+.event a.performer {
+  font-weight: 700;
+}
+
+.event a.event-info {
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
 // in a listing, a row of their own below the text, lined up with it like the play buttons
 .event .event-actions {
   flex-basis: 100%;
