@@ -80,6 +80,11 @@ class ImportArtistsFromEventsTestCase(TestCase):
         # only the act not found is for review, not the billing
         self.assertEqual([r["Name"] for r in self.review_rows()], ["Dana Alden"])
 
+    def test_a_billing_with_no_act_found_is_reviewed_whole(self):
+        self.event("Dust Bowls and Jewish Souls")
+        self.run_command()
+        self.assertEqual([r["Name"] for r in self.review_rows()], ["Dust Bowls and Jewish Souls"])
+
     def test_placeholders_repeats_and_existing_records_arent_searched(self):
         Band.objects.create(name="Krill")
         self.event("TBA, Krill, Kim Deal")

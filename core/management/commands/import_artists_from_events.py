@@ -33,7 +33,9 @@ written to the review csv (logs/artists-from-events-review-<date>.csv), in impor
 layout with Act_ID and Kind blank, for an editor to fill in and import.
 
 a duo billing that isn't on musicbrainz as a whole ("Louis Cole & Chiquita Magic") has
-each of its acts looked up instead, and only the acts not found go on the review list.
+each of its acts looked up instead, and only the acts not found go on the review list; when
+none is found, the billing goes there whole, as it may be one band ("Dust Bowls and Jewish
+Souls").
 
 names already an artist's or a band's, and placeholders ("TBA"), are skipped; the names most
 events give go first, so --limit covers the acts that matter most. about two searches a
@@ -67,6 +69,24 @@ def event_names():
     for key, entry in found.items():
         entry["events"] = counts[key]
     return dict(sorted(found.items(), key=lambda item: (-item[1]["events"], item[1]["name"].lower())))
+
+
+def whole_billings(review):
+    """
+    the review list with a duo billing none of whose acts was found back as one name: "Dust
+    Bowls and Jewish Souls" may be one band, and an editor can split it if not
+    """
+    review_keys = {normalize(entry["name"]) for entry in review}
+    whole, seen = [], set()
+    for entry in review:
+        billing = entry.get("billing")
+        if billing and all(normalize(part) in review_keys for part in name_parts(billing["name"])):
+            if normalize(billing["name"]) not in seen:
+                seen.add(normalize(billing["name"]))
+                whole.append({**billing, "reason": entry["reason"]})
+            continue
+        whole.append(entry)
+    return whole
 
 
 class Command(RecordedCommand, BaseCommand):
@@ -113,7 +133,7 @@ class Command(RecordedCommand, BaseCommand):
                     parts = [part for part in name_parts(entry["name"]) if normalize(part) not in queued]
                     for part in reversed(parts):
                         queued.add(normalize(part))
-                        names.insert(0, (normalize(part), {**entry, "name": part}))
+                        names.insert(0, (normalize(part), {**entry, "name": part, "billing": entry}))
                     self.stdout.write(f"  {entry['name']}: not on MusicBrainz; looking up its acts")
                     continue
                 if model is None:
@@ -127,6 +147,7 @@ class Command(RecordedCommand, BaseCommand):
             counts["events linked"] = self.link_events()
             if dry_run:
                 transaction.set_rollback(True)
+        review = whole_billings(review)
         self.write_review(review_path, review)
         self.job_summary = list(counts.items())
         self.stdout.write(f"\nreview list: {review_path} ({len(review)} names)")
