@@ -49,3 +49,44 @@ In each name, from the title or the artists text, everything from the first spac
 #### Scenario: Names that only look like tours
 - **WHEN** events are titled "Summer Salt", "North Mississippi Allstars", "Class of 2027" and "The Thing in the Spring 2027"
 - **THEN** each name is kept whole
+
+
+
+### Requirement: Artist names come from the artists text, split on bill separators
+The system SHALL split an event's artists text into names at these separators:
+- commas and semicolons, taking a comma followed by "&" or "and" (a serial comma, as in "DÀN, & Aydan Hill") as one separator;
+- " / ", and "//" with or without spaces around it;
+- " + ";
+- " x ", as in joint billings ("Dead Poet Society x Honey Revenge");
+- " w/ " and " with ";
+- " feat. ", " ft. " and " featuring ".
+
+It SHALL NOT split on "&" or "and" without a comma before it, because these appear inside band names. It SHALL trim each name, and remove from it a leading "with" and any trailing notes in parentheses that aren't part of the name: age limits such as "(18+)", "(21+)" or "(all ages)", and "(DJ set)", "(live set)", "(live)", "(acoustic)", "(solo)" or "(full band)". It SHALL drop empty names. Names SHALL keep the order they appear in, without duplicates.
+
+#### Scenario: Comma-separated bill
+- **WHEN** an event's artists text is "Arto Vaun, Shadow Monster, Dyr Faser"
+- **THEN** its names are "Arto Vaun", "Shadow Monster" and "Dyr Faser", in that order
+
+#### Scenario: Double slashes
+- **WHEN** an event's artists text is "Bomb Valley// Blesser //Seconds Before the Crash// Silvera"
+- **THEN** its names are "Bomb Valley", "Blesser", "Seconds Before the Crash" and "Silvera"
+
+#### Scenario: Featuring and with
+- **WHEN** an event's artists text is "Genevieve Artadi ft. Louis Cole w/ Chiquita Magic"
+- **THEN** its names are "Genevieve Artadi", "Louis Cole" and "Chiquita Magic"
+
+#### Scenario: Leading "with" and age limits removed
+- **WHEN** an event's artists text is "with Jacyn Tremblay, Rhiannon Hurst (21+)"
+- **THEN** its names are "Jacyn Tremblay" and "Rhiannon Hurst"
+
+#### Scenario: Joint billing and set notes
+- **WHEN** an event's artists text is "Dead Poet Society x Honey Revenge, 49th & Main (DJ Set) (21+)"
+- **THEN** its names are "Dead Poet Society", "Honey Revenge" and "49th & Main"
+
+#### Scenario: Ampersand kept
+- **WHEN** an event's artists text is "Simon & Garfunkel Story, Mumford & Sons"
+- **THEN** its names are "Simon & Garfunkel Story" and "Mumford & Sons"
+
+#### Scenario: Serial comma before the last name
+- **WHEN** one event is titled "AYĖL, Belen, DÀN, & Aydan Hill", and another's artists text is "SixFoxWhiskey, Booyah, and The Hub"
+- **THEN** the first's names are "AYĖL", "Belen", "DÀN" and "Aydan Hill", and the second's "SixFoxWhiskey", "Booyah" and "The Hub"

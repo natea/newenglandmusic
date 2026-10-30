@@ -93,6 +93,10 @@ class TitleTestCase(SimpleTestCase):
         )
         self.assertEqual(names(title="Blue October - 'Foiled' 20th Anniversary World Tour"), ["Blue October"])
 
+    def test_serial_comma_before_the_last_name(self):
+        self.assertEqual(names(title="AYĖL, Belen, DÀN, & Aydan Hill"), ["AYĖL", "Belen", "DÀN", "Aydan Hill"])
+        self.assertEqual(names(artists="SixFoxWhiskey, Booyah, and The Hub"), ["SixFoxWhiskey", "Booyah", "The Hub"])
+
     def test_tour_name_with_no_separator_removed(self):
         self.assertEqual(names(title="Seb Lowe US 2027"), ["Seb Lowe"])
         self.assertEqual(names(title="Built to Spill Fall 2026 Tour"), ["Built to Spill"])

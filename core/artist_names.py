@@ -13,8 +13,9 @@ import re
 
 from core.artist_matching import normalize
 
+# a comma then "&" or "and" ends a list ("DÀN, & Aydan Hill"); "&" alone is inside names
 SEPARATOR_RE = re.compile(
-    r"\s*[,;]\s*|\s*//\s*|\s+/\s+|\s+\+\s+|\s+x\s+|\s+w/\s*|\s+with\s+|\s+(?:feat\.?|ft\.?|featuring)\s+",
+    r"\s*,\s*(?:&|and)\s+|\s*[,;]\s*|\s*//\s*|\s+/\s+|\s+\+\s+|\s+x\s+|\s+w/\s*|\s+with\s+|\s+(?:feat\.?|ft\.?|featuring)\s+",
     re.IGNORECASE,
 )
 # "State Theatre Presents: The Ballroom Thieves", "An evening with Lake Street Dive"
@@ -53,7 +54,7 @@ TRAILING_NOTE_RE = re.compile(
 )
 LEADING_WITH_RE = re.compile(r"^with\s+", re.IGNORECASE)
 # what bills say in place of a name, compared normalized
-PLACEHOLDERS = {"tba", "tbd", "special guest", "special guests", "and more", "organization", "dj"}
+PLACEHOLDERS = {"tba", "tbd", "special guest", "special guests", "and more", "more", "organization", "dj"}
 
 
 # "Seb Lowe US 2027", "Built to Spill Fall 2026 Tour": a tour named after the act with no
