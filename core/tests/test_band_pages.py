@@ -256,3 +256,16 @@ class FinishFixesTestCase(TestCase):
         self.assertIn('alt="" width="48" height="48"', html)
         # the member without a headshot keeps the column
         self.assertIn('<span class="act-headshot-slot"></span>', html)
+
+
+class ShowTimesTestCase(TestCase):
+    setUp, band, show, page = BandPageTestCase.setUp, BandPageTestCase.band, BandPageTestCase.show, BandPageTestCase.page
+
+    def test_each_row_has_its_time(self):
+        band = self.band()
+        when = timezone.localtime(days(5)).replace(hour=19, minute=0)
+        self.show(band, self.norwalk, when)
+        self.show(band, self.norwalk, when.replace(hour=22))
+        html = self.page(band).content.decode()
+        self.assertIn('<span class="act-show-time">7:00 p.m.</span>', html)
+        self.assertIn('<span class="act-show-time">10:00 p.m.</span>', html)

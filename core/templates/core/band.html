@@ -100,7 +100,7 @@
       <ol class="act-shows">
         {% for event in shows %}
           <li id="event-{{ event.pk }}">
-            <time datetime="{{ event.starttime|date:'c' }}">{{ event.starttime|date:'D, M j' }}</time>
+            <time datetime="{{ event.starttime|date:'c' }}">{{ event.starttime|date:'D, M j' }}{% if not event.starttime_override %}<span class="act-show-time">{{ event.starttime|time:'g:i a' }}</span>{% endif %}</time>
             <span><a href="{% url 'event_redirect' event.pk %}">{{ event.venue.name }}</a>{% if event.venue.location %}, {{ event.venue.location }}{% endif %}{% if event.is_cancelled %} <strong>(cancelled)</strong>{% endif %}{{ event.actions }}</span>
           </li>
         {% endfor %}

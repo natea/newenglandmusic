@@ -64,7 +64,8 @@ $quiet: #4f4b44;
   color: $quiet;
 }
 
-.act-next {
+// .act's paragraph reset (display: block) would otherwise win over the strip's flex
+.act .act-next {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -105,6 +106,11 @@ $quiet: #4f4b44;
 .act-next-none {
   margin-bottom: 18px;
   color: $quiet;
+}
+
+// the photo, after the bio, keeps the same clearance above its rule as every other block
+.act-fields.act-fields-photo {
+  margin-top: 18px;
 }
 
 .act-fields {
@@ -246,6 +252,13 @@ $quiet: #4f4b44;
   time {
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+  }
+
+  // two shows at one venue on one day differ only by their time
+  .act-show-time {
+    display: block;
+    font-weight: 400;
+    color: $quiet;
   }
 }
 
