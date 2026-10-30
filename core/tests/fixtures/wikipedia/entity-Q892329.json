@@ -1,0 +1,61 @@
+{
+ "entities": {
+  "Q892329": {
+   "type": "item",
+   "id": "Q892329",
+   "claims": {
+    "P18": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P18",
+       "hash": "4ccc2d5cce7d865dd3fde653a10f3705635ee48e",
+       "datavalue": {
+        "value": "Bonerama2006.jpg",
+        "type": "string"
+       },
+       "datatype": "commonsMedia"
+      },
+      "type": "statement",
+      "id": "Q892329$6E4FAD7A-0597-4081-A9BB-A218CAD83F3A",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "site": "enwiki",
+     "title": "Bonerama",
+     "badges": []
+    }
+   }
+  }
+ },
+ "success": 1
+}

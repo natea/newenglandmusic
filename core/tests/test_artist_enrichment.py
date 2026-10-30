@@ -143,7 +143,11 @@ class EnrichTestCase(TestCase):
         # most votes first
         self.assertEqual(set(band.genres), {"alternative rock", "indie rock", "noise pop"})
         self.assertEqual((band.website, band.bandcamp_url), ("https://speedyortiz.com/", "https://speedyortiz.bandcamp.com/"))
-        self.assertEqual(band.field_sources, {"musicbrainz_id": "musicbrainz", "website": "musicbrainz", "bandcamp_url": "musicbrainz"})
+        self.assertEqual(band.field_sources, {
+            "musicbrainz_id": "musicbrainz", "website": "musicbrainz", "bandcamp_url": "musicbrainz", "instagram_url": "musicbrainz",
+        })
+        # musicbrainz lists an instagram account among its "social network" links
+        self.assertEqual(band.instagram_url, "https://www.instagram.com/sad13/")
         self.assertEqual(len(added), 6)
         sadie = band.memberships.get(artist__name="Sadie Dupuis")
         self.assertEqual((sadie.source, sadie.artist.musicbrainz_id is not None), ("musicbrainz", True))
@@ -296,7 +300,7 @@ class WikipediaClientTestCase(SimpleTestCase):
         self.assertEqual(found["url"], "https://en.wikipedia.org/wiki/Speedy_Ortiz")
         (wikidata_url, params, headers), (summary_url, _, _) = session.requests
         self.assertEqual(wikidata_url, "https://www.wikidata.org/w/api.php")
-        self.assertEqual((params["ids"], params["props"], params["sitefilter"]), (SPEEDY_ORTIZ_WIKIDATA, "sitelinks", "enwiki"))
+        self.assertEqual((params["ids"], params["props"], params["sitefilter"]), (SPEEDY_ORTIZ_WIKIDATA, "claims|sitelinks", "enwiki"))
         self.assertEqual(summary_url, "https://en.wikipedia.org/api/rest_v1/page/summary/Speedy_Ortiz")
         self.assertIn("venue-db-event-check/1.0", headers["User-Agent"])
         self.assertEqual(len(sleeps), 1)
@@ -380,7 +384,7 @@ class IntroductionTestCase(TestCase):
         status, _ = self.enrich(band, status=503)
         band.refresh_from_db()
         self.assertEqual((status, band.musicbrainz_id, band.wikipedia_extract), (Status.MATCHED, SPEEDY_ORTIZ, text))
-        self.assertEqual(self.problems, ["Speedy Ortiz: wikidata: HTTP 503; kept its earlier wikipedia text"])
+        self.assertEqual(self.problems, ["Speedy Ortiz: wikidata: HTTP 503; kept its earlier wikipedia text, photo and links"])
 
 
 class ChooseKindTestCase(TestCase):
@@ -405,3 +409,102 @@ class ChooseKindTestCase(TestCase):
 
     def test_not_found(self):
         self.assertEqual(self.kind("Dana and Alden", {}), (None, None, NOT_ON_MUSICBRAINZ))
+
+
+class WikidataPhotoAndLinksTestCase(SimpleTestCase):
+    def test_entity(self):
+        wikipedia, session = fake_wikipedia()
+        found = wikipedia.entity("Q485416")
+        self.assertEqual(found, {
+            "title": "Anamanaguchi", "image": "Anamanaguchi.jpg",
+            "instagram": "https://www.instagram.com/anamanaguchi_official/",
+            "youtube": "https://www.youtube.com/channel/UCtdPSQIDsZyhq3L7kITrKoA",
+        })
+        params = session.requests[0][1]
+        self.assertEqual((params["props"], params["sitefilter"]), ("claims|sitelinks", "enwiki"))
+
+    def test_a_free_photo(self):
+        wikipedia, session = fake_wikipedia()
+        found = wikipedia.photo("Bonerama2006.jpg")
+        self.assertEqual(found["license"], "CC BY-SA 3.0")
+        self.assertEqual(found["license_url"], "http://creativecommons.org/licenses/by-sa/3.0/")
+        self.assertTrue(found["author"].startswith("Masahiro"))
+        self.assertNotIn("<", found["author"])
+        url, params, headers = session.requests[0]
+        self.assertEqual(url, "https://commons.wikimedia.org/w/api.php")
+        self.assertEqual((params["titles"], params["prop"]), ("File:Bonerama2006.jpg", "imageinfo"))
+        self.assertIn("venue-db-event-check/1.0", headers["User-Agent"])
+
+    def test_a_file_without_a_free_licence(self):
+        answer = load_wikipedia("commons-bonerama2006")
+        page = next(iter(answer["query"]["pages"].values()))
+        page["imageinfo"][0]["extmetadata"]["LicenseShortName"]["value"] = "CC BY-NC 2.0"
+        wikipedia, _ = fake_wikipedia(commons={"Bonerama2006.jpg": answer})
+        self.assertIsNone(wikipedia.photo("Bonerama2006.jpg"))
+
+    def test_public_domain_and_cc0_are_free(self):
+        for name in ("Public domain", "CC0", "CC BY 2.0"):
+            answer = load_wikipedia("commons-bonerama2006")
+            page = next(iter(answer["query"]["pages"].values()))
+            page["imageinfo"][0]["extmetadata"]["LicenseShortName"]["value"] = name
+            wikipedia, _ = fake_wikipedia(commons={"Bonerama2006.jpg": answer})
+            self.assertEqual(wikipedia.photo("Bonerama2006.jpg")["license"], name)
+
+    def test_a_missing_image(self):
+        wikipedia, _ = fake_wikipedia()
+        self.assertEqual(wikipedia.entity(SPEEDY_ORTIZ_WIKIDATA)["image"], "")
+        self.assertIsNone(wikipedia.photo("No such file.jpg"))
+        self.assertIsNone(wikipedia.photo("../etc"))
+
+    def test_values_that_arent_links_are_dropped(self):
+        wikipedia, _ = fake_wikipedia(claims={"Q1": {"P2003": "not a handle!", "P2397": "notachannel"}})
+        found = wikipedia.entity("Q1")
+        self.assertEqual((found["instagram"], found["youtube"]), ("", ""))
+
+
+def url_rel(kind, url):
+    return {"target-type": "url", "type": kind, "url": {"resource": url}}
+
+
+class PhotoAndSocialEnrichmentTestCase(TestCase):
+    def enrich(self, band, relations, **wikipedia):
+        mbid = HORSE_A
+        mb = FakeMusicBrainz(searches={band.name: [candidate(mbid, band.name)]}, artists={mbid: details(mbid, band.name, relations=relations)})
+        self.wikipedia, self.session = fake_wikipedia(**wikipedia)
+        enrich(band, mb, Matcher(mb, covered_states=set()), self.wikipedia, [])
+        band.refresh_from_db()
+        return band
+
+    def test_a_free_photo(self):
+        band = self.enrich(Band.objects.create(name="Bonerama"), [url_rel("wikidata", "https://www.wikidata.org/wiki/Q892329")])
+        self.assertEqual((band.photo_file, band.photo_license), ("Bonerama2006.jpg", "CC BY-SA 3.0"))
+        self.assertEqual(band.photo_license_url, "http://creativecommons.org/licenses/by-sa/3.0/")
+        self.assertTrue(band.photo_author.startswith("Masahiro"))
+
+    def test_a_file_without_a_free_licence(self):
+        answer = load_wikipedia("commons-bonerama2006")
+        next(iter(answer["query"]["pages"].values()))["imageinfo"][0]["extmetadata"]["LicenseShortName"]["value"] = "All rights reserved"
+        band = self.enrich(Band.objects.create(name="Bonerama"), [url_rel("wikidata", "https://www.wikidata.org/wiki/Q892329")], commons={"Bonerama2006.jpg": answer})
+        self.assertEqual((band.photo_file, band.photo_author, band.photo_license), ("", "", ""))
+
+    def test_social_links_from_musicbrainz_and_wikidata(self):
+        band = self.enrich(Band.objects.create(name="Anamanaguchi"), [
+            url_rel("wikidata", "https://www.wikidata.org/wiki/Q485416"),
+            url_rel("social network", "https://www.instagram.com/from_musicbrainz/"),
+            url_rel("social network", "https://twitter.com/anamanaguchi"),
+        ])
+        # musicbrainz's instagram, and wikidata's youtube where musicbrainz had none
+        self.assertEqual(band.instagram_url, "https://www.instagram.com/from_musicbrainz/")
+        self.assertEqual(band.youtube_url, "https://www.youtube.com/channel/UCtdPSQIDsZyhq3L7kITrKoA")
+        self.assertEqual((band.field_sources["instagram_url"], band.field_sources["youtube_url"]), ("musicbrainz", "wikidata"))
+
+    def test_an_editors_link_stays(self):
+        band = Band.objects.create(name="Anamanaguchi", instagram_url="https://www.instagram.com/editors_pick/", field_sources={"instagram_url": "editor"})
+        band = self.enrich(band, [url_rel("wikidata", "https://www.wikidata.org/wiki/Q485416"), url_rel("social network", "https://www.instagram.com/other/")])
+        self.assertEqual(band.instagram_url, "https://www.instagram.com/editors_pick/")
+
+    def test_no_image_is_stored(self):
+        band = self.enrich(Band.objects.create(name="Bonerama"), [url_rel("wikidata", "https://www.wikidata.org/wiki/Q892329")])
+        stored = json.dumps(Band.objects.filter(pk=band.pk).values().get(), default=str)
+        self.assertNotIn("upload.wikimedia.org", stored)
+        self.assertNotIn("http", band.photo_file)

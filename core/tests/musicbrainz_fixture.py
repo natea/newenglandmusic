@@ -73,13 +73,22 @@ def load_wikipedia(name):
 
 class FakeWikipediaSession:
     """
-    a requests session answering wikidata's sitelinks and wikipedia's summaries from
-    recorded responses, for core.wikipedia.Wikipedia; anything else is a 404
+    a requests session answering wikidata's entities, wikipedia's summaries and commons'
+    licences from recorded responses (and claims or commons answers a test passes), for
+    core.wikipedia.Wikipedia; anything else is a 404
     """
 
-    def __init__(self, summaries=None, titles=None, status=200):
+    def __init__(self, summaries=None, titles=None, status=200, claims=None, commons=None):
         self.summaries = {"Speedy_Ortiz": load_wikipedia("summary-speedy-ortiz"), "Pile": load_wikipedia("summary-pile"), **(summaries or {})}
-        self.titles = {SPEEDY_ORTIZ_WIKIDATA: "Speedy Ortiz", **(titles or {})}
+        self.titles = {SPEEDY_ORTIZ_WIKIDATA: "Speedy Ortiz", "Q892329": "Bonerama", "Q485416": "Anamanaguchi", **(titles or {})}
+        # {qid: {"P18": "file.jpg", ...}}; recorded items' claims unless a test passes its own
+        self.claims = {
+            qid: {prop: [c["mainsnak"]["datavalue"]["value"] for c in claims_] for prop, claims_ in load_wikipedia(f"entity-{qid}")["entities"][qid]["claims"].items()}
+            for qid in ("Q892329", "Q485416")
+        }
+        self.claims.update(claims or {})
+        # {file name: commons query answer}
+        self.commons = {"Bonerama2006.jpg": load_wikipedia("commons-bonerama2006"), "Anamanaguchi.jpg": load_wikipedia("commons-anamanaguchi"), **(commons or {})}
         self.status = status
         self.requests = []
 
@@ -90,8 +99,15 @@ class FakeWikipediaSession:
         if url.startswith("https://www.wikidata.org/"):
             qid = params["ids"]
             title = self.titles.get(qid)
+            claims = {
+                prop: [{"mainsnak": {"datavalue": {"value": value}}, "rank": "normal"} for value in (values if isinstance(values, list) else [values])]
+                for prop, values in self.claims.get(qid, {}).items()
+            }
             sitelinks = {"enwiki": {"site": "enwiki", "title": title}} if title else {}
-            return FakeResponse(200, {"entities": {qid: {"id": qid, "sitelinks": sitelinks}}})
+            return FakeResponse(200, {"entities": {qid: {"id": qid, "sitelinks": sitelinks, "claims": claims}}})
+        if url.startswith("https://commons.wikimedia.org/"):
+            answer = self.commons.get(params["titles"].removeprefix("File:"))
+            return FakeResponse(200, copy.deepcopy(answer)) if answer else FakeResponse(200, {"query": {"pages": {"-1": {"missing": ""}}}})
         title = url.rsplit("/", 1)[-1]
         summary = self.summaries.get(title)
         return FakeResponse(200, copy.deepcopy(summary)) if summary else FakeResponse(404, {})

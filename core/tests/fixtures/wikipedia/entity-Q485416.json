@@ -1,0 +1,333 @@
+{
+ "entities": {
+  "Q485416": {
+   "type": "item",
+   "id": "Q485416",
+   "claims": {
+    "P18": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P18",
+       "hash": "682341f4f3f97a96f0efc49b6a4c4944ec6ce41b",
+       "datavalue": {
+        "value": "Anamanaguchi.jpg",
+        "type": "string"
+       },
+       "datatype": "commonsMedia"
+      },
+      "type": "statement",
+      "id": "Q485416$31E4FC4C-E7FC-48D7-BAB3-0868F8EA9352",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P2003": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P2003",
+       "hash": "a586e64786dd8c4f5d766d73fbe600191cc98a30",
+       "datavalue": {
+        "value": "anamanaguchi_official",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q485416$0D3D7F0D-F5F2-41DA-9B8E-AE6DFBA14D97",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "6955ab2374c8a0ff7b1df2e45780bff1c09fb092",
+        "snaks": {
+         "P248": [
+          {
+           "snaktype": "value",
+           "property": "P248",
+           "hash": "8ab77c7cd50031c3ae514693b69b28bd375a315a",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 648625,
+             "id": "Q648625"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P813": [
+          {
+           "snaktype": "value",
+           "property": "P813",
+           "hash": "54d66efc63b4cbb6cea1f7569daaea31d3249e5f",
+           "datavalue": {
+            "value": {
+             "time": "+2020-06-18T00:00:00Z",
+             "timezone": 0,
+             "before": 0,
+             "after": 0,
+             "precision": 11,
+             "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+            },
+            "type": "time"
+           },
+           "datatype": "time"
+          }
+         ],
+         "P646": [
+          {
+           "snaktype": "value",
+           "property": "P646",
+           "hash": "cf9af61bd644f590842f560d6487171c76516e51",
+           "datavalue": {
+            "value": "/m/01t18xx",
+            "type": "string"
+           },
+           "datatype": "external-id"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P248",
+         "P813",
+         "P646"
+        ]
+       },
+       {
+        "hash": "85c8294aaed0b4f82e70873219a5fa5bc67e3051",
+        "snaks": {
+         "P887": [
+          {
+           "snaktype": "value",
+           "property": "P887",
+           "hash": "0ca41c4135639ebe0e0ddac1f02e9b8648203ca7",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 11660,
+             "id": "Q11660"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P248": [
+          {
+           "snaktype": "value",
+           "property": "P248",
+           "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 14005,
+             "id": "Q14005"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P434": [
+          {
+           "snaktype": "value",
+           "property": "P434",
+           "hash": "de20d620c2645a0ce7246a4fbc819aa7f38f6673",
+           "datavalue": {
+            "value": "e4d7cfe5-0bed-46cf-acad-ab9a4dcb7aa6",
+            "type": "string"
+           },
+           "datatype": "external-id"
+          }
+         ],
+         "P813": [
+          {
+           "snaktype": "value",
+           "property": "P813",
+           "hash": "4eda47c07bb63c24242f33ca58c1fa7088a9fbb4",
+           "datavalue": {
+            "value": {
+             "time": "+2021-07-19T00:00:00Z",
+             "timezone": 0,
+             "before": 0,
+             "after": 0,
+             "precision": 11,
+             "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+            },
+            "type": "time"
+           },
+           "datatype": "time"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P887",
+         "P248",
+         "P434",
+         "P813"
+        ]
+       }
+      ]
+     }
+    ],
+    "P2397": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P2397",
+       "hash": "ee765d7379cd7e2781077cb7f47af0c73d678aea",
+       "datavalue": {
+        "value": "UCtdPSQIDsZyhq3L7kITrKoA",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P1810": [
+        {
+         "snaktype": "value",
+         "property": "P1810",
+         "hash": "3a53d39e184dbc7668434b595bb0799c54c2746c",
+         "datavalue": {
+          "value": "Anamanaguchi",
+          "type": "string"
+         },
+         "datatype": "string"
+        }
+       ],
+       "P580": [
+        {
+         "snaktype": "value",
+         "property": "P580",
+         "hash": "35cf5aa417eefd24c820b87cd0297f760daf86b6",
+         "datavalue": {
+          "value": {
+           "time": "+2006-02-20T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ],
+       "P3744": [
+        {
+         "snaktype": "value",
+         "property": "P3744",
+         "hash": "ddee1815169f646d8489da786e4c771c6a9636e4",
+         "datavalue": {
+          "value": {
+           "amount": "+77300",
+           "unit": "1"
+          },
+          "type": "quantity"
+         },
+         "datatype": "quantity"
+        }
+       ],
+       "P3740": [
+        {
+         "snaktype": "value",
+         "property": "P3740",
+         "hash": "d90893b7f5c5b3c580ee8ade1b9fc253df990408",
+         "datavalue": {
+          "value": {
+           "amount": "+73",
+           "unit": "1"
+          },
+          "type": "quantity"
+         },
+         "datatype": "quantity"
+        }
+       ],
+       "P5436": [
+        {
+         "snaktype": "value",
+         "property": "P5436",
+         "hash": "9b30f2342a5ddbaa1daea9a29141cf409e137fc8",
+         "datavalue": {
+          "value": {
+           "amount": "+13624233",
+           "unit": "1"
+          },
+          "type": "quantity"
+         },
+         "datatype": "quantity"
+        }
+       ],
+       "P585": [
+        {
+         "snaktype": "value",
+         "property": "P585",
+         "hash": "a25c17059444ed44c010bcd1fbb23a6ad296220b",
+         "datavalue": {
+          "value": {
+           "time": "+2020-12-08T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P1810",
+       "P580",
+       "P3744",
+       "P3740",
+       "P5436",
+       "P585"
+      ],
+      "id": "Q485416$9dbd8203-48a6-0b3c-9e78-aae5f2203a65",
+      "rank": "normal"
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "site": "enwiki",
+     "title": "Anamanaguchi",
+     "badges": []
+    }
+   }
+  }
+ },
+ "success": 1
+}

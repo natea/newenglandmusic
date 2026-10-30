@@ -16,6 +16,8 @@ a record whose musicbrainz id came from the import or an editor is looked up by 
 not searched for, and its id is never replaced.
 """
 
+from urllib.parse import urlsplit
+
 from django.db.models import Q
 from django.utils import timezone
 
@@ -27,13 +29,16 @@ from core.wikipedia import WikipediaError
 
 Status = MusicAct.MusicBrainzStatus
 MUSICBRAINZ = "musicbrainz"
+WIKIDATA = "wikidata"
 # musicbrainz's types for each kind of record
 TYPES = {Artist: {"Person"}, Band: {"Group", "Orchestra", "Choir"}}
 SEARCH_TYPES = {Artist: "person", Band: "group"}
 # musicbrainz's member attributes that aren't a role
 NOT_ROLES = {"original", "additional", "founder", "minor", "guest"}
 # url relationship types -> how each is kept
-URL_TYPES = ("official homepage", "bandcamp", "wikidata", "discogs")
+URL_TYPES = ("official homepage", "bandcamp", "wikidata", "discogs", "social network", "youtube", "video channel")
+SOCIAL_FIELDS = ("instagram_url", "youtube_url")
+PHOTO_FIELDS = ("photo_file", "photo_author", "photo_license", "photo_license_url")
 
 
 def years(date):
@@ -121,8 +126,15 @@ def wikidata_id(url):
     return last if last[:1] == "Q" and last[1:].isdigit() else ""
 
 
+def host(url):
+    return (urlsplit(url).hostname or "").lower().removeprefix("www.").removeprefix("m.")
+
+
 def links(details):
-    """{"website", "bandcamp_url", "wikidata_id", "discogs_url"} from the url relationships"""
+    """
+    {"website", "bandcamp_url", "wikidata_id", "discogs_url", "instagram_url", "youtube_url"}
+    from the url relationships
+    """
     found = {}
     for relation in details.get("relations") or []:
         kind, url = relation.get("type"), ((relation.get("url") or {}).get("resource")) or ""
@@ -136,6 +148,10 @@ def links(details):
             found.setdefault("wikidata_id", wikidata_id(url))
         elif kind == "discogs":
             found.setdefault("discogs_url", url)
+        elif kind == "social network" and host(url) == "instagram.com" and url.startswith("https://"):
+            found.setdefault("instagram_url", url)
+        elif kind in ("youtube", "video channel") and host(url) == "youtube.com" and url.startswith("https://"):
+            found.setdefault("youtube_url", url)
     return found
 
 
@@ -174,6 +190,16 @@ def apply_details(record, details, status):
     found = links(details)
     record.wikidata_id = found.get("wikidata_id", "")
     record.discogs_url = found.get("discogs_url", "")
+    # instagram and youtube: musicbrainz's, unless an editor set them (wikidata's come later,
+    # where musicbrainz has none)
+    for name in SOCIAL_FIELDS:
+        if record.field_sources.get(name) == "editor":
+            continue
+        setattr(record, name, found.get(name, ""))
+        if found.get(name):
+            record.field_sources[name] = MUSICBRAINZ
+        else:
+            record.field_sources.pop(name, None)
     # the record's own website and bandcamp link stay; musicbrainz's fill only empty ones
     for name in ("website", "bandcamp_url"):
         if found.get(name) and (not getattr(record, name) or record.field_sources.get(name) == MUSICBRAINZ):
@@ -231,21 +257,37 @@ def add_members(band, details):
 
 def add_introduction(record, wikipedia, problems):
     """
-    the opening paragraph of the record's english wikipedia article (not saved); none when
-    it has no wikidata id or article. a failed request keeps what it had, and is reported
+    from the record's wikidata item (not saved): the opening paragraph of its english
+    wikipedia article, its commons photo under a free licence, and the instagram and youtube
+    links musicbrainz didn't give. none when it has no wikidata id or they don't exist; a
+    failed request keeps what it had, and is reported
     """
-    if not record.wikidata_id:
-        found = None
-    else:
+    entity = found = photo = None
+    if record.wikidata_id:
         try:
-            found = wikipedia.introduction(record.wikidata_id)
+            entity = wikipedia.entity(record.wikidata_id)
+            found = wikipedia.introduction(record.wikidata_id, entity)
+            photo = wikipedia.photo(entity["image"]) if entity and entity["image"] else None
         except WikipediaError as e:
-            problems.append(f"{record.name}: {e}; kept its earlier wikipedia text")
+            problems.append(f"{record.name}: {e}; kept its earlier wikipedia text, photo and links")
             return
     record.wikipedia_extract = found["extract"] if found else ""
     record.wikipedia_url = found["url"][:500] if found else ""
     record.wikipedia_revision = found["revision"][:32] if found else ""
     record.wikipedia_fetched_at = timezone.now() if found else None
+    for name in SOCIAL_FIELDS:
+        source = record.field_sources.get(name)
+        value = (entity or {}).get(name.removesuffix("_url"), "")
+        if source in ("editor", MUSICBRAINZ):
+            continue
+        setattr(record, name, value)
+        if value:
+            record.field_sources[name] = WIKIDATA
+        else:
+            record.field_sources.pop(name, None)
+    if record.field_sources.get("photo_file") != "editor":
+        for name in PHOTO_FIELDS:
+            setattr(record, name, (photo or {}).get(name.removeprefix("photo_"), ""))
 
 
 def enrich(record, musicbrainz, matcher, wikipedia=None, problems=None):

@@ -16,7 +16,7 @@ OTHER = "11111111-1111-4111-8111-111111111111"
 def form_data(band, **changes):
     """the band admin's form as posted, with no members changed"""
     data = {
-        "name": band.name, "act_id": band.act_id or "", "city_town": band.city_town, "state": band.state,
+        "name": band.name, "slug": band.slug, "act_id": band.act_id or "", "city_town": band.city_town, "state": band.state,
         "website": band.website, "bandcamp_url": band.bandcamp_url, "notes": band.notes,
         "musicbrainz_id": band.musicbrainz_id or "",
         "memberships-TOTAL_FORMS": "0", "memberships-INITIAL_FORMS": "0",
@@ -129,3 +129,28 @@ class IntroductionAdminTestCase(TestCase):
         self.client.post(reverse("admin:core_band_changelist"), {"action": "clear_musicbrainz_match", "_selected_action": [band.pk]})
         band.refresh_from_db()
         self.assertEqual((band.wikipedia_extract, band.wikipedia_url, band.disambiguation), ("", "", ""))
+
+
+class PhotoAndLinksAdminTestCase(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+
+    def test_photo_preview_and_links_on_the_page(self):
+        band = Band.objects.create(
+            name="Bonerama", photo_file="Bonerama2006.jpg", photo_author="Masahiro Sumori", photo_license="CC BY-SA 3.0",
+            instagram_url="https://www.instagram.com/bonerama/",
+        )
+        html = self.client.get(reverse("admin:core_band_change", args=[band.pk])).content.decode()
+        self.assertIn("https://commons.wikimedia.org/wiki/Special:FilePath/Bonerama2006.jpg?width=480", html)
+        self.assertIn("https://www.instagram.com/bonerama/", html)
+
+    def test_clearing_a_match_drops_its_photo_and_links_but_not_an_editors(self):
+        band = Band.objects.create(
+            name="Bonerama", musicbrainz_id=OTHER, photo_file="Bonerama2006.jpg", photo_license="CC BY-SA 3.0",
+            instagram_url="https://www.instagram.com/x/", youtube_url="https://www.youtube.com/channel/UCxxxxxxxxxxxxxxxxxxxxxx",
+            field_sources={"instagram_url": "musicbrainz", "youtube_url": "editor"},
+        )
+        self.client.post(reverse("admin:core_band_changelist"), {"action": "clear_musicbrainz_match", "_selected_action": [band.pk]})
+        band.refresh_from_db()
+        self.assertEqual((band.photo_file, band.photo_license, band.instagram_url), ("", "", ""))
+        self.assertEqual(band.youtube_url, "https://www.youtube.com/channel/UCxxxxxxxxxxxxxxxxxxxxxx")

@@ -6,6 +6,7 @@ from django.db import models
 from django.db.models.functions import Upper
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.text import slugify
 from ordered_model.models import OrderedModel
 from solo.models import SingletonModel
 from tinymce import models as tinymce_models
@@ -878,6 +879,17 @@ class MusicAct(models.Model):
     wikipedia_url = models.URLField(max_length=500, blank=True, default="")
     wikipedia_revision = models.CharField(max_length=32, blank=True, default="")
     wikipedia_fetched_at = models.DateTimeField(null=True, blank=True)
+    # the public page's address (/bands/<slug>, /artists/<slug>), unique within each kind
+    slug = models.SlugField(max_length=120, unique=True, blank=True)
+    # from musicbrainz's links or wikidata, unless an editor set them (field_sources)
+    instagram_url = models.URLField(max_length=300, blank=True, default="")
+    youtube_url = models.URLField(max_length=300, blank=True, default="")
+    # a wikimedia commons photo under a free licence (wikidata's image, p18): only its file
+    # name and credit are kept, and the page loads commons' own thumbnail (add-band-pages)
+    photo_file = models.CharField(max_length=255, blank=True, default="")
+    photo_author = models.CharField(max_length=255, blank=True, default="")
+    photo_license = models.CharField(max_length=64, blank=True, default="")
+    photo_license_url = models.URLField(max_length=300, blank=True, default="")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -888,6 +900,8 @@ class MusicAct(models.Model):
 
     def save(self, *args, **kwargs):
         self.name_key = normalize(self.name)
+        if not self.slug:
+            self.slug = unique_slug(type(self), self.name, exclude_pk=self.pk)
         if self.act_id == "":
             self.act_id = None
         if self.musicbrainz_id == "":
@@ -896,6 +910,16 @@ class MusicAct(models.Model):
 
     def __str__(self):
         return self.name
+
+
+def unique_slug(model, name, exclude_pk=None):
+    """the name as a slug, with -2, -3... when another record of this kind has it"""
+    base = (slugify(name) or "act")[:110]
+    taken = set(model.objects.filter(slug__startswith=base).exclude(pk=exclude_pk).values_list("slug", flat=True))
+    slug, n = base, 2
+    while slug in taken:
+        slug, n = f"{base}-{n}", n + 1
+    return slug
 
 
 class Artist(MusicAct):

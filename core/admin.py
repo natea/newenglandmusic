@@ -23,7 +23,7 @@ from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filt
 from . import apple_music, youtube
 from .places import PlacesClient, PlacesError
 from .spotify import parse_artist_id
-from .wikipedia import LICENSE_URL
+from .wikipedia import LICENSE_URL, commons_file_page, commons_thumbnail
 from .spotify_links import rebake_events_naming
 from .artist_matching import normalize
 from .job_runs import DIDNT_FINISH, STALE_AFTER, outcome
@@ -1359,9 +1359,18 @@ class MusicActAdmin(admin.ModelAdmin):
     readonly_fields = (
         "musicbrainz_status", "musicbrainz_checked_at", "musicbrainz_page", "genres_from_musicbrainz",
         *[f for f in MUSICBRAINZ_FIELDS if f != "genres"], "field_sources", "introduction_from_wikipedia",
+        "photo_preview",
     )
     fieldsets = (
-        (None, {"fields": ("name", "act_id", "city_town", "state", "website", "bandcamp_url", "notes")}),
+        (None, {"fields": ("name", "slug", "act_id", "city_town", "state", "notes")}),
+        ("Links", {"fields": ("website", "bandcamp_url", "instagram_url", "youtube_url")}),
+        (
+            "Photo (Wikimedia Commons, free licence only)",
+            {
+                "description": "set a commons file name and its credit to choose the photo by hand; enrichment keeps an editor's",
+                "fields": ("photo_preview", "photo_file", "photo_author", "photo_license", "photo_license_url"),
+            },
+        ),
         (
             "MusicBrainz",
             {
@@ -1394,6 +1403,17 @@ class MusicActAdmin(admin.ModelAdmin):
         return format_html(
             '{} <span class="help">(genres from <a href="https://musicbrainz.org/doc/About/Data_License">MusicBrainz</a>, CC BY-NC-SA)</span>',
             ", ".join(act.genres),
+        )
+
+    @admin.display(description="photo")
+    def photo_preview(self, act):
+        # commons' own thumbnail, as the public page shows it, so a wrong photo is obvious
+        if not act.photo_file:
+            return "-"
+        return format_html(
+            '<img src="{}" alt="" width="240" style="max-width:100%;height:auto"><br>'
+            '<a href="{}" target="_blank" rel="noopener">on Wikimedia Commons</a>',
+            commons_thumbnail(act.photo_file, 480), commons_file_page(act.photo_file),
         )
 
     @admin.display(description="from Wikipedia")
@@ -1447,10 +1467,16 @@ def clear_musicbrainz(act):
     # found through musicbrainz's wikidata link, so it goes with it
     for name in WIKIPEDIA_FIELDS:
         setattr(act, name, None if name == "wikipedia_fetched_at" else "")
-    for name in ("website", "bandcamp_url"):
-        if act.field_sources.get(name) == "musicbrainz":
+    for name in ("website", "bandcamp_url", "instagram_url", "youtube_url"):
+        if act.field_sources.get(name) in ("musicbrainz", "wikidata"):
             setattr(act, name, "")
-    act.field_sources = {k: v for k, v in act.field_sources.items() if v != "musicbrainz" and k != "musicbrainz_id"}
+    # the photo came through musicbrainz's wikidata link too, unless an editor chose it
+    if act.field_sources.get("photo_file") != "editor":
+        for name in ("photo_file", "photo_author", "photo_license", "photo_license_url"):
+            setattr(act, name, "")
+    act.field_sources = {
+        k: v for k, v in act.field_sources.items() if v not in ("musicbrainz", "wikidata") and k != "musicbrainz_id"
+    }
 
 
 class ArtistAdmin(MusicActAdmin):

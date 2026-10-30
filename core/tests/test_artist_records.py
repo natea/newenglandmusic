@@ -54,3 +54,25 @@ class BandcampUrlTestCase(SimpleTestCase):
             "https://notbandcamp.com", "", None, "krill.bandcamp.com",
         ):
             self.assertFalse(is_bandcamp_url(url), url)
+
+
+class SlugTestCase(TestCase):
+    def test_slug_from_the_name(self):
+        self.assertEqual(Band.objects.create(name="Built To Spill").slug, "built-to-spill")
+        self.assertEqual(Band.objects.create(name="Mike “McDuck” Olson & Co.").slug, "mike-mcduck-olson-co")
+
+    def test_a_clash_gets_a_number(self):
+        Band.objects.create(name="Horse")
+        self.assertEqual(Band.objects.create(name="Horse").slug, "horse-2")
+        self.assertEqual(Band.objects.create(name="HORSE").slug, "horse-3")
+        # an artist with the name is another kind, at another address
+        self.assertEqual(Artist.objects.create(name="Horse").slug, "horse")
+
+    def test_a_name_with_no_letters(self):
+        self.assertEqual(Band.objects.create(name="!!!").slug, "act")
+
+    def test_the_slug_stays_when_the_name_changes(self):
+        band = Band.objects.create(name="Krill")
+        band.name = "Krill (band)"
+        band.save()
+        self.assertEqual(Band.objects.get(pk=band.pk).slug, "krill")

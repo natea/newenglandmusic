@@ -1,0 +1,95 @@
+{
+ "batchcomplete": "",
+ "query": {
+  "pages": {
+   "2243343": {
+    "pageid": 2243343,
+    "ns": 6,
+    "title": "File:Bonerama2006.jpg",
+    "imagerepository": "local",
+    "imageinfo": [
+     {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/5/57/Bonerama2006.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "descriptionurl": "https://commons.wikimedia.org/wiki/File:Bonerama2006.jpg",
+      "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=2243343",
+      "extmetadata": {
+       "DateTime": {
+        "value": "2007-06-14 16:55:55",
+        "source": "mediawiki-metadata",
+        "hidden": ""
+       },
+       "ObjectName": {
+        "value": "Bonerama2006",
+        "source": "mediawiki-metadata"
+       },
+       "CommonsMetadataExtension": {
+        "value": 1.2,
+        "source": "extension",
+        "hidden": ""
+       },
+       "Categories": {
+        "value": "GFDL|Taken with Sony DSC-H1|Bonerama|License migration redundant|Rick Trolsen|Self-published work|New Orleans Jazz & Heritage Festival 2006|People playing the trombone|Craig Klein",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "Assessments": {
+        "value": "",
+        "source": "commons-categories",
+        "hidden": ""
+       },
+       "ImageDescription": {
+        "value": "Bonerama at the New Orleans Jazz &amp; Heritage Festival",
+        "source": "commons-desc-page"
+       },
+       "DateTimeOriginal": {
+        "value": "2006-05-06",
+        "source": "commons-desc-page"
+       },
+       "Credit": {
+        "value": "<span class=\"int-own-work\" lang=\"en\">Own work</span>",
+        "source": "commons-desc-page"
+       },
+       "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Sumori\" title=\"User:Sumori\">Masahiro Sumori</a>",
+        "source": "commons-desc-page"
+       },
+       "LicenseShortName": {
+        "value": "CC BY-SA 3.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "UsageTerms": {
+        "value": "Creative Commons Attribution-Share Alike 3.0",
+        "source": "commons-desc-page"
+       },
+       "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "LicenseUrl": {
+        "value": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "source": "commons-desc-page"
+       },
+       "Copyrighted": {
+        "value": "True",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+       },
+       "License": {
+        "value": "cc-by-sa-3.0",
+        "source": "commons-templates",
+        "hidden": ""
+       }
+      }
+     }
+    ]
+   }
+  }
+ }
+}
