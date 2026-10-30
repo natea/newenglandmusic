@@ -21,12 +21,13 @@ SEPARATOR_RE = re.compile(
 TITLE_PREFIX_RE = re.compile(r"^(?:.*?\bpresents\b\s*:?|an evening with)\s+", re.IGNORECASE)
 # titles that name a kind of night rather than its acts. the second line came from the
 # titles' names on 2026-10-29 ("Irish Session", "Jazz Jam", "Live Music at SAL's Birch Bar",
-# "Jazz Wednesdays", "WXPN Welcomes", "Porchfest", "A Celtic Christmas", "FREE"). "tour"
+# "Jazz Wednesdays", "WXPN Welcomes", "Porchfest", "A Celtic Christmas", "FREE", "Live Jazz"). "tour"
 # isn't one: "Built to Spill Fall 2026 Tour" names its act (see occasion_prefix)
 TITLE_STOPWORDS_RE = re.compile(
     r"\b(?:tribute|party|night|festival|open mic|karaoke"
     r"|jams?|sessions?|brunch|live music|open stage|series|showcase|christmas|halloween|intimate evening"
-    r"|welcomes|battle of the bands|(?:mon|tues|wednes|thurs|fri|satur|sun)days)\b"
+    r"|welcomes|battle of the bands|(?:mon|tues|wednes|thurs|fri|satur|sun)days"
+    r"|live (?:jazz|blues|bluegrass|folk|country|rock|soul|funk|acoustic|band|bands|entertainment))\b"
     r"|\w+fest\b|^\W*free\W*$",
     re.IGNORECASE,
 )
