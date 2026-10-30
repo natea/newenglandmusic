@@ -48,7 +48,7 @@ OCCASION_WORDS = {
 # "Rhiannon Hurst (21+)", "49th & Main (DJ Set)": notes after a name, not part of it.
 # "with Jacyn Tremblay": a bill that starts "with ..."
 TRAILING_NOTE_RE = re.compile(
-    r"\s*\(\s*(?:\d+\s*\+|all ages|dj set|live set|live|acoustic|solo|full band)\s*\)\s*$",
+    r"\s*\(\s*(?:\d+\s*\+|all ages|dj set|live set|live|acoustic|solo|full band|sold out)\s*\)\s*$",
     re.IGNORECASE,
 )
 LEADING_WITH_RE = re.compile(r"^with\s+", re.IGNORECASE)
@@ -56,12 +56,48 @@ LEADING_WITH_RE = re.compile(r"^with\s+", re.IGNORECASE)
 PLACEHOLDERS = {"tba", "tbd", "special guest", "special guests", "and more", "organization", "dj"}
 
 
+# "Seb Lowe US 2027", "Built to Spill Fall 2026 Tour": a tour named after the act with no
+# dash or colon between. words a trailing tour name is made of, dropped only when the run
+# has a year, or "tour" and a region or season, so "Summer Salt" and "North Mississippi
+# Allstars" stay whole
+TOUR_YEAR_RE = re.compile(r"^(?:19|20)\d\d$")
+TOUR_WORDS = {
+    "us", "usa", "uk", "eu", "north", "south", "east", "west", "coast", "american", "america",
+    "european", "europe", "canada", "canadian", "world", "worldwide", "global", "international",
+    "fall", "autumn", "spring", "summer", "winter", "headline", "headlining", "dates", "leg",
+}
+# "The Thing in the Spring 2027": a little word before the run means it's part of the name
+TOUR_NAME_JOINERS = {"the", "a", "an", "in", "of", "at", "on", "for", "to", "from", "and", "&", "with", "by"}
+
+
+def strip_tour_name(name):
+    """the name without a trailing tour name: "Seb Lowe US 2027" -> "Seb Lowe" """
+    words = name.split()
+    end, year, tour, place = len(words), False, False, False
+    while end > 1:
+        word = words[end - 1].strip("()[]'\"’.,!:").lower()
+        if TOUR_YEAR_RE.match(word):
+            year = True
+        elif word in ("tour", "tours"):
+            tour = True
+        elif word in TOUR_WORDS:
+            place = True
+        else:
+            break
+        end -= 1
+    # a lone "tour" is left for occasion_prefix, which needs it: "Corey Kent Heartland Rock and Roll Tour"
+    marked = year or (tour and place)
+    if not marked or end == len(words) or words[end - 1].lower() in TOUR_NAME_JOINERS:
+        return name
+    return " ".join(words[:end])
+
+
 def clean_name(name):
     name, before = SUBTITLE_RE.split(name.strip(), maxsplit=1)[0], None
     # notes can stack: "Glass Halo (DJ Set) (21+)"
     while name != before:
         before, name = name, TRAILING_NOTE_RE.sub("", name)
-    return LEADING_WITH_RE.sub("", name).strip()
+    return strip_tour_name(LEADING_WITH_RE.sub("", name).strip())
 
 
 def split_names(text):

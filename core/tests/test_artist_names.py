@@ -93,6 +93,15 @@ class TitleTestCase(SimpleTestCase):
         )
         self.assertEqual(names(title="Blue October - 'Foiled' 20th Anniversary World Tour"), ["Blue October"])
 
+    def test_tour_name_with_no_separator_removed(self):
+        self.assertEqual(names(title="Seb Lowe US 2027"), ["Seb Lowe"])
+        self.assertEqual(names(title="Built to Spill Fall 2026 Tour"), ["Built to Spill"])
+        self.assertEqual(names(title="Matchbox Twenty North American Tour 2026"), ["Matchbox Twenty"])
+
+    def test_names_that_only_look_like_tours_kept(self):
+        for title in ("Summer Salt", "North Mississippi Allstars", "Class of 2027", "The Thing in the Spring 2027"):
+            self.assertEqual(names(title=title), [title])
+
     def test_show_name_after_a_dash_or_colon_dropped(self):
         self.assertEqual(names(title="Còig - early show"), ["Còig"])
         self.assertEqual(names(title="Corey Kent - Heartland Rock and Roll"), ["Corey Kent"])
@@ -200,4 +209,4 @@ class TitleStopwordsTestCase(SimpleTestCase):
 
         for title in ("They Might Be Giants", "Dropkick Murphys", "Free Throw", "Jamiroquai", "Evening Hymns", "Live Wire", "Liver"):
             self.assertEqual(title_names(title), [title], title)
-        self.assertEqual(title_names("Built to Spill Fall 2026 Tour"), ["Built to Spill Fall 2026 Tour"])
+        self.assertEqual(title_names("Built to Spill Fall 2026 Tour"), ["Built to Spill"])
