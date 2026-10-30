@@ -2,7 +2,8 @@ from django.conf import settings
 from django.contrib.sitemaps import Sitemap
 from django.db.models.functions import TruncMonth
 
-from .models import Event, StaticPage
+from .models import Artist, Band, Event, StaticPage
+from .utils_datemath import beginning_of_day, get_current_new_york_datetime
 
 
 class SiteSitemap(Sitemap):
@@ -21,6 +22,14 @@ class SiteSitemap(Sitemap):
             )
         ):
             url_list.append(f"/{event_year_month.year}-{event_year_month.month:02d}/")
+
+        # band and artist pages with an upcoming approved show; the rest are noindex
+        today = beginning_of_day(get_current_new_york_datetime())
+        for model, field in ((Band, "band"), (Artist, "artist")):
+            acts = model.objects.filter(
+                performances__event__is_approved=True, performances__event__starttime__gte=today
+            ).distinct()
+            url_list.extend(act.get_absolute_url() for act in acts)
 
         # uniquify.
         return list(set(url_list))

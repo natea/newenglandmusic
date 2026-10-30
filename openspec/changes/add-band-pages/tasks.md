@@ -7,7 +7,7 @@
 ## 2. The page
 
 - [x] 2.1 Add the views, URLs and `band.html` (band and artist variants) with `band.scss`, built to the direction contract and the chosen sketch: tab, name, meta line, next-show strip, fields, bio with credit, show list, invitation, `noindex` without upcoming shows. Verify with view tests for every band-pages scenario except linking from events.
-- [ ] 2.2 Link performers in the calendar's event listings, re-baking events whose links change, and add band and artist pages with upcoming shows to the sitemap. Verify with a calendar test for a linked performer and a plain name, and a sitemap test.
+- [x] 2.2 Link performers in the calendar's event listings, re-baking events whose links change, and add band and artist pages with upcoming shows to the sitemap. Verify with a calendar test for a linked performer and a plain name, and a sitemap test.
 
 ## 3. Check and finish
 

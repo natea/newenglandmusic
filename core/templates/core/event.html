@@ -42,22 +42,33 @@
       {% endcomment %}
 
       {% spaceless %}
-        {% if event.hyperlink %}
-          <a href="{{ event.hyperlink }}" target="_blank">
-        {% endif %}
-        
-        {% if event.title and event.artists %}
-          <span class='artist-present'>{{ event.title }}:&nbsp;</span>
-        {% elif event.title %}
-          <span class="title-only">{{ event.title }}</span>
-        {% endif %}
+        {% if artist_parts %}
+          {% comment %}
+            names that are performers link to their pages (add-band-pages), so the event's own
+            link covers only its title: links can't nest
+          {% endcomment %}
+          {% if event.title %}
+            {% if event.hyperlink %}<a href="{{ event.hyperlink }}" target="_blank">{% endif %}<span class='artist-present'>{{ event.title }}:&nbsp;</span>{% if event.hyperlink %}</a>{% endif %}
+          {% endif %}
+          <span class="artists">{% for text, url in artist_parts %}{% if url %}<a class="performer" href="{{ url }}">{{ text }}</a>{% else %}{{ text }}{% endif %}{% endfor %}</span>
+        {% else %}
+          {% if event.hyperlink %}
+            <a href="{{ event.hyperlink }}" target="_blank">
+          {% endif %}
 
-        {% if event.artists %}
-          <span class="artists">{{ event.artists }}</span>
-        {% endif %}
+          {% if event.title and event.artists %}
+            <span class='artist-present'>{{ event.title }}:&nbsp;</span>
+          {% elif event.title %}
+            <span class="title-only">{{ event.title }}</span>
+          {% endif %}
 
-        {% if event.hyperlink %}
-          </a>
+          {% if event.artists %}
+            <span class="artists">{{ event.artists }}</span>
+          {% endif %}
+
+          {% if event.hyperlink %}
+            </a>
+          {% endif %}
         {% endif %}
       {% endspaceless %}
 

@@ -153,3 +153,45 @@ class BandPageTestCase(TestCase):
         html = self.page(self.full_band()).content.decode()
         self.assertIn("<title>Built To Spill | New England Music</title>", html)
         self.assertIn('alt="Built To Spill"', html)
+
+
+class LinksFromTheCalendarTestCase(TestCase):
+    def setUp(self):
+        self.venue = Venue.objects.create(sheet_id="V1", name="Paradise", city_town="Boston", state="MA")
+        self.pixies = Band.objects.create(name="Pixies")
+
+    def test_a_linked_performer(self):
+        from core.event_performers import link_from_names
+
+        event = Event.all_objects.create(title="show", artists="Pixies, Dana and Alden", starttime=days(3), venue=self.venue,
+                                         hyperlink="https://venue.example/show")
+        link_from_names(event)
+        html = Event.all_objects.get(pk=event.pk).baked_html_template
+        self.assertIn('<a class="performer" href="/bands/pixies">Pixies</a>, Dana and Alden', html)
+        # the event's own link covers only its title now
+        self.assertIn("<a href=\"https://venue.example/show\" target=\"_blank\"><span class='artist-present'>show:", html)
+
+    def test_names_that_arent_performers_stay_plain(self):
+        event = Event.all_objects.create(title="show", artists="Dana and Alden", starttime=days(3), venue=self.venue)
+        html = Event.all_objects.get(pk=event.pk).baked_html_template
+        self.assertNotIn('class="performer"', html)
+        self.assertIn('<span class="artists">Dana and Alden</span>', html)
+
+    def test_unlinking_rerenders(self):
+        from core.event_performers import link_from_names
+
+        event = Event.all_objects.create(title="show", artists="Pixies", starttime=days(3), venue=self.venue)
+        link_from_names(event)
+        self.pixies.delete()
+        link_from_names(event)
+        self.assertNotIn('class="performer"', Event.all_objects.get(pk=event.pk).baked_html_template)
+
+    def test_sitemap_lists_acts_with_upcoming_shows(self):
+        from core.event_performers import link_from_names
+
+        Band.objects.create(name="Krill")
+        event = Event.all_objects.create(title="show", artists="Pixies", starttime=days(3), venue=self.venue, is_approved=True)
+        link_from_names(event)
+        xml = self.client.get("/sitemap.xml").content.decode()
+        self.assertIn("/bands/pixies", xml)
+        self.assertNotIn("/bands/krill", xml)

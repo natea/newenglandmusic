@@ -24,6 +24,7 @@ from . import apple_music, youtube
 from .places import PlacesClient, PlacesError
 from .spotify import parse_artist_id
 from .wikipedia import LICENSE_URL, commons_file_page, commons_thumbnail
+from .event_performers import rebake
 from .spotify_links import rebake_events_naming
 from .artist_matching import normalize
 from .job_runs import DIDNT_FINISH, STALE_AFTER, outcome
@@ -222,6 +223,8 @@ class EventAdmin(admin.ModelAdmin):
                 performer.save()
             for performer in formset.deleted_objects:
                 performer.delete()
+            # the listing links its performers' names, so it's rendered again
+            rebake(formset.instance)
             return
         super().save_formset(request, form, formset, change)
 
