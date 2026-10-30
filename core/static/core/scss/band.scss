@@ -154,11 +154,13 @@ $quiet: #4f4b44;
 .act-photo {
   margin: 0;
 
+  // a portrait stays within the card's rhythm instead of filling a screen
   img {
     display: block;
-    width: 100%;
-    max-width: 480px;
+    width: auto;
+    max-width: unquote("min(100%, 480px)");
     height: auto;
+    max-height: 26rem;
     background: $ground;
   }
 

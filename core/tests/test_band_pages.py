@@ -195,3 +195,11 @@ class LinksFromTheCalendarTestCase(TestCase):
         xml = self.client.get("/sitemap.xml").content.decode()
         self.assertIn("/bands/pixies", xml)
         self.assertNotIn("/bands/krill", xml)
+
+
+class ArtistMetaTestCase(TestCase):
+    def test_a_persons_birth_year_isnt_shown_as_since(self):
+        kim = Artist.objects.create(name="Kim Deal", city_town="Dayton", state="OH", begin_date="1961-06-10")
+        html = self.client.get(kim.get_absolute_url()).content.decode()
+        self.assertIn("Artist · Dayton, OH", html)
+        self.assertNotIn("since 1961", html)

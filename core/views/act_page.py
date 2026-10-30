@@ -116,7 +116,8 @@ def act_page(request, act):
     origin = origin_of(act)
     meta_bits = [bit for bit in (
         "Band" if is_band else "Artist", ", ".join(act.genres[:2]), origin,
-        f"since {act.begin_date[:4]}" if act.begin_date[:4].isdigit() else "",
+        # a person's musicbrainz begin date is their birth, not when they started playing
+        f"since {act.begin_date[:4]}" if is_band and act.begin_date[:4].isdigit() else "",
     ) if bit]
     description = act.disambiguation or f"{act.name}: upcoming shows in the Northeast, members and links."
     if act.wikipedia_extract:
