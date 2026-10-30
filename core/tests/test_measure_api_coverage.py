@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from core.event_fetching.eventbrite import EventbriteClient
+from core.event_fetching.seatgeek import SeatGeekClient, SeatGeekError, to_venue_dict
 from core.event_sources import save_event_source
 from core.management.commands import match_eventbrite_organizers as match
 from core.models import JobRun, Venue, VenueEventSource
@@ -14,6 +15,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 FIXTURES = Path(__file__).parent / "fixtures" / "eventbrite"
+SEATGEEK_FIXTURES = Path(__file__).parent / "fixtures" / "seatgeek"
 
 PAGES = {
     # the main pub links its eventbrite events
@@ -84,3 +86,79 @@ class MeasureCoverageTestCase(TestCase):
             problems=[{"venue_id": problem.pk, "sheet_id": "V0594", "name": problem.name, "problems": ["failed: x"]}],
         )
         self.assertIn("V0594 Montage Music Hall", self.measure())
+
+
+class MeasureSeatGeekCoverageTestCase(TestCase):
+    """the seatgeek half, with eventbrite off and the seatgeek client mocked"""
+
+    def setUp(self):
+        self.sinclair = Venue.objects.create(
+            sheet_id="V0152", name="The Sinclair", city_town="Cambridge", state="MA",
+            latitude=42.3740, longitude=-71.1206,
+        )
+        save_event_source(self.sinclair, {
+            "best_source": "ticketing", "url": "https://sinclair.example/", "platforms": "axs",
+        })
+        self.toads = Venue.objects.create(
+            sheet_id="V0042", name="Toad's Place", city_town="New Haven", state="CT",
+            latitude=41.308, longitude=-72.9244, ticketmaster_venue_id="tm1",
+        )
+        save_event_source(self.toads, {
+            "best_source": "ticketing", "url": "https://toads.example/", "platforms": "etix",
+        })
+        searches = {
+            "MA": [to_venue_dict(v) for v in self.load("venues_sinclair.json")["venues"]],
+            "CT": [to_venue_dict(v) for v in self.load("venues_toads.json")["venues"]],
+        }
+        patches = [
+            mock.patch.dict(os.environ, {"EVENTBRITE_API_KEY": "", "SEATGEEK_CLIENT_ID": "test"}),
+            mock.patch.object(SeatGeekClient, "search_venues", side_effect=lambda name, state: searches[state]),
+            mock.patch.object(
+                SeatGeekClient, "venue_events", return_value=self.load("events_sinclair.json")["events"]
+            ),
+        ]
+        for patch in patches:
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def load(self, name):
+        return json.loads((SEATGEEK_FIXTURES / name).read_text())
+
+    def measure(self, *args):
+        out = StringIO()
+        call_command("measure_api_coverage", *args, stdout=out, no_color=True)
+        return out.getvalue()
+
+    def test_reports_the_match_and_its_concerts(self):
+        output = self.measure()
+        # two of the five recorded events are concerts
+        self.assertIn("seatgeek venue 11280 The Sinclair - Cambridge: 5 upcoming events, 2 concerts\n", output)
+        self.assertIn(
+            "seatgeek venue 1075 Toad's Place: 5 upcoming events, 2 concerts (already linked to ticketmaster)",
+            output,
+        )
+        self.assertIn(
+            "seatgeek: matched 2 of 2 venues; 2 have upcoming concerts there (4 concerts), "
+            "1 of them not linked to ticketmaster or eventbrite",
+            output,
+        )
+        # eventbrite is off, so it has no totals line
+        self.assertNotIn("eventbrite: organizer found", output)
+
+    def test_summary_is_recorded(self):
+        self.measure()
+        summary = dict(JobRun.objects.get().summary)
+        self.assertEqual(summary["seatgeek matched"], 2)
+        self.assertEqual(summary["seatgeek concerts"], 4)
+        self.assertEqual(summary["seatgeek with concerts, not on ticketmaster or eventbrite"], 1)
+
+    def test_no_certain_match_lists_the_candidates(self):
+        Venue.objects.filter(pk=self.sinclair.pk).update(latitude=42.0, longitude=-71.5)
+        output = self.measure("--sheet-ids", "V0152")
+        self.assertIn("seatgeek: no certain match among", output)
+        self.assertRegex(output, r"11280 The Sinclair - Cambridge, Cambridge \[\d+\.\d\d km\]")
+
+    def test_api_error_is_reported_and_the_run_goes_on(self):
+        with mock.patch.object(SeatGeekClient, "search_venues", side_effect=SeatGeekError("venues: HTTP 500")):
+            output = self.measure()
+        self.assertEqual(output.count("seatgeek failed: venues: HTTP 500"), 2)

@@ -6,6 +6,7 @@ from unittest import mock
 
 from core.event_fetching.ai_extraction import ExtractionError
 from core.event_fetching.eventbrite import EventbriteClient, EventbriteError
+from core.event_fetching.seatgeek import SeatGeekClient, SeatGeekError
 from core.event_fetching.spider import VenueEventsSpider
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.management.commands import fetch_events
@@ -892,6 +893,372 @@ class FetchEventsEventbriteTestCase(TestCase):
         )
 
 
+def sg_event(id, title="Show", days=7, taxonomy="concert", **changes):
+    """a seatgeek api event, starting `days` from now"""
+    start = timezone.now() + datetime.timedelta(days=days)
+    event = {
+        "id": id,
+        "title": title,
+        "url": f"https://seatgeek.com/show-tickets/{id}",
+        "datetime_utc": start.strftime("%Y-%m-%dT%H:%M:%S"),
+        "datetime_local": start.strftime("%Y-%m-%dT%H:%M:%S"),
+        "date_tbd": False,
+        "datetime_tbd": False,
+        "time_tbd": False,
+        "status": "normal",
+        "description": "",
+        "taxonomies": [{"name": taxonomy}],
+        "performers": [{"name": title}],
+        "stats": {},
+    }
+    event.update(changes)
+    return event
+
+
+class FakeSite:
+    """the venues' own sites, as a requests session sees them; records what it's asked for"""
+
+    def __init__(self):
+        self.pages = {}
+        self.requested = []
+
+    def get(self, url, timeout=None):
+        self.requested.append(url)
+        page = self.pages.get(url)
+        if url.endswith("/robots.txt"):
+            return mock.Mock(status_code=200 if page else 404, text=page or "")
+        if isinstance(page, int):
+            return mock.Mock(status_code=page, text="")
+        return mock.Mock(status_code=200 if page is not None else 404, text=page or "")
+
+
+def etix_show(id, slug):
+    return f'<a href="https://www.etix.com/ticket/p/{id}/{slug}">tickets</a>'
+
+
+class FetchEventsSeatGeekTestCase(TestCase):
+    """fetch_events with venues linked to seatgeek venues"""
+
+    def setUp(self):
+        FetchEventsTestCase.setUp(self)
+        # link a venue of every kind: ical, json-ld, ticketing, ai and bot-blocked
+        for sheet_id in ("V0001", "V0002", "V0003", "V0004", "V0005"):
+            Venue.objects.filter(sheet_id=sheet_id).update(seatgeek_venue_id=f"sg-{sheet_id}")
+        Venue.objects.filter(sheet_id="V0003").update(
+            ticket_page_url="https://www.etix.com/ticket/v/1234/venue-v0003",
+            website="https://v0003.example/",
+        )
+        self.venues = {v.sheet_id: v for v in Venue.objects.all()}
+        env = mock.patch.dict(os.environ, {"SEATGEEK_CLIENT_ID": "sg-id"})
+        env.start()
+        self.addCleanup(env.stop)
+        FakeCrawlerProcess.seen_targets = []
+        self.sg_events = {}
+        self.sg_requests = []
+
+        def venue_events(client, venue_id):
+            self.sg_requests.append(venue_id)
+            events = self.sg_events.get(venue_id, [])
+            if isinstance(events, Exception):
+                raise events
+            return events
+
+        patcher = mock.patch.object(SeatGeekClient, "venue_events", venue_events)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.site = FakeSite()
+        patcher = mock.patch.object(fetch_events, "polite_session", lambda: self.site)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    save_sources = FetchEventsTestCase.save_sources
+    crawl_returns = FetchEventsTestCase.crawl_returns
+    events_for = FetchEventsTestCase.events_for
+    fetch = FetchEventsTestCase.fetch
+
+    def ticket_page(self, sheet_id):
+        return Venue.objects.get(sheet_id=sheet_id).ticket_page_url
+
+    def sources(self, *args, **kwargs):
+        return {
+            target["sheet_id"]: target["source"]
+            for target in fetch_events.select_targets(3, *args, **kwargs)
+        }
+
+    def test_linked_venues_keep_feeds_and_replace_scraping(self):
+        self.assertEqual(
+            self.sources(None, True),
+            {
+                "V0001": "ical",
+                "V0002": "json-ld",
+                "V0003": "seatgeek",
+                "V0004": "seatgeek",
+                # bot-blocked in the report, but the api still works
+                "V0005": "seatgeek",
+            },
+        )
+
+    def test_linked_to_ticketmaster_and_seatgeek(self):
+        Venue.objects.filter(sheet_id__in=["V0003", "V0005"]).update(ticketmaster_venue_id="tm-1")
+        sources = self.sources(None, True)
+        self.assertEqual((sources["V0003"], sources["V0005"]), ("ticketmaster", "ticketmaster"))
+
+    def test_linked_to_eventbrite_and_seatgeek(self):
+        Venue.objects.filter(sheet_id__in=["V0003", "V0005"]).update(eventbrite_organizer_id="eb-1")
+        sources = self.sources(None, True)
+        self.assertEqual((sources["V0003"], sources["V0005"]), ("eventbrite", "eventbrite"))
+        # without eventbrite, seatgeek takes over
+        sources = self.sources(None, True, use_eventbrite=False)
+        self.assertEqual((sources["V0003"], sources["V0005"]), ("seatgeek", "seatgeek"))
+
+    def test_concerts_only(self):
+        self.sg_events["sg-V0003"] = [
+            sg_event("1"),
+            sg_event("2"),
+            sg_event("3"),
+            sg_event("4", taxonomy="comedy"),
+            sg_event("5", taxonomy="nba"),
+        ]
+        output = self.fetch("--sheet-ids", "V0003")
+        self.assertEqual(
+            set(Event.all_objects.values_list("external_id", flat=True)),
+            {"seatgeek:1", "seatgeek:2", "seatgeek:3"},
+        )
+        self.assertIn("seatgeek: 2 non-music or undated events left out", output)
+        self.assertEqual(self.sg_requests, ["sg-V0003"])
+        self.assertEqual(FakeCrawlerProcess.seen_targets, [])
+
+    def test_venue_sells_through_etix(self):
+        self.sg_events["sg-V0003"] = [sg_event("101", "Samantha Fish")]
+        output = self.fetch("--sheet-ids", "V0003")
+        event = Event.all_objects.get(external_id="seatgeek:101")
+        self.assertFalse(event.is_approved)
+        self.assertEqual((event.source, event.venue), ("seatgeek", self.venues["V0003"]))
+        self.assertEqual(event.hyperlink, "https://www.etix.com/ticket/v/1234/venue-v0003")
+        self.assertEqual(event.ticket_hyperlink, "https://www.etix.com/ticket/v/1234/venue-v0003")
+        self.assertEqual(event.source_url, "https://seatgeek.com/show-tickets/101")
+        self.assertIsNone(event.price)
+        self.assertIn("[seatgeek]", output)
+
+    def test_no_ticket_page(self):
+        Venue.objects.filter(sheet_id="V0003").update(ticket_page_url="")
+        self.sg_events["sg-V0003"] = [sg_event("101")]
+        self.fetch("--sheet-ids", "V0003")
+        event = Event.all_objects.get(external_id="seatgeek:101")
+        self.assertEqual((event.hyperlink, event.ticket_hyperlink), ("https://v0003.example/", "https://v0003.example/"))
+
+    def test_no_ticket_page_or_website(self):
+        self.sg_events["sg-V0004"] = [sg_event("104")]
+        output = self.fetch("--sheet-ids", "V0004")
+        event = Event.all_objects.get(external_id="seatgeek:104")
+        self.assertEqual((event.hyperlink, event.ticket_hyperlink), (None, None))
+        self.assertEqual(event.source_url, "https://seatgeek.com/show-tickets/104")
+        self.assertIn("seatgeek: the venue has no ticket page or website, so some events have no link", output)
+        self.assertEqual(JobRun.objects.get().problems, [])
+
+    def test_seatgeek_link_not_shown(self):
+        self.sg_events["sg-V0003"] = [sg_event("101", "Samantha Fish", days=2)]
+        self.fetch("--sheet-ids", "V0003")
+        event = Event.all_objects.get(external_id="seatgeek:101")
+        event.is_approved = True
+        event.save()
+        for url in ("/", f"/event/{event.pk}/ics", "/calendar.ics"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200, url)
+            self.assertNotIn(b"seatgeek.com", response.content, url)
+        home = self.client.get("/").content
+        self.assertIn(b"Samantha Fish", home)
+        self.assertIn(b"etix.com/ticket/v/1234/venue-v0003", home)
+
+    def test_refetch_updates_instead_of_duplicating(self):
+        self.sg_events["sg-V0003"] = [sg_event("101", "Old Name")]
+        self.fetch("--sheet-ids", "V0003")
+        self.sg_events["sg-V0003"] = [sg_event("101", "New Name")]
+        self.fetch("--sheet-ids", "V0003")
+        self.assertEqual(
+            list(Event.all_objects.filter(external_id="seatgeek:101").values_list("title", flat=True)),
+            ["New Name"],
+        )
+
+    def test_api_error(self):
+        self.sg_events["sg-V0003"] = SeatGeekError("events: HTTP 503")
+        self.sg_events["sg-V0004"] = [sg_event("104")]
+        output = self.fetch("--sheet-ids", "V0003,V0004")
+        self.assertIn("seatgeek failed: events: HTTP 503", output)
+        self.assertTrue(Event.all_objects.filter(external_id="seatgeek:104").exists())
+        run = JobRun.objects.get()
+        self.assertEqual(
+            [(p["sheet_id"], p["problems"]) for p in run.problems],
+            [("V0003", ["seatgeek failed: events: HTTP 503"])],
+        )
+
+    def test_no_client_id(self):
+        with mock.patch.dict(os.environ, {"SEATGEEK_CLIENT_ID": ""}):
+            output = self.fetch("--sheet-ids", "V0002,V0003")
+        self.assertEqual(self.sg_requests, [])
+        self.assertIn("seatgeek skipped (no SEATGEEK_CLIENT_ID)", output)
+        # the json-ld venue is still crawled
+        self.assertEqual([t["sheet_id"] for t in FakeCrawlerProcess.seen_targets], ["V0002"])
+        self.assertFalse(JobRun.objects.get().problems)
+
+    def test_skip_seatgeek_flag(self):
+        self.fetch("--sheet-ids", "V0003", "--skip-seatgeek")
+        self.assertEqual(self.sg_requests, [])
+        self.assertEqual(
+            [(t["sheet_id"], t["source"]) for t in FakeCrawlerProcess.seen_targets],
+            [("V0003", "ticketing")],
+        )
+
+    def test_shows_own_page_found(self):
+        self.site.pages["https://v0003.example/calendar"] = etix_show(
+            96934398, "as-i-lay-dying-new-haven-toads-place-of-new-haven"
+        ) + etix_show(1, "eggythe-final-tour-new-haven-toads-place-of-new-haven")
+        self.sg_events["sg-V0003"] = [sg_event("101", "As I Lay Dying"), sg_event("102", "Someone Else")]
+        output = self.fetch("--sheet-ids", "V0003")
+        show = Event.all_objects.get(external_id="seatgeek:101")
+        url = "https://www.etix.com/ticket/p/96934398/as-i-lay-dying-new-haven-toads-place-of-new-haven"
+        self.assertEqual((show.hyperlink, show.ticket_hyperlink), (url, url))
+        self.assertEqual(show.source_url, "https://seatgeek.com/show-tickets/101")
+        # no show link of its own: the venue's ticket page
+        other = Event.all_objects.get(external_id="seatgeek:102")
+        self.assertEqual(other.ticket_hyperlink, "https://www.etix.com/ticket/v/1234/venue-v0003")
+        self.assertIn("seatgeek: 1 of 2 events link to the show's own ticket page", output)
+
+    def test_recurring_title(self):
+        self.site.pages["https://v0003.example/calendar"] = etix_show(
+            1, "saturday-night-dance-party-18-new-haven"
+        ) + etix_show(2, "saturday-night-dance-party-18-new-haven")
+        self.sg_events["sg-V0003"] = [sg_event("101", "Saturday Night Dance Party")]
+        self.fetch("--sheet-ids", "V0003")
+        event = Event.all_objects.get(external_id="seatgeek:101")
+        self.assertEqual(event.ticket_hyperlink, "https://www.etix.com/ticket/v/1234/venue-v0003")
+
+    def test_venues_list_found_on_its_site(self):
+        self.site.pages["https://v0004.example/calendar"] = '<a href="https://www.etix.com/ticket/v/677">Tickets</a>'
+        self.sg_events["sg-V0004"] = [sg_event("104")]
+        output = self.fetch("--sheet-ids", "V0004")
+        self.assertEqual(self.ticket_page("V0004"), "https://www.etix.com/ticket/v/677")
+        event = Event.all_objects.get(external_id="seatgeek:104")
+        self.assertEqual(event.ticket_hyperlink, "https://www.etix.com/ticket/v/677")
+        self.assertIn("seatgeek: ticket page set to https://www.etix.com/ticket/v/677", output)
+
+    def test_venues_list_isnt_saved_on_a_dry_run(self):
+        self.site.pages["https://v0004.example/calendar"] = '<a href="https://www.etix.com/ticket/v/677">Tickets</a>'
+        self.sg_events["sg-V0004"] = [sg_event("104")]
+        self.fetch("--sheet-ids", "V0004", "--dry-run")
+        self.assertEqual(self.ticket_page("V0004"), "")
+
+    def test_ticket_page_already_set(self):
+        self.site.pages["https://v0003.example/calendar"] = '<a href="https://www.etix.com/ticket/v/999">Tickets</a>'
+        self.sg_events["sg-V0003"] = [sg_event("101")]
+        self.fetch("--sheet-ids", "V0003")
+        self.assertEqual(self.ticket_page("V0003"), "https://www.etix.com/ticket/v/1234/venue-v0003")
+        event = Event.all_objects.get(external_id="seatgeek:101")
+        self.assertEqual(event.ticket_hyperlink, "https://www.etix.com/ticket/v/1234/venue-v0003")
+
+    def test_venues_site_cant_be_read(self):
+        self.site.pages["https://v0003.example/calendar"] = 503
+        self.sg_events["sg-V0003"] = [sg_event("101")]
+        output = self.fetch("--sheet-ids", "V0003")
+        event = Event.all_objects.get(external_id="seatgeek:101")
+        self.assertEqual(event.ticket_hyperlink, "https://www.etix.com/ticket/v/1234/venue-v0003")
+        # the homepage is tried too, and isn't there either
+        self.assertIn(
+            "seatgeek: no ticket links looked for: couldn't read https://v0003.example/calendar (HTTP 503); "
+            "couldn't read https://v0003.example/ (HTTP 404)",
+            output,
+        )
+        self.assertEqual(JobRun.objects.get().problems, [])
+
+    def test_robots_txt_is_obeyed(self):
+        self.site.pages["https://v0003.example/robots.txt"] = "User-agent: *\nDisallow: /calendar"
+        self.site.pages["https://v0003.example/calendar"] = etix_show(1, "show-town")
+        self.sg_events["sg-V0003"] = [sg_event("101")]
+        output = self.fetch("--sheet-ids", "V0003")
+        self.assertNotIn("https://v0003.example/calendar", self.site.requested)
+        self.assertIn("seatgeek: no ticket links looked for: robots.txt disallows https://v0003.example/calendar", output)
+        self.assertEqual(JobRun.objects.get().problems, [])
+
+    def test_show_links_on_the_homepage(self):
+        # the saved events page is one show's page, linking only that show
+        self.site.pages["https://v0003.example/calendar"] = etix_show(9, "season-pass-new-haven")
+        self.site.pages["https://v0003.example/"] = etix_show(5, "as-i-lay-dying-new-haven")
+        self.sg_events["sg-V0003"] = [sg_event("101", "As I Lay Dying")]
+        self.fetch("--sheet-ids", "V0003")
+        event = Event.all_objects.get(external_id="seatgeek:101")
+        self.assertEqual(event.ticket_hyperlink, "https://www.etix.com/ticket/p/5/as-i-lay-dying-new-haven")
+
+    def test_only_the_venues_own_site_is_read(self):
+        self.site.pages["https://v0003.example/calendar"] = etix_show(1, "show-town")
+        self.sg_events["sg-V0003"] = [sg_event("101")]
+        self.fetch("--sheet-ids", "V0003")
+        # the events page and the homepage, each after its robots.txt
+        self.assertEqual(
+            self.site.requested,
+            [
+                "https://v0003.example/robots.txt",
+                "https://v0003.example/calendar",
+                "https://v0003.example/robots.txt",
+                "https://v0003.example/",
+            ],
+        )
+
+    def test_no_events_reads_no_page(self):
+        self.fetch("--sheet-ids", "V0003")
+        self.assertEqual(self.site.requested, [])
+
+    def test_json_ld_from_a_single_shows_page(self):
+        self.events_for("V0002", [event("The one show", external_id="json-ld:1")], source="json-ld")
+        self.sg_events["sg-V0002"] = [sg_event(str(i), f"Band {i}") for i in range(14)]
+        output = self.fetch("--sheet-ids", "V0002")
+        self.assertEqual(Event.all_objects.filter(source="seatgeek").count(), 14)
+        self.assertFalse(Event.all_objects.filter(external_id="json-ld:1").exists())
+        self.assertIn("json-ld found 1 upcoming events and seatgeek 14 concerts, so seatgeek was used", output)
+        self.assertIn("[seatgeek]", output)
+
+    def test_json_ld_events_found_twice_count_once(self):
+        shows = [event(f"Show {i}", external_id=f"json-ld:{i}") for i in range(2)]
+        self.events_for("V0002", shows + shows, source="json-ld")
+        self.sg_events["sg-V0002"] = [sg_event("1"), sg_event("2"), sg_event("3")]
+        output = self.fetch("--sheet-ids", "V0002")
+        self.assertIn("json-ld found 2 upcoming events and seatgeek 3 concerts, so seatgeek was used", output)
+
+    def test_json_ld_lists_more(self):
+        self.events_for(
+            "V0002", [event(f"Show {i}", external_id=f"json-ld:{i}") for i in range(3)], source="json-ld"
+        )
+        self.sg_events["sg-V0002"] = [sg_event("1"), sg_event("2")]
+        output = self.fetch("--sheet-ids", "V0002")
+        self.assertEqual(Event.all_objects.filter(source="json-ld").count(), 3)
+        self.assertFalse(Event.all_objects.filter(source="seatgeek").exists())
+        self.assertIn("json-ld found 3 upcoming events and seatgeek 2 concerts, so json-ld was kept", output)
+
+    def test_json_ld_kept_when_seatgeek_fails(self):
+        self.events_for("V0002", [event("The one show", external_id="json-ld:1")], source="json-ld")
+        self.sg_events["sg-V0002"] = SeatGeekError("events: HTTP 500")
+        output = self.fetch("--sheet-ids", "V0002")
+        self.assertTrue(Event.all_objects.filter(external_id="json-ld:1").exists())
+        self.assertIn("seatgeek (to compare with json-ld) failed: events: HTTP 500", output)
+        self.assertEqual(JobRun.objects.get().problems, [])
+
+    def test_json_ld_venue_linked_to_eventbrite_isnt_compared(self):
+        Venue.objects.filter(sheet_id="V0002").update(eventbrite_organizer_id="eb-2")
+        self.events_for("V0002", [event("The one show", external_id="json-ld:1")], source="json-ld")
+        self.sg_events["sg-V0002"] = [sg_event("1"), sg_event("2")]
+        with mock.patch.dict(os.environ, {"EVENTBRITE_API_KEY": ""}):
+            self.fetch("--sheet-ids", "V0002")
+        self.assertEqual(self.sg_requests, [])
+        self.assertTrue(Event.all_objects.filter(external_id="json-ld:1").exists())
+
+    def test_json_ld_blocked_falls_back_to_seatgeek(self):
+        self.sg_events["sg-V0002"] = [sg_event("202")]
+        FetchEventsFallbackTestCase.crawl_fails(self, "V0002")
+        output = self.fetch("--sheet-ids", "V0002")
+        self.assertTrue(Event.all_objects.filter(external_id="seatgeek:202", source="seatgeek").exists())
+        self.assertIn("json-ld failed, fetched from seatgeek instead", output)
+        self.assertEqual(JobRun.objects.get().problems, [])
+
+
 class FetchEventsFallbackTestCase(TestCase):
     """fetch_events falling back to a venue's linked api when its feed or json-ld fails"""
 
@@ -1248,6 +1615,7 @@ class IsProblemTestCase(SimpleTestCase):
         problems = [
             "failed: https://v.example/cal.ics TimeoutError()",
             "ticketmaster failed: HTTP 503",
+            "seatgeek failed: events: HTTP 500",
             "ai extraction failed: stopped with max_tokens",
         ]
         notes = [
@@ -1256,6 +1624,11 @@ class IsProblemTestCase(SimpleTestCase):
             "not music, hidden from review (1): Trivia [other]",
             "removed 2 unapproved events from the venue's ical feed",
             "ticketmaster: 4 non-music or undated events left out",
+            "seatgeek: 2 non-music or undated events left out",
+            "seatgeek: the venue has no ticket page or website, so some events have no link",
+            "seatgeek: no ticket links looked for: couldn't read https://v.example/ (HTTP 503)",
+            "seatgeek (to compare with json-ld) failed: events: HTTP 500",
+            "json-ld found 1 upcoming events and seatgeek 14 concerts, so seatgeek was used",
         ]
         self.assertTrue(all(fetch_events.is_problem(note) for note in problems))
         self.assertFalse(any(fetch_events.is_problem(note) for note in notes))

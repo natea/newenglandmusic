@@ -1,0 +1,55 @@
+{
+ "meta": {
+  "geolocation": null,
+  "page": 1,
+  "per_page": 10,
+  "took": 0,
+  "total": 1
+ },
+ "venues": [
+  {
+   "access_method": null,
+   "address": "52 Church Street",
+   "capacity": 0,
+   "city": "Cambridge",
+   "country": "US",
+   "display_location": "Cambridge, MA",
+   "extended_address": "Cambridge, MA 02138",
+   "has_upcoming_events": true,
+   "hidden": false,
+   "id": 11280,
+   "links": [],
+   "location": {
+    "lat": 42.374,
+    "lon": -71.1206
+   },
+   "marquee_city": null,
+   "metro_code": 506,
+   "name": "The Sinclair - Cambridge",
+   "name_v2": "The Sinclair - Cambridge",
+   "num_upcoming_events": 52,
+   "passes": [
+    {
+     "name": "The Sinclair - Cambridge Parking",
+     "pass_type": "PARKING",
+     "relative_url": "/venues/the-sinclair-cambridge/parking",
+     "stats": {
+      "event_count": 52
+     },
+     "url": "https://seatgeek.com/venues/the-sinclair-cambridge/parking"
+    }
+   ],
+   "popularity": 1413,
+   "postal_code": "02138",
+   "relative_url": "/venues/the-sinclair-cambridge/tickets",
+   "score": 0.58,
+   "slug": "the-sinclair-cambridge",
+   "state": "MA",
+   "stats": {
+    "event_count": 52
+   },
+   "timezone": "America/New_York",
+   "url": "https://seatgeek.com/venues/the-sinclair-cambridge/tickets"
+  }
+ ]
+}

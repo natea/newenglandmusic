@@ -1,0 +1,886 @@
+{
+ "events": [
+  {
+   "access_method": null,
+   "announce_date": "2026-07-10T00:00:00",
+   "announcements": {},
+   "conditional": false,
+   "contingent": false,
+   "created_at": "2026-07-10T19:37:49",
+   "date_tbd": false,
+   "datetime_local": "2026-11-11T20:00:00",
+   "datetime_tbd": false,
+   "datetime_utc": "2026-11-12T01:00:00",
+   "description": "",
+   "domain_information": [],
+   "enddatetime_utc": "2026-11-12T02:30:00",
+   "event_group_ids": [],
+   "event_promotion": null,
+   "expected_experience_end": "2026-11-12T02:30:00",
+   "game_number": 0,
+   "home_game_number": 0,
+   "id": 18363578,
+   "integrated": null,
+   "is_open": false,
+   "is_visible": true,
+   "is_visible_override": "VISIBLE",
+   "links": [
+    {
+     "display_name": "",
+     "id": "7260964",
+     "link_type": "ID",
+     "logos": {},
+     "primary": false,
+     "provider": "vividseats",
+     "sales": [],
+     "url": ""
+    }
+   ],
+   "main_event_id": null,
+   "onsale": null,
+   "open_domain_id": "",
+   "open_id": "",
+   "performer_order": [
+    {
+     "id": 1770,
+     "ordinal": 0
+    }
+   ],
+   "performers": [
+    {
+     "ada_dominant_image_color": "#c2857a",
+     "colors": null,
+     "divisions": null,
+     "genres": [
+      {
+       "id": 468,
+       "name": "Jazz",
+       "primary": false,
+       "slug": "jazz"
+      },
+      {
+       "id": 465,
+       "name": "Blues",
+       "primary": true,
+       "slug": "blues"
+      }
+     ],
+     "has_upcoming_events": true,
+     "hidden": false,
+     "home_venue_id": null,
+     "id": 1770,
+     "is_event": false,
+     "links": [],
+     "location": null,
+     "name": "The Bad Plus",
+     "num_upcoming_events": 24,
+     "popularity": 125.0,
+     "primary": true,
+     "relative_url": "/the-bad-plus-tickets",
+     "score": 0.31,
+     "short_name": "The Bad Plus",
+     "slug": "the-bad-plus",
+     "stats": {
+      "event_count": 24
+     },
+     "taxonomies": [
+      {
+       "id": 2000000,
+       "name": "concert",
+       "parent_id": null,
+       "rank": 0,
+       "seo_event_type": "concert"
+      }
+     ],
+     "type": "band",
+     "url": "https://seatgeek.com/the-bad-plus-tickets"
+    }
+   ],
+   "playoffs": null,
+   "popularity": 0.5230640362,
+   "relative_url": "/the-bad-plus-tickets/cambridge-massachusetts-the-sinclair-cambridge-2026-11-11-8-pm/concert/18363578",
+   "sales_end_datetime_utc": "2026-11-12T02:30:00",
+   "score": 0.1374623122,
+   "season_stage": null,
+   "short_title": "The Bad Plus",
+   "stats": {},
+   "status": "normal",
+   "taxonomies": [
+    {
+     "id": 2000000,
+     "name": "concert",
+     "parent_id": null,
+     "rank": 0,
+     "seo_event_type": "concert"
+    }
+   ],
+   "tbd_datetime_range_end_utc": null,
+   "tbd_datetime_range_start_utc": null,
+   "tdc_pv_id": 0,
+   "tdc_pvo_id": 0,
+   "themes": [],
+   "ticketmaster": null,
+   "time_tbd": false,
+   "title": "The Bad Plus",
+   "type": "concert",
+   "url": "https://seatgeek.com/the-bad-plus-tickets/cambridge-massachusetts-the-sinclair-cambridge-2026-11-11-8-pm/concert/18363578",
+   "venue": {
+    "access_method": null,
+    "address": "52 Church Street",
+    "capacity": 0,
+    "city": "Cambridge",
+    "country": "US",
+    "display_location": "Cambridge, MA",
+    "extended_address": "Cambridge, MA 02138",
+    "has_upcoming_events": true,
+    "hidden": false,
+    "id": 11280,
+    "links": [],
+    "location": {
+     "lat": 42.374,
+     "lon": -71.1206
+    },
+    "marquee_city": null,
+    "metro_code": 506,
+    "name": "The Sinclair - Cambridge",
+    "name_v2": "The Sinclair - Cambridge",
+    "num_upcoming_events": 52,
+    "passes": [
+     {
+      "name": "The Sinclair - Cambridge Parking",
+      "pass_type": "PARKING",
+      "relative_url": "/venues/the-sinclair-cambridge/parking",
+      "stats": {
+       "event_count": 52
+      },
+      "url": "https://seatgeek.com/venues/the-sinclair-cambridge/parking"
+     }
+    ],
+    "popularity": 1413,
+    "postal_code": "02138",
+    "relative_url": "/venues/the-sinclair-cambridge/tickets",
+    "score": 0.58,
+    "sg_market_area": 6,
+    "slug": "the-sinclair-cambridge",
+    "state": "MA",
+    "timezone": "America/New_York",
+    "url": "https://seatgeek.com/venues/the-sinclair-cambridge/tickets"
+   },
+   "visible_at": "2026-10-26T06:44:56Z",
+   "visible_until_utc": "2026-11-12T02:30:00"
+  },
+  {
+   "access_method": null,
+   "announce_date": "2026-06-16T00:00:00",
+   "announcements": {},
+   "conditional": false,
+   "contingent": false,
+   "created_at": "2026-06-16T23:19:47",
+   "date_tbd": false,
+   "datetime_local": "2027-02-21T18:45:00",
+   "datetime_tbd": false,
+   "datetime_utc": "2027-02-21T23:45:00",
+   "description": "",
+   "domain_information": [],
+   "enddatetime_utc": "2027-02-22T01:15:00",
+   "event_group_ids": [],
+   "event_promotion": null,
+   "expected_experience_end": "2027-02-22T01:15:00",
+   "game_number": 0,
+   "home_game_number": 0,
+   "id": 18316935,
+   "integrated": null,
+   "is_open": false,
+   "is_visible": true,
+   "is_visible_override": "VISIBLE",
+   "links": [
+    {
+     "display_name": "",
+     "id": "161335689",
+     "link_type": "ID",
+     "logos": {},
+     "primary": false,
+     "provider": "stubhub",
+     "sales": [],
+     "url": ""
+    }
+   ],
+   "main_event_id": null,
+   "onsale": null,
+   "open_domain_id": "",
+   "open_id": "",
+   "performer_order": [
+    {
+     "id": 1959808,
+     "ordinal": 0
+    },
+    {
+     "id": 779913,
+     "ordinal": 1
+    }
+   ],
+   "performers": [
+    {
+     "ada_dominant_image_color": "#050505",
+     "colors": null,
+     "divisions": null,
+     "has_upcoming_events": true,
+     "hidden": false,
+     "home_venue_id": null,
+     "id": 1959808,
+     "is_event": false,
+     "links": [],
+     "location": null,
+     "name": "strongboi",
+     "num_upcoming_events": 7,
+     "popularity": 70.0,
+     "primary": true,
+     "relative_url": "/strongboi-tickets",
+     "score": 0.44,
+     "short_name": "strongboi",
+     "slug": "strongboi",
+     "stats": {
+      "event_count": 7
+     },
+     "taxonomies": [
+      {
+       "id": 2000000,
+       "name": "concert",
+       "parent_id": null,
+       "rank": 0,
+       "seo_event_type": "concert"
+      }
+     ],
+     "type": "band",
+     "url": "https://seatgeek.com/strongboi-tickets"
+    },
+    {
+     "ada_dominant_image_color": "#040405",
+     "colors": null,
+     "divisions": null,
+     "has_upcoming_events": true,
+     "hidden": false,
+     "home_venue_id": null,
+     "id": 779913,
+     "is_event": false,
+     "links": [],
+     "location": null,
+     "name": "Salami Rose Joe Louis",
+     "num_upcoming_events": 4,
+     "popularity": 32.0,
+     "relative_url": "/salami-rose-joe-louis-tickets",
+     "score": 0.36,
+     "short_name": "Salami Rose Joe Louis",
+     "slug": "salami-rose-joe-louis",
+     "stats": {
+      "event_count": 4
+     },
+     "taxonomies": [
+      {
+       "id": 2000000,
+       "name": "concert",
+       "parent_id": null,
+       "rank": 0,
+       "seo_event_type": "concert"
+      }
+     ],
+     "type": "band",
+     "url": "https://seatgeek.com/salami-rose-joe-louis-tickets"
+    }
+   ],
+   "playoffs": null,
+   "popularity": 0.5191404139,
+   "relative_url": "/strongboi-tickets/cambridge-massachusetts-the-sinclair-cambridge-2027-02-21-6-45-pm/concert/18316935",
+   "sales_end_datetime_utc": "2027-02-22T01:15:00",
+   "score": 0.1072690494,
+   "season_stage": null,
+   "short_title": "strongboi with Salami Rose Joe Louis",
+   "stats": {},
+   "status": "normal",
+   "taxonomies": [
+    {
+     "id": 2000000,
+     "name": "concert",
+     "parent_id": null,
+     "rank": 0,
+     "seo_event_type": "concert"
+    }
+   ],
+   "tbd_datetime_range_end_utc": null,
+   "tbd_datetime_range_start_utc": null,
+   "tdc_pv_id": 0,
+   "tdc_pvo_id": 0,
+   "themes": [],
+   "ticketmaster": null,
+   "time_tbd": false,
+   "title": "strongboi with Salami Rose Joe Louis",
+   "type": "concert",
+   "url": "https://seatgeek.com/strongboi-tickets/cambridge-massachusetts-the-sinclair-cambridge-2027-02-21-6-45-pm/concert/18316935",
+   "venue": {
+    "access_method": null,
+    "address": "52 Church Street",
+    "capacity": 0,
+    "city": "Cambridge",
+    "country": "US",
+    "display_location": "Cambridge, MA",
+    "extended_address": "Cambridge, MA 02138",
+    "has_upcoming_events": true,
+    "hidden": false,
+    "id": 11280,
+    "links": [],
+    "location": {
+     "lat": 42.374,
+     "lon": -71.1206
+    },
+    "marquee_city": null,
+    "metro_code": 506,
+    "name": "The Sinclair - Cambridge",
+    "name_v2": "The Sinclair - Cambridge",
+    "num_upcoming_events": 52,
+    "passes": [
+     {
+      "name": "The Sinclair - Cambridge Parking",
+      "pass_type": "PARKING",
+      "relative_url": "/venues/the-sinclair-cambridge/parking",
+      "stats": {
+       "event_count": 52
+      },
+      "url": "https://seatgeek.com/venues/the-sinclair-cambridge/parking"
+     }
+    ],
+    "popularity": 1413,
+    "postal_code": "02138",
+    "relative_url": "/venues/the-sinclair-cambridge/tickets",
+    "score": 0.58,
+    "sg_market_area": 6,
+    "slug": "the-sinclair-cambridge",
+    "state": "MA",
+    "timezone": "America/New_York",
+    "url": "https://seatgeek.com/venues/the-sinclair-cambridge/tickets"
+   },
+   "visible_at": "2026-10-21T08:28:05Z",
+   "visible_until_utc": "2027-02-22T01:15:00"
+  },
+  {
+   "access_method": null,
+   "announce_date": "2026-06-10T00:00:00",
+   "announcements": {},
+   "conditional": false,
+   "contingent": false,
+   "created_at": "2026-06-10T20:12:52",
+   "date_tbd": false,
+   "datetime_local": "2026-12-03T20:00:00",
+   "datetime_tbd": false,
+   "datetime_utc": "2026-12-04T01:00:00",
+   "description": "",
+   "domain_information": [],
+   "enddatetime_utc": "2026-12-04T01:00:00",
+   "event_group_ids": [],
+   "event_promotion": null,
+   "expected_experience_end": "2026-12-04T01:00:00",
+   "game_number": 0,
+   "home_game_number": 0,
+   "id": 18299531,
+   "integrated": null,
+   "is_open": false,
+   "is_visible": true,
+   "is_visible_override": "VISIBLE",
+   "links": [],
+   "main_event_id": null,
+   "onsale": null,
+   "open_domain_id": "",
+   "open_id": "",
+   "performer_order": [
+    {
+     "id": 811451,
+     "ordinal": 0
+    }
+   ],
+   "performers": [
+    {
+     "ada_dominant_image_color": "#262725",
+     "colors": null,
+     "divisions": null,
+     "has_upcoming_events": true,
+     "hidden": false,
+     "home_venue_id": null,
+     "id": 811451,
+     "is_event": false,
+     "links": [],
+     "location": null,
+     "name": "Kyle Gordon",
+     "num_upcoming_events": 9,
+     "popularity": 240.0,
+     "primary": true,
+     "relative_url": "/kyle-gordon-tickets",
+     "score": 0.3,
+     "short_name": "Kyle Gordon",
+     "slug": "kyle-gordon",
+     "stats": {
+      "event_count": 9
+     },
+     "taxonomies": [
+      {
+       "id": 3000000,
+       "name": "theater",
+       "parent_id": null,
+       "rank": 0,
+       "seo_event_type": "theater"
+      },
+      {
+       "id": 3040000,
+       "name": "comedy",
+       "parent_id": 3000000,
+       "rank": 0,
+       "seo_event_type": "comedy"
+      }
+     ],
+     "type": "theater_comedy",
+     "url": "https://seatgeek.com/kyle-gordon-tickets"
+    }
+   ],
+   "playoffs": null,
+   "popularity": 0.5961933038,
+   "relative_url": "/kyle-gordon-tickets/comedy/2026-12-03-8-pm/18299531",
+   "sales_end_datetime_utc": "2026-12-04T01:00:00",
+   "score": 0.2463643389,
+   "season_stage": null,
+   "short_title": "Kyle Gordon ",
+   "stats": {},
+   "status": "normal",
+   "taxonomies": [
+    {
+     "id": 3000000,
+     "name": "theater",
+     "parent_id": null,
+     "rank": 0,
+     "seo_event_type": "theater"
+    },
+    {
+     "id": 3040000,
+     "name": "comedy",
+     "parent_id": 3000000,
+     "rank": 0,
+     "seo_event_type": "comedy"
+    }
+   ],
+   "tbd_datetime_range_end_utc": null,
+   "tbd_datetime_range_start_utc": null,
+   "tdc_pv_id": 0,
+   "tdc_pvo_id": 0,
+   "themes": [],
+   "ticketmaster": null,
+   "time_tbd": false,
+   "title": "Kyle Gordon",
+   "type": "comedy",
+   "url": "https://seatgeek.com/kyle-gordon-tickets/comedy/2026-12-03-8-pm/18299531",
+   "venue": {
+    "access_method": null,
+    "address": "52 Church Street",
+    "capacity": 0,
+    "city": "Cambridge",
+    "country": "US",
+    "display_location": "Cambridge, MA",
+    "extended_address": "Cambridge, MA 02138",
+    "has_upcoming_events": true,
+    "hidden": false,
+    "id": 11280,
+    "links": [],
+    "location": {
+     "lat": 42.374,
+     "lon": -71.1206
+    },
+    "marquee_city": null,
+    "metro_code": 506,
+    "name": "The Sinclair - Cambridge",
+    "name_v2": "The Sinclair - Cambridge",
+    "num_upcoming_events": 52,
+    "passes": [
+     {
+      "name": "The Sinclair - Cambridge Parking",
+      "pass_type": "PARKING",
+      "relative_url": "/venues/the-sinclair-cambridge/parking",
+      "stats": {
+       "event_count": 52
+      },
+      "url": "https://seatgeek.com/venues/the-sinclair-cambridge/parking"
+     }
+    ],
+    "popularity": 1413,
+    "postal_code": "02138",
+    "relative_url": "/venues/the-sinclair-cambridge/tickets",
+    "score": 0.58,
+    "sg_market_area": 6,
+    "slug": "the-sinclair-cambridge",
+    "state": "MA",
+    "timezone": "America/New_York",
+    "url": "https://seatgeek.com/venues/the-sinclair-cambridge/tickets"
+   },
+   "visible_at": "2026-06-10T20:12:51Z",
+   "visible_until_utc": "2026-12-04T01:00:00"
+  },
+  {
+   "access_method": null,
+   "announce_date": "2026-10-20T00:00:00",
+   "announcements": {},
+   "conditional": false,
+   "contingent": false,
+   "created_at": "2026-10-20T21:40:46",
+   "date_tbd": false,
+   "datetime_local": "2026-11-07T13:00:00",
+   "datetime_tbd": false,
+   "datetime_utc": "2026-11-07T18:00:00",
+   "description": "",
+   "domain_information": [],
+   "enddatetime_utc": "2026-11-07T18:00:00",
+   "event_group_ids": [],
+   "event_promotion": null,
+   "expected_experience_end": "2026-11-07T18:00:00",
+   "game_number": 0,
+   "home_game_number": 0,
+   "id": 18702693,
+   "integrated": {
+    "provider_id": "1528339",
+    "provider_name": "AXS"
+   },
+   "is_open": false,
+   "is_visible": true,
+   "is_visible_override": "VISIBLE",
+   "links": [
+    {
+     "display_name": "",
+     "id": "7330073",
+     "link_type": "ID",
+     "logos": {},
+     "primary": false,
+     "provider": "vividseats",
+     "sales": [],
+     "url": ""
+    }
+   ],
+   "main_event_id": null,
+   "onsale": null,
+   "open_domain_id": "",
+   "open_id": "",
+   "performer_order": [
+    {
+     "id": 1961320,
+     "ordinal": 0
+    }
+   ],
+   "performers": [
+    {
+     "ada_dominant_image_color": null,
+     "colors": null,
+     "divisions": null,
+     "genres": [
+      {
+       "id": 491,
+       "name": "Hip-hop",
+       "primary": true,
+       "slug": "hip-hop"
+      }
+     ],
+     "has_upcoming_events": true,
+     "hidden": false,
+     "home_venue_id": null,
+     "id": 1961320,
+     "is_event": false,
+     "links": [],
+     "location": null,
+     "name": "Koo Koo",
+     "num_upcoming_events": 2,
+     "popularity": 35.0,
+     "primary": true,
+     "relative_url": "/koo-koo-tickets",
+     "score": 0.26,
+     "short_name": "Koo Koo",
+     "slug": "koo-koo",
+     "stats": {
+      "event_count": 2
+     },
+     "taxonomies": [
+      {
+       "id": 2000000,
+       "name": "concert",
+       "parent_id": null,
+       "rank": 0,
+       "seo_event_type": "concert"
+      }
+     ],
+     "type": "band",
+     "url": "https://seatgeek.com/koo-koo-tickets"
+    }
+   ],
+   "playoffs": null,
+   "popularity": 0.5701755118,
+   "relative_url": "/koo-koo-tickets/dance/2026-11-07-1-pm/18702693",
+   "sales_end_datetime_utc": "2026-11-07T18:00:00",
+   "score": 0.2239941566,
+   "season_stage": null,
+   "short_title": "KOO KOO - Cambridge",
+   "stats": {},
+   "status": "normal",
+   "taxonomies": [
+    {
+     "id": 3000000,
+     "name": "theater",
+     "parent_id": null,
+     "rank": 0,
+     "seo_event_type": "theater"
+    },
+    {
+     "id": 3060000,
+     "name": "dance",
+     "parent_id": 3000000,
+     "rank": 0,
+     "seo_event_type": "dance"
+    }
+   ],
+   "tbd_datetime_range_end_utc": null,
+   "tbd_datetime_range_start_utc": null,
+   "tdc_pv_id": 0,
+   "tdc_pvo_id": 0,
+   "themes": [],
+   "ticketmaster": null,
+   "time_tbd": false,
+   "title": "KOO KOO - Cambridge",
+   "type": "dance",
+   "url": "https://seatgeek.com/koo-koo-tickets/dance/2026-11-07-1-pm/18702693",
+   "venue": {
+    "access_method": null,
+    "address": "52 Church Street",
+    "capacity": 0,
+    "city": "Cambridge",
+    "country": "US",
+    "display_location": "Cambridge, MA",
+    "extended_address": "Cambridge, MA 02138",
+    "has_upcoming_events": true,
+    "hidden": false,
+    "id": 11280,
+    "links": [],
+    "location": {
+     "lat": 42.374,
+     "lon": -71.1206
+    },
+    "marquee_city": null,
+    "metro_code": 506,
+    "name": "The Sinclair - Cambridge",
+    "name_v2": "The Sinclair - Cambridge",
+    "num_upcoming_events": 52,
+    "passes": [
+     {
+      "name": "The Sinclair - Cambridge Parking",
+      "pass_type": "PARKING",
+      "relative_url": "/venues/the-sinclair-cambridge/parking",
+      "stats": {
+       "event_count": 52
+      },
+      "url": "https://seatgeek.com/venues/the-sinclair-cambridge/parking"
+     }
+    ],
+    "popularity": 1413,
+    "postal_code": "02138",
+    "relative_url": "/venues/the-sinclair-cambridge/tickets",
+    "score": 0.58,
+    "sg_market_area": 6,
+    "slug": "the-sinclair-cambridge",
+    "state": "MA",
+    "timezone": "America/New_York",
+    "url": "https://seatgeek.com/venues/the-sinclair-cambridge/tickets"
+   },
+   "visible_at": "2026-10-24T07:57:48Z",
+   "visible_until_utc": "2026-11-07T18:00:00"
+  },
+  {
+   "access_method": null,
+   "announce_date": "2026-10-09T00:00:00",
+   "announcements": {},
+   "conditional": false,
+   "contingent": false,
+   "created_at": "2026-10-09T13:42:18",
+   "date_tbd": false,
+   "datetime_local": "2026-11-07T19:00:00",
+   "datetime_tbd": false,
+   "datetime_utc": "2026-11-08T00:00:00",
+   "description": "",
+   "domain_information": [],
+   "enddatetime_utc": "2026-11-08T00:00:00",
+   "event_group_ids": [],
+   "event_promotion": null,
+   "expected_experience_end": "2026-11-08T00:00:00",
+   "game_number": 0,
+   "home_game_number": 0,
+   "id": 18663880,
+   "integrated": null,
+   "is_open": false,
+   "is_visible": true,
+   "is_visible_override": "UNSET",
+   "links": [
+    {
+     "display_name": "",
+     "id": "7462003",
+     "link_type": "ID",
+     "logos": {},
+     "primary": false,
+     "provider": "vividseats",
+     "sales": [],
+     "url": ""
+    }
+   ],
+   "main_event_id": null,
+   "onsale": null,
+   "open_domain_id": "",
+   "open_id": "",
+   "performer_order": [
+    {
+     "id": 1963714,
+     "ordinal": 0
+    }
+   ],
+   "performers": [
+    {
+     "ada_dominant_image_color": "#040404",
+     "colors": null,
+     "divisions": null,
+     "has_upcoming_events": true,
+     "hidden": false,
+     "home_venue_id": null,
+     "id": 1963714,
+     "is_event": false,
+     "links": [],
+     "location": null,
+     "name": "Earlybirds Club",
+     "num_upcoming_events": 18,
+     "popularity": 315.0,
+     "primary": true,
+     "relative_url": "/earlybirds-club-tickets",
+     "score": 0.29,
+     "short_name": "Earlybirds Club",
+     "slug": "earlybirds-club",
+     "stats": {
+      "event_count": 18
+     },
+     "taxonomies": [
+      {
+       "id": 3000000,
+       "name": "theater",
+       "parent_id": null,
+       "rank": 0,
+       "seo_event_type": "theater"
+      },
+      {
+       "id": 3100000,
+       "name": "entertainment",
+       "parent_id": 3000000,
+       "rank": 0,
+       "seo_event_type": "entertainment"
+      },
+      {
+       "id": 3100400,
+       "name": "entertainment",
+       "parent_id": 3100000,
+       "rank": 0,
+       "seo_event_type": "entertainment"
+      }
+     ],
+     "type": "entertainment",
+     "url": "https://seatgeek.com/earlybirds-club-tickets"
+    }
+   ],
+   "playoffs": null,
+   "popularity": 0.5663736038,
+   "relative_url": "/earlybirds-club-tickets/entertainment/2026-11-07-7-pm/18663880",
+   "sales_end_datetime_utc": "2026-11-08T00:00:00",
+   "score": 0.2242045897,
+   "season_stage": null,
+   "short_title": "Earlybirds Club - Cambridge",
+   "stats": {},
+   "status": "normal",
+   "taxonomies": [
+    {
+     "id": 3000000,
+     "name": "theater",
+     "parent_id": null,
+     "rank": 0,
+     "seo_event_type": "theater"
+    },
+    {
+     "id": 3100000,
+     "name": "entertainment",
+     "parent_id": 3000000,
+     "rank": 0,
+     "seo_event_type": "entertainment"
+    },
+    {
+     "id": 3100400,
+     "name": "entertainment",
+     "parent_id": 3100000,
+     "rank": 0,
+     "seo_event_type": "entertainment"
+    }
+   ],
+   "tbd_datetime_range_end_utc": null,
+   "tbd_datetime_range_start_utc": null,
+   "tdc_pv_id": 0,
+   "tdc_pvo_id": 0,
+   "themes": [],
+   "ticketmaster": null,
+   "time_tbd": false,
+   "title": "Earlybirds Club - Cambridge",
+   "type": "entertainment",
+   "url": "https://seatgeek.com/earlybirds-club-tickets/entertainment/2026-11-07-7-pm/18663880",
+   "venue": {
+    "access_method": null,
+    "address": "52 Church Street",
+    "capacity": 0,
+    "city": "Cambridge",
+    "country": "US",
+    "display_location": "Cambridge, MA",
+    "extended_address": "Cambridge, MA 02138",
+    "has_upcoming_events": true,
+    "hidden": false,
+    "id": 11280,
+    "links": [],
+    "location": {
+     "lat": 42.374,
+     "lon": -71.1206
+    },
+    "marquee_city": null,
+    "metro_code": 506,
+    "name": "The Sinclair - Cambridge",
+    "name_v2": "The Sinclair - Cambridge",
+    "num_upcoming_events": 52,
+    "passes": [
+     {
+      "name": "The Sinclair - Cambridge Parking",
+      "pass_type": "PARKING",
+      "relative_url": "/venues/the-sinclair-cambridge/parking",
+      "stats": {
+       "event_count": 52
+      },
+      "url": "https://seatgeek.com/venues/the-sinclair-cambridge/parking"
+     }
+    ],
+    "popularity": 1413,
+    "postal_code": "02138",
+    "relative_url": "/venues/the-sinclair-cambridge/tickets",
+    "score": 0.58,
+    "sg_market_area": 6,
+    "slug": "the-sinclair-cambridge",
+    "state": "MA",
+    "timezone": "America/New_York",
+    "url": "https://seatgeek.com/venues/the-sinclair-cambridge/tickets"
+   },
+   "visible_at": "2026-10-09T12:08:13Z",
+   "visible_until_utc": "2026-11-08T00:00:00"
+  }
+ ],
+ "meta": {
+  "geolocation": null,
+  "page": 1,
+  "per_page": 50,
+  "took": 0,
+  "total": 5
+ }
+}

@@ -2,7 +2,7 @@ import os
 
 from core.event_fetching.ticketmaster import TicketmasterClient, TicketmasterError
 from core.models import Venue, VenueEventSource
-from core.venue_matching import distance_km, names_match, normalize_name, spelling_variants
+from core.venue_matching import MAX_DISTANCE_KM, find_match, spelling_variants
 from core.job_runs import RecordedCommand
 from django.core.management.base import BaseCommand, CommandError
 
@@ -25,48 +25,6 @@ venue's own name is linked, or the only one when none has it exactly -- anything
 certain is reported for an admin to settle by setting the venue's ticketmaster venue id
 in the admin. needs TICKETMASTER_API_KEY.
 """
-
-MAX_DISTANCE_KM = 1.0
-
-def find_match(venue, candidates):
-    """
-    returns (outcome, match, candidates with their distances) where outcome is
-    "linked", "ambiguous" or "unmatched"
-    """
-    scored = [
-        {
-            **candidate,
-            # the google places location when it's a confident match; the sheet's own
-            # coordinates are only town centres
-            "distance_km": distance_km(
-                *venue.exact_location, candidate["latitude"], candidate["longitude"]
-            ),
-        }
-        for candidate in candidates
-    ]
-    if not scored:
-        return "unmatched", None, scored
-    near = [
-        c
-        for c in scored
-        if names_match(venue.name, c["name"])
-        and c["distance_km"] is not None
-        and c["distance_km"] <= MAX_DISTANCE_KM
-    ]
-    # a venue often has a second listing that actually sells its shows (ticketweb's
-    # "Off The Rails Music Venue" vs an empty "Off The Rails"): prefer listings with events
-    with_events = [c for c in near if c.get("upcoming_events")]
-    if with_events:
-        near = with_events
-    # prefer a listing with the venue's own name over ones that merely contain it,
-    # e.g. "Big Night Live" over "PLAY Boston at Big Night Live"
-    exact = [c for c in near if normalize_name(c["name"]) == normalize_name(venue.name)]
-    if len(exact) == 1:
-        return "linked", exact[0], scored
-    if not exact and len(near) == 1:
-        return "linked", near[0], scored
-    return "ambiguous", None, scored
-
 
 def ticketmaster_venue_pks():
     """venues whose saved event source links to ticketmaster (or live nation)"""

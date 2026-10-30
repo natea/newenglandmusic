@@ -229,12 +229,16 @@ class SyncCommandTestCase(TestCase):
             name="Before",
             ticketmaster_venue_id="KovZpZA11JtA",
             eventbrite_organizer_id="14327783302",
+            seatgeek_venue_id="11280",
+            ticket_page_url="https://www.axs.com/venues/1234/the-sinclair",
         )
         self.sync([row("V0001", "After")])
         venue = Venue.objects.get(sheet_id="V0001")
         self.assertEqual(venue.name, "After")
         self.assertEqual(venue.ticketmaster_venue_id, "KovZpZA11JtA")
         self.assertEqual(venue.eventbrite_organizer_id, "14327783302")
+        self.assertEqual(venue.seatgeek_venue_id, "11280")
+        self.assertEqual(venue.ticket_page_url, "https://www.axs.com/venues/1234/the-sinclair")
 
     def test_sync_leaves_the_place_lookup_alone(self):
         Venue.objects.create(

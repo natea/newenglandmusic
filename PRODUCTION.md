@@ -38,6 +38,7 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 - `ANTHROPIC_API_KEY`: AI event extraction and labelling events by kind.
 - `TICKETMASTER_API_KEY`: the Consumer Key of a Ticketmaster app.
 - `EVENTBRITE_API_KEY`: the private token of an Eventbrite account, from eventbrite.com/platform/api-keys.
+- `SEATGEEK_CLIENT_ID`: the client ID of an app registered at seatgeek.com/account/develop (see "SeatGeek events"). The secret isn't needed.
 - `GOOGLE_PLACES_API_KEY`: in Google Cloud, restrict it to the Places API (New) and cap its daily quota.
 - `GOOGLE_SERVICE_ACCOUNT_JSON`: the sheet sync's service-account key (see "Reading the sheet on a server").
 - `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`: a Spotify app's credentials, for the listing's play buttons (see "Spotify play buttons"). The web service uses them too, because saving an event renders its buttons.
@@ -168,12 +169,13 @@ These run in this order. Each one depends on the one before it:
 | `check_event_sources` | weekly | free, but it crawls every venue's site, so don't run it more often |
 | `match_ticketmaster_venues` | weekly, after the source check | free (Ticketmaster allows 5,000 requests a day) |
 | `match_eventbrite_organizers` | weekly, after the source check | free (Eventbrite allows 2,000 requests an hour). It fetches the pages of venues that link Eventbrite, politely, and links only new venues unless given `--recheck` |
-| `lookup_venue_neighborhoods` | weekly, after the Eventbrite matching | free. It finds venues on OpenStreetMap (Nominatim, one request a second) by their own name and town, and reads their neighborhood, with Overpass for New York and DC. Only venues never looked up, or looked up a year ago; up to 300 a run |
+| `match_seatgeek_venues` | weekly, after the Eventbrite matching | free (SeatGeek publishes no limit; the client waits half a second between requests). About 80 venues take two minutes. It links only new venues unless given `--recheck` |
+| `lookup_venue_neighborhoods` | weekly, after the SeatGeek matching | free. It finds venues on OpenStreetMap (Nominatim, one request a second) by their own name and town, and reads their neighborhood, with Overpass for New York and DC. Only venues never looked up, or looked up a year ago; up to 300 a run |
 | `match_spotify_artists --limit 500` | daily, after `fetch_events` | free, but rate limited. It searches Spotify for artist names it hasn't seen, and for automatic matches more than 30 days old, half a second apart, taking about 4 minutes. Spotify doesn't publish its limits, but the number of searches is what counts, not their pace: about 650 half a second apart (2026-10-27) and about 680 two seconds apart (2026-10-28) each got the app blocked for about a day. The block applies to the whole developer account, so a dev app's runs use up production's allowance too. 500 a morning stays under it, and clears a first run's backlog of about 2,700 names in about six days. When blocked, a run stops at once and keeps what it found, and the next morning's carries on. After the backlog, each morning searches only new names |
 | `match_apple_music_artists --limit 1000` | daily, after the Spotify matching | free with the Developer Program membership. Like the Spotify matching, but also looks up each matched artist's top song. Requests go half a second apart, and a long rate-limit block stops the run the same way. It does nothing until the MusicKit key is set |
 | `resolve_artists_with_lastfm --limit 300` | daily, after the Apple Music matching | free. For names several Spotify or Apple Music artists share, it reads Last.fm (half a second apart) and MusicBrainz (a second apart), taking up to about 8 minutes. It does nothing until `LASTFM_API_KEY` is set |
 | `match_youtube_artists --limit 90` | daily, after the Last.fm resolving | free within YouTube Data API v3's 10,000 units a day. It matches only artists already matched on Spotify or Apple Music: first through Wikidata and MusicBrainz, then at most 90 searches for their Last.fm top track (101 units each). It does nothing until `YOUTUBE_API_KEY` is set |
-| `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster and Eventbrite: a few hundred requests each |
+| `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster and Eventbrite: a few hundred requests each; SeatGeek: one per linked venue |
 
 ### How they run on Render
 
@@ -182,7 +184,7 @@ These run in this order. Each one depends on the one before it:
 | Job | Schedule (UTC) | Script | Runs |
 |---|---|---|---|
 | `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | sheet sync, Places lookup, coordinate refresh, `fetch_events --all`, Spotify and Apple Music matching |
-| `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster and Eventbrite matching |
+| `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster, Eventbrite and SeatGeek matching, neighborhoods |
 
 - **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed sheet sync leaves the venues as they were, and they can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.
 - **Builds:** the jobs build with `bin/build-job.sh`, which only installs the requirements. Only the web service migrates. Like the web service, they deploy a commit only once CI passes.
@@ -356,6 +358,23 @@ Events at city venues show their neighborhood, such as "Boston (West End), MA", 
 
 **The credit:** OpenStreetMap's data is ODbL, which asks for "© OpenStreetMap contributors", linked to its copyright page. It's in every page's footer, and on `/privacy`.
 
+## SeatGeek events
+
+SeatGeek's API fills in venues whose ticketing pages (Etix, AXS and others) refuse our crawler, and that neither Ticketmaster nor Eventbrite reaches. On 2026-10-29 it covered 21 such venues with upcoming concerts (`logs/measure_api_coverage-seatgeek-2026-10-29.log`).
+
+- **Getting a client ID.** SeatGeek approves developer accounts by hand (it took three days in October 2026). Then register an app at seatgeek.com/account/develop, which needs a SeatGeek.com account, and set `SEATGEEK_CLIENT_ID`. The client sends it by HTTP Basic Auth, never in a URL.
+- **What it gives.** Event details only: no ticket listings, no prices and no images (SeatGeek's email of 2026-10-29). Only concerts and music festivals are imported.
+- **Links.** SeatGeek resells tickets, so the site never links to it; the SeatGeek page is kept only as the event's source URL, which only admins see (the event's admin page shows it, and the event list filters by source). SeatGeek's API never says where a show is sold, so each run reads the venue's own events page and homepage once each, obeying robots.txt, and a SeatGeek event links to:
+  1. **the show's own page** on Etix or AXS, when exactly one show link there matches its title or headliner (about 15 of the 24 SeatGeek-only venues link their shows this way);
+  2. else the venue's **ticket page** (the venue's admin page, "Event sources"): its list of shows on Etix or AXS. When blank, it's filled in from the one Etix or AXS venue link on the venue's site, such as `etix.com/ticket/v/677`. A ticket page that's already set is never changed automatically, so an editor can set or correct one, or clear it to have it found again;
+  3. else the venue's website.
+
+  Only the venue's own site is read, never Etix or AXS. A site that can't be read is a note in the report, not a problem.
+- **JSON-LD.** SeatGeek replaces a venue's JSON-LD only in a run where it has more concerts than the JSON-LD found upcoming events, since some venues' JSON-LD is a single show's page (Town Ballroom: 1 against 14). Venues with good JSON-LD keep it, with its prices and descriptions (Ardmore Music Hall: 47 against 22). The report gives both counts.
+- **Linking venues.** Run `match_seatgeek_venues --dry-run`, then without `--dry-run`. Venues it can't link with certainty are listed with their candidates; set the SeatGeek venue ID on the venue's admin page by hand. Matching is by name and distance, as for Ticketmaster.
+- **Precedence.** A venue is fetched from one API only: Ticketmaster, then Eventbrite, then SeatGeek. Like Eventbrite, SeatGeek replaces a venue's ticketing pages and AI extraction, but not its iCal feed, and its JSON-LD only as above.
+- **Affiliate program.** SeatGeek's partner program would add an `aid` to its links. Held off on 2026-10-29, and moot while the site doesn't link to SeatGeek.
+
 ## Artists and bands
 
 `Artist` (a person or solo act) and `Band` records, with memberships, are admin-only for now, at `/admin/core/artist/` and `/admin/core/band/`: nothing is shown to visitors, and events still name artists by text. Neither command runs on a schedule.
@@ -448,6 +467,7 @@ If the key ever leaks, delete it on the account's **Keys** tab and create a new 
 - [ ] YouTube's Developer Policies met: `/privacy` linked from every page. The policies also say users must agree to the privacy policy before using the site. Decide whether a footer link is enough for a public listing.
 - [x] the scheduled jobs added (the sheet's service account set up first): running on Render since 2026-10-26
 - [ ] Eventbrite's API terms checked for attribution and caching rules, since events imported from it are shown on the site
+- [ ] SeatGeek's API terms checked for attribution and caching rules; its developer docs say nothing about them. The ticket pages of SeatGeek-linked venues checked, and filled in where the venue's site doesn't link one
 - [ ] the first `fetch_events` run checked in `/admin/core/alleventproxy/` before events are approved
 - [ ] **before announcing or sharing the site:** Google Places terms met. Until then, keep the site unshared. As of 2026-10-25 it was deployed but kept private for this reason.
   - **Stored content:** done. Only place IDs and coordinates are stored, and coordinates are refreshed or deleted within 30 days (see Google Places terms above). The daily `--refresh-stale` job has to be running for pins to stay exact.

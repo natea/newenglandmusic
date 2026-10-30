@@ -1,0 +1,89 @@
+{
+ "meta": {
+  "geolocation": null,
+  "page": 1,
+  "per_page": 10,
+  "took": 0,
+  "total": 2
+ },
+ "venues": [
+  {
+   "access_method": null,
+   "address": "300 York Street",
+   "capacity": 0,
+   "city": "New Haven",
+   "country": "US",
+   "display_location": "New Haven, CT",
+   "extended_address": "New Haven, CT 06511",
+   "has_upcoming_events": true,
+   "hidden": false,
+   "id": 1075,
+   "links": [],
+   "location": {
+    "lat": 41.308,
+    "lon": -72.9244
+   },
+   "marquee_city": null,
+   "metro_code": 533,
+   "name": "Toad's Place",
+   "name_v2": "Toad's Place",
+   "num_upcoming_events": 12,
+   "passes": [
+    {
+     "name": "Toad's Place Parking",
+     "pass_type": "PARKING",
+     "relative_url": "/venues/toad-s-place/parking",
+     "stats": {
+      "event_count": 12
+     },
+     "url": "https://seatgeek.com/venues/toad-s-place/parking"
+    }
+   ],
+   "popularity": 1616,
+   "postal_code": "06511",
+   "relative_url": "/venues/toad-s-place/tickets",
+   "score": 0.54,
+   "slug": "toad-s-place",
+   "state": "CT",
+   "stats": {
+    "event_count": 12
+   },
+   "timezone": "America/New_York",
+   "url": "https://seatgeek.com/venues/toad-s-place/tickets"
+  },
+  {
+   "access_method": null,
+   "address": "300 York St",
+   "capacity": 0,
+   "city": "New Haven",
+   "country": "US",
+   "display_location": "New Haven, CT",
+   "extended_address": "New Haven, CT 06511",
+   "has_upcoming_events": false,
+   "hidden": false,
+   "id": 36839,
+   "links": [],
+   "location": {
+    "lat": 41.3118,
+    "lon": -72.9302
+   },
+   "marquee_city": null,
+   "metro_code": 533,
+   "name": "Lilly's Pad (Toad's Place Upstairs)",
+   "name_v2": "Lilly's Pad (Toad's Place Upstairs)",
+   "num_upcoming_events": 0,
+   "passes": [],
+   "popularity": 0,
+   "postal_code": "06511",
+   "relative_url": "/venues/lilly-s-pad-toad-s-place-upstairs/tickets",
+   "score": 0.0,
+   "slug": "lilly-s-pad-toad-s-place-upstairs",
+   "state": "CT",
+   "stats": {
+    "event_count": 0
+   },
+   "timezone": "America/New_York",
+   "url": "https://seatgeek.com/venues/lilly-s-pad-toad-s-place-upstairs/tickets"
+  }
+ ]
+}
