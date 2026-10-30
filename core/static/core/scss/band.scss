@@ -69,7 +69,7 @@ $quiet: #4f4b44;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 10px;
-  margin: 0 0 18px;
+  margin: 0;
   padding: 10px 14px;
   background: $strip;
   font-size: 1.05rem;
@@ -87,8 +87,9 @@ $quiet: #4f4b44;
 }
 
 // the calendar's own action icons (core/event_actions.py), under the strip and in each row
+// joined to the strip above it: one lavender band, the show then its actions
 .act-next-actions {
-  margin: -12px 0 18px;
+  margin: 0 0 18px;
   padding: 0 14px 8px;
   background: $strip;
 
@@ -102,6 +103,7 @@ $quiet: #4f4b44;
 }
 
 .act-next-none {
+  margin-bottom: 18px;
   color: $quiet;
 }
 
@@ -142,10 +144,11 @@ $quiet: #4f4b44;
   .act-headshot-slot {
     flex: 0 0 48px;
     width: 48px;
-    height: 48px;
   }
 
+  // the slot keeps the column, not the height: a row without a headshot stays one line
   img {
+    height: 48px;
     object-fit: cover;
     background: $ground;
   }

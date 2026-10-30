@@ -23,7 +23,7 @@
       <p class="act-next act-next-none">No upcoming shows listed.</p>
     {% endif %}
 
-    {% if current_members or former_members or bands or links or photo %}
+    {% if current_members or former_members or bands or links %}
     <dl class="act-fields">
       {% if current_members or former_members %}
         <dt>Members</dt>
@@ -69,15 +69,6 @@
         <dt>Links</dt>
         <dd class="act-links">{% for label, url in links %}<a href="{{ url }}" rel="noopener" target="_blank">{{ label }}</a>{% if not forloop.last %} · {% endif %}{% endfor %}</dd>
       {% endif %}
-      {% if photo %}
-        <dt>Photo</dt>
-        <dd>
-          <figure class="act-photo">
-            <img src="{{ photo.src }}" alt="{{ act.name }}">
-            <figcaption>Photo: {{ photo.author }}, {% if photo.license_url %}<a href="{{ photo.license_url }}" rel="noopener license" target="_blank">{{ photo.license }}</a>{% else %}{{ photo.license }}{% endif %}, via <a href="{{ photo.page }}" rel="noopener" target="_blank">Wikimedia Commons</a></figcaption>
-          </figure>
-        </dd>
-      {% endif %}
     </dl>
     {% endif %}
 
@@ -88,6 +79,20 @@
       </div>
     {% elif act.disambiguation %}
       <div class="act-bio"><div class="act-ruled"><p>{{ act.disambiguation|capfirst }}.</p></div></div>
+    {% endif %}
+
+    {% if photo %}
+    <dl class="act-fields act-fields-photo">
+      {% if photo %}
+        <dt>Photo</dt>
+        <dd>
+          <figure class="act-photo">
+            <img src="{{ photo.src }}" alt="{{ act.name }}">
+            <figcaption>Photo: {{ photo.author }}, {% if photo.license_url %}<a href="{{ photo.license_url }}" rel="noopener license" target="_blank">{{ photo.license }}</a>{% else %}{{ photo.license }}{% endif %}, via <a href="{{ photo.page }}" rel="noopener" target="_blank">Wikimedia Commons</a></figcaption>
+          </figure>
+        </dd>
+      {% endif %}
+    </dl>
     {% endif %}
 
     {% if shows|length > 1 %}
