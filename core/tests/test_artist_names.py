@@ -53,8 +53,8 @@ class ArtistsTextTestCase(SimpleTestCase):
         self.assertEqual(names(artists="Roni Size X Dieselboy"), ["Roni Size", "Dieselboy"])
         # an x inside a word, or ending a name, isn't a separator
         self.assertEqual(names(artists="Malcolm X, Xoth, The xx"), ["Malcolm X", "Xoth", "The xx"])
-        # other notes in parentheses can be part of the name, or name another act
-        self.assertEqual(names(artists="Andrea Neuenfeldt (of MK Naomi)"), ["Andrea Neuenfeldt (of MK Naomi)"])
+        # every trailing note in parentheses is a note: in this data, never part of a name
+        self.assertEqual(names(artists="Andrea Neuenfeldt (of MK Naomi)"), ["Andrea Neuenfeldt"])
 
     def test_ampersand_kept(self):
         self.assertEqual(
@@ -123,6 +123,22 @@ class TitleTestCase(SimpleTestCase):
 
     def test_a_weekday_and_a_genre_is_no_act(self):
         self.assertEqual(names(title="Sunday Blues with Bruce Bears & Friends"), ["Bruce Bears"])
+
+    def test_notes_venues_and_lead_ins_dropped(self):
+        self.assertEqual(
+            names(artists="Don Felder (formerly of The Eagles), Mike Dawes (rescheduled from 1/28), moe. (Run 1)"),
+            ["Don Felder", "Mike Dawes", "moe."],
+        )
+        self.assertEqual(names(title="John Scofield\\'s Electrospective * SOLD OUT *"), ["John Scofield's Electrospective"])
+        self.assertEqual(names(title="Q Marsden ** SOLD OUT"), ["Q Marsden"])
+        self.assertEqual(names(title="The Hellp (DJ Set) @ 99 Scott"), ["The Hellp"])
+        self.assertEqual(names(title="Sophistafunk Live at The Main Pub"), ["Sophistafunk"])
+        self.assertEqual(names(title="THE BOUNCING SOULS 'Born To Be Tour'"), ["THE BOUNCING SOULS"])
+        self.assertEqual(
+            names(artists="a Special Appearance by Sarah Lee Guthrie, Special Guest Ben Caplan, Party with Friends"),
+            ["Sarah Lee Guthrie", "Ben Caplan", "Party"],
+        )
+        self.assertEqual(names(title="Alaska Thunderf*ck"), ["Alaska Thunderf*ck"])
 
     def test_the_music_of_is_no_act(self):
         self.assertEqual(names(title="The music of Steely Dan"), [])

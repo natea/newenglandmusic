@@ -65,7 +65,7 @@ The system SHALL split an event's artists text into names at these separators:
 - " w/ " (also written "w /") and " with ";
 - " feat. ", " ft. " and " featuring ".
 
-It SHALL NOT split on "&" or "and" without a comma before it, because these appear inside band names. It SHALL trim each name, and remove from it a leading "with" or "members of", a trailing "& friends", "and friends", "& guests", "& special guests" or "& band" ("Sammy Rae & The Friends" is a band, and stays whole), any trailing note in square brackets ("[EARLY SHOW]"), and any trailing notes in parentheses that aren't part of the name: age limits such as "(18+)", "(21+)" or "(all ages)", and "(DJ set)", "(live set)", "(live)", "(acoustic)", "(solo)" or "(full band)". It SHALL drop empty names. Names SHALL keep the order they appear in, without duplicates.
+It SHALL NOT split on "&" or "and" without a comma before it, because these appear inside band names. It SHALL trim each name, and remove from it a leading "with", "members of", "special guest(s)" or "a special appearance by", a trailing "& friends", "and friends", "& guests", "& special guests" or "& band" ("Sammy Rae & The Friends" is a band, and stays whole), any trailing note in square brackets, parentheses or stars, all of which are notes rather than part of a name ("[EARLY SHOW]", "(21+)", "(DJ Set)", "(formerly of The Eagles)", "* SOLD OUT *"), a trailing "** SOLD OUT", a venue after "@" or "live at", and a quoted tour ("THE BOUNCING SOULS 'Born To Be Tour'"); and it SHALL read an escaped apostrophe ("\'") as an apostrophe. It SHALL drop empty names. Names SHALL keep the order they appear in, without duplicates.
 
 #### Scenario: Comma-separated bill
 - **WHEN** an event's artists text is "Arto Vaun, Shadow Monster, Dyr Faser"
@@ -110,3 +110,7 @@ It SHALL NOT split on "&" or "and" without a comma before it, because these appe
 #### Scenario: "Evening With" and a weekday's genre
 - **WHEN** events are titled "Evening With - John Splithoff Stripped Tour" and "Sunday Blues with Bruce Bears & Friends"
 - **THEN** the first's name is "John Splithoff Stripped Tour", and the second's "Bruce Bears"
+
+#### Scenario: Notes, venues and lead-ins dropped
+- **WHEN** an event's artists are "Don Felder (formerly of The Eagles), Mike Dawes (rescheduled from 1/28), a Special Appearance by Sarah Lee Guthrie", and others are titled "Q Marsden ** SOLD OUT", "The Hellp (DJ Set) @ 99 Scott", "Sophistafunk Live at The Main Pub" and "THE BOUNCING SOULS 'Born To Be Tour'"
+- **THEN** their names are "Don Felder", "Mike Dawes" and "Sarah Lee Guthrie"; "Q Marsden"; "The Hellp"; "Sophistafunk"; and "THE BOUNCING SOULS"

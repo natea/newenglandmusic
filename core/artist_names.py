@@ -50,18 +50,20 @@ OCCASION_WORDS = {
     "holiday", "holidays", "christmas", "benefit", "charity", "reunion", "farewell", "birthday", "edition",
 }
 # "Rhiannon Hurst (21+)", "49th & Main (DJ Set)": notes after a name, not part of it.
-# "Graphic Melee [EARLY SHOW]": a note in brackets is never part of a name.
-# "with Jacyn Tremblay", "members of SixFoxWhiskey": words before the name.
+# "Graphic Melee [EARLY SHOW]", "Don Felder (formerly of The Eagles)", "Electrospective
+# * SOLD OUT *", "The Hellp @ 99 Scott", "Sophistafunk Live at The Main Pub", "THE BOUNCING SOULS 'Born To Be Tour'": a note in
+# brackets, parentheses or stars, a venue, or a quoted tour is never part of a name.
+# "with Jacyn Tremblay", "members of SixFoxWhiskey", "Special Guest Ben Caplan": words before the name.
 # "Alan Kaufman & friends": the name and unnamed guests ("Sammy Rae & The Friends" is a band)
 TRAILING_NOTE_RE = re.compile(
-    r"\s*\(\s*(?:\d+\s*\+|all ages|dj set|live set|live|acoustic|solo|full band|sold out)\s*\)\s*$"
-    r"|\s*\[[^\]]*\]\s*$",
+    r"\s*\([^()]*\)\s*$|\s*\[[^\]]*\]\s*$|\s*\*+[^*]*\*+\s*$|\s*\*+\s*sold out\W*$|\s+@\s.*$|\s+live at\s.*$"
+    r"|\s+['\"‘“][^'\"‘“]*\btour\W*$",
     re.IGNORECASE,
 )
-LEADING_WITH_RE = re.compile(r"^(?:with|members of)\s+", re.IGNORECASE)
+LEADING_WITH_RE = re.compile(r"^(?:with|members of|(?:a\s+)?special appearance by|special guests?:?)\s+", re.IGNORECASE)
 AND_FRIENDS_RE = re.compile(r"\s+(?:&|and|\+)\s+(?:friends|guests|special guests|band)$", re.IGNORECASE)
 # what bills say in place of a name, compared normalized
-PLACEHOLDERS = {"tba", "tbd", "special guest", "special guests", "and more", "more", "organization", "dj"}
+PLACEHOLDERS = {"tba", "tbd", "special guest", "special guests", "and more", "more", "friends", "organization", "dj"}
 
 
 # "Seb Lowe US 2027", "Built to Spill Fall 2026 Tour": a tour named after the act with no
@@ -101,6 +103,8 @@ def strip_tour_name(name):
 
 
 def clean_name(name):
+    # "Joker\'s Republic": an apostrophe some feeds escape
+    name = name.replace("\\'", "'")
     name, before = SUBTITLE_RE.split(name.strip(), maxsplit=1)[0], None
     # notes can stack: "Glass Halo (DJ Set) (21+)"
     while name != before:
