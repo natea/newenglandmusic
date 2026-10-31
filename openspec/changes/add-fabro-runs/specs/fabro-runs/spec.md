@@ -21,7 +21,7 @@ The project configuration SHALL name natea/newenglandmusic as the repository for
 #### Scenario: Guide commands name the fork
 
 - **WHEN** the configuration tests read every `fabro run` command in the guide
-- **THEN** each command that uses a Daytona workflow passes `--target natea/newenglandmusic`
+- **THEN** each command that uses a Daytona workflow passes `--environment daytona` and `--target natea/newenglandmusic`
 
 ### Requirement: Smoke-test runs push nothing and open no pull request
 
@@ -43,7 +43,7 @@ The repo SHALL have a `hello` workflow that runs one shell command and no model 
 
 ### Requirement: Claude Code runs in a Daytona sandbox with a subscription token
 
-The repo SHALL define a `daytona` environment in which Claude Code runs through Fabro's ACP backend. Claude Code SHALL authenticate with the subscription token stored in Fabro's secret vault as `CLAUDE_CODE_OAUTH_TOKEN`, with `ANTHROPIC_API_KEY` set empty in the sandbox, so that a missing token stops the run before the sandbox starts instead of falling back to an API key. No file in the repo SHALL contain a token value.
+The repo SHALL define a `daytona` environment, in which Claude Code runs through Fabro's ACP backend, in `.fabro/environments/daytona.json`: the request body Fabro's environments API takes, including the sandbox's Dockerfile inline. Claude Code SHALL authenticate with the subscription token stored in Fabro's secret vault as `CLAUDE_CODE_OAUTH_TOKEN`, with `ANTHROPIC_API_KEY` set empty in the sandbox, so that a missing token stops the run before the sandbox starts instead of falling back to an API key. No file in the repo SHALL contain a token value.
 
 #### Scenario: Token comes from the vault
 
@@ -54,6 +54,25 @@ The repo SHALL define a `daytona` environment in which Claude Code runs through 
 
 - **WHEN** the configuration tests scan the tracked files in the repo
 - **THEN** none contains a token-shaped value: `sk-ant-`, then a token type of letters and digits such as `oat01`, a hyphen, and at least 20 key characters
+
+### Requirement: The repo's environment definition is what the server runs
+
+Fabro runs use only environments stored on the Fabro server. The repo SHALL have a script, `bin/fabro-environment`, that creates the `daytona` environment on the server from `.fabro/environments/daytona.json` when the server has none of that name, and replaces it when it has one, so the server runs what the repo defines. The script SHALL send the server's dev token in a request header read from a file, never on a command line, and SHALL NOT print it.
+
+#### Scenario: Environment missing on the server
+
+- **WHEN** the script runs and the server answers that no `daytona` environment exists
+- **THEN** it creates one with the file's contents, and exits successfully
+
+#### Scenario: Environment already on the server
+
+- **WHEN** the script runs and the server returns an existing `daytona` environment with its revision
+- **THEN** it replaces that environment with the file's contents, without the `id` field, passing the revision it was given, and exits successfully
+
+#### Scenario: The dev token stays off command lines
+
+- **WHEN** the script calls the server
+- **THEN** no command it runs has the dev token among its arguments, and nothing it prints contains the token
 
 ### Requirement: Smoke-test sandboxes stop when idle
 
@@ -66,12 +85,12 @@ The `daytona` environment used by this change SHALL stop a sandbox when its run 
 
 ### Requirement: A claude-max workflow exercises the sandbox path
 
-The repo SHALL have a `claude-max` workflow with exactly one Claude Code step, run through the ACP backend in the `daytona` environment, that writes `hello-claude-max.txt` to the workspace.
+The repo SHALL have a `claude-max` workflow with exactly one Claude Code step, run through the ACP backend, that writes `hello-claude-max.txt` to the workspace. It runs in the `daytona` environment, which the run command selects with `--environment daytona`, because Fabro does not apply an environment chosen in a workflow's settings.
 
 #### Scenario: Claude-max workflow shape
 
 - **WHEN** the configuration tests read the `claude-max` workflow
-- **THEN** its graph has exactly one step between start and exit, that step is an agent using the ACP backend with the `claude-code-acp` command, its prompt names `hello-claude-max.txt`, and the workflow selects the `daytona` environment
+- **THEN** its graph has exactly one step between start and exit, that step is an agent using the ACP backend with the `claude-code-acp` command, and its prompt names `hello-claude-max.txt`
 
 ### Requirement: A guide explains how to run the workflows
 
@@ -80,4 +99,4 @@ The repo SHALL have a guide at `docs/FABRO.md` that, for each workflow, says wha
 #### Scenario: Guide covers both workflows and the token
 
 - **WHEN** the configuration tests read `docs/FABRO.md`
-- **THEN** it names both `hello` and `claude-max` with a `fabro run` command for each, includes `claude setup-token`, and stores the token with `fabro secret set CLAUDE_CODE_OAUTH_TOKEN` followed by no value
+- **THEN** it names both `hello` and `claude-max` with a `fabro run` command for each, includes `claude setup-token` and `bin/fabro-environment`, and stores the token with `fabro secret set CLAUDE_CODE_OAUTH_TOKEN` followed by no value
