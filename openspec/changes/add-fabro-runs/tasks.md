@@ -2,7 +2,7 @@ Tasks marked done were completed on the `fabro-setup` branch before this proposa
 
 ## 1. Worktree and project setup
 
-- [ ] 1.1 Create the worktree with `git worktree add -b change/add-fabro-runs ../nycnoise-add-fabro-runs main`. Then:
+- [x] 1.1 Create the worktree with `git worktree add -b change/add-fabro-runs ../nycnoise-add-fabro-runs main`. Then:
   - move `.fabro/` and this change directory into it, and remove them from the main checkout;
   - symlink `.env` and `logs/` from the main checkout;
   - give it its own database, `nycnoise_add_fabro_runs`, dumped from `nycnoise`;
@@ -10,8 +10,8 @@ Tasks marked done were completed on the `fabro-setup` branch before this proposa
 
   Verify with `git -C ../nycnoise-add-fabro-runs status`, which should show only these files, and with `git status` in the main checkout, which should show none of them.
 - [x] 1.2 Run `fabro repo init` and verify `.fabro/project.toml` and `.fabro/workflows/hello/` exist
-- [ ] 1.3 Add `[run.scm]` with provider `github`, owner `natea` and repository `newenglandmusic` to `.fabro/project.toml`. Verify `fabro preflight claude-max` reports the repository as natea/newenglandmusic, or an origin mismatch instead of nycnoise/nycnoise, and that `fabro preflight hello --environment local` still passes. Record both outputs here.
-- [ ] 1.4 Add tests in `core/tests/test_fabro_config.py` for the "Project names the fork" and "A setting names upstream" scenarios. Verify they pass with `python manage.py test core.tests.test_fabro_config`, and that the second fails when an upstream name is added to a `.fabro/` file temporarily.
+- [x] 1.3 Add `[run.scm]` with provider `github`, owner `natea` and repository `newenglandmusic` to `.fabro/project.toml`. Verify `fabro preflight claude-max` reports the repository as natea/newenglandmusic, or an origin mismatch instead of nycnoise/nycnoise, and that `fabro preflight hello --environment local` still passes. Record both outputs here. (Done: `claude-max` preflight reports "Repository (natea/newenglandmusic)" and origin https://github.com/natea/newenglandmusic; its only failure is repository access for branch `change/add-fabro-runs`, which is not on the fork. `hello --environment local`: "All checks passed.")
+- [x] 1.4 Add tests in `core/tests/test_fabro_config.py` for the "Project names the fork" and "A setting names upstream" scenarios. Verify they pass with `python manage.py test core.tests.test_fabro_config`, and that the second fails when an upstream name is added to a `.fabro/` file temporarily.
 
 ## 2. Hello workflow
 
