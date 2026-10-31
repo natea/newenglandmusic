@@ -251,12 +251,13 @@ class TitleStopwordsTestCase(SimpleTestCase):
             "Irish Session", "Jazz Jam", "FREE", "Live Music at SAL's Birch Bar", "Jazz Wednesdays",
             "A Celtic Christmas", "Porchfest", "WXPN Welcomes", "An Intimate Evening", "Local Artist Series",
             "Jimmy's Jazz Brunch", "BATTLE of the BANDS", "Live Jazz", "Live Blues", "LIVE BAND",
+            "An Evening", "An Acoustic Evening", "A Very Special Evening",
         ):
             self.assertEqual(title_names(title), [], title)
 
     def test_acts_still_count(self):
         from core.artist_names import title_names
 
-        for title in ("They Might Be Giants", "Dropkick Murphys", "Free Throw", "Jamiroquai", "Evening Hymns", "Live Wire", "Liver"):
+        for title in ("They Might Be Giants", "Dropkick Murphys", "Free Throw", "Jamiroquai", "Evening Hymns", "Evening Elephants", "Live Wire", "Liver"):
             self.assertEqual(title_names(title), [title], title)
         self.assertEqual(title_names("Built to Spill Fall 2026 Tour"), ["Built to Spill"])

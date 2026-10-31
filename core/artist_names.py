@@ -32,7 +32,7 @@ TITLE_STOPWORDS_RE = re.compile(
     r"|welcomes|battle of the bands|music of|songs of|(?:mon|tues|wednes|thurs|fri|satur|sun)days"
     r"|(?:mon|tues|wednes|thurs|fri|satur|sun)day (?:blues|jazz|bluegrass|folk|funk|soul|swing)"
     r"|live (?:jazz|blues|bluegrass|folk|country|rock|soul|funk|acoustic|band|bands|entertainment))\b"
-    r"|\w+fest\b|^\W*free\W*$",
+    r"|\w+fest\b|^\W*free\W*$|^\W*an?\s+(?:\w+\s+){0,2}evening\W*$",
     re.IGNORECASE,
 )
 # "Còig - early show", "Elderbrook - Heart On A Wire Tour", "2hollis: The Pirouette Tour":

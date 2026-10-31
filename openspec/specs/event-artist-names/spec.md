@@ -70,7 +70,7 @@ The system SHALL also take names from the event's title, after removing:
 - a leading presenter phrase, ending in "Presents:" or "presents";
 - a leading "An evening with".
 
-The title SHALL be split with the same separators as the artists text, and its names SHALL come before the artists text's names. A title name that names a kind of night rather than an act SHALL be dropped: one containing, ignoring case, "tribute", "party", "night", "festival", "open mic", "karaoke", "jam", "session", "brunch", "live music", "open stage", "series", "showcase", "christmas", "halloween", "intimate evening", "welcomes", "battle of the bands", "music of", "songs of", "live" followed by a genre or "band" ("Live Jazz", "Live Band"), a weekday in the plural ("Wednesdays"), or a weekday followed by a genre ("Sunday Blues"); one with a word ending in "fest" ("Porchfest"); or one that is only "free". "Tour" is not among them, so "Built to Spill Fall 2026 Tour" keeps its act. The check SHALL be made after the show name is removed (see the next requirement), so that a band's name survives a show name that calls it a tribute.
+The title SHALL be split with the same separators as the artists text, and its names SHALL come before the artists text's names. A title name that names a kind of night rather than an act SHALL be dropped: one containing, ignoring case, "tribute", "party", "night", "festival", "open mic", "karaoke", "jam", "session", "brunch", "live music", "open stage", "series", "showcase", "christmas", "halloween", "intimate evening", "welcomes", "battle of the bands", "music of", "songs of", "live" followed by a genre or "band" ("Live Jazz", "Live Band"), a weekday in the plural ("Wednesdays"), or a weekday followed by a genre ("Sunday Blues"); one with a word ending in "fest" ("Porchfest"); one that is only "free"; or one that is only "an evening" with up to two words between ("An Acoustic Evening"). "Tour" is not among them, so "Built to Spill Fall 2026 Tour" keeps its act. The check SHALL be made after the show name is removed (see the next requirement), so that a band's name survives a show name that calls it a tribute.
 
 #### Scenario: Headliner only in the title
 - **WHEN** an event is titled "SHEBAD w/ Psymon Spine + Shadow Show", and its artists text is "SHEBAD, Psymon Spine"
@@ -79,6 +79,10 @@ The title SHALL be split with the same separators as the artists text, and its n
 #### Scenario: Presenter prefix removed
 - **WHEN** an event is titled "State Theatre Presents: The Ballroom Thieves"
 - **THEN** its names include "The Ballroom Thieves", and don't include "State Theatre"
+
+#### Scenario: An evening names no one
+- **WHEN** events are titled "An Evening" and "An Acoustic Evening", and another "Evening Elephants"
+- **THEN** the first two give no names, and the third gives "Evening Elephants"
 
 #### Scenario: Tribute title ignored
 - **WHEN** an event is titled "Dirty Deeds AC/DC Tribute", and its artists text is "Highway Kind"
