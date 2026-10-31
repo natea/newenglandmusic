@@ -138,7 +138,7 @@ DATABASE_URL="<External Database URL>" DJANGO_SETTINGS_MODULE=nycnoise.settings.
 
 **Staff accounts without superuser access.** Every `migrate` keeps a group named `admin` holding every permission on the site's own records (events, venues, artists, bands, job runs and the rest of `core`) and none on users, groups or sites (`core/admin_group.py`). To give someone an account, sign in as a superuser, add them at `/admin/auth/user/add/`, then tick **Staff status**, leave **Superuser status** off, and choose the `admin` group. They can edit the site's records but can't add accounts or change anyone's access, their own included.
 
-**A custom domain:** add it under the service's **Settings > Custom Domains**, then set `ALLOWED_HOSTS` to the domain and `SITE_URL` to `https://` plus the domain.
+**A custom domain:** add it under the service's **Settings > Custom Domains**, then set `ALLOWED_HOSTS` to the domain and `SITE_URL` to `https://` plus the domain. The next deploy's `migrate` updates Django's Sites record to match (`core/site_record.py`); it's read-only in the admin, since it always follows `SITE_URL` and `SITE_NAME`.
 
 ## Scheduled jobs
 

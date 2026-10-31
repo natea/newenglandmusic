@@ -1492,3 +1492,23 @@ class BandAdmin(MusicActAdmin):
 
 admin.site.register(Artist, ArtistAdmin)
 admin.site.register(Band, BandAdmin)
+
+
+# the sites record follows SITE_URL and SITE_NAME on every migrate (core/site_record.py), so
+# it's shown read-only: an edit here would be undone by the next deploy
+from django.contrib.sites.admin import SiteAdmin as BaseSiteAdmin
+from django.contrib.sites.models import Site
+
+admin.site.unregister(Site)
+
+
+@admin.register(Site)
+class SiteAdmin(BaseSiteAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
