@@ -1,0 +1,17 @@
+digraph ClaudeMax {
+    graph [goal="Smoke-test Claude Code on the Max subscription in a Daytona sandbox"]
+    rankdir=LR
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    work [
+        label="Claude Code (ACP)",
+        type="agent",
+        backend="acp",
+        acp.command="claude-code-acp",
+        prompt="Create a file called hello-claude-max.txt in the workspace root containing exactly: hello from claude max in daytona"
+    ]
+
+    start -> work -> exit
+}

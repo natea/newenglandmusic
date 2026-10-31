@@ -24,7 +24,7 @@ Tasks marked done were completed on the `fabro-setup` branch before this proposa
 
 - [x] 3.1 Add `.fabro/daytona.Dockerfile` (Node 22, git, Claude Code, the ACP adapter) and verify `fabro preflight claude-max` reports the Daytona sandbox as configured
 - [x] 3.2 Add `.fabro/workflows/claude-max/` with one ACP Claude Code step and the `daytona` environment (vault token, empty API key, 30-minute idle stop, no pull request, no branch push), and verify `fabro preflight claude-max` passes everything except repository access
-- [ ] 3.3 Add tests for the "Token comes from the vault", "No token in the repo" (one general pattern for token-shaped values, such as `sk-ant-[a-z]+[0-9]*-[A-Za-z0-9_-]{20,}`, which catches subscription tokens and API keys alike, and which the spec and test files themselves don't match), "Lifecycle settings", "Claude-max workflow shape" and `claude-max` half of "Smoke-test settings" scenarios, and verify they pass
+- [x] 3.3 Add tests for the "Token comes from the vault", "No token in the repo" (one general pattern for token-shaped values, such as `sk-ant-[a-z]+[0-9]*-[A-Za-z0-9_-]{20,}`, which catches subscription tokens and API keys alike, and which the spec and test files themselves don't match), "Lifecycle settings", "Claude-max workflow shape" and `claude-max` half of "Smoke-test settings" scenarios, and verify they pass
 
 ## 4. Credentials (Nate does these; no secret goes into the repo or a chat)
 
