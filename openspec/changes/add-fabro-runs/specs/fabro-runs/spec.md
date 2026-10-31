@@ -43,7 +43,7 @@ The repo SHALL have a `hello` workflow that runs one shell command and no model 
 
 ### Requirement: Claude Code runs in a Daytona sandbox with a subscription token
 
-The repo SHALL define a `daytona` environment, in which Claude Code runs through Fabro's ACP backend, in `.fabro/environments/daytona.json`: the request body Fabro's environments API takes, including the sandbox's Dockerfile inline. Claude Code SHALL authenticate with the subscription token stored in Fabro's secret vault as `CLAUDE_CODE_OAUTH_TOKEN`, with `ANTHROPIC_API_KEY` set empty in the sandbox, so that a missing token stops the run before the sandbox starts instead of falling back to an API key. No file in the repo SHALL contain a token value.
+The repo SHALL define a `daytona` environment, in which Claude Code runs through Fabro's ACP backend, in `.fabro/environments/daytona.json`: the request body Fabro's environments API takes, including the sandbox's Dockerfile inline. Claude Code SHALL authenticate with the subscription token stored in Fabro's secret vault as `CLAUDE_CODE_OAUTH_TOKEN`, with `ANTHROPIC_API_KEY` set empty in the sandbox, so that a missing token fails the Claude Code step, naming the missing secret, instead of falling back to an API key. No file in the repo SHALL contain a token value.
 
 #### Scenario: Token comes from the vault
 
@@ -54,6 +54,15 @@ The repo SHALL define a `daytona` environment, in which Claude Code runs through
 
 - **WHEN** the configuration tests scan the tracked files in the repo
 - **THEN** none contains a token-shaped value: `sk-ant-`, then a token type of letters and digits such as `oat01`, a hyphen, and at least 20 key characters
+
+### Requirement: A failed step fails the run
+
+The `hello` and `claude-max` workflows SHALL end the run as failed when any step fails, instead of continuing to exit and reporting success.
+
+#### Scenario: Failure policy
+
+- **WHEN** the configuration tests read the two workflows' graphs
+- **THEN** each sets the graph-level failure policy `on_failure="exit"`
 
 ### Requirement: The repo's environment definition is what the server runs
 

@@ -31,9 +31,11 @@ On start, the server imported all six secrets into its database and renamed the 
 **Claude Code through ACP, authenticated with a subscription token (Nate's decision to use the Max plan).** Fabro's own prompt stages call model APIs directly and need an API key. Claude Code run through the ACP adapter uses whatever login Claude Code has. On the Mac that is the keychain login, which the earlier claude-acp test used by setting `ANTHROPIC_API_KEY` empty. In a Daytona sandbox there is no keychain. Instead:
 - `claude setup-token` creates a subscription token, which Nate stores in Fabro's vault as `CLAUDE_CODE_OAUTH_TOKEN`.
 - The environment passes it into the sandbox through `{{ secrets.NAME }}` interpolation.
-- Fabro's docs (environments.mdx, run-configuration.mdx) say a missing or non-token secret fails closed before the sandbox starts.
+- Fabro's docs (environments.mdx, run-configuration.mdx) say a missing or non-token secret fails closed. The first live check (run 01M6994V09J0QCPY004PK2HF4G) showed when: Fabro starts the sandbox first, then fails the Claude Code step with "no secret named …". It never falls back to an API key, which is what matters, but a sandbox is created and then stopped.
 
 The tests check the exact reference and the empty API key, which is what makes the fail-closed behavior apply.
+
+**A failed step fails the run (found in the first live check).** Fabro's default failure policy, `route`, sends a failed step down its unconditional edge, so the `claude-max` run with a missing secret reached exit and reported success. Both smoke workflows set `on_failure="exit"` on the graph, so a failed step ends the run as failed. The bridge's later workflows need the same policy, or explicit failure edges.
 
 **`hello` uses a shell command, not a model (agent's decision, for Nate to confirm at G2).** The first `hello` run used OpenAI's gpt-5.4-mini, because the starter workflow has a prompt step and the Anthropic key is invalid. That used an API key, against Nate's decision to use the Max plan. The `claude-max` workflow already tests the model path, so `hello` only needs to prove the server and repo setup. It becomes a single command step, and uses no provider or key. Alternative: an ACP Claude Code step on the Mac's keychain login, rejected because it needs the ACP adapter installed on the Mac and duplicates `claude-max`.
 
