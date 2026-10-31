@@ -1,0 +1,11 @@
+_version = 1
+
+[workflow]
+graph = "workflow.fabro"
+
+# Smoke test only: no pull request and no pushed run branch.
+[run.pull_request]
+enabled = false
+
+[run.run_branch]
+push = false

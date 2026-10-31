@@ -16,9 +16,9 @@ Tasks marked done were completed on the `fabro-setup` branch before this proposa
 ## 2. Hello workflow
 
 - [x] 2.1 Turn off pull requests in `.fabro/workflows/hello/workflow.toml`, and verify `fabro preflight hello --environment local` shows no pull request error
-- [ ] 2.2 Replace the hello graph's prompt step with one command step (for example `git log -1 --oneline`), turn off run-branch pushing, and correct the comment about Daytona and the unused `draft` setting. Verify `fabro validate .fabro/workflows/hello/workflow.fabro` passes.
-- [ ] 2.3 Add tests for the "Hello workflow shape" scenario and the `hello` half of "Smoke-test settings", and verify they pass
-- [ ] 2.4 Manual check: run `fabro run hello --environment local` and verify it succeeds with no model and leaves the working tree unchanged. Record the run ID here. (An earlier run, 01M687YP6X73RSQ2DQZYW60HVF, used the old prompt step and OpenAI's gpt-5.4-mini.)
+- [x] 2.2 Replace the hello graph's prompt step with one command step (for example `git log -1 --oneline`), turn off run-branch pushing, and correct the comment about Daytona and the unused `draft` setting. Verify `fabro validate .fabro/workflows/hello/workflow.fabro` passes.
+- [x] 2.3 Add tests for the "Hello workflow shape" scenario and the `hello` half of "Smoke-test settings", and verify they pass
+- [x] 2.4 Manual check: run `fabro run hello --environment local` and verify it succeeds with no model and leaves the working tree unchanged. Record the run ID here. (Done: run 01M696CQQ3VPKGQPAHRB1TDR5D succeeded in 2 seconds with no model, working tree unchanged. An earlier run, 01M687YP6X73RSQ2DQZYW60HVF, used the old prompt step and OpenAI's gpt-5.4-mini.)
 
 ## 3. Daytona environment and claude-max workflow
 
