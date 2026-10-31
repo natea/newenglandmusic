@@ -29,7 +29,7 @@ Tasks marked done were completed on the `fabro-setup` branch before this proposa
 - [x] 3.4 Move the `daytona` environment out of `.fabro/workflows/claude-max/workflow.toml` into `.fabro/environments/daytona.json`, in the shape `POST /api/v1/environments` takes, with the Dockerfile inline; remove `[run.environment]` from the workflow and delete `.fabro/daytona.Dockerfile`. Verify the existing token and lifecycle tests, pointed at the JSON file, pass.
 - [x] 3.5 Write `bin/fabro-environment`: create the environment when the server has none, replace it with `If-Match` when it does, and keep the dev token in a private header file. Verify by running it against the local server and checking that `GET /api/v1/environments/daytona` returns the file's settings. (Done: created, then replaced on a second run; the server's provider, resources, lifecycle, Dockerfile and env match the file, with the token as the vault reference.)
 - [x] 3.6 Add tests with a stand-in `curl` for the "Environment missing on the server", "Environment already on the server" and "The dev token stays off command lines" scenarios, and verify they pass
-- [ ] 3.7 Set `on_failure="exit"` on both smoke workflows' graphs, and add a test for the "Failure policy" scenario
+- [x] 3.7 Set `on_failure="exit"` on both smoke workflows' graphs, and add a test for the "Failure policy" scenario
 
 ## 4. Credentials (Nate does these; no secret goes into the repo or a chat)
 

@@ -1,6 +1,7 @@
 digraph ClaudeMax {
     graph [goal="Smoke-test Claude Code on the Max subscription in a Daytona sandbox"]
     rankdir=LR
+    on_failure="exit"
 
     start [shape=Mdiamond, label="Start"]
     exit  [shape=Msquare, label="Exit"]

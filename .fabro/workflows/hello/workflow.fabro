@@ -1,6 +1,7 @@
 digraph Hello {
     graph [goal="Check that the Fabro server and this repo's setup work, without a model"]
     rankdir=LR
+    on_failure="exit"
 
     start [shape=Mdiamond, label="Start"]
     exit  [shape=Msquare, label="Exit"]

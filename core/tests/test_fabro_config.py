@@ -59,6 +59,15 @@ class SmokeTestSettingsTestCase(SimpleTestCase):
         self.assert_pushes_nothing("claude-max")
 
 
+class FailurePolicyTestCase(SimpleTestCase):
+    """a failed step ends the run as failed instead of carrying on to exit"""
+
+    def test_failure_policy(self):
+        for name in ("hello", "claude-max"):
+            graph = workflow(name)[1]
+            self.assertRegex(graph, r'(?m)^\s*on_failure="exit"\s*$', name)
+
+
 class HelloWorkflowTestCase(SimpleTestCase):
     """hello checks the setup with one shell command and no model"""
 
