@@ -3,8 +3,9 @@ _version = 1
 [workflow]
 graph = "workflow.fabro"
 
-[run.environment]
-id = "daytona"
+# Runs in the server's daytona environment, defined in
+# .fabro/environments/daytona.json and put there by bin/fabro-environment;
+# select it with --environment daytona.
 
 # Smoke test only: no pull request and no pushed run branch.
 [run.pull_request]
@@ -12,25 +13,3 @@ enabled = false
 
 [run.run_branch]
 push = false
-
-# Daytona sandbox for intentable runs. Claude Code runs inside it through ACP
-# and signs in with Nate's Claude Max subscription token, not an API key.
-[environments.daytona]
-provider = "daytona"
-
-[environments.daytona.image]
-dockerfile = { path = "../../daytona.Dockerfile" }
-
-[environments.daytona.resources]
-cpu = 2
-memory = "4GB"
-disk = "10GB"
-
-[environments.daytona.lifecycle]
-preserve = false
-stop_on_terminal = true
-auto_stop = "30m"
-
-[environments.daytona.env]
-CLAUDE_CODE_OAUTH_TOKEN = "{{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}"
-ANTHROPIC_API_KEY = ""

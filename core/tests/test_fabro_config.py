@@ -1,5 +1,8 @@
+import json
+import os
 import re
 import subprocess
+import tempfile
 import tomllib
 from pathlib import Path
 
@@ -75,7 +78,7 @@ TOKEN = re.compile(r"sk-ant-[a-z]+[0-9]*-[A-Za-z0-9_-]{20,}")
 
 
 def daytona():
-    return workflow("claude-max")[0]["environments"]["daytona"]
+    return json.loads((FABRO / "environments" / "daytona.json").read_text())
 
 
 class SubscriptionTokenTestCase(SimpleTestCase):
@@ -119,5 +122,84 @@ class ClaudeMaxWorkflowTestCase(SimpleTestCase):
         self.assertIn('backend="acp"', attrs)
         self.assertIn('acp.command="claude-code-acp"', attrs)
         self.assertIn("hello-claude-max.txt", attrs)
-        self.assertEqual(settings["run"]["environment"]["id"], "daytona")
+        self.assertEqual(daytona()["id"], "daytona")
         self.assertEqual(daytona()["provider"], "daytona")
+
+
+# stands in for curl: records each call's arguments and request body, and answers the
+# environment lookup with $LOOKUP_STATUS and an ETag of $REVISION
+STUB_CURL = r"""#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$CALLS"
+out=""; headers=""; body=""; prev=""
+for arg in "$@"; do
+  case "$prev" in
+    -o) out="$arg" ;;
+    -D) headers="$arg" ;;
+    --data-binary) body="${arg#@}" ;;
+    -H) case "$arg" in @*) cat "${arg#@}" >> "$SENT_HEADERS" ;; esac ;;
+  esac
+  prev="$arg"
+done
+if [ -n "$body" ]; then cp "$body" "$CALLS.body"; fi
+if [ -n "$headers" ]; then
+  printf 'HTTP/1.1 %s\r\nETag: %s\r\n\r\n' "$LOOKUP_STATUS" "$REVISION" > "$headers"
+  echo '{}' > "$out"
+  printf '%s' "$LOOKUP_STATUS"
+fi
+"""
+
+
+class EnvironmentScriptTestCase(SimpleTestCase):
+    """bin/fabro-environment puts the repo's environment on the Fabro server"""
+
+    TOKEN = "test-dev-token-0123456789"
+
+    def run_script(self, lookup_status):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            stub = tmp / "curl"
+            stub.write_text(STUB_CURL)
+            stub.chmod(0o755)
+            env = {
+                **os.environ,
+                "PATH": f"{tmp}:{os.environ['PATH']}",
+                "CALLS": str(tmp / "calls"),
+                "SENT_HEADERS": str(tmp / "headers"),
+                "LOOKUP_STATUS": lookup_status,
+                "REVISION": '"rev-7"',
+                "FABRO_DEV_TOKEN": self.TOKEN,
+                "FABRO_SERVER": "http://fabro.test",
+            }
+            result = subprocess.run(
+                [str(ROOT / "bin" / "fabro-environment")], env=env, capture_output=True, text=True
+            )
+            calls = (tmp / "calls").read_text().splitlines()
+            body = json.loads((tmp / "calls.body").read_text()) if (tmp / "calls.body").exists() else None
+            return result, calls, body, (tmp / "headers").read_text()
+
+    def test_creates_the_environment_when_missing(self):
+        result, calls, body, _ = self.run_script("404")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(calls), 2)
+        self.assertIn("-X POST", calls[1])
+        self.assertTrue(calls[1].endswith("http://fabro.test/api/v1/environments"))
+        self.assertEqual(body, daytona())
+
+    def test_replaces_the_environment_with_its_revision(self):
+        result, calls, body, _ = self.run_script("200")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(calls), 2)
+        self.assertIn("-X PUT", calls[1])
+        self.assertIn('If-Match: "rev-7"', calls[1])
+        self.assertTrue(calls[1].endswith("http://fabro.test/api/v1/environments/daytona"))
+        expected = daytona()
+        del expected["id"]
+        self.assertEqual(body, expected)
+
+    def test_dev_token_stays_off_command_lines(self):
+        for status in ("404", "200"):
+            result, calls, _, headers = self.run_script(status)
+            self.assertIn(f"Authorization: Bearer {self.TOKEN}", headers)
+            for call in calls:
+                self.assertNotIn(self.TOKEN, call)
+            self.assertNotIn(self.TOKEN, result.stdout + result.stderr)

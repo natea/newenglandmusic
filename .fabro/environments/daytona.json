@@ -1,0 +1,33 @@
+{
+  "id": "daytona",
+  "provider": "daytona",
+  "cwd": null,
+  "image": {
+    "docker": null,
+    "dockerfile": {
+      "type": "inline",
+      "value": "FROM node:22-bookworm\nRUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*\nRUN npm install -g @anthropic-ai/claude-code @zed-industries/claude-code-acp\n"
+    }
+  },
+  "resources": {
+    "cpu": 2,
+    "memory": "4GB",
+    "disk": "10GB"
+  },
+  "network": {
+    "mode": "allow_all",
+    "allow": []
+  },
+  "lifecycle": {
+    "preserve": false,
+    "stop_on_terminal": true,
+    "auto_stop": "30m"
+  },
+  "labels": {
+    "repo": "natea/newenglandmusic"
+  },
+  "env": {
+    "CLAUDE_CODE_OAUTH_TOKEN": "{{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}",
+    "ANTHROPIC_API_KEY": ""
+  }
+}
