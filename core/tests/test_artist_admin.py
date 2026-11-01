@@ -104,6 +104,16 @@ class ArtistAdminTestCase(TestCase):
         self.assertEqual(names("?musicbrainz_status__exact=ambiguous"), {"Speedy Ortiz"})
         self.assertEqual(names("?q=kri"), {"Krill"})
 
+    def test_filtering_by_source(self):
+        Band.objects.create(name="'Til Tuesday", sources=["ohb"])
+        Band.objects.create(name="Dropkick Murphys", musicbrainz_status=Status.MATCHED, sources=["ohb"])
+        url = reverse("admin:core_band_changelist")
+        response = self.client.get(url + "?source=ohb")
+        self.assertEqual({b.name for b in response.context["cl"].result_list}, {"'Til Tuesday", "Dropkick Murphys"})
+        self.assertContains(response, "Oh Hello Boston")
+        # with no filter, every band, the source shown only where there is one
+        self.assertEqual(len(self.client.get(url).context["cl"].result_list), 3)
+
     def test_genres_are_credited(self):
         html = self.change(self.band).content.decode()
         self.assertIn("indie rock", html)

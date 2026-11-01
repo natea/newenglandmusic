@@ -56,7 +56,7 @@ Each artist and band SHALL keep the set of sources that named it, as short keys 
 - **THEN** every record it names has "ohb" once, and nothing new is made the second time
 
 ### Requirement: Importing a curated list of names
-`import_act_list --source <key>` SHALL read a list from one or more CSV files (`--csv <path>`) or Google Sheet tabs (`--sheet <id> --tab <name>`, `--tab` repeatable) in the list's own columns: the act's name (`Artist` or `Name`), and optionally `City` or `Town`, `State` (a full state name or its two-letter code), `Website`, `Bandcamp`, `Instagram`, `YouTube`, `MusicBrainz ID` and `Kind`. For each name it SHALL decide the kind on MusicBrainz: with a MusicBrainz ID, a person SHALL make an artist and a group a band; without one, the name SHALL be searched as the events' names are, and exactly one group SHALL make a band and exactly one person an artist, with the list's `Kind` settling a name that is both. Rows naming the same act, within a tab or across tabs (the same name ignoring case, accents and punctuation, or the same MusicBrainz ID), SHALL be merged into one before any lookup, the first tab's values winning where they differ and each difference reported. An act already on the site, by its MusicBrainz ID or else by its name and kind, SHALL be found rather than made again. It SHALL fill only unset fields or its own, never an editor's or MusicBrainz's, and add its source. A name it can't settle (not on MusicBrainz, several with the name, both kinds and no `Kind`, or an ID that isn't a person or a group) SHALL NOT be saved and SHALL be written to a review CSV with its reason, in the `import_artists` layout so an editor can complete and import it. `--dry-run` SHALL report and save nothing, and `--limit` SHALL stop after that many names. The run SHALL be recorded as a job run.
+`import_act_list --source <key>` SHALL read a list from one or more CSV files (`--csv <path>`) or Google Sheet tabs (`--sheet <id> --tab <name>`, `--tab` repeatable) in the list's own columns: the act's name (`Artist` or `Name`), and optionally `City` or `Town`, `State` (a full state name or its two-letter code), `Website`, `Bandcamp`, `Instagram`, `YouTube`, `MusicBrainz ID` and `Kind`. For each name it SHALL decide the kind on MusicBrainz: with a MusicBrainz ID, a person SHALL make an artist and a group a band; without one, the name SHALL be searched as the events' names are, and exactly one group SHALL make a band and exactly one person an artist, with the list's `Kind` settling a name that is both. Rows naming the same act, within a tab or across tabs (the same name ignoring case, accents and punctuation, or the same MusicBrainz ID), SHALL be merged into one before any lookup, the first tab's values winning where they differ and each difference reported. An act already on the site, by its MusicBrainz ID or else by its name and kind, SHALL be found rather than made again. It SHALL fill only unset fields or its own, never an editor's or MusicBrainz's, and add its source. Every act on the list SHALL become a record, since the list is vetted. An act it can't settle cleanly SHALL be made held for review (see "Acts held for review stay off the site"), with each reason: not on MusicBrainz, several with the name, both kinds and no `Kind` (made as a band), an ID MusicBrainz doesn't have, an ID whose MusicBrainz act has a different name or is typed as neither a person nor a group (an act with no type takes the list's `Kind`), or a match MusicBrainz places only outside the states the site covers. Its kind SHALL be MusicBrainz's when known, else the list's `Kind`, else band. After importing, it SHALL link every approved event to the records its names are, as the events' import does, re-rendering each event whose links change. `--dry-run` SHALL report and save nothing, and `--limit` SHALL stop after that many names. The run SHALL be recorded as a job run.
 
 #### Scenario: A row with a MusicBrainz ID
 - **WHEN** a row is "'Til Tuesday" with MusicBrainz ID 8cf8869d-e066-4c94-b734-fe05749badf0, a group
@@ -71,8 +71,16 @@ Each artist and band SHALL keep the set of sources that named it, as short keys 
 - **THEN** a band "Horse" is made with the group's ID
 
 #### Scenario: Not on MusicBrainz
-- **WHEN** a row is "3 1/2 Girls" and MusicBrainz has no act of that name
-- **THEN** no record is made, and the name is on the review CSV as "not on MusicBrainz"
+- **WHEN** a row is "3 1/2 Girls" with no Kind, and MusicBrainz has no act of that name
+- **THEN** a band "3 1/2 Girls" is made with the source "ohb", held for review as "not on MusicBrainz", with its links from the row
+
+#### Scenario: Matched to an act from elsewhere
+- **WHEN** a row is "Sunburst" from Boston, MA, and the one MusicBrainz group named Sunburst is from Ohio
+- **THEN** the band is made with that ID but held for review as "placed outside the Northeast"
+
+#### Scenario: An ID for a different act
+- **WHEN** a row is "27" with a MusicBrainz ID whose act is named "Twenty Seven Strings"
+- **THEN** the band is made held for review as "MusicBrainz's name differs"
 
 #### Scenario: An act on both tabs
 - **WHEN** "Adam Sherman" is on "In Rotation" and on "2026 backlog", and the import reads both tabs
@@ -82,10 +90,33 @@ Each artist and band SHALL keep the set of sources that named it, as short keys 
 - **WHEN** a tab lists the same act twice, once as "The Dresden Dolls" and once as "Dresden Dolls"
 - **THEN** one record is made
 
+#### Scenario: No type on MusicBrainz
+- **WHEN** a row is "Wire Lines" with Kind "Band" and a MusicBrainz ID whose act has no type recorded
+- **THEN** a live band is made with that ID, its kind from the row
+
 #### Scenario: State names
 - **WHEN** a row's State is "Massachusetts"
 - **THEN** the record's state is "MA"
 
+#### Scenario: Existing events are linked
+- **WHEN** an approved upcoming event's artists are "28 Degrees Taurus, Kim Deal", and the import makes the band "28 Degrees Taurus"
+- **THEN** the event is linked to 28 Degrees Taurus, in billing order with Kim Deal, and its listing is re-rendered
+
 #### Scenario: A dry run
 - **WHEN** the list is imported with `--dry-run`
 - **THEN** it reports what it would make, find and review, and saves nothing
+
+### Requirement: Acts held for review stay off the site
+An artist or band held for review SHALL have no public page (its address answers 404), SHALL NOT be linked to any event, and SHALL NOT be listed in the sitemap, until an editor marks it ready. The admin SHALL filter artists and bands by whether they need review, show each one's reasons, and offer a "Mark ready" action, which SHALL clear the hold and its reasons and link the approved events that name the act. Only a curated list's import SHALL hold an act; a record made from events, by hand, or already live SHALL NOT be held by it.
+
+#### Scenario: Hidden while held
+- **WHEN** the band "3 1/2 Girls" is held for review and an approved event lists "3 1/2 Girls"
+- **THEN** `/bands/3-1-2-girls` answers 404 and the event isn't linked to it
+
+#### Scenario: Marked ready
+- **WHEN** an editor selects "3 1/2 Girls" in the admin's "Needs review" list and runs "Mark ready"
+- **THEN** it no longer needs review, its page loads, and the event that lists it is linked to it
+
+#### Scenario: A live act stays live
+- **WHEN** the list names "Dropkick Murphys", already live from events, and its MusicBrainz match would have been held
+- **THEN** Dropkick Murphys stays live, with the source "ohb" added

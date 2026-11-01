@@ -27,7 +27,7 @@ class SiteSitemap(Sitemap):
         today = beginning_of_day(get_current_new_york_datetime())
         for model, field in ((Band, "band"), (Artist, "artist")):
             acts = model.objects.filter(
-                performances__event__is_approved=True, performances__event__starttime__gte=today
+                needs_review=False, performances__event__is_approved=True, performances__event__starttime__gte=today
             ).distinct()
             url_list.extend(act.get_absolute_url() for act in acts)
 

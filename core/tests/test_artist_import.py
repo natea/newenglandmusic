@@ -90,6 +90,27 @@ class ImportArtistsTestCase(TestCase):
         self.assertEqual(band.website, "https://krill.example")
         self.assertEqual(report.problems, [(2, "A0001", "Bandcamp 'https://example.com/krill' isn't a bandcamp.com page; not saved")])
 
+    def test_instagram_and_youtube_columns(self):
+        header = "Act_ID,Name,Kind,Instagram,YouTube\n"
+        line = "A0027,27,band,https://instagram.com/27theband/,https://www.youtube.com/27boston\n"
+        import_rows(rows_from_csv(io.StringIO(header + line)))
+        band = Band.objects.get(act_id="A0027")
+        self.assertEqual((band.instagram_url, band.youtube_url), ("https://instagram.com/27theband/", "https://www.youtube.com/27boston"))
+        self.assertEqual(band.field_sources["instagram_url"], "import")
+        # an editor's link stays
+        band.youtube_url = "https://www.youtube.com/@27official"
+        band.field_sources["youtube_url"] = "editor"
+        band.save()
+        import_rows(rows_from_csv(io.StringIO(header + line)))
+        self.assertEqual(Band.objects.get(act_id="A0027").youtube_url, "https://www.youtube.com/@27official")
+
+    def test_links_to_the_wrong_site_are_reported(self):
+        header = "Act_ID,Name,Kind,Instagram,YouTube\n"
+        report = import_rows(rows_from_csv(io.StringIO(header + "A0028,Horse,band,https://example.com/horse,https://vimeo.com/1\n")))
+        band = Band.objects.get(act_id="A0028")
+        self.assertEqual((band.instagram_url, band.youtube_url), ("", ""))
+        self.assertEqual(len(report.problems), 2)
+
     def test_invalid_values_are_reported(self):
         line = "A0003,Solo Person,artist,,Providence,Rhode Island,not a url,,abc,\n"
         report = import_rows(rows(line))

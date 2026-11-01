@@ -164,11 +164,12 @@ def act_page(request, act):
 
 
 def band_page(request, slug):
-    return act_page(request, get_object_or_404(Band, slug=slug))
+    # an act held for review has no page until it's marked ready
+    return act_page(request, get_object_or_404(Band, slug=slug, needs_review=False))
 
 
 def artist_page(request, slug):
-    return act_page(request, get_object_or_404(Artist, slug=slug))
+    return act_page(request, get_object_or_404(Artist, slug=slug, needs_review=False))
 
 
 def act_url(act):

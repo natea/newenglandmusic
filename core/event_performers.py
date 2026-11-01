@@ -12,6 +12,7 @@ event's links from names are replaced; an editor's are kept, and keep their orde
 from collections import defaultdict
 
 from django.db import transaction
+from django.db.models import Q
 
 import re
 
@@ -23,10 +24,13 @@ Source = EventPerformer.Source
 
 
 def names_to_records():
-    """{name_key: the one artist or band with it}; a key two records share maps to none"""
+    """
+    {name_key: the one artist or band with it}; a key two records share maps to none. an act
+    held for review links to nothing until it's marked ready
+    """
     found = defaultdict(list)
     for model in (Artist, Band):
-        for record in model.objects.only("pk", "name", "name_key"):
+        for record in model.objects.filter(needs_review=False).only("pk", "name", "name_key"):
             found[record.name_key].append(record)
     return {key: records[0] for key, records in found.items() if len(records) == 1}
 
@@ -192,3 +196,19 @@ def connect_signals():
     for model in (Artist, Band):
         pre_delete.connect(remember_events, sender=model, dispatch_uid=f"remember-events-{model.__name__}")
         post_delete.connect(rebake_remembered_events, sender=model, dispatch_uid=f"rebake-events-{model.__name__}")
+
+
+def relink_events_naming(acts):
+    """
+    links the approved events that name any of these acts (by their names, as listings read
+    them): after an act held for review is marked ready. returns how many events link to one
+    """
+    keys = {act.name_key for act in acts}
+    if not keys:
+        return 0
+    records, linked = names_to_records(), 0
+    for event in Event.objects.all():
+        if keys & {normalize(name) for name in event_artist_names(event)}:
+            link_from_names(event, records)
+            linked += event.performers.filter(Q(artist__in=[a for a in acts if isinstance(a, Artist)]) | Q(band__in=[a for a in acts if isinstance(a, Band)])).exists()
+    return linked

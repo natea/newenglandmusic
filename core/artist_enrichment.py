@@ -337,12 +337,13 @@ SEVERAL = "several with this name"
 NOT_ON_MUSICBRAINZ = "not on MusicBrainz"
 
 
-def choose_kind(name, matcher):
+def choose_kind(name, matcher, prefer=None):
     """
     what a name from the events is on musicbrainz (import_artists_from_events): (Artist or
     Band, its musicbrainz id, "") when it's settled as exactly one kind, else (None, None,
     the reason). both kinds are searched with the matcher's rules; a name with no state
-    isn't checked for being placed abroad, as touring acts play local venues
+    isn't checked for being placed abroad, as touring acts play local venues. prefer (Artist
+    or Band, from a curated list's Kind: import_act_list) settles a name that's both
     """
     found = {}
     for model in (Band, Artist):
@@ -353,6 +354,8 @@ def choose_kind(name, matcher):
     if Status.AMBIGUOUS in (band_status, artist_status):
         return None, None, SEVERAL
     if band_status == Status.MATCHED and artist_status == Status.MATCHED:
+        if prefer in found:
+            return prefer, found[prefer][1], ""
         return None, None, BOTH_KINDS
     if band_status == Status.MATCHED:
         return Band, band_id, ""

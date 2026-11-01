@@ -2,7 +2,7 @@
 imports artists and bands from rows of a csv file or a google sheet tab (import_artists),
 in one layout, keyed by Act_ID:
 
-    Act_ID, Name, Kind, Members, Town, State, Website, Bandcamp, MusicBrainz_ID, Notes
+    Act_ID, Name, Kind, Members, Town, State, Website, Bandcamp, Instagram, YouTube, MusicBrainz_ID, Notes
 
 Kind is "artist" or "band". a band's Members are separated by semicolons, each with an
 optional role in parentheses: "Jonah Furman (bass, vocals); Aaron Mendelsohn (guitar)".
@@ -14,6 +14,7 @@ MusicAct.field_sources), so an editor's or musicbrainz's value stays.
 
 import csv
 import re
+from urllib.parse import urlsplit
 from dataclasses import dataclass, field
 
 from django.core.exceptions import ValidationError
@@ -24,7 +25,10 @@ from core.artist_matching import normalize
 from core.artists import MBID_PATTERN, is_bandcamp_url
 from core.models import Artist, Band, BandMembership
 
-COLUMNS = ("Act_ID", "Name", "Kind", "Members", "Town", "State", "Website", "Bandcamp", "MusicBrainz_ID", "Notes")
+COLUMNS = (
+    "Act_ID", "Name", "Kind", "Members", "Town", "State", "Website", "Bandcamp", "Instagram", "YouTube",
+    "MusicBrainz_ID", "Notes",
+)
 KINDS = {"artist": Artist, "band": Band}
 # the fields each column sets
 FIELD_COLUMNS = {
@@ -33,12 +37,19 @@ FIELD_COLUMNS = {
     "state": "State",
     "website": "Website",
     "bandcamp_url": "Bandcamp",
+    "instagram_url": "Instagram",
+    "youtube_url": "YouTube",
     "musicbrainz_id": "MusicBrainz_ID",
     "notes": "Notes",
 }
 IMPORT = "import"
 MBID_RE = re.compile(MBID_PATTERN)
 STATE_RE = re.compile(r"^[A-Z]{2}$")
+# the hosts a link column must point at: "https://www.instagram.com/27theband/"
+LINK_HOSTS = {
+    "instagram_url": ("Instagram", ("instagram.com",)),
+    "youtube_url": ("YouTube", ("youtube.com", "youtu.be")),
+}
 # "Kim Gordon (bass, vocals)" -> name, role
 MEMBER_RE = re.compile(r"^(?P<name>[^()]+?)\s*(?:\((?P<role>[^()]*)\))?$")
 
@@ -108,11 +119,25 @@ def clean_values(row, problem):
     if values["bandcamp_url"] and not is_bandcamp_url(values["bandcamp_url"]):
         problem(f"Bandcamp {values['bandcamp_url']!r} isn't a bandcamp.com page; not saved")
         del values["bandcamp_url"]
+    for name, (column, hosts) in LINK_HOSTS.items():
+        if values[name] and not is_link_to(values[name], hosts):
+            problem(f"{column} {values[name]!r} isn't a {hosts[0]} page; not saved")
+            del values[name]
     values["musicbrainz_id"] = values["musicbrainz_id"].lower()
     if values["musicbrainz_id"] and not MBID_RE.match(values["musicbrainz_id"]):
         problem(f"MusicBrainz_ID {values['musicbrainz_id']!r} isn't a MusicBrainz id; not saved")
         del values["musicbrainz_id"]
     return values
+
+
+def is_link_to(url, hosts):
+    """a web address on one of the hosts, or their subdomains ("www.youtube.com")"""
+    try:
+        URLValidator(schemes=["http", "https"])(url)
+    except ValidationError:
+        return False
+    host = urlsplit(url).hostname or ""
+    return any(host == h or host.endswith("." + h) for h in hosts)
 
 
 def apply_values(record, values):

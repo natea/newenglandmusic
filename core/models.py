@@ -853,6 +853,24 @@ class MusicAct(models.Model):
     # import writes only a field that's unset or its own, and musicbrainz fills the website
     # and bandcamp link only when they're empty, so neither overwrites an editor's
     field_sources = models.JSONField(blank=True, default=dict)
+    # the curated lists that name this act, as short keys ("ohb": core/act_sources.py); a
+    # list's import adds its key and never removes one (import_act_list)
+    sources = ArrayField(models.CharField(max_length=16), blank=True, default=list)
+    # held for review: made by a curated list's import with a doubtful or missing musicbrainz
+    # match, it has no public page and no event links until an editor marks it ready. codes
+    # in REVIEW_REASONS
+    needs_review = models.BooleanField(default=False, db_index=True)
+    review_reasons = ArrayField(models.CharField(max_length=16), blank=True, default=list)
+
+    REVIEW_REASONS = {
+        "not_found": "not on MusicBrainz",
+        "several": "several on MusicBrainz",
+        "kind": "kind unknown",
+        "id_unknown": "MusicBrainz ID not found",
+        "id_type": "not a person or group on MusicBrainz",
+        "name": "MusicBrainz's name differs",
+        "elsewhere": "placed outside the Northeast",
+    }
 
     musicbrainz_id = models.CharField(
         max_length=36, unique=True, null=True, blank=True,

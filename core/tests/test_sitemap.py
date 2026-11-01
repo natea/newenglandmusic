@@ -1,4 +1,5 @@
 from core.models import Event
+from core.utils_datemath import get_current_new_york_datetime
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
@@ -8,7 +9,8 @@ from django.utils import timezone
 )
 class SitemapTestCase(TestCase):
     def setUp(self):
-        self.month = timezone.now().strftime("%Y-%m")
+        # the sitemap's months are new york's: utc has already turned the month on its last evening
+        self.month = get_current_new_york_datetime().strftime("%Y-%m")
         Event.objects.create(title="a show", starttime=timezone.now(), is_approved=True)
 
     def test_urls_use_the_site_address(self):

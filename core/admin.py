@@ -20,11 +20,11 @@ from solo.admin import SingletonModelAdmin
 from tinymce.widgets import TinyMCE
 
 from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filter
-from . import apple_music, youtube
+from . import act_sources, apple_music, youtube
 from .places import PlacesClient, PlacesError
 from .spotify import parse_artist_id
 from .wikipedia import LICENSE_URL, commons_file_page, commons_thumbnail
-from .event_performers import rebake
+from .event_performers import rebake, relink_events_naming
 from .spotify_links import rebake_events_naming
 from .artist_matching import normalize
 from .job_runs import DIDNT_FINISH, STALE_AFTER, outcome
@@ -1354,18 +1354,33 @@ class ArtistMembershipInline(BandMembershipInline):
     verbose_name_plural = "bands"
 
 
+class ActSourceFilter(SimpleListFilter):
+    """the curated lists acts come from (MusicAct.sources, core/act_sources.py)"""
+
+    title = "source"
+    parameter_name = "source"
+
+    def lookups(self, request, model_admin):
+        return list(act_sources.SOURCES.items())
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(sources__contains=[self.value()])
+        return queryset
+
+
 class MusicActAdmin(admin.ModelAdmin):
-    list_display = ("name", "city_town", "state", "musicbrainz_status", "musicbrainz_page", "act_id")
-    list_filter = ("state", "musicbrainz_status")
+    list_display = ("name", "city_town", "state", "musicbrainz_status", "musicbrainz_page", "source_labels", "review", "act_id")
+    list_filter = ("needs_review", "state", "musicbrainz_status", ActSourceFilter)
     search_fields = ("name", "act_id", "musicbrainz_id")
-    actions = ["clear_musicbrainz_match"]
+    actions = ["clear_musicbrainz_match", "mark_ready"]
     readonly_fields = (
         "musicbrainz_status", "musicbrainz_checked_at", "musicbrainz_page", "genres_from_musicbrainz",
         *[f for f in MUSICBRAINZ_FIELDS if f != "genres"], "field_sources", "introduction_from_wikipedia",
-        "photo_preview",
+        "photo_preview", "source_labels", "review",
     )
     fieldsets = (
-        (None, {"fields": ("name", "slug", "act_id", "city_town", "state", "notes")}),
+        (None, {"fields": ("name", "slug", "act_id", "source_labels", "review", "city_town", "state", "notes")}),
         ("Links", {"fields": ("website", "bandcamp_url", "instagram_url", "youtube_url")}),
         (
             "Photo (Wikimedia Commons, free licence only)",
@@ -1388,6 +1403,24 @@ class MusicActAdmin(admin.ModelAdmin):
         ("Introduction", {"fields": ("introduction_from_wikipedia",)}),
         ("Who set what", {"fields": ("field_sources",), "classes": ("collapse",)}),
     )
+
+    @admin.display(description="Review")
+    def review(self, act):
+        """why a held act waits ("not on MusicBrainz"), or blank for a live one"""
+        if not act.needs_review:
+            return ""
+        return "needs review: " + ", ".join(act.REVIEW_REASONS.get(code, code) for code in act.review_reasons)
+
+    @admin.action(description="Mark ready: show on the site and link its events")
+    def mark_ready(self, request, queryset):
+        held = list(queryset.filter(needs_review=True))
+        queryset.filter(needs_review=True).update(needs_review=False, review_reasons=[])
+        linked = relink_events_naming(held)
+        self.message_user(request, f"{len(held)} marked ready; {linked} events linked to them.")
+
+    @admin.display(description="Sources")
+    def source_labels(self, act):
+        return ", ".join(act_sources.label(key) for key in act.sources) or "-"
 
     @admin.display(description="MusicBrainz")
     def musicbrainz_page(self, act):
