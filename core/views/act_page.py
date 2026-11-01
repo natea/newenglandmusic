@@ -156,8 +156,6 @@ def act_page(request, act):
             "photo": photo_of(act, PHOTO_WIDTH),
             "wikipedia_title": wikipedia_title(act) if act.wikipedia_url else "",
             "invitation": invitation(request, act),
-            # thin pages stay out of search results until they have a show to point to
-            "noindex": not shows,
             "meta": get_meta(url=request.path.rstrip("/"), title=f"{act.name} | {settings.SITE_NAME}", description=description),
         },
     )

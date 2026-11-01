@@ -1,0 +1,339 @@
+// the a–z index of bands and artists (core/templates/core/act_index.html) and the search
+// results (search.html), set as the index at the back of a reference book: the band page's
+// card and tab (band.scss), a lavender letter rail, a plum initial per letter, and entries
+// run in two columns with the next show as each one's page reference
+
+$card: #f6f4ee;
+$hairline: #b9b4a8;
+$tab: #8b5d8b;
+$strip: #eeeeff;
+$rule: #c9d3e6;
+$ink: #1a1a1a;
+$quiet: #4f4b44;
+$display: Helvetica, Arial, sans-serif;
+
+// the rail stays in reach while the visitor scrolls 3,000 names
+.index-rail {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 0;
+  margin: 14px 0 6px;
+  padding: 5px 8px;
+  background: $strip;
+  box-shadow: 0 1px 0 $rule;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  a,
+  span {
+    min-width: 1.15em;
+    padding: 1px;
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  a:focus-visible {
+    outline: 2px solid $tab;
+    outline-offset: 1px;
+  }
+
+  // a letter with no acts is shown, quietly, so the rail reads as the whole alphabet
+  span {
+    color: $quiet;
+    font-weight: 400;
+  }
+}
+
+// the initial in its own column, pinned beside its letter's entries as they scroll by
+.index-letter {
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr);
+  margin-top: 26px;
+  scroll-margin-top: 52px;
+}
+
+.act .index-initial {
+  position: sticky;
+  top: 44px;
+  align-self: start;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: $tab;
+  font: 800 3.4rem/0.82 $display;
+  letter-spacing: -0.03em;
+}
+
+.index-page + .index-page {
+  margin-top: 18px;
+}
+
+// guide words: the page's first and last names, as a printed index heads each page
+.index-guide {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 4px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid $rule;
+  color: $quiet;
+  font-size: 0.82rem;
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.index-entries {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  columns: 2;
+  column-gap: 28px;
+  column-rule: 1px solid $rule;
+}
+
+.index-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 2px 0;
+  break-inside: avoid;
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
+// the name keeps its line; the grey detail takes what's left, with the dotted leader drawn
+// behind it to the date, and is hidden when too little is left to read
+.index-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.index-detail {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  container-type: inline-size;
+  color: $quiet;
+  font-size: 0.82rem;
+
+  // one line tall: a town that doesn't fit wraps onto the hidden second line and drops whole
+  > span {
+    position: relative;
+    display: inline-flex;
+    flex-wrap: wrap;
+    max-width: 100%;
+    height: 1.3em;
+    overflow: hidden;
+    vertical-align: bottom;
+    white-space: nowrap;
+  }
+
+  // the ground is on the words, not the line, so the leader shows after the last one left
+  > span > span {
+    padding-right: 4px;
+    background: $card;
+  }
+
+  > span > span + span {
+    margin-left: -4px;
+  }
+}
+
+// too narrow for even the kind ("artist"): the whole grey line goes, rather than a cut word
+@container (max-width: 44px) {
+  .index-detail > span {
+    visibility: hidden;
+  }
+}
+
+.index-entry:has(.index-next) .index-detail::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0.3em;
+  left: 0;
+  border-bottom: 1px dotted $hairline;
+}
+
+.index-next {
+  color: $ink;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* search results: the same entries under a heading per kind, then compact show rows */
+
+.search-form {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 6px;
+
+  input[type="search"] {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 8px;
+    border: 1px solid $hairline;
+    background: #fff;
+    font: inherit;
+  }
+
+  input[type="search"]:focus-visible,
+  input[type="submit"]:focus-visible {
+    outline: 2px solid $tab;
+    outline-offset: 0;
+  }
+
+  // the button in the box's own material, not the browser's bevel
+  input[type="submit"] {
+    padding: 4px 12px;
+    border: 1px solid $hairline;
+    background: $strip;
+    color: $ink;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  input[type="submit"]:hover {
+    border-color: $tab;
+  }
+}
+
+.search-kind {
+  margin-top: 20px;
+  padding-top: 10px;
+  border-top: 2px solid $tab;
+
+  // a short list keeps an index column's measure, so a name stays near its date
+  .index-entries {
+    max-width: 28em;
+    columns: 1;
+  }
+
+  .index-entries--two {
+    max-width: none;
+    columns: 2;
+  }
+}
+
+.act .search-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 6px;
+  padding: 0;
+  border: 0;
+  color: $quiet;
+  font: 700 0.82rem/1.2 "Open Sans", sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  small {
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+}
+
+.show-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.show-row {
+  display: grid;
+  grid-template-columns: 4.2em minmax(0, 1fr);
+  gap: 0 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid $rule;
+  scroll-margin-top: 12px;
+
+  time {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // a show in another year: the year under its day, small and quiet
+  time small {
+    display: block;
+    color: $quiet;
+    font-size: 0.82rem;
+    font-weight: 400;
+  }
+
+}
+
+// the venue, then the icon row at the right of the same line
+.show-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 14px;
+
+  .event-actions {
+    margin-left: auto;
+  }
+}
+
+.show-title {
+  font-weight: 700;
+}
+
+.show-where {
+  min-width: 0;
+  color: $quiet;
+  font-size: 0.85rem;
+}
+
+.show-row.is-past time,
+.show-row.is-past .show-title {
+  font-weight: 400;
+}
+
+@media (max-width: 600px) {
+  // two even rows of letters, lined up in equal cells
+  .index-rail {
+    display: grid;
+    grid-template-columns: repeat(14, 1fr);
+  }
+
+  .index-entries--two {
+    columns: 1;
+  }
+
+  .show-meta {
+    display: block;
+
+    .event-actions {
+      margin-top: 3px;
+    }
+  }
+
+  .index-letter {
+    grid-template-columns: 2.4rem minmax(0, 1fr);
+    scroll-margin-top: 96px;
+  }
+
+  .act .index-initial {
+    top: 88px;
+    font-size: 2.4rem;
+  }
+
+  .index-entries {
+    columns: 1;
+  }
+}

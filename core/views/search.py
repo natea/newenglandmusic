@@ -1,8 +1,15 @@
 from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
-from django.db.models import F
+from django.db.models import F, Q
+from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.decorators.cache import cache_control
 
 from ..models import Event, SearchableStaticPageBit, StaticPage
+from ..search_kinds import KINDS, shows
+from ..utils_datemath import beginning_of_day, get_current_new_york_datetime
+
+# how many bands and artists, and venues, a results page lists
+RESULTS_LIMIT = 50
 
 
 def search(request):
@@ -28,7 +35,7 @@ def search(request):
         .all()
     )
 
-    results_events = (
+    found_events = (
         # the venue, for each event's map icon (core/event_actions.py)
         Event.objects.select_related("venue")
         .annotate(
@@ -41,18 +48,46 @@ def search(request):
                 "preface",
             )
         )
-        .filter(search=query)
-        .order_by("-starttime")
+        # words anywhere, and part of a title or the artists, as the suggestions match
+        .filter(Q(search=query) | Q(title__icontains=query) | Q(artists__icontains=query))
         .distinct()
-        .all()
     )
+    # upcoming shows first, soonest first; then past ones, newest first
+    today = beginning_of_day(get_current_new_york_datetime())
+    upcoming_shows = found_events.filter(starttime__gte=today).order_by("starttime")
+    past_shows = found_events.filter(starttime__lt=today).order_by("-starttime")
+
+    # bands and artists, then venues, above the shows: the registry's own show search is the
+    # suggestions' upcoming-only one, so the page keeps its full-text search of every show
+    groups = [(group, find(query, RESULTS_LIMIT)) for group, find in KINDS if find is not shows]
 
     return render(
         request,
         "core/search.html",
         {
             "query": query,
+            "groups": [(group, matches) for group, matches in groups if matches],
+            # a show in another year carries its year
+            "this_year": str(today.year),
             "results_pages": results_pages,
-            "results_events": results_events,
+            "upcoming_shows": upcoming_shows,
+            "past_shows": past_shows,
         },
     )
+
+
+# suggestions per kind, and the fewest characters worth suggesting for
+SUGGESTIONS_PER_KIND = 5
+SUGGEST_MIN_LENGTH = 2
+
+
+# a minute: typing the same letters again, or going back, needn't ask again
+@cache_control(max_age=60, public=True)
+def suggest(request):
+    """what the search box suggests as you type (core/static/core/js/search-suggest.js), by kind"""
+    query = request.GET.get("q", "").strip()
+    items = []
+    if len(query) >= SUGGEST_MIN_LENGTH:
+        for group, find in KINDS:
+            items.extend(match.as_dict(group) for match in find(query, SUGGESTIONS_PER_KIND))
+    return JsonResponse({"items": items})

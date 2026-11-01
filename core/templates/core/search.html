@@ -1,34 +1,65 @@
 {% extends 'core/base.html' %}
+{% load sass_tags event_actions %}
 
-{% load event_actions %}
+{% block head %}
+  <link href="{% sass_src 'scss/band.scss' %}" rel="stylesheet" type="text/css" />
+  <link href="{% sass_src 'scss/act_index.scss' %}" rel="stylesheet" type="text/css" />
+{% endblock head %}
 
 {% block content %}
-  <h3>Search results for: {{ query }}</h3>
+<article class="act act-search" aria-labelledby="search-name">
+  <h1 class="act-tab" id="search-name">Search{% if query %}: {{ query }}{% endif %}</h1>
+  <div class="act-card">
+    <form class="search-form" method="GET" action="/" role="search">
+      <input type="search" name="s" value="{{ query }}" aria-label="Search bands, artists, venues and shows">
+      <input type="submit" value="search">
+    </form>
 
-  <h4>Events</h4>
-
-  <article>
-    {% for results_event in results_events %}
-      <div style="border-bottom: 1px solid rgba(0, 0, 0, 0.3); margin-bottom: 10px;">
-        <a href="/{{ results_event.starttime|date:'Y-m' }}/#{{ results_event.starttime|date:'mdy' }}">
-          {{ results_event.starttime|date:"M d (D) Y"|lower }}
-        </a>
-
-        {% event_html results_event %}
-      </div>
-    {% empty %}
-      No results found.
+    {# bands and artists, then venues (core/search_kinds.py); a kind with no match isn't shown #}
+    {% for group, matches in groups %}
+      <section class="search-kind">
+        <h2 class="search-head">{{ group }} <small>{{ matches|length }}</small></h2>
+        {# two columns, as on /bands, once there are enough to fill them #}
+        <ul class="index-entries{% if matches|length >= 8 %} index-entries--two{% endif %}">
+          {% for match in matches %}
+            {% include "core/index_entry.html" with name=match.name url=match.url kind=match.index_kind place=match.index_place when=match.when %}
+          {% endfor %}
+        </ul>
+      </section>
     {% endfor %}
-  </article>
 
-  <h4>Pages</h4>
+    {% if upcoming_shows %}
+      <section class="search-kind">
+        <h2 class="search-head">Shows <small>{{ upcoming_shows|length }} upcoming</small></h2>
+        <ul class="show-rows">
+          {% for event in upcoming_shows %}{% include "core/search_show.html" %}{% endfor %}
+        </ul>
+      </section>
+    {% endif %}
 
-  {% for results_page in results_pages %}
-    <div style="margin-bottom: 10px">
-      <a href="{{ results_page.get_absolute_url }}">{{ results_page.title }}</a>
-    </div>
-  {% empty %}
-    No results found.
-  {% endfor %}
+    {% if past_shows %}
+      <section class="search-kind">
+        <h2 class="search-head">Past shows <small>{{ past_shows|length }}, newest first</small></h2>
+        <ul class="show-rows">
+          {% for event in past_shows %}{% include "core/search_show.html" with is_past=True %}{% endfor %}
+        </ul>
+      </section>
+    {% endif %}
 
+    {% if results_pages %}
+      <section class="search-kind">
+        <h2 class="search-head">Pages <small>{{ results_pages|length }}</small></h2>
+        <ul class="index-entries">
+          {% for page in results_pages %}
+            {% include "core/index_entry.html" with name=page.title url=page.get_absolute_url kind="" place="" when=None %}
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+
+    {% if query and not groups and not upcoming_shows and not past_shows and not results_pages %}
+      <p class="act-meta">Nothing found for “{{ query }}”. Try part of a name, or browse <a href="/bands">bands &amp; artists A to Z</a>.</p>
+    {% endif %}
+  </div>
+</article>
 {% endblock content %}

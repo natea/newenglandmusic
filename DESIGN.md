@@ -293,6 +293,21 @@ A record-store divider and index card for one band or artist.
 - **Foot:** the invitation to send a photo, bio or links, and the genres' source, in small quiet type.
 - Empty fields are left out entirely, so a sparse act's card is short and nothing on it is filler.
 
+### Act index (`/bands`) and search results
+Set as the index at the back of a reference book, on the act card.
+- **Tab and meta:** "Bands & artists" (or "Search: <words>") on the plum tab; the count, "A to Z", as the meta line.
+- **Letter rail:** a lavender strip of the 27 letters ("#" first) in bold tabular small type, on one line at desktop width and wrapping on phones, sticky at the top of the window. A letter with no acts stays in quiet grey at regular weight, unlinked.
+- **Letters:** each letter's large plum display initial (3.4rem; 2.4rem on phones) sits in its own left column and stays pinned beside its entries as they scroll by.
+- **Pages:** each letter is set in pages of 40 entries, two columns of twenty with a ruled-blue column rule (one column on phones), each headed by guide words, its first and last names, in quiet small caps over a ruled-blue line.
+- **Entries:** the name as a bold navy link that keeps its line, a leading "The" inverted as indexes do ("Blue Stones, The"; the act's page, search and suggestions keep its own name); then kind and town in caption grey ("band, Boston"; "United States" shortened to "US"): when the line is tight the town drops whole, then the kind, never a cut word; a dotted hairline leader drawn behind the detail to the next show's date, bold and tabular ("Oct 17", with the year when it isn't this year's). No date, no leader.
+- **Search:** a box under the tab, then a section per kind, each opened by a 2px plum rule and a small uppercase quiet heading with its count: bands and artists as single-column entries, venues the same, then "Shows" (upcoming, soonest first) and "Past shows" (newest first, in regular weight) as compact rows: date column (the year small under it when it isn't this year's), the show as a bold link, venue and town in quiet grey, and the show's icon row.
+
+### Search suggestions
+The search box's suggestions, over accessible-autocomplete's stylesheet.
+- **Box and menu:** the small search box with a hairline border and a 2px plum focus outline; the menu on card stock with a hairline border, at most 360px wide (the screen less 32px on phones).
+- **Rows:** a group label (small bold quiet-grey capitals) above the first row of each group, then the kind as a small plum outline pill ("Band", "Artist", "Venue", "Show"), the name in bold and the detail in quiet grey. Rows are separated by 1px ruled-blue lines, and the chosen row is lavender.
+- **Spoken:** each row is read as one phrase, "Belly, band, Providence, RI". The visible row is hidden from screen readers.
+
 ## Do's and Don'ts
 
 ### Do:

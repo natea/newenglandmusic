@@ -494,6 +494,101 @@ main .search {
   }
 }
 
+// the search box's suggestions (core/static/core/js/search-suggest.js), over the
+// accessible-autocomplete stylesheet: card stock, a hairline border, the chosen row on lavender
+.search-suggest {
+  position: relative;
+  display: inline-block;
+  width: 280px;
+  max-width: 100%;
+  text-align: left;
+  vertical-align: middle;
+
+  // the library's box is gov.uk-sized; the site's is the small one beside its button
+  .autocomplete__input {
+    height: auto;
+    padding: 3px 6px;
+    border: 1px solid #b9b4a8;
+    font: inherit;
+  }
+
+  .autocomplete__input--focused {
+    outline: 2px solid #8b5d8b;
+    outline-offset: 0;
+    box-shadow: none;
+  }
+
+  .autocomplete__menu {
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    max-height: 70vh;
+    border: 1px solid #b9b4a8;
+    border-top: 0;
+    background: #f6f4ee;
+  }
+
+  .autocomplete__option {
+    padding: 6px 8px;
+    border-bottom: 1px solid #c9d3e6;
+    color: #1a1a1a;
+    font-size: 0.95rem;
+  }
+
+  .autocomplete__option--focused,
+  .autocomplete__option:hover {
+    border-color: #c9d3e6;
+    background: #eeeeff;
+    color: #1a1a1a;
+    outline: none;
+  }
+}
+
+.suggest-group {
+  display: block;
+  margin: -2px 0 5px;
+  color: #4f4b44;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.suggest-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
+.suggest-kind {
+  padding: 0 6px;
+  border: 1px solid #8b5d8b;
+  border-radius: 999px;
+  color: #8b5d8b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.suggest-name {
+  font-weight: 700;
+}
+
+.suggest-detail {
+  color: #4f4b44;
+  font-size: 0.85rem;
+}
+
+// what screen readers hear for a row; the row itself is hidden from them
+.suggest-spoken {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /*************************************/
 /** Event Submission                **/
 /*************************************/

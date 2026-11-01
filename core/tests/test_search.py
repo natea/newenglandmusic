@@ -117,7 +117,7 @@ class SearchTestCase(TestCase):
         # create event
         event_title = " ".join(random.sample(RANDOM_WORDS, 10))
         event_description = str(uuid.uuid4())
-        Event.objects.create(
+        event = Event.objects.create(
             title=event_title,
             description=event_description,
             starttime=get_current_new_york_datetime(),
@@ -129,9 +129,11 @@ class SearchTestCase(TestCase):
         response = self.client.get("/", {"s": partial_title})
 
         self.assertEqual(response.status_code, 200)
-        # find the title and the description in the results
+        # the show is listed as a compact row, linking to its page; its description isn't shown
         self.assertContains(response, event_title)
-        self.assertContains(response, event_description)
+        self.assertContains(response, f'href="/event/{event.pk}"')
+        # but it's searched: the description's words find the show too
+        self.assertContains(self.client.get("/", {"s": event_description}), event_title)
 
     def test_submitted_event_search(self):
         # create an event that's user submitted i.e. not approved
@@ -162,6 +164,8 @@ class SearchTestCase(TestCase):
         response = self.client.get("/", {"s": partial_title})
 
         self.assertEqual(response.status_code, 200)
-        # find the title and the description in the results
+        # the show is listed as a compact row, linking to its page; its description isn't shown
         self.assertContains(response, event_title)
-        self.assertContains(response, event_description)
+        self.assertContains(response, f'href="/event/{event.pk}"')
+        # but it's searched: the description's words find the show too
+        self.assertContains(self.client.get("/", {"s": event_description}), event_title)

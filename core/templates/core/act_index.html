@@ -1,0 +1,43 @@
+{% extends 'core/base.html' %}
+{% load sass_tags %}
+
+{% block head %}
+  <link href="{% sass_src 'scss/band.scss' %}" rel="stylesheet" type="text/css" />
+  <link href="{% sass_src 'scss/act_index.scss' %}" rel="stylesheet" type="text/css" />
+{% endblock head %}
+
+{% block content %}
+<article class="act act-index" aria-labelledby="index-name">
+  <h1 class="act-tab" id="index-name">Bands &amp; artists</h1>
+  <div class="act-card">
+    <p class="act-meta">{{ count }} band{{ count|pluralize }} and artist{{ count|pluralize }}, A to Z</p>
+
+    <nav class="index-rail" aria-label="Jump to a letter">
+      {% for letter, has_acts in rail %}
+        {% if has_acts %}<a href="#letter-{% if letter == '#' %}0{% else %}{{ letter }}{% endif %}">{{ letter }}</a>{% else %}<span aria-hidden="true">{{ letter }}</span>{% endif %}
+      {% endfor %}
+    </nav>
+
+    {% for letter, pages in groups %}
+      {% with anchor=letter|cut:"#"|default:"0" %}
+      <section class="index-letter" id="letter-{{ anchor }}" aria-labelledby="letter-{{ anchor }}-head">
+        <h2 class="index-initial" id="letter-{{ anchor }}-head">{{ letter }}</h2>
+        <div class="index-pages">
+        {% for first, last, acts in pages %}
+          <div class="index-page">
+            {# guide words, as at the top of a printed index page #}
+            <div class="index-guide" aria-hidden="true"><span>{{ first }}</span>{% if last != first %}<span>{{ last }}</span>{% endif %}</div>
+            <ul class="index-entries">
+              {% for act in acts %}
+                {% include "core/index_entry.html" with name=act.index_name url=act.get_absolute_url kind=act.kind place=act.place when=act.next_show %}
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
+        </div>
+      </section>
+      {% endwith %}
+    {% endfor %}
+  </div>
+</article>
+{% endblock content %}

@@ -1,0 +1,12 @@
+{# a show in the search results, compact: date, title, venue and town, and its icon row #}
+{% load event_actions %}
+<li class="show-row{% if is_past %} is-past{% endif %}" id="event-{{ event.pk }}">
+  <time datetime="{{ event.starttime|date:'c' }}">{% if event.starttime|date:'Y' == this_year %}{{ event.starttime|date:'M j' }}{% else %}{{ event.starttime|date:'M j' }} <small>{{ event.starttime|date:'Y' }}</small>{% endif %}</time>
+  <div>
+    <a class="show-title" href="/event/{{ event.pk }}">{{ event.title_and_artists }}</a>
+    <div class="show-meta">
+      <span class="show-where">{% if event.venue %}{{ event.venue.name }}{% if event.venue.location %}, {{ event.venue.location }}{% endif %}{% else %}{{ event.venue_override|default:'' }}{% endif %}{% if event.is_cancelled %} · cancelled{% endif %}</span>
+      {% event_actions event %}
+    </div>
+  </div>
+</li>

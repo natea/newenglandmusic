@@ -84,8 +84,8 @@ class BandPageTestCase(TestCase):
         response = self.page(band)
         self.assertIn("No upcoming shows listed.", response.content.decode())
         self.assertEqual(response.context["shows"], [])
-        # a thin page stays out of search results
-        self.assertIn('<meta name="robots" content="noindex">', response.content.decode())
+        # open to search engines all the same (add-act-index-and-search)
+        self.assertNotIn('name="robots"', response.content.decode())
 
     def test_unapproved_events(self):
         band = self.band()
@@ -187,15 +187,18 @@ class LinksFromTheCalendarTestCase(TestCase):
         link_from_names(event)
         self.assertNotIn('class="performer"', Event.all_objects.get(pk=event.pk).baked_html_template)
 
-    def test_sitemap_lists_acts_with_upcoming_shows(self):
+    def test_sitemap_lists_every_live_act(self):
         from core.event_performers import link_from_names
 
         Band.objects.create(name="Krill")
+        Artist.objects.create(name="Kim Deal")
+        Band.objects.create(name="3 1/2 Girls", needs_review=True, review_reasons=["not_found"])
         event = Event.all_objects.create(title="show", artists="Pixies", starttime=days(3), venue=self.venue, is_approved=True)
         link_from_names(event)
         xml = self.client.get("/sitemap.xml").content.decode()
-        self.assertIn("/bands/pixies", xml)
-        self.assertNotIn("/bands/krill", xml)
+        for path in ("/bands</loc>", "/bands/pixies", "/bands/krill", "/artists/kim-deal"):
+            self.assertIn(path, xml)
+        self.assertNotIn("girls", xml)
 
 
 class ArtistMetaTestCase(TestCase):
