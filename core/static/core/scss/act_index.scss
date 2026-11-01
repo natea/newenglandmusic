@@ -176,53 +176,6 @@ $display: Helvetica, Arial, sans-serif;
 
 /* search results: the same entries under a heading per kind, then compact show rows */
 
-.search-form {
-  display: flex;
-  gap: 6px;
-  margin: 0 0 6px;
-
-  // the suggesting box (search-suggest.js) fills the row, as the plain one did
-  .search-suggest {
-    flex: 1;
-    width: auto;
-    min-width: 0;
-  }
-
-  .search-suggest .autocomplete__input {
-    width: 100%;
-  }
-
-  input[type="search"] {
-    flex: 1;
-    min-width: 0;
-    padding: 4px 8px;
-    border: 1px solid $hairline;
-    background: #fff;
-    font: inherit;
-  }
-
-  input[type="search"]:focus-visible,
-  input[type="submit"]:focus-visible {
-    outline: 2px solid $tab;
-    outline-offset: 0;
-  }
-
-  // the button in the box's own material, not the browser's bevel
-  input[type="submit"] {
-    padding: 4px 12px;
-    border: 1px solid $hairline;
-    background: $strip;
-    color: $ink;
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  input[type="submit"]:hover {
-    border-color: $tab;
-  }
-}
-
 .search-kind {
   margin-top: 20px;
   padding-top: 10px;
@@ -238,6 +191,13 @@ $display: Helvetica, Arial, sans-serif;
     max-width: none;
     columns: 2;
   }
+}
+
+// the first kind opens the card, under the tab's own plum edge
+.search-kind:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .act .search-head {

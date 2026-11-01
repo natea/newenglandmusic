@@ -56,9 +56,19 @@ class SearchResultsTestCase(TestCase):
     def test_without_javascript(self):
         # the search box is a plain get form: the script only enhances it
         home = self.client.get("/").content.decode()
-        self.assertIn("<form method='GET' action='/'>", home)
+        # empty, not a missing variable's placeholder, on a page that isn't a search
+        self.assertIn("name='s' value=''", home)
+        self.assertIn("<form class='site-search' method='GET' action='/' role='search'>", home)
         self.assertIn("<input type='search' name='s'", home)
         self.assertContains(self.search("belly"), '<a class="index-name" href="/bands/belly">Belly</a>', html=True)
+
+    def test_one_box_showing_what_was_searched(self):
+        html = self.search("belly").content.decode()
+        self.assertEqual(html.count("name='s'") + html.count('name="s"'), 1)
+        self.assertIn("name='s' value='belly'", html)
+        # and none in the menu
+        menu = html[html.index("id='burgerMenuContents'"):]
+        self.assertNotIn("name='s'", menu[:menu.index("</div>")])
 
     def test_nothing_found(self):
         response = self.search("zzzz")

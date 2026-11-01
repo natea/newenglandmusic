@@ -66,6 +66,8 @@ def search(request):
         "core/search.html",
         {
             "query": query,
+            # the header's search box shows what was searched (base.html)
+            "search_query": query,
             "groups": [(group, matches) for group, matches in groups if matches],
             # a show in another year carries its year
             "this_year": str(today.year),

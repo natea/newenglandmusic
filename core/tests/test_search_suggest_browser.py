@@ -21,8 +21,10 @@ class SearchSuggestBrowserTestCase(BrowserTestCase):
     def search_box(self):
         # any page has the box; /bands has no day map fetching its tiles
         _, page = self.open_page("/bands")
-        page.click(".burgerColumn a")
-        return page, page.locator(".search input[name=s]")
+        box = page.locator(".site-search input[name=s]")
+        # at the top of the page, not behind the menu
+        self.assertTrue(box.is_visible())
+        return page, box
 
     def options(self, page):
         page.wait_for_selector(".autocomplete__option")
@@ -86,7 +88,7 @@ class SearchSuggestBrowserTestCase(BrowserTestCase):
         _, page = self.open_page("/?s=belly")
         # one box on the results page: the menu leaves its own out
         self.assertEqual(page.locator("input[name=s]").count(), 1)
-        box = page.locator(".search-form input[name=s]")
+        box = page.locator(".site-search input[name=s]")
         self.assertEqual(box.input_value(), "belly")
         box.fill("")
         box.press_sequentially("bel")

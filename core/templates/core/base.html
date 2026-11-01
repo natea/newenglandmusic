@@ -169,18 +169,13 @@
                       </div>
                   </div>
               </div>
+              {# search, at the top of every page: suggestions as you type (core/js/search-suggest.js), a plain get form without javascript #}
+              <form class='site-search' method='GET' action='/' role='search'>
+                  <input type='search' name='s' value='{% if search_query %}{{ search_query }}{% endif %}' placeholder='Search bands, artists, venues and shows' aria-label='Search bands, artists, venues and shows' data-suggest>
+                  <input type='submit' value='search'>
+              </form>
           </div>
           <div style="display:none;" id='burgerMenuContents'>
-            {# the search results page has its own box, so it leaves this one out #}
-            {% block menu_search %}
-            <div class='search'>
-                <form method='GET' action='/'>
-                    <input type='search' name='s' placeholder='band, artist, venue or show' aria-label='Search bands, artists, venues and shows' data-suggest>
-                    <input type='submit' value='search'>
-                </form>
-            </div>
-            {% endblock menu_search %}
-
             {% get_all_menu_items as all_menu_items %}
             {% for menu_item in all_menu_items %}
               <a href="{{ menu_item.url }}">{{ menu_item.name }}</a><br/>

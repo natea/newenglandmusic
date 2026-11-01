@@ -485,12 +485,65 @@ article {
 /** Search                          **/
 /*************************************/
 
-main .search {
-  text-align: center;
-  margin-bottom: 20px;
+// the search box across the top of every page (base.html), under the site's name: the one
+// way in to bands, artists, venues and shows, so it's always in view
+.site-search {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
 
   input[type="search"] {
-    width: 200px;
+    flex: 1;
+    min-width: 0;
+    padding: 7px 10px;
+    border: 1px solid #b9b4a8;
+    background: #fff;
+    font: inherit;
+    font-size: 1.05rem;
+  }
+
+  input[type="search"]::placeholder {
+    color: #6b665d;
+  }
+
+  input[type="search"]:focus-visible,
+  input[type="submit"]:focus-visible {
+    outline: 2px solid #8b5d8b;
+    outline-offset: 0;
+  }
+
+  // the button in the box's own material, not the browser's bevel
+  input[type="submit"] {
+    padding: 7px 16px;
+    border: 1px solid #b9b4a8;
+    background: #eeeeff;
+    color: #1a1a1a;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  input[type="submit"]:hover {
+    border-color: #8b5d8b;
+  }
+
+  // with javascript, the suggesting box (search-suggest.js) fills the row as the plain one did
+  .search-suggest {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  .search-suggest .autocomplete__input {
+    width: 100%;
+    padding: 7px 10px;
+    background: #fff;
+    font-size: 1.05rem;
+  }
+
+  .search-suggest .autocomplete__menu {
+    width: 100%;
+    max-width: none;
   }
 }
 

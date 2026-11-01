@@ -303,8 +303,8 @@ Set as the index at the back of a reference book, on the act card.
 - **Search:** a box under the tab, then a section per kind, each opened by a 2px plum rule and a small uppercase quiet heading with its count: bands and artists as single-column entries, venues the same, then "Shows" (upcoming, soonest first) and "Past shows" (newest first, in regular weight) as compact rows: date column (the year small under it when it isn't this year's), the show as a bold link, venue and town in quiet grey, and the show's icon row.
 
 ### Search suggestions
-The search box's suggestions, over accessible-autocomplete's stylesheet.
-- **Box and menu:** the small search box with a hairline border and a 2px plum focus outline; the menu on card stock with a hairline border, at most 360px wide (the screen less 32px on phones).
+The search box sits across the top of every page, under the site's name and links: a full-width white box (1.05rem, hairline border) with a bold "search" button on the lavender strip; the results page fills it with what was searched, and there's no other box. Its suggestions sit over accessible-autocomplete's stylesheet.
+- **Box and menu:** a 2px plum focus outline; the menu on card stock with a hairline border, as wide as the box.
 - **Rows:** a group label (small bold quiet-grey capitals) above the first row of each group, then the kind as a small plum outline pill ("Band", "Artist", "Venue", "Show"), the name in bold and the detail in quiet grey. Rows are separated by 1px ruled-blue lines, and the chosen row is lavender.
 - **Spoken:** each row is read as one phrase, "Belly, band, Providence, RI". The visible row is hidden from screen readers.
 
