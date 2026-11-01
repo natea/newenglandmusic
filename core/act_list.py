@@ -53,6 +53,21 @@ STATE_CODES = {
 }
 
 
+URL_FIELDS = ("website", "bandcamp_url", "instagram_url", "youtube_url")
+
+
+def https(url):
+    """an old http:// link as https:// (bandcamp, instagram and youtube all serve it)"""
+    return "https://" + url[len("http://"):] if url.lower().startswith("http://") else url
+
+
+def same_value(a, b):
+    """whether two of a list's values say the same thing: links compared without a trailing slash or case"""
+    if a.lower().startswith("http") and b.lower().startswith("http"):
+        return https(a).rstrip("/").lower() == https(b).rstrip("/").lower()
+    return a == b
+
+
 @dataclass
 class Act:
     """one act, from one or more rows of the list"""
@@ -89,6 +104,8 @@ def row_values(row, columns, problem):
     """the row's act fields, by the list's own headers, cleaned as import_artists cleans them"""
     found = {name: (row.get(columns[name]) or "").strip() if name in columns else "" for name in COLUMN_ALIASES}
     found["state"] = state_code(found["state"])
+    for name in URL_FIELDS:
+        found[name] = https(found[name])
     # clean_values reads import_artists' layout: Name, Town, State, Website...
     layout = {FIELD_COLUMNS[name]: value for name, value in found.items() if name in FIELD_COLUMNS}
     values = clean_values(layout, problem)
@@ -130,7 +147,7 @@ def merge_acts(tabs, report):
                     continue
                 if not act.values.get(name_):
                     act.values[name_] = value
-                elif act.values[name_] != value:
+                elif not same_value(act.values[name_], value):
                     report.problems.append(f"{tab} gives {act.name} a different {name_} ({value}); kept {act.values[name_]}")
             by_key.setdefault(key, act)
             if act.values.get("musicbrainz_id"):

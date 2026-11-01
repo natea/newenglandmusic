@@ -143,6 +143,14 @@ class ImportActListTestCase(TestCase):
         self.assertEqual(artist.youtube_url, "https://www.youtube.com/@adamsherman6483")
         self.assertIn("gives Adam Sherman a different instagram_url", out)
 
+    def test_old_http_links_and_trailing_slashes(self):
+        rotation = self.tab("rotation", row("28 Degrees Taurus", bandcamp="http://28degreestaurus.bandcamp.com/"))
+        backlog = self.tab("backlog", row("28 Degrees Taurus", bandcamp="https://28degreestaurus.bandcamp.com"))
+        out = self.run_command(rotation, backlog)
+        self.assertEqual(Band.objects.get(name="28 Degrees Taurus").bandcamp_url, "https://28degreestaurus.bandcamp.com/")
+        self.assertNotIn("different bandcamp_url", out)
+        self.assertNotIn("isn't a bandcamp.com page", out)
+
     def test_a_name_repeated_on_one_tab(self):
         self.run_command(self.tab("rotation", row("The Dresden Dolls"), row("Dresden Dolls")))
         self.assertEqual(Band.objects.count(), 1)
