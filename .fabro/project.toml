@@ -1,0 +1,12 @@
+# Fabro project configuration
+# https://docs.fabro.computer/getting-started/quick-start
+
+_version = 1
+
+# Every run targets the fork. A Daytona run started from a checkout whose
+# origin is the upstream repository stops on the mismatch instead of pushing
+# there; pass --target natea/newenglandmusic@<branch> to run.
+[run.scm]
+provider = "github"
+owner = "natea"
+repository = "newenglandmusic"

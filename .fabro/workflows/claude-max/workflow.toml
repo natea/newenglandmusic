@@ -1,0 +1,15 @@
+_version = 1
+
+[workflow]
+graph = "workflow.fabro"
+
+# Runs in the server's daytona environment, defined in
+# .fabro/environments/daytona.json and put there by bin/fabro-environment;
+# select it with --environment daytona.
+
+# Smoke test only: no pull request and no pushed run branch.
+[run.pull_request]
+enabled = false
+
+[run.run_branch]
+push = false

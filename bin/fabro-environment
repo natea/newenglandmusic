@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# puts a Fabro environment defined in the repo on the Fabro server (see docs/FABRO.md):
+# creates it when the server has none of that name, and replaces it when it has one, so
+# runs started with --environment <name> use what .fabro/environments/<name>.json says.
+# the server's dev token goes in a private header file, never on a command line.
+set -euo pipefail
+
+name="${1:-daytona}"
+root="$(cd "$(dirname "$0")/.." && pwd)"
+file="$root/.fabro/environments/$name.json"
+server="${FABRO_SERVER:-http://127.0.0.1:32276}"
+url="$server/api/v1/environments/$name"
+
+[ -f "$file" ] || { echo "no environment file: $file" >&2; exit 1; }
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+chmod 700 "$tmp"
+if [ -n "${FABRO_DEV_TOKEN:-}" ]; then
+  printf 'Authorization: Bearer %s\n' "$FABRO_DEV_TOKEN" > "$tmp/auth"
+else
+  printf 'Authorization: Bearer %s\n' "$(cat "$HOME/.fabro/dev-token")" > "$tmp/auth"
+fi
+
+status="$(curl -sS -o "$tmp/current" -D "$tmp/headers" -w '%{http_code}' -H @"$tmp/auth" "$url")"
+case "$status" in
+  404)
+    curl -sS --fail-with-body -o /dev/null -X POST -H @"$tmp/auth" -H 'Content-Type: application/json' \
+      --data-binary @"$file" "$server/api/v1/environments"
+    echo "created environment $name"
+    ;;
+  200)
+    revision="$(grep -i '^etag:' "$tmp/headers" | head -1 | cut -d' ' -f2- | tr -d '\r')"
+    jq 'del(.id)' "$file" > "$tmp/body"
+    curl -sS --fail-with-body -o /dev/null -X PUT -H @"$tmp/auth" -H 'Content-Type: application/json' \
+      -H "If-Match: $revision" --data-binary @"$tmp/body" "$url"
+    echo "replaced environment $name"
+    ;;
+  *)
+    echo "could not read environment $name from $server (HTTP $status)" >&2
+    exit 1
+    ;;
+esac
