@@ -56,7 +56,7 @@
     );
   }
 
-  function mount(input) {
+  function mount(input, n) {
     const form = input.form;
     const container = document.createElement("div");
     container.className = "search-suggest";
@@ -64,7 +64,9 @@
 
     accessibleAutocomplete({
       element: container,
-      id: "search-box",
+      // each box its own id, and keeps what was searched (the results page's box)
+      id: n ? "search-box-" + n : "search-box",
+      defaultValue: input.value,
       name: input.name,
       placeholder: input.placeholder,
       minLength: 2,

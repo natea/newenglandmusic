@@ -6,12 +6,14 @@
   <link href="{% sass_src 'scss/act_index.scss' %}" rel="stylesheet" type="text/css" />
 {% endblock head %}
 
+{% block menu_search %}{% endblock menu_search %}
+
 {% block content %}
 <article class="act act-search" aria-labelledby="search-name">
   <h1 class="act-tab" id="search-name">Search{% if query %}: {{ query }}{% endif %}</h1>
   <div class="act-card">
     <form class="search-form" method="GET" action="/" role="search">
-      <input type="search" name="s" value="{{ query }}" aria-label="Search bands, artists, venues and shows">
+      <input type="search" name="s" value="{{ query }}" placeholder="band, artist, venue or show" aria-label="Search bands, artists, venues and shows" data-suggest>
       <input type="submit" value="search">
     </form>
 

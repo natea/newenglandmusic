@@ -81,3 +81,16 @@ class SearchSuggestBrowserTestCase(BrowserTestCase):
         box.press_sequentially("b")
         page.wait_for_timeout(400)
         self.assertEqual(page.locator(".autocomplete__option").count(), 0)
+
+    def test_the_results_page_box_suggests_too(self):
+        _, page = self.open_page("/?s=belly")
+        # one box on the results page: the menu leaves its own out
+        self.assertEqual(page.locator("input[name=s]").count(), 1)
+        box = page.locator(".search-form input[name=s]")
+        self.assertEqual(box.input_value(), "belly")
+        box.fill("")
+        box.press_sequentially("bel")
+        self.assertEqual(self.options(page).locator(".suggest-name").first.inner_text(), "Belly")
+        with page.expect_navigation():
+            box.press("Enter")
+        self.assertTrue(page.url.endswith("/?s=bel"))

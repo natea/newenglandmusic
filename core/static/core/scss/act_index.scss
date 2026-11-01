@@ -181,6 +181,17 @@ $display: Helvetica, Arial, sans-serif;
   gap: 6px;
   margin: 0 0 6px;
 
+  // the suggesting box (search-suggest.js) fills the row, as the plain one did
+  .search-suggest {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  .search-suggest .autocomplete__input {
+    width: 100%;
+  }
+
   input[type="search"] {
     flex: 1;
     min-width: 0;
