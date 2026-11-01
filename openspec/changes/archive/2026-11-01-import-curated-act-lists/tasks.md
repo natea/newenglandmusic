@@ -18,10 +18,13 @@
 
 ## 5. Run it
 
-- [ ] 4.1 Run Sooz's "In Rotation" and "2026 backlog" tabs together locally with `--dry-run`, then for real, then the enrichment; record the counts (made live, made held for review, found) in this file.
-- [ ] 4.2 With approval, back up production and run the import and enrichment against it; verify the counts and a few band pages.
+- [x] 4.1 Run Sooz's "In Rotation" and "2026 backlog" tabs together locally with `--dry-run`, then for real, then the enrichment; record the counts (made live, made held for review, found) in this file.
+  - 2026-10-31, `logs/act-list-ohb-2026-10-31.log`: the dry run read 554 acts from both tabs. The full local run was cut off (the local Postgres stopped at 21:13) and left no counts; a 60-act sample on the test site made 35 live, held 23 for review and found 2 (28 problems, all differing values between the tabs), and its enrichment recorded 79 records. The full list then ran on production (4.2).
+- [x] 4.2 With approval, back up production and run the import and enrichment against it; verify the counts and a few band pages.
+  - 2026-10-31, backup `render-2026-10-31-2219-before-ohb-import.dump`, `logs/act-list-ohb-production-2026-10-31.log`: 554 acts; made live 310, held for review 227, found 17, problems 10 (nine differing values between the tabs, one MusicBrainz ID differing from the record's), events linked 1,313. Enrichment of 558 records: 365 matched on MusicBrainz (88 with a Wikipedia introduction), 184 not found, 9 ambiguous; no errors. Band pages checked live on 2026-11-01 (`/bands` lists 3,749 acts).
 
 ## 6. Finish
 
-- [ ] 5.1 Run the whole suite with the network blocked and verify it passes, with every scenario in this change's spec covered.
+- [x] 5.1 Run the whole suite with the network blocked and verify it passes, with every scenario in this change's spec covered.
+  - 2026-10-31: 1,390 tests passed offline before the merge (`f76ac2f`); 1,435 on `main` since.
 - [x] 5.2 Update `PRODUCTION.md` and the artists section of `AGENTS.md` for `import_act_list` and sources; verify both describe the shipped behavior.
