@@ -100,3 +100,10 @@ def act_index(request):
 def artists_index(request):
     # one index for both kinds: a visitor looks for a name, not a kind
     return redirect("act_index", permanent=True)
+
+
+def without_trailing_slash(request):
+    # /bands/ and /bands/pixies/ are common to type or paste; the pages live without the slash
+    path = request.path.rstrip("/")
+    query = request.META.get("QUERY_STRING")
+    return redirect(f"{path}?{query}" if query else path, permanent=True)

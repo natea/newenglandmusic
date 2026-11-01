@@ -2,7 +2,7 @@ from django.conf import settings
 from django.urls import include, path, re_path
 from django.views.generic import TemplateView
 
-from .views.act_index import act_index, artists_index
+from .views.act_index import act_index, artists_index, without_trailing_slash
 from .views.search import suggest
 from .views.act_page import artist_page, band_page
 from .views.autocomplete import VenueAutocomplete
@@ -39,6 +39,7 @@ urlpatterns = [
     path("privacy", TemplateView.as_view(template_name="core/privacy.html"), name="privacy"),
     path("saved", saved_shows, name="saved_shows"),
     path("bands", act_index, name="act_index"),
+    re_path(r"^(?:bands|artists)(?:/[-\w]+)?/$", without_trailing_slash),
     path("search/suggest", suggest, name="search_suggest"),
     path("artists", artists_index, name="artists_index"),
     path("bands/<slug:slug>", band_page, name="band_page"),
