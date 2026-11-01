@@ -1,6 +1,7 @@
 {# one entry in the back-of-book index (act_index.html, search.html): the name, its kind and town, a dotted leader and its next show as the page reference #}
+{% load search_marks %}
 <li class="index-entry">
-  <a class="index-name" href="{{ url }}">{{ name }}</a>
+  <a class="index-name" href="{{ url }}">{% if query %}{{ name|marked:query }}{% else %}{{ name }}{% endif %}</a>
   {# kind and town are separate pieces: on a tight line the town drops whole rather than being cut #}
   <span class="index-detail"><span>{% if kind %}<span>{{ kind }}</span>{% endif %}{% if place %}<span>{% if kind %},&nbsp;{% endif %}{{ place }}</span>{% endif %}</span></span>
   {% if when %}<time class="index-next" datetime="{{ when|date:'c' }}">{% if when|date:'Y' == this_year %}{{ when|date:'M j' }}{% else %}{{ when|date:'M j, Y' }}{% endif %}</time>{% endif %}

@@ -39,7 +39,7 @@ class ActIndexTestCase(TestCase):
         self.assertContains(response, f'<a class="index-name" href="{band.get_absolute_url()}">Atlantics, The</a>', html=True)
         # the act's own page and search keep its name
         self.assertContains(self.client.get(band.get_absolute_url()), "The Atlantics")
-        self.assertContains(self.client.get("/", {"s": "atlantics"}), ">The Atlantics</a>")
+        self.assertContains(self.client.get("/", {"s": "atlantics"}), ">The <mark>Atlantics</mark></a>")
 
     def test_a_leading_the_and_digits(self):
         Band.objects.create(name="The Atlantics")

@@ -38,6 +38,8 @@ class SearchSuggestBrowserTestCase(BrowserTestCase):
         self.assertEqual(options.locator(".suggest-group").inner_text().casefold(), "bands & artists")
         self.assertEqual(options.locator(".suggest-kind").inner_text(), "Band")
         self.assertEqual(options.locator(".suggest-name").inner_text(), "Belly")
+        # what was typed is marked in the name
+        self.assertEqual(options.locator(".suggest-name mark").inner_text(), "Bel")
         self.assertEqual(page.get_attribute("[role=listbox]", "role"), "listbox")
         self.assertEqual(self.blocked, [])
 

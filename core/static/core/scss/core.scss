@@ -760,3 +760,13 @@ article {
     padding: 0 3px;
   }
 }
+
+// what was searched, marked in the suggestions and the results (core/search_marks.py,
+// search-suggest.js): a soft plum tint, which still shows on a chosen row's lavender
+.suggest-name mark,
+.act-search mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: rgba(139, 93, 139, 0.2);
+  color: inherit;
+}

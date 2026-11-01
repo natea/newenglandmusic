@@ -17,7 +17,7 @@
         {# two columns, as on /bands, once there are enough to fill them #}
         <ul class="index-entries{% if matches|length >= 8 %} index-entries--two{% endif %}">
           {% for match in matches %}
-            {% include "core/index_entry.html" with name=match.name url=match.url kind=match.index_kind place=match.index_place when=match.when %}
+            {% include "core/index_entry.html" with name=match.name query=query url=match.url kind=match.index_kind place=match.index_place when=match.when %}
           {% endfor %}
         </ul>
       </section>
@@ -46,7 +46,7 @@
         <h2 class="search-head">Pages <small>{{ results_pages|length }}</small></h2>
         <ul class="index-entries">
           {% for page in results_pages %}
-            {% include "core/index_entry.html" with name=page.title url=page.get_absolute_url kind="" place="" when=None %}
+            {% include "core/index_entry.html" with name=page.title query=query url=page.get_absolute_url kind="" place="" when=None %}
           {% endfor %}
         </ul>
       </section>

@@ -14,12 +14,37 @@
     return div.innerHTML;
   }
 
+  // a character as matching sees it (core/search_marks.py): lowercase, no accents, letters and digits
+  function fold(char) {
+    return char.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+  }
+
+  // the name, escaped, with what was typed in <mark>, found as matching finds it
+  function marked(text, query) {
+    const wanted = Array.from(query || "").map(fold).join("");
+    const chars = Array.from(text || "");
+    const folded = [];
+    const origin = [];
+    chars.forEach(function (char, i) {
+      Array.from(fold(char)).forEach(function (c) { folded.push(c); origin.push(i); });
+    });
+    const at = wanted ? folded.join("").indexOf(wanted) : -1;
+    if (at < 0) return escape(text);
+    const start = origin[at];
+    const end = origin[at + wanted.length - 1] + 1;
+    return escape(chars.slice(0, start).join("")) + "<mark>" + escape(chars.slice(start, end).join("")) +
+      "</mark>" + escape(chars.slice(end).join(""));
+  }
+
+  let typed = "";
+
   // the suggestions for what's typed, debounced, each marked when it starts a new group
   function source() {
     let timer = null;
     let latest = 0;
     return function (query, populateResults) {
       clearTimeout(timer);
+      typed = query;
       timer = setTimeout(function () {
         const asked = ++latest;
         fetch("/search/suggest?q=" + encodeURIComponent(query))
@@ -49,7 +74,7 @@
       (item.first ? '<span class="suggest-group" aria-hidden="true">' + escape(item.group) + "</span>" : "") +
       '<span class="suggest-row" aria-hidden="true">' +
       '<span class="suggest-kind suggest-kind--' + escape(item.kind) + '">' + escape(kind) + "</span>" +
-      '<span class="suggest-name">' + escape(item.name) + "</span>" +
+      '<span class="suggest-name">' + marked(item.name, typed) + "</span>" +
       (item.detail ? '<span class="suggest-detail">' + escape(item.detail) + "</span>" : "") +
       "</span>" +
       '<span class="suggest-spoken">' + escape(spoken) + "</span>"
