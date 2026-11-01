@@ -6,7 +6,7 @@ Configure Fabro workflows for this repo, so agents can work on the site in sandb
 
 ### Requirement: Runs target the fork, never upstream
 
-The project configuration SHALL name natea/newenglandmusic as the repository for every Daytona run, so that a Daytona run started from this checkout without `--target`, whose `origin` is nycnoise/nycnoise, stops instead of pushing to or opening anything against upstream. No file under `.fabro/` SHALL name nycnoise/nycnoise, and every `fabro run` command for a Daytona workflow in the guide SHALL pass `--target natea/newenglandmusic`. Local runs need no target: Fabro rejects `--target` for them and works from the checkout's committed files.
+The project configuration SHALL name natea/newenglandmusic as the repository for every Daytona run, so a run started from this checkout without `--target` stops instead of pushing to or opening anything against the upstream nycnoise/nycnoise. No file under `.fabro/` SHALL name nycnoise/nycnoise, and every guide command for a Daytona workflow SHALL pass `--target natea/newenglandmusic`.
 
 #### Scenario: Project names the fork
 
@@ -43,7 +43,7 @@ The repo SHALL have a `hello` workflow that runs one shell command and no model 
 
 ### Requirement: Claude Code runs in a Daytona sandbox with a subscription token
 
-The repo SHALL define a `daytona` environment, in which Claude Code runs through Fabro's ACP backend, in `.fabro/environments/daytona.json`: the request body Fabro's environments API takes. The sandbox uses Daytona's default image, because Fabro 0.400 does not build an environment's Dockerfile, and the workflow installs Claude Code and its ACP adapter at the start of each run. Claude Code SHALL authenticate with the subscription token stored in Fabro's secret vault as `CLAUDE_CODE_OAUTH_TOKEN`, with `ANTHROPIC_API_KEY` set empty in the sandbox, so that a missing token fails the Claude Code step, naming the missing secret, instead of falling back to an API key. No file in the repo SHALL contain a token value.
+The repo SHALL define a `daytona` environment in `.fabro/environments/daytona.json`, the body Fabro's environments API takes, in which Claude Code runs through Fabro's ACP backend. Claude Code SHALL authenticate with the vault secret `CLAUDE_CODE_OAUTH_TOKEN`, with `ANTHROPIC_API_KEY` empty, so a missing token fails its step instead of falling back to an API key. No file in the repo SHALL contain a token value.
 
 #### Scenario: Token comes from the vault
 
