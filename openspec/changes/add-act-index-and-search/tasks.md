@@ -7,7 +7,7 @@
 
 - [ ] 2.1 Add `core/search_kinds.py` (bands & artists, venues, shows) and use it in `core/views/search.py` and `search.html`, sections in order, names matched on their normalized form, held acts and inactive venues left out; verify with tests for "A band by name", "A venue by name" and "No act matches".
 - [ ] 2.2 Add `/search/suggest?q=` from the same registry (five per kind, nothing under two characters); each item carrying its kind; verify with view tests for "Suggestions by kind" and "Too short".
-- [ ] 2.3 Add `core/static/core/js/search-suggest.js` and the combobox markup on the search box in `base.html`, styled in the site's look; verify "Each suggestion says what it is", "Going straight to a band", "Running the full search" and keyboard and screen-reader behavior with a Playwright browser test, and "Without JavaScript" with a plain form submission test.
+- [ ] 2.3 Vendor accessible-autocomplete 3.0.2 (its min.js and min.css, with its licence) into `core/static/core/vendor/accessible-autocomplete/3.0.2/`, and add `core/static/core/js/search-suggest.js` mounting it on the search box in `base.html` (fetching `/search/suggest`, kind-tagged suggestion template, going to the chosen url), its stylesheet overridden in the site's look; verify "Each suggestion says what it is", "Going straight to a band", "Running the full search" and keyboard and screen-reader behavior with a Playwright browser test, and "Without JavaScript" with a plain form submission test.
 
 ## 3. Indexable pages
 
