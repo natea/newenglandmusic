@@ -43,11 +43,15 @@ A search SHALL list, in this order and each in its own section: the live bands a
 - **THEN** the results show shows and pages only, with no acts section
 
 ### Requirement: The search box suggests as you type
-Once two or more characters are typed, the search box SHALL suggest matches under it, grouped and labelled by kind: up to five bands and artists, up to five venues, and up to five upcoming approved shows (with their date and venue), each linking where its search result does. The suggestions SHALL be operable from the keyboard (arrow keys move through them, Enter opens the one chosen, Escape closes them) and announced to screen readers as a list of options. Enter with no suggestion chosen SHALL run the full search. Without JavaScript the box SHALL submit a full search. Held acts and inactive venues SHALL NOT be suggested.
+Once two or more characters are typed, the search box SHALL suggest matches under it, grouped and labelled by kind: up to five bands and artists, up to five venues, and up to five upcoming approved shows (with their date and venue), each linking where its search result does. Every suggestion SHALL say which kind of record it is (Band, Artist, Venue or Show), visibly on its row and in what screen readers announce, so a band and an artist of the same name, or a venue and a show named after it, can't be mistaken. The suggestions SHALL be operable from the keyboard (arrow keys move through them, Enter opens the one chosen, Escape closes them) and announced to screen readers as a list of options. Enter with no suggestion chosen SHALL run the full search. Without JavaScript the box SHALL submit a full search. Held acts and inactive venues SHALL NOT be suggested.
 
 #### Scenario: Suggestions by kind
 - **WHEN** a visitor types "bel" into the search box
-- **THEN** a list under it shows "Bands & artists" with Belly, and any venues and upcoming shows that match, each labelled
+- **THEN** a list under it shows "Bands & artists" with Belly tagged "Band", and any venues and upcoming shows that match, each group labelled
+
+#### Scenario: Each suggestion says what it is
+- **WHEN** a visitor types "paradise" and the suggestions include the venue Paradise Rock Club and a show there
+- **THEN** the venue's row is tagged "Venue" and the show's row "Show", and a screen reader announces each with its kind ("Paradise Rock Club, venue")
 
 #### Scenario: Going straight to a band
 - **WHEN** the visitor presses the down arrow to Belly and presses Enter
