@@ -27,16 +27,43 @@ The site SHALL list every live band and artist at `/bands`, together, ordered by
 - **WHEN** a visitor opens `/artists`
 - **THEN** they're redirected to `/bands`
 
-### Requirement: Search finds bands and artists
-A search SHALL list the live bands and artists whose names contain the search words (ignoring case and accents), above the shows and pages it finds, each with its name linking to its page, its kind and its town. Acts held for review SHALL NOT be listed. A search that finds no act SHALL show no acts section.
+### Requirement: Search finds bands, artists, venues and shows
+A search SHALL list, in this order and each in its own section: the live bands and artists whose names contain the search words, the active venues whose names contain them, the shows it finds, and the pages it finds. Names SHALL be matched ignoring case, accents and punctuation. Each band or artist SHALL link to its page with its kind and town; each venue SHALL show its town and link to the venue's page, or to a search for its shows while venues have no page. Acts held for review and inactive venues SHALL NOT be listed. A section with no match SHALL NOT be shown.
 
 #### Scenario: A band by name
 - **WHEN** a visitor searches for "belly"
 - **THEN** the results list the band Belly, linking to `/bands/belly`, above any shows that match
 
+#### Scenario: A venue by name
+- **WHEN** a visitor searches for "o'brien"
+- **THEN** the results list the venue O'Brien's with its town, in a venues section above the shows
+
 #### Scenario: No act matches
 - **WHEN** a visitor searches for "karaoke"
 - **THEN** the results show shows and pages only, with no acts section
+
+### Requirement: The search box suggests as you type
+Once two or more characters are typed, the search box SHALL suggest matches under it, grouped and labelled by kind: up to five bands and artists, up to five venues, and up to five upcoming approved shows (with their date and venue), each linking where its search result does. The suggestions SHALL be operable from the keyboard (arrow keys move through them, Enter opens the one chosen, Escape closes them) and announced to screen readers as a list of options. Enter with no suggestion chosen SHALL run the full search. Without JavaScript the box SHALL submit a full search. Held acts and inactive venues SHALL NOT be suggested.
+
+#### Scenario: Suggestions by kind
+- **WHEN** a visitor types "bel" into the search box
+- **THEN** a list under it shows "Bands & artists" with Belly, and any venues and upcoming shows that match, each labelled
+
+#### Scenario: Going straight to a band
+- **WHEN** the visitor presses the down arrow to Belly and presses Enter
+- **THEN** Belly's page opens
+
+#### Scenario: Running the full search
+- **WHEN** the visitor types "belly" and presses Enter without choosing a suggestion
+- **THEN** the full search results for "belly" open
+
+#### Scenario: Too short
+- **WHEN** a visitor has typed one character
+- **THEN** no suggestions are shown
+
+#### Scenario: Without JavaScript
+- **WHEN** a visitor's browser runs no JavaScript and they search for "belly"
+- **THEN** the full search results open
 
 ### Requirement: The index reads well on phones
 The index SHALL fit a 390px-wide screen with no sideways scrolling, its letter rail wrapping onto as many lines as it needs.
