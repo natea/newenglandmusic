@@ -30,7 +30,7 @@ Tasks marked done were completed on the `fabro-setup` branch before this proposa
 - [x] 3.5 Write `bin/fabro-environment`: create the environment when the server has none, replace it with `If-Match` when it does, and keep the dev token in a private header file. Verify by running it against the local server and checking that `GET /api/v1/environments/daytona` returns the file's settings. (Done: created, then replaced on a second run; the server's provider, resources, lifecycle, Dockerfile and env match the file, with the token as the vault reference.)
 - [x] 3.6 Add tests with a stand-in `curl` for the "Environment missing on the server", "Environment already on the server" and "The dev token stays off command lines" scenarios, and verify they pass
 - [x] 3.7 Set `on_failure="exit"` on both smoke workflows' graphs, and add a test for the "Failure policy" scenario
-- [ ] 3.8 Remove the Dockerfile from `.fabro/environments/daytona.json`, add the pinned install step to `claude-max` and switch its ACP command to `claude-agent-acp`, then update the "Claude-max workflow shape" test. Verify the config tests pass and `bin/fabro-environment` updates the server.
+- [x] 3.8 Remove the Dockerfile from `.fabro/environments/daytona.json`, add the pinned install step to `claude-max` and switch its ACP command to `claude-agent-acp`, then update the "Claude-max workflow shape" test. Verify the config tests pass and `bin/fabro-environment` updates the server.
 
 ## 4. Credentials (Nate does these; no secret goes into the repo or a chat)
 
@@ -39,20 +39,20 @@ Tasks marked done were completed on the `fabro-setup` branch before this proposa
 
 ## 5. Manual checks of the sandbox path
 
-- [ ] 5.1 Before 4.2, or by temporarily renaming the reference, run `fabro run claude-max --environment daytona --target natea/newenglandmusic@main` and verify the Claude Code step fails naming the missing secret, no API key is used, and the run ends as failed
+- [x] 5.1 Before 4.2, or by temporarily renaming the reference, run `fabro run claude-max --environment daytona --target natea/newenglandmusic@main` and verify the Claude Code step fails naming the missing secret, no API key is used, and the run ends as failed (Done: run 01M699DPJGKYQDNHYGNJSN0CDW failed with "no secret named `CLAUDE_CODE_OAUTH_TOKEN_MISSING`". The earlier run 01M6994V09J0QCPY004PK2HF4G showed the step failing but the run reporting success, which led to task 3.7.)
 - [ ] 5.2 Run `fabro run claude-max --environment daytona --target natea/newenglandmusic@main`. Verify:
   - the run succeeds, and its file changes show `hello-claude-max.txt` with the expected text;
   - the run's details show the fork as the cloned repository;
   - no run branch appears on either GitHub repository;
   - the Daytona dashboard shows the sandbox stopped or deleted.
 
-  Record the run ID here.
-- [ ] 5.3 Run `fabro run claude-max --environment daytona` without `--target` from the worktree, and verify it stops with an origin mismatch and pushes nothing to nycnoise/nycnoise
-- [ ] 5.4 Check that the pinned versions in the install step are the ones 5.2 installed, from the run's log
+  Record the run ID here. (Run 01M6A82MA3ZC5R6XYE3YCG8HQT succeeded: the file changes hold the expected text, the cloned repository is natea/newenglandmusic, and neither GitHub repository has a run branch. The Daytona dashboard showed its sandbox still running 45 minutes later, and the failed runs' sandboxes stopped but not deleted; see the design's risks. This stays open until its sandbox is deleted.)
+- [x] 5.3 Run `fabro run claude-max --environment daytona` without `--target` from the worktree, and verify it stops with an origin mismatch and pushes nothing to nycnoise/nycnoise (Done, with origin's push address disabled for safety: it stopped before creating a run with "the workflow configures a run.scm repository that is not the local checkout's origin", and upstream has no branches from this change.)
+- [x] 5.4 Check that the pinned versions in the install step are the ones 5.2 installed, from the run's log (Done: npm installed claude-code@2.1.316 and claude-agent-acp@0.99.1. npm skipped Claude Code's postinstall script; the ACP step doesn't need it.)
 
 ## 6. Guide and review
 
-- [ ] 6.1 Write `docs/FABRO.md`. It covers what Fabro is for here, the one-time token steps (4.2), the command for each workflow with `--environment local`, or `--environment daytona --target natea/newenglandmusic@main`, the `bin/fabro-environment` step, what each run proves, and that the preflight warning about ignored pull request settings is expected.
+- [ ] 6.1 Write `docs/FABRO.md`. It covers what Fabro is for here, the one-time token steps (4.2), the command for each workflow with `--environment local`, or `--environment daytona --target natea/newenglandmusic@main`, the `bin/fabro-environment` step, what each run proves, that the preflight warning about ignored pull request settings is expected, and that leftover `petri-<run id>-I0` sandboxes must be deleted in the Daytona dashboard (Jazkarta organization) after a run, because Fabro 0.400 leaves them.
 - [ ] 6.2 Add a test for the "Guide commands name the fork" and "Guide covers both workflows and the token" scenarios, and verify it passes
 - [ ] 6.3 Manual check: follow `docs/FABRO.md` from a fresh clone of the fork with the Fabro server running, and verify both workflows run without other instructions
 - [ ] 6.4 Run the full test suite with `python manage.py test` and verify it passes

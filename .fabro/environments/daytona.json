@@ -4,10 +4,7 @@
   "cwd": null,
   "image": {
     "docker": null,
-    "dockerfile": {
-      "type": "inline",
-      "value": "FROM node:22-bookworm\nRUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*\nRUN npm install -g @anthropic-ai/claude-code @zed-industries/claude-code-acp\n"
-    }
+    "dockerfile": null
   },
   "resources": {
     "cpu": 2,

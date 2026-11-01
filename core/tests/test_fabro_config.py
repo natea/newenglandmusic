@@ -120,17 +120,20 @@ class SandboxLifecycleTestCase(SimpleTestCase):
 
 
 class ClaudeMaxWorkflowTestCase(SimpleTestCase):
-    """claude-max runs one Claude Code step through ACP in the daytona sandbox"""
+    """claude-max installs Claude Code, then runs one Claude Code step through ACP"""
 
-    def test_one_acp_claude_code_step(self):
+    def test_install_then_one_acp_claude_code_step(self):
         settings, graph, steps, edges = workflow("claude-max")
-        self.assertEqual(len(steps), 1)
-        self.assertEqual(len(edges), 1)
-        attrs = next(iter(steps.values()))
-        self.assertIn('type="agent"', attrs)
-        self.assertIn('backend="acp"', attrs)
-        self.assertIn('acp.command="claude-code-acp"', attrs)
-        self.assertIn("hello-claude-max.txt", attrs)
+        self.assertEqual(list(steps), ["install", "work"])
+        self.assertEqual(edges, [" install -> work "])
+        install, work = steps["install"], steps["work"]
+        self.assertIn("script=", install)
+        self.assertRegex(install, r"@anthropic-ai/claude-code@\d+\.\d+\.\d+\b")
+        self.assertRegex(install, r"@agentclientprotocol/claude-agent-acp@\d+\.\d+\.\d+\b")
+        self.assertIn('type="agent"', work)
+        self.assertIn('backend="acp"', work)
+        self.assertIn('acp.command="claude-agent-acp"', work)
+        self.assertIn("hello-claude-max.txt", work)
         self.assertEqual(daytona()["id"], "daytona")
         self.assertEqual(daytona()["provider"], "daytona")
 
