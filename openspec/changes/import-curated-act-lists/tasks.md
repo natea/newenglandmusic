@@ -24,4 +24,4 @@
 ## 6. Finish
 
 - [ ] 5.1 Run the whole suite with the network blocked and verify it passes, with every scenario in this change's spec covered.
-- [ ] 5.2 Update `PRODUCTION.md` and the artists section of `AGENTS.md` for `import_act_list` and sources; verify both describe the shipped behavior.
+- [x] 5.2 Update `PRODUCTION.md` and the artists section of `AGENTS.md` for `import_act_list` and sources; verify both describe the shipped behavior.

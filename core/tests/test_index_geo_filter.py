@@ -17,7 +17,10 @@ class GeoFilterPageTestCase(TestCase):
 
     def setUp(self):
         load_geo_fixture()
-        soon = get_current_new_york_datetime() + timedelta(hours=2)
+        now = get_current_new_york_datetime()
+        # later today, never past midnight: on a month's last evening two hours on is next month
+        end_of_today = now.replace(hour=23, minute=59, second=0, microsecond=0)
+        soon = min(now + timedelta(hours=2), max(now, end_of_today))
         for title, state, county, city in [
             ("boston show", "MA", "Suffolk", "Boston"),
             ("cape cod show", "MA", "Barnstable", "Hyannis"),

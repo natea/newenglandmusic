@@ -384,7 +384,7 @@ SeatGeek's API fills in venues whose ticketing pages (Etix, AXS and others) refu
 **Importing.** Make a CSV file, or a Google Sheet tab, with this header row:
 
 ```
-Act_ID,Name,Kind,Members,Town,State,Website,Bandcamp,MusicBrainz_ID,Notes
+Act_ID,Name,Kind,Members,Town,State,Website,Bandcamp,Instagram,YouTube,MusicBrainz_ID,Notes
 ```
 
 - `Act_ID` (required, such as A0001) keys the row, so never change it.
@@ -396,6 +396,15 @@ Act_ID,Name,Kind,Members,Town,State,Website,Bandcamp,MusicBrainz_ID,Notes
 venv/bin/python manage.py import_artists --csv acts.csv --dry-run
 venv/bin/python manage.py import_artists --sheet <sheet id> --tab "Acts"
 ```
+
+**Importing a curated list** (Sooz's Oh Hello Boston tabs, or the next editor's list), in its own columns (`Artist`, `City`, `State` as a name or code, `Website`, `Bandcamp`, `Instagram`, `YouTube`, `Kind`, `MusicBrainz ID`):
+
+```sh
+venv/bin/python manage.py import_act_list --source ohb --sheet 1a6D3uMv5U_yoA02K0YCh9BpsnkZHquP2xBD2BkgwGRk --tab "In Rotation" --tab "2026 backlog" --dry-run
+venv/bin/python manage.py enrich_artists_from_musicbrainz
+```
+
+Add a new list's key and label to `core/act_sources.py` first. Rows naming the same act, on one tab or across tabs, become one act (the first tab winning where they differ). MusicBrainz decides each act's kind; an act already on the site is found and marked with the source, never duplicated. Every act on the list becomes a record, and one MusicBrainz can't settle cleanly (not found, several, a different name, placed outside the states the site has venues in) is **held for review**: it has no public page and no event links until an editor selects it under **Needs review** in the band or artist admin and runs **Mark ready**, which also links the events that name it. Filter the admin by **source** to see a list's acts. The run ends by linking approved events to the live acts.
 
 A sheet is read like the venue sheet: with `gog` locally, and with the service account on Render (share the sheet with its email). The import never deletes a record or a membership, and never overwrites a field an editor changed or MusicBrainz filled in.
 
