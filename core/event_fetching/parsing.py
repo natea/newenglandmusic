@@ -57,12 +57,23 @@ def to_starttime(value):
     return None, False
 
 
+# wordpress shortcodes that page builders (wpbakery's [vc_row ...], divi's [et_pb_section])
+# leave in feeds that export a post's raw content, as the events calendar's ical does: a tag
+# with attributes, a closing tag, or a builder's underscored name. plain brackets ("[with]") stay
+SHORTCODE_RE = re.compile(
+    r"\[/[a-z][\w-]*\]"  # [/vc_column]
+    r"|\[[a-z][\w-]*(?:\s+[\w-]+\s*=\s*(?:\"[^\"]*\"|[“”″][^“”″]*[“”″]|'[^']*'|[^\s\]]+))+\s*/?\]"  # [vc_row type="x"]
+    r"|\[[a-z]+_[\w-]*\s*/?\]"  # [vc_column_text]
+)
+
+
 def clean_text(text):
     """plain text: html tags and entities (e.g. &#038;) removed, whitespace collapsed"""
     # some feeds escape their html (&lt;p&gt;), so unescape before stripping tags too
     text = html.unescape(str(text or ""))
     # block tags separate words, so "<h2>Show</h2><p>Doors" doesn't become "ShowDoors"
     text = BLOCK_TAG_RE.sub(r" \g<0>", text)
+    text = SHORTCODE_RE.sub(" ", text)
     return " ".join(html.unescape(strip_tags(text)).split())
 
 

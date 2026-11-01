@@ -310,3 +310,19 @@ class PlaceholderMidnightTestCase(SimpleTestCase):
         }.items():
             with self.subTest(name):
                 self.assertFalse(is_placeholder_midnight(event))
+
+
+class ShortcodeTestCase(SimpleTestCase):
+    """page-builder shortcodes in a feed's raw post content (buffalo iron works' events calendar ical)"""
+
+    def test_page_builder_shortcodes_removed(self):
+        raw = (
+            '[vc_row type=”in_container” full_screen_row_position=”middle” overlay_strength=”0.3″]'
+            '[vc_column column_padding="no-extra-padding" width="1/1"][vc_column_text]'
+            "Doors at 6. Afrobeats all night.[/vc_column_text][/vc_column][/vc_row]"
+        )
+        self.assertEqual(clean_description(raw), "Doors at 6. Afrobeats all night.")
+
+    def test_plain_brackets_stay(self):
+        self.assertEqual(clean_text("Marshall Crenshaw [with] Sarah Borges"), "Marshall Crenshaw [with] Sarah Borges")
+        self.assertEqual(clean_text("Tickets [sold out]"), "Tickets [sold out]")
