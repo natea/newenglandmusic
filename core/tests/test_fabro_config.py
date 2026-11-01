@@ -215,3 +215,27 @@ class EnvironmentScriptTestCase(SimpleTestCase):
             for call in calls:
                 self.assertNotIn(self.TOKEN, call)
             self.assertNotIn(self.TOKEN, result.stdout + result.stderr)
+
+
+class GuideTestCase(SimpleTestCase):
+    """docs/FABRO.md says how to run both workflows, against the fork"""
+
+    def guide(self):
+        return (ROOT / "docs" / "FABRO.md").read_text()
+
+    def test_daytona_commands_name_the_fork(self):
+        commands = re.findall(r"^\s*fabro run .*$", self.guide(), re.MULTILINE)
+        daytona_runs = [c for c in commands if "claude-max" in c]
+        self.assertTrue(daytona_runs)
+        for command in daytona_runs:
+            self.assertIn("--environment daytona", command)
+            self.assertIn("--target natea/newenglandmusic", command)
+
+    def test_covers_both_workflows_and_the_token(self):
+        guide = self.guide()
+        commands = re.findall(r"^\s*fabro run (\S+)", guide, re.MULTILINE)
+        self.assertIn("hello", commands)
+        self.assertIn("claude-max", commands)
+        self.assertIn("claude setup-token", guide)
+        self.assertIn("bin/fabro-environment", guide)
+        self.assertRegex(guide, r"(?m)^\s*fabro secret set CLAUDE_CODE_OAUTH_TOKEN\s*$")
