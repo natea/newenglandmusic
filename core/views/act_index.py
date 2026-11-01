@@ -107,3 +107,8 @@ def without_trailing_slash(request):
     path = request.path.rstrip("/")
     query = request.META.get("QUERY_STRING")
     return redirect(f"{path}?{query}" if query else path, permanent=True)
+
+
+def plural_address(request, kind, slug=None):
+    # /band and /artist/pixies are natural guesses at /bands and /artists/pixies
+    return redirect(f"/{kind}s/{slug}" if slug else f"/{kind}s", permanent=True)
