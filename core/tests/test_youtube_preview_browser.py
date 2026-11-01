@@ -59,6 +59,9 @@ class YouTubePreviewBrowserTestCase(BrowserTestCase):
         # nothing drawn over it, and no autoplay asked for
         self.assertNotIn("autoplay", player.get_attribute("src"))
         self.assertNotIn("autoplay", player.get_attribute("allow"))
+        # elementFromPoint sees only the window, and the page above the player is longer some days
+        player.scroll_into_view_if_needed()
+        box = player.bounding_box()
         center = (box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
         self.assertTrue(page.evaluate("([x, y]) => document.elementFromPoint(x, y).tagName === 'IFRAME'", list(center)))
 
