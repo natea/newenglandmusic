@@ -30,6 +30,7 @@ Tasks marked done were completed on the `fabro-setup` branch before this proposa
 - [x] 3.5 Write `bin/fabro-environment`: create the environment when the server has none, replace it with `If-Match` when it does, and keep the dev token in a private header file. Verify by running it against the local server and checking that `GET /api/v1/environments/daytona` returns the file's settings. (Done: created, then replaced on a second run; the server's provider, resources, lifecycle, Dockerfile and env match the file, with the token as the vault reference.)
 - [x] 3.6 Add tests with a stand-in `curl` for the "Environment missing on the server", "Environment already on the server" and "The dev token stays off command lines" scenarios, and verify they pass
 - [x] 3.7 Set `on_failure="exit"` on both smoke workflows' graphs, and add a test for the "Failure policy" scenario
+- [ ] 3.8 Remove the Dockerfile from `.fabro/environments/daytona.json`, add the pinned install step to `claude-max` and switch its ACP command to `claude-agent-acp`, then update the "Claude-max workflow shape" test. Verify the config tests pass and `bin/fabro-environment` updates the server.
 
 ## 4. Credentials (Nate does these; no secret goes into the repo or a chat)
 
@@ -47,7 +48,7 @@ Tasks marked done were completed on the `fabro-setup` branch before this proposa
 
   Record the run ID here.
 - [ ] 5.3 Run `fabro run claude-max --environment daytona` without `--target` from the worktree, and verify it stops with an origin mismatch and pushes nothing to nycnoise/nycnoise
-- [ ] 5.4 Pin the npm package versions in the Dockerfile inside `.fabro/environments/daytona.json` to the versions 5.2 used, run `bin/fabro-environment`, and verify the next run builds the new snapshot without errors
+- [ ] 5.4 Check that the pinned versions in the install step are the ones 5.2 installed, from the run's log
 
 ## 6. Guide and review
 

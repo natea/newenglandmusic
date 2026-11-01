@@ -43,7 +43,7 @@ The repo SHALL have a `hello` workflow that runs one shell command and no model 
 
 ### Requirement: Claude Code runs in a Daytona sandbox with a subscription token
 
-The repo SHALL define a `daytona` environment, in which Claude Code runs through Fabro's ACP backend, in `.fabro/environments/daytona.json`: the request body Fabro's environments API takes, including the sandbox's Dockerfile inline. Claude Code SHALL authenticate with the subscription token stored in Fabro's secret vault as `CLAUDE_CODE_OAUTH_TOKEN`, with `ANTHROPIC_API_KEY` set empty in the sandbox, so that a missing token fails the Claude Code step, naming the missing secret, instead of falling back to an API key. No file in the repo SHALL contain a token value.
+The repo SHALL define a `daytona` environment, in which Claude Code runs through Fabro's ACP backend, in `.fabro/environments/daytona.json`: the request body Fabro's environments API takes. The sandbox uses Daytona's default image, because Fabro 0.400 does not build an environment's Dockerfile, and the workflow installs Claude Code and its ACP adapter at the start of each run. Claude Code SHALL authenticate with the subscription token stored in Fabro's secret vault as `CLAUDE_CODE_OAUTH_TOKEN`, with `ANTHROPIC_API_KEY` set empty in the sandbox, so that a missing token fails the Claude Code step, naming the missing secret, instead of falling back to an API key. No file in the repo SHALL contain a token value.
 
 #### Scenario: Token comes from the vault
 
@@ -94,12 +94,12 @@ The `daytona` environment used by this change SHALL stop a sandbox when its run 
 
 ### Requirement: A claude-max workflow exercises the sandbox path
 
-The repo SHALL have a `claude-max` workflow with exactly one Claude Code step, run through the ACP backend, that writes `hello-claude-max.txt` to the workspace. It runs in the `daytona` environment, which the run command selects with `--environment daytona`, because Fabro does not apply an environment chosen in a workflow's settings.
+The repo SHALL have a `claude-max` workflow with a command step that installs exact versions of Claude Code and its ACP adapter, followed by exactly one Claude Code step, run through the ACP backend, that writes `hello-claude-max.txt` to the workspace. It runs in the `daytona` environment, which the run command selects with `--environment daytona`, because Fabro does not apply an environment chosen in a workflow's settings.
 
 #### Scenario: Claude-max workflow shape
 
 - **WHEN** the configuration tests read the `claude-max` workflow
-- **THEN** its graph has exactly one step between start and exit, that step is an agent using the ACP backend with the `claude-code-acp` command, and its prompt names `hello-claude-max.txt`
+- **THEN** its graph has exactly two steps between start and exit: first a command that installs `@anthropic-ai/claude-code` and `@agentclientprotocol/claude-agent-acp`, each at an exact version, then an agent using the ACP backend with the `claude-agent-acp` command, whose prompt names `hello-claude-max.txt`
 
 ### Requirement: A guide explains how to run the workflows
 
