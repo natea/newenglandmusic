@@ -1,0 +1,26 @@
+digraph Triage {
+    graph [goal="Triage an issue on the New England Music Project site: label it, then ask one question, write it up, or park it"]
+    rankdir=LR
+    on_failure="exit"
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    install [
+        label="Install Claude Code",
+        shape=parallelogram,
+        script="python3 --version && npm install -g --prefix /usr/local @anthropic-ai/claude-code@2.1.316 @agentclientprotocol/claude-agent-acp@0.99.1"
+    ]
+
+    think [
+        label="Triage (Claude Code, ACP)",
+        type="agent",
+        backend="acp",
+        acp.command="claude-agent-acp",
+        prompt="@prompt.md"
+    ]
+
+    check [label="Check the result", shape=parallelogram, script="python3 bin/check-intentable-result triage"]
+
+    start -> install -> think -> check -> exit
+}
