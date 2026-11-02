@@ -51,7 +51,7 @@ These two workflows are started by the intentable bridge (natea/intentable), nev
 
 Started when someone on the intake list opens an issue. Claude Code reads the issue and the code, then gives first-guess labels: one each of type, clarity, risk, blast radius and size. It then moves the issue on:
 
-- clarity 4 or 5: `spec-review`, with a short summary of what would be built;
+- clarity 4 or 5: `spec-review`, with a short summary of what would be built, ending "Next, this will be written up as a proposal for Nate to review before anything is built.";
 - clarity 1 to 3: `needs-info`, with one question;
 - a grey-area issue, where it's unclear whether the behaviour belongs in the site's spec: `parked`, with the reason, for Nate to decide.
 

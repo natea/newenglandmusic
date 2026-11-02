@@ -32,6 +32,10 @@
 - [x] 3.2 Run the full suite (`python manage.py test`) and fix what this change broke
   - 2 November 2026: 1,479 tests, one failure, `test_youtube_preview_browser.test_click_opens_the_video` ("150 not greater than or equal to 200"). It fails the same way on `main` (503401b) without this change, so it isn't this change's; it came with other work on `main`. Everything this change adds passes.
 
+## 5. After the live check
+
+- [x] 5.1 End every `spec-review` message with Nate's sentence, "Next, this will be written up as a proposal for Nate to review before anything is built.": in both prompts, required by the checker. Add tests for "Spec review says what happens next" and "The prompts give the sentence".
+
 ## 4. Live check on the Spark
 
 This needs the intentable change that makes `FABRO_WORKFLOW_REF` also set the run's target. One go-ahead from Nate covers the steps below. It touches GitHub: a pushed branch on the fork, comments and labels from the bridge on the issues named in 4.1, a reply on #9, then deleting the pushed branch.

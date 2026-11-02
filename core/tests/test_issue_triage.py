@@ -12,6 +12,8 @@ from core.tests.test_fabro_config import FABRO, workflow
 ROOT = Path(__file__).resolve().parents[2]
 CHECKER = ROOT / "bin" / "check-intentable-result"
 
+NEXT = "Next, this will be written up as a proposal for Nate to review before anything is built."
+
 COMPLETE_TRIAGE = {
     "labels": ["type:feature", "clarity:2", "risk:2", "blast:2", "size:M"],
     "state": "needs-info",
@@ -179,13 +181,13 @@ class MessagesStayOnTheIssueTestCase(SimpleTestCase):
 
     def test_an_email_address(self):
         labels = ["type:feature", "clarity:4", "risk:2", "blast:2", "size:M"]
-        message = "A venue page with upcoming shows, and for artists the venue's booking address, booking@venue.com."
+        message = "A venue page with upcoming shows, and for artists the venue's booking address, booking@venue.com. " + NEXT
         status, output = run_checker("triage", triage(labels=labels, state="spec-review", message=message))
         self.assertEqual(status, 0, output)
 
     def test_too_long(self):
         labels = ["type:feature", "clarity:4", "risk:2", "blast:2", "size:M"]
-        status, output = run_checker("triage", triage(labels=labels, state="spec-review", message="x" * 2001))
+        status, output = run_checker("triage", triage(labels=labels, state="spec-review", message="x" * 2001 + " " + NEXT))
         self.assertEqual(status, 1)
         self.assertIn("too long", output)
 
@@ -302,3 +304,19 @@ class GuideTestCase(SimpleTestCase):
         self.assertIn("--environment daytona", trials[0])
         self.assertIn("--target natea/newenglandmusic@<branch>", trials[0])
 
+
+class WhatHappensNextTestCase(SimpleTestCase):
+    """a spec-review message says what happens next"""
+
+    def test_spec_review_says_what_happens_next(self):
+        labels = ["type:feature", "clarity:4", "risk:2", "blast:2", "size:M"]
+        summary = "A page for each venue with its upcoming shows."
+        status, output = run_checker("triage", triage(labels=labels, state="spec-review", message=summary))
+        self.assertEqual(status, 1)
+        self.assertIn(NEXT, output)
+        status, output = run_checker("triage", triage(labels=labels, state="spec-review", message=f"{summary} {NEXT}"))
+        self.assertEqual(status, 0, output)
+
+    def test_the_prompts_give_the_sentence(self):
+        for name in WORKFLOWS:
+            self.assertIn(NEXT, prompt(name), name)

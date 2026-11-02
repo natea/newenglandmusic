@@ -29,6 +29,8 @@ STATES = ["triage", "needs-info", "spec-review", "needs-design", "building", "pr
 # what each workflow may give
 ALLOWED_STATES = {"triage": ["spec-review", "needs-info", "parked"], "clarify": ["spec-review", "needs-info"]}
 MAX_MESSAGE = 2000
+# how every spec-review message ends, so the person knows what happens next
+SPEC_REVIEW_ENDING = "Next, this will be written up as a proposal for Nate to review before anything is built."
 # a GitHub mention: @login at the start of a word, so an email address isn't one
 MENTION = re.compile(r"(?<![\w.@])@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?")
 
@@ -86,6 +88,8 @@ def check(workflow, text):
         raise Refused("the message is missing")
     if state == "needs-info" and message.count("?") != 1:
         raise Refused("ask one question: the message must have exactly one question mark")
+    if state == "spec-review" and not message.rstrip().endswith(SPEC_REVIEW_ENDING):
+        raise Refused(f"a spec-review message must end with: {SPEC_REVIEW_ENDING}")
     if MENTION.search(message):
         raise Refused("messages mention no one")
     if len(message) > MAX_MESSAGE:

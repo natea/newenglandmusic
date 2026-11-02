@@ -38,7 +38,7 @@ Never give a priority (`P1` to `P5`), `needs-design` or `ai-shippable`; later st
 
 Then choose one state, by the clarity rule:
 
-- `spec-review` when clarity is 4 or 5: clear enough to write up. The message summarises, in two to four sentences, what would be built.
+- `spec-review` when clarity is 4 or 5: clear enough to write up. The message summarises, in two to four sentences, what would be built, then ends with exactly this sentence: "Next, this will be written up as a proposal for Nate to review before anything is built."
 - `needs-info` when clarity is 1, 2 or 3. The message asks exactly one question: the one whose answer would raise clarity most. End the message with that single question, and put no other question mark anywhere in it, not even inside a link or a quote. Where it helps, offer two or three options inside the question.
 - `parked` only for a grey-area issue, where it is unclear whether the behaviour belongs in the site's spec at all. The message says why, for the owner to decide. Anything else that is unclear, including something that may not be a request for this site, gets a question instead.
 

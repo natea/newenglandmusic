@@ -152,6 +152,20 @@ Every result SHALL have a message. A `needs-info` result's message SHALL ask exa
 - **WHEN** a result's message is empty or missing
 - **THEN** the checker exits with a failure saying the message is missing
 
+### Requirement: A spec-review message says what happens next
+
+A result that moves the issue to `spec-review` SHALL end its message with the sentence "Next, this will be written up as a proposal for Nate to review before anything is built.", so the person who asked knows what comes next (Nate's wording, 2 November 2026).
+
+#### Scenario: Spec review says what happens next
+
+- **WHEN** an otherwise complete `spec-review` result's message is only a summary
+- **THEN** the checker exits with a failure quoting the sentence it must end with, and accepts the same message once it ends with that sentence
+
+#### Scenario: The prompts give the sentence
+
+- **WHEN** the configuration tests read each prompt
+- **THEN** it contains the sentence
+
 ### Requirement: Messages stay on the issue
 
 A result's message SHALL mention no GitHub user, an `@` followed by a login at the start of a word, and SHALL be at most 2,000 characters, so a result can't notify people or flood the issue. An email address isn't a mention.

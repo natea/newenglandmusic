@@ -69,7 +69,7 @@ See proposal.md for why. What the workflows must fit, checked on 2 November 2026
 - **What triage gives:** exactly one `type:`, `clarity:`, `risk:`, `blast:` and `size:` label, and no other label.
 - **What clarify gives:** an updated `clarity:` label, judged afresh from the whole thread, since the bridge doesn't pass current labels. It may also give one of each of type, risk, blast and size, if the answers change them, and no other label.
 - **The clarity rule:**
-  - 4 or 5 means clear enough to write up: `spec-review`, with two to four sentences summarising what will be built (agent's decision on length);
+  - 4 or 5 means clear enough to write up: `spec-review`, with two to four sentences summarising what will be built (agent's decision on length), ending with "Next, this will be written up as a proposal for Nate to review before anything is built." (Nate's wording, 2 November 2026, after the live check showed the summary left the person without a next step; the checker requires it);
   - 1 to 3 means `needs-info`, with exactly one question, the one whose answer would raise clarity most;
   - triage alone may use `parked`, for a grey-area issue, saying why.
 - **The question:** end with the single question. Put no other `?` in the message, not even inside a link.
