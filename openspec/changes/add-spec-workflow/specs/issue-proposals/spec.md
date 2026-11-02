@@ -45,16 +45,49 @@ When the draft is labelled `needs-design`, a `sketch` agent with the Impeccable 
 #### Scenario: Sketches required with needs-design
 
 - **WHEN** the draft has the label `needs-design` and `openspec/changes/add-venue-hours/sketches/` lacks `c.html` or `options.json`, or `design.md` doesn't link `sketches/a.html`
-- **THEN** the checker, without `--draft`, exits with a failure naming what is missing
+- **THEN** `bin/check-intentable-result spec --sketches` exits with a failure naming what is missing
+
+### Requirement: Sketches are checked as soon as they are made
+
+A `check_sketches` step SHALL run right after `sketch`, before the fan-out, running `bin/check-intentable-result spec --sketches`: the sketches are present, linked from `design.md`, and safe to publish. The draft check after revise SHALL check the safety of any sketches again. The first draft check, before `sketch`, SHALL NOT require sketches.
+
+#### Scenario: Unsafe sketch caught before review
+
+- **WHEN** the sketch agent writes a `b.html` that loads a stylesheet from another address
+- **THEN** `check_sketches` fails the run before any reviewer starts
+
+#### Scenario: First draft check without sketches
+
+- **WHEN** `--draft` runs on a `needs-design` draft that has no `sketches/` yet
+- **THEN** it accepts the draft
 
 ### Requirement: Sketches are safe to publish
 
-Each sketch SHALL be one self-contained HTML file: no `<script>`, no event-handler attribute such as `onclick=`, no `javascript:` URL, and no resource loaded from another address. `bin/check-intentable-result spec` SHALL fail the run, naming the file and the problem, otherwise.
+`bin/check-intentable-result` SHALL parse each sketch as HTML, entities decoded, and accept it only if every element and attribute is on an allowlist of static markup and inline styling, and every URL, in attributes or CSS, is a fragment (`#…`) or a `data:image/` URL. Otherwise it SHALL fail, naming the file and the problem.
 
 #### Scenario: A sketch with a script
 
-- **WHEN** `sketches/b.html` contains `<script>` or loads `https://fonts.example/x.css`
+- **WHEN** `sketches/b.html` contains `<script>`, `onclick=` or an entity-encoded `jav&#x61;script:` link
 - **THEN** the checker exits with a failure naming `sketches/b.html`
+
+#### Scenario: A sketch that calls out
+
+- **WHEN** a sketch loads `https://fonts.googleapis.com/css2?family=Open+Sans`, `//cdn.example/x.css`, or has `<form action="https://example.org">` or `<iframe srcdoc=…>`
+- **THEN** the checker exits with a failure naming the file
+
+#### Scenario: A safe sketch
+
+- **WHEN** a sketch uses only inline `<style>`, system fonts, headings, lists, tables and `data:image/png` images
+- **THEN** the checker accepts it
+
+### Requirement: The draft's labels are fixed before review
+
+The `route` step SHALL record the draft's labels in `.intentable/route.json`. The revise agent SHALL NOT change the labels, and every later check SHALL fail the run when `.intentable/draft.json`'s labels differ from the recorded ones.
+
+#### Scenario: Revise adds needs-design
+
+- **WHEN** route recorded no labels and, after revise, the draft's labels are `needs-design`
+- **THEN** the recheck exits with a failure saying the labels changed after routing
 
 ### Requirement: The spec workflow follows the workflow contract
 
@@ -164,7 +197,7 @@ The last step SHALL copy `.intentable/reviews/summary.md` to `.intentable/review
 
 ### Requirement: The draft is named in its own file
 
-The propose agent SHALL name the change and give its message in `.intentable/draft.json`, as `change`, `labels` and `message`. The revise agent may change the message and labels, but not the change name. No step before the last SHALL write `.intentable/result.json`, `.intentable/review.md` or anything under `.intentable/proposal/`.
+The propose agent SHALL name the change and give its message in `.intentable/draft.json`, as `change`, `labels` and `message`. The revise agent may change the message, but not the labels or the change name. No step before the last SHALL write `.intentable/result.json`, `.intentable/review.md` or anything under `.intentable/proposal/`.
 
 #### Scenario: Draft check reads the draft file
 

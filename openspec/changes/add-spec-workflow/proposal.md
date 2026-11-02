@@ -9,7 +9,7 @@ The `triage` and `clarify` workflows move an issue to `spec-review` once it is c
   - **Propose.** Claude Code reads the issue thread and the site's code. It then writes a complete OpenSpec change for it: proposal, delta specs, design and tasks. It uses the `openspec` CLI at a pinned version and follows this repository's `openspec/config.yaml` and `AGENTS.md`.
   - **Review.** Three reviewers run in parallel, each a fresh agent with one lens: risk, spec fit and fidelity. The lenses are the ones in the `dev-review-proposal` skill. Fidelity is checked against what the person who asked said in the thread and against this repository's recorded rules. Each reviewer writes a report and edits nothing. From the second round on, each is told what revise changed.
   - **Revise.** A fourth agent applies every blocking finding, plus the non-blocking ones it agrees with. It writes down how it fixed each finding, or why it didn't apply it, and never renames the change. Then the three reviewers run again on the revised text.
-  - The loop stops when all three are satisfied in the same round, or after three rounds. If it stops at the limit, the run still ends with the draft, marked as not passed by the reviewers, so Nate sees the open findings (decision taken without Nate, see design).
+  - The loop stops when all three are satisfied in the same round, or after three rounds. If it stops at the limit, the run still ends with the draft, marked as not passed by the reviewers, so Nate sees the open findings (Nate's decision, 2 November 2026).
 - **Sketches, when the proposal needs screens** (Nate's decision, 2 November 2026). When the draft is labelled `needs-design`, one more agent runs Impeccable's decision step before the review. It writes three self-contained HTML sketches into the change's `sketches/` folder, with each option's label, thesis and risk, and the design links them. The reviewers review them with the rest of the change, so Nate sees the sketches at G2. Choosing one is a later stage for Sooz or Mark. The sketches are published beside the change's Spek page. Impeccable's design context (`.impeccable/`, `PRODUCT.md`, `DESIGN.md`) is committed with this change, so the sandbox has it.
 - **The run pushes nothing (Nate's decision, 2 November 2026: runs read the code and push nothing).** Like `triage` and `clarify`, it opens no pull request, pushes no run branch and asks Fabro for no GitHub permissions. The last step, and only the last, copies the finished change into `.intentable/proposal/` and writes the result. Fabro collects both as artifacts. The intentable bridge commits it from there to a `change/<name>` branch on the fork, under its own change. That push gives the draft its Spek page.
 - **The result.** While the run works, the change's name and message live in `.intentable/draft.json`. At the end, `.intentable/result.json` names the change, gives a plain-words message for the issue, says whether the reviewers passed it (`reviewed`), and lists the files copied. It may add the `needs-design` label when the proposal needs screens sketched, which the plan's next step uses. It gives no state, so the issue stays in `spec-review` until Nate confirms. `.intentable/review.md` starts with a fixed line, `Passed by the reviewers after <n> round(s).` or `Not passed by the reviewers after <n> rounds.`, then sums up the review: rounds, blocking findings and their fixes, and findings not applied with their reasons. The bridge uses it as the draft commit's message.
@@ -19,7 +19,7 @@ The `triage` and `clarify` workflows move an issue to `spec-review` once it is c
   - the change doesn't pass `openspec validate --strict`;
   - the change has too many files for Fabro to collect, a file that isn't text, or a folder name Fabro skips;
   - the result names a state, or any label other than `needs-design`;
-  - a `needs-design` change lacks its sketches, or a sketch has a script or loads anything from elsewhere;
+  - a `needs-design` change lacks its sketches, a sketch fails the HTML allowlist, or the labels changed after the sketch step was decided;
   - the message breaks the existing message rules.
 - **`docs/FABRO.md`** describes the workflow.
 
@@ -42,7 +42,8 @@ Out of scope:
 ## Impact
 
 - **New files:**
-  - `.fabro/workflows/spec/`, with `workflow.toml`, `workflow.fabro` and one prompt each for propose, the three lenses and revise;
+  - Impeccable's design context: `.impeccable/` (config, design, surfaces, mocks) and `PRODUCT.md`;
+  - `.fabro/workflows/spec/`, with `workflow.toml`, `workflow.fabro` and one prompt each for propose, sketch, the three lenses and revise;
   - `bin/check-intentable-reviews`, which reads the three reports and decides whether to run another round;
   - `core/tests/test_issue_proposals.py`.
 - **Changed:** `bin/check-intentable-result` gains the `spec` mode; `bin/publish-spek-page` also publishes a change's sketches; `docs/FABRO.md`.

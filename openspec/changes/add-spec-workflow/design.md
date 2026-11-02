@@ -26,8 +26,8 @@ The review loop is the `dev-review-proposal` skill from intentable: three fresh 
 
 ```
 start -> install -> propose -> check_draft -> route
-route -> sketch -> fork    (needs-design)
-route -> fork              (otherwise)
+route -> sketch -> check_sketches -> fork    (needs-design)
+route -> fork                                (otherwise)
 fork -> risk, spec_fit, fidelity -> merge -> check_reviews
 check_reviews -> finish   [outcome=succeeded]   (all yes, or round limit reached)
 check_reviews -> revise   (otherwise)
@@ -58,10 +58,14 @@ finish -> exit
 **Sketches** (Nate's decision, 2 November 2026: "sketches should be included in the proposal if design is needed").
 - After the first `check_draft`, a `route` script reads `.intentable/draft.json`. With `needs-design`, the graph goes to `sketch`; otherwise it goes straight to the fan-out. The edge mechanism is the one task 1.1 settles.
 - `sketch` is an ACP agent with the Impeccable plugin, installed in `install` from its marketplace (`pbakaus/impeccable`) at a pinned version. It is told to run Impeccable's decision step unattended: three options, each a self-contained HTML mock with inline CSS and no scripts, at 1440×900. It is also told not to generate images, so every file stays text. It copies the mocks and the options' payload into the change's `sketches/`, and adds a "Sketches" section to `design.md` that links each one.
-- It runs once. The reviewers then review the sketches with the rest of the change, and revise may edit a sketch but never regenerates the set.
-- Impeccable's design context is committed with this change, so the sandbox's checkout has it (Nate's decision, 2 November 2026: the `.impeccable` files are useful for making new sketches). That means `.impeccable/config.json`, `design.json`, `surfaces/` and `mocks/`, plus `PRODUCT.md` and `DESIGN.md`, which Impeccable reads first. Left out are the per-machine and per-session files: `config.local.json` and `hook.cache.json` (already excluded locally), `questions/` (one session's question logs) and `review/` (screenshots, binary). These files come from another session's design work in the main checkout. They are committed as they stand when this change is applied, and that session keeps editing them.
+- It runs once. `check_sketches` checks the sketches at once, so a missing or unsafe one fails cheaply, before any reviewer. The reviewers then review the sketches with the rest of the change, and revise may edit a sketch but never regenerates the set. `recheck` checks their safety again.
+- `route` records the labels in `.intentable/route.json`, and revise may not change them, so the sketches always match the `needs-design` label. A reviewer who thinks the label is wrong says so in the report, and that goes to Nate in the summary.
+- `sketch.md` says to use system fonts or inline styles only: no web fonts, no outside stylesheets or images. Three of the Impeccable mocks committed as context load Google Fonts, and the sketch agent would otherwise tend to copy them.
+- **Safety.** Sketches are written by an agent from issue text and served from the fork's Pages domain, which natea's other Pages sites share. So there are two checks. The run's checker parses each sketch against an allowlist (decoded entities; static elements and inline styles only; URLs only `#…` or `data:image/`). `bin/publish-spek-page` also adds a Content-Security-Policy meta tag to every published sketch, and copies only regular files, never links, in case something reaches a `change/` branch without the checker.
+- Impeccable's design context is committed with this change, so the sandbox's checkout has it (Nate's decision, 2 November 2026: the `.impeccable` files are useful for making new sketches). That means `.impeccable/config.json`, `design.json`, `surfaces/` and `mocks/`. It also means `PRODUCT.md`, which Impeccable reads first; adding it is my decision beyond Nate's words, for him to confirm at G2. `DESIGN.md` is already committed. Task 1.4 checks that the JSON files parse, since another session is editing them. Left out are the per-machine and per-session files: `config.local.json` and `hook.cache.json` (already excluded locally), `questions/` (one session's question logs) and `review/` (screenshots, binary). These files come from another session's design work in the main checkout. They are committed as they stand when this change is applied, and that session keeps editing them.
 - Picking one option is left to the later stage where Sooz or Mark choose. At G2 Nate sees all three.
-- The sketches are published beside the Spek page (`spec-pages` delta), at `changes/<name>/sketches/a.html` and so on. That page is served from the fork's Pages domain, so the checker refuses anything that could run code there or call out.
+- The sketches are published beside the Spek page (`spec-pages` delta), at `changes/<name>/sketches/a.html` and so on. This replaces the plan's separate assets branch for sketches, since Nate put them in the proposal itself.
+- The plan has Sooz or Mark pick a sketch before G2. Whether G2 waits for that pick is for the stage that records G2 from the issue.
 
 **Briefs.** Each reviewer prompt gives its lens, the change folder path, `openspec/specs/`, `AGENTS.md`, `openspec/config.yaml` and the report format.
 - There is no project dictionary in this repo, so spec fit checks vocabulary against the existing specs.
@@ -88,7 +92,7 @@ finish -> exit
 - the configuration tests read the workflow files;
 - the checkers run as subprocesses on temporary folders holding fixture changes and reports;
 - `openspec` is replaced by a fake executable placed first on `PATH`. It exits with a chosen status and prints a chosen summary line, so the suite runs offline and where `openspec` isn't installed (CI);
-- Fabro, Claude and GitHub aren't touched;
+- Fabro, Claude, GitHub and Impeccable aren't touched (Impeccable's install and the sketch agent are covered by the configuration tests and the live check);
 - the live check is a manual task.
 
 ## Risks / Trade-offs

@@ -2,7 +2,12 @@
 
 ### Requirement: A change's sketches are published beside its page
 
-When `bin/publish-spek-page` publishes a `change/<name>` branch, it SHALL also copy every `openspec/changes/<name>/sketches/*.html` file in the checkout to `changes/<name>/sketches/` in the site folder. Each publish SHALL replace that change's `sketches/` folder whole, and SHALL touch no other change's files or the root page. Main's publish copies no sketches.
+When `bin/publish-spek-page` publishes a `change/<name>` branch, it SHALL also copy that change's sketches, if any: each regular file directly in `openspec/changes/<name>/sketches/` whose name ends in `.html`, to `changes/<name>/sketches/` in the site folder. Each publish SHALL replace that change's `sketches/` folder whole, and SHALL touch no other change's files or the root page. Main's publish copies no sketches.
+
+#### Scenario: A link instead of a file
+
+- **WHEN** `sketches/a.html` is a symbolic link
+- **THEN** it isn't published, and the other sketches are
 
 #### Scenario: Sketches published
 
@@ -13,6 +18,15 @@ When `bin/publish-spek-page` publishes a `change/<name>` branch, it SHALL also c
 
 - **WHEN** the site has `changes/add-venue-hours/sketches/c.html` and the branch no longer has `c.html`
 - **THEN** after the publish the site has no `changes/add-venue-hours/sketches/c.html`
+
+### Requirement: Published sketches can't run code or call out
+
+Every sketch `bin/publish-spek-page` publishes SHALL begin its `<head>` with `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'">`, added by the script, so the browser refuses scripts, outside resources and form posts on the fork's Pages domain, even for a sketch pushed without the run's checker.
+
+#### Scenario: Policy added
+
+- **WHEN** `sketches/a.html` is published
+- **THEN** the published copy's `<head>` starts with that policy, and the rest of the file is unchanged
 
 #### Scenario: No sketches on main
 
