@@ -59,7 +59,7 @@ finish -> exit
 - After the first `check_draft`, a `route` script reads `.intentable/draft.json`. With `needs-design`, the graph goes to `sketch`; otherwise it goes straight to the fan-out. The edge mechanism is the one task 1.1 settles.
 - `sketch` is an ACP agent with the Impeccable plugin, installed in `install` from its marketplace (`pbakaus/impeccable`) at a pinned version. It is told to run Impeccable's decision step unattended: three options, each a self-contained HTML mock with inline CSS and no scripts, at 1440×900. It is also told not to generate images, so every file stays text. It copies the mocks and the options' payload into the change's `sketches/`, and adds a "Sketches" section to `design.md` that links each one.
 - It runs once. The reviewers then review the sketches with the rest of the change, and revise may edit a sketch but never regenerates the set.
-- Impeccable's own context files, `PRODUCT.md`, `DESIGN.md` and `.impeccable/`, aren't committed to this repository today. In the sandbox the agent therefore works from the site's templates and CSS. Committing them is the open question below.
+- Impeccable's design context is committed with this change, so the sandbox's checkout has it (Nate's decision, 2 November 2026: the `.impeccable` files are useful for making new sketches). That means `.impeccable/config.json`, `design.json`, `surfaces/` and `mocks/`, plus `PRODUCT.md` and `DESIGN.md`, which Impeccable reads first. Left out are the per-machine and per-session files: `config.local.json` and `hook.cache.json` (already excluded locally), `questions/` (one session's question logs) and `review/` (screenshots, binary). These files come from another session's design work in the main checkout. They are committed as they stand when this change is applied, and that session keeps editing them.
 - Picking one option is left to the later stage where Sooz or Mark choose. At G2 Nate sees all three.
 - The sketches are published beside the Spek page (`spec-pages` delta), at `changes/<name>/sketches/a.html` and so on. That page is served from the fork's Pages domain, so the checker refuses anything that could run code there or call out.
 
@@ -105,5 +105,4 @@ finish -> exit
 
 ## Open Questions
 
-- Should `PRODUCT.md`, `DESIGN.md` and `.impeccable/` be committed, so the sketch agent works from the site's recorded design context? They exist only untracked in one checkout today.
 - Should the agent be able to say an issue isn't ready for a proposal after all, sending it back to `needs-info` with a question? This change leaves that out. Once in `spec-review`, the agent writes the best proposal it can and records the gaps as open questions.

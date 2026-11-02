@@ -3,8 +3,9 @@
 - [ ] 1.1 Check with `fabro validate` that a conditional edge on `outcome` routes a failed `check_reviews` to `revise` despite `on_failure="exit"`; otherwise use the `context.review_done` route from the design
 - [ ] 1.2 Add `.fabro/workflows/spec/workflow.toml`: the five inputs, pull requests and run-branch pushing off, no GitHub permissions, artifacts `.intentable/result.json`, `.intentable/review.md` and `.intentable/proposal/**`
 - [ ] 1.3 Add `workflow.fabro` with the graph from the design, every agent through ACP, the pinned installs (Impeccable from `pbakaus/impeccable` included; check the version can be pinned) and the existing-changes record
-- [ ] 1.4 Write `propose.md`, `sketch.md`, `risk.md`, `spec_fit.md`, `fidelity.md` and `revise.md`
-- [ ] 1.5 Add tests for "Workflow shape", "Sketch step only for needs-design", "Every agent through ACP", "Inputs used, commands without inputs", "No gate, no children, references inside", "Nothing pushed", "Three lenses", "Decision record and bridge comments", "Reviewer prompts", "Revise prompt" and "The prompt gives the rules"
+- [ ] 1.4 Commit Impeccable's design context from the main checkout: `.impeccable/config.json`, `design.json`, `surfaces/`, `mocks/`, `PRODUCT.md` and `DESIGN.md`; not `config.local.json`, `hook.cache.json`, `questions/` or `review/`
+- [ ] 1.5 Write `propose.md`, `sketch.md`, `risk.md`, `spec_fit.md`, `fidelity.md` and `revise.md`
+- [ ] 1.6 Add tests for "Workflow shape", "Sketch step only for needs-design", "Every agent through ACP", "Inputs used, commands without inputs", "No gate, no children, references inside", "Nothing pushed", "Three lenses", "Decision record and bridge comments", "Reviewer prompts", "Revise prompt" and "The prompt gives the rules"
 
 ## 2. The checkers
 
