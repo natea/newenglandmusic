@@ -7,6 +7,13 @@ main goes to <site>/index.html and change/<name> to
 <site>/changes/<name>/index.html; any other branch is refused and nothing is
 written. It always writes <site>/.nojekyll and replaces only the one
 index.html, so publishing main never touches the change pages.
+
+For change/<name> it also copies that change's sketches, if any: each
+regular file directly in openspec/changes/<name>/sketches/ (read from the
+current directory, the branch's checkout) whose name ends in .html, to
+<site>/changes/<name>/sketches/, replacing that folder whole. Each published
+sketch starts with a Content-Security-Policy meta tag, so a browser refuses
+scripts, outside resources and form posts on the Pages domain.
 """
 
 import re
@@ -23,10 +30,40 @@ def target(branch):
     if branch == "main":
         return Path("index.html")
     if branch.startswith("change/"):
-        name = branch[len("change/"):]
+        name = branch[len("change/") :]
         if NAME.fullmatch(name):
             return Path("changes") / name / "index.html"
     return None
+
+
+# what a published sketch may do: inline styles and data: images, nothing else
+POLICY = (
+    "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; "
+    "img-src data:; form-action 'none'; base-uri 'none'\">"
+)
+DOCTYPE = re.compile(r"\A(\ufeff?\s*<!doctype[^>]*>)", re.IGNORECASE)
+
+
+def with_policy(html):
+    """the sketch with the policy first, after any doctype, before anything that could run"""
+    found = DOCTYPE.match(html)
+    if found:
+        return found.group(1) + POLICY + html[found.end() :]
+    return POLICY + html
+
+
+def publish_sketches(name, site):
+    """replaces the change's published sketches with the checkout's; returns how many"""
+    source = Path("openspec") / "changes" / name / "sketches"
+    destination = site / "changes" / name / "sketches"
+    shutil.rmtree(destination, ignore_errors=True)
+    sketches = (
+        [p for p in sorted(source.glob("*.html")) if p.is_file() and not p.is_symlink()] if source.is_dir() else []
+    )
+    for sketch in sketches:
+        destination.mkdir(parents=True, exist_ok=True)
+        (destination / sketch.name).write_text(with_policy(sketch.read_text()))
+    return len(sketches)
 
 
 def main(argv):
@@ -44,6 +81,8 @@ def main(argv):
     destination = site / relative
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(page, destination)
+    if branch.startswith("change/"):
+        publish_sketches(branch[len("change/") :], site)
     (site / ".nojekyll").touch()
     print(f"published {branch} at {relative.parent.as_posix() + '/' if relative.parent != Path('.') else ''}")
     return 0

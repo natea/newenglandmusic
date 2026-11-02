@@ -184,3 +184,98 @@ class RuleAndGuideTestCase(SimpleTestCase):
             "Keep host and network names out of OpenSpec files",
         ):
             self.assertIn(needed, guide)
+
+
+SKETCH = "<!doctype html><html><head><title>A</title></head><body><p>hours</p></body></html>"
+POLICY_START = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\';'
+
+
+def publish_from(checkout, branch, site):
+    """runs the script for a branch from a checkout folder, as the workflow does from the repo root"""
+    with tempfile.TemporaryDirectory() as build:
+        page = Path(build) / "spek.html"
+        page.write_text("<html>new page</html>")
+        return subprocess.run(
+            [sys.executable, str(PUBLISH), branch, str(page), str(site)],
+            cwd=checkout,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        ).returncode
+
+
+def checkout_with_sketches(folder, name="add-venue-hours", sketches=("a.html", "b.html", "c.html"), text=SKETCH):
+    root = Path(folder) / "checkout"
+    sketch_dir = root / "openspec" / "changes" / name / "sketches"
+    sketch_dir.mkdir(parents=True)
+    for sketch in sketches:
+        (sketch_dir / sketch).write_text(text)
+    (sketch_dir / "options.json").write_text("[]")
+    return root
+
+
+class SketchPagesTestCase(SimpleTestCase):
+    """a change's sketches are published beside its page; published sketches can't run code or call out"""
+
+    def test_sketches_published(self):
+        with tempfile.TemporaryDirectory() as folder:
+            checkout = checkout_with_sketches(folder)
+            site = Path(folder) / "site"
+            other = site / "changes" / "add-other" / "index.html"
+            other.parent.mkdir(parents=True)
+            other.write_text("<html>other</html>")
+            self.assertEqual(publish_from(checkout, "change/add-venue-hours", site), 0)
+            published = files_in(site)
+            for sketch in ("a.html", "b.html", "c.html"):
+                self.assertIn(f"changes/add-venue-hours/sketches/{sketch}", published)
+            self.assertNotIn("changes/add-venue-hours/sketches/options.json", published)
+            self.assertIn("changes/add-venue-hours/index.html", published)
+            self.assertEqual(published["changes/add-other/index.html"], "<html>other</html>")
+
+    def test_a_sketch_removed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            checkout = checkout_with_sketches(folder, sketches=("a.html", "b.html"))
+            site = Path(folder) / "site"
+            stale = site / "changes" / "add-venue-hours" / "sketches" / "c.html"
+            stale.parent.mkdir(parents=True)
+            stale.write_text(SKETCH)
+            self.assertEqual(publish_from(checkout, "change/add-venue-hours", site), 0)
+            self.assertFalse(stale.exists())
+
+    def test_a_link_instead_of_a_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            checkout = checkout_with_sketches(folder, sketches=("b.html",))
+            secret = Path(folder) / "secret.txt"
+            secret.write_text("token")
+            (checkout / "openspec" / "changes" / "add-venue-hours" / "sketches" / "a.html").symlink_to(secret)
+            site = Path(folder) / "site"
+            self.assertEqual(publish_from(checkout, "change/add-venue-hours", site), 0)
+            published = files_in(site)
+            self.assertNotIn("changes/add-venue-hours/sketches/a.html", published)
+            self.assertIn("changes/add-venue-hours/sketches/b.html", published)
+
+    def test_policy_added(self):
+        with tempfile.TemporaryDirectory() as folder:
+            checkout = checkout_with_sketches(folder, sketches=("a.html",))
+            site = Path(folder) / "site"
+            publish_from(checkout, "change/add-venue-hours", site)
+            text = (site / "changes" / "add-venue-hours" / "sketches" / "a.html").read_text()
+            self.assertTrue(text.startswith("<!doctype html>" + POLICY_START))
+            self.assertIn("img-src data:; form-action 'none'; base-uri 'none'", text)
+            self.assertTrue(text.endswith(SKETCH[len("<!doctype html>") :]))
+
+    def test_a_sketch_with_no_head(self):
+        with tempfile.TemporaryDirectory() as folder:
+            checkout = checkout_with_sketches(folder, sketches=("a.html",), text="<script>go()</script><p>x</p>")
+            site = Path(folder) / "site"
+            publish_from(checkout, "change/add-venue-hours", site)
+            text = (site / "changes" / "add-venue-hours" / "sketches" / "a.html").read_text()
+            self.assertTrue(text.startswith(POLICY_START))
+            self.assertLess(text.index("Content-Security-Policy"), text.index("<script>"))
+
+    def test_no_sketches_on_main(self):
+        with tempfile.TemporaryDirectory() as folder:
+            checkout = checkout_with_sketches(folder)
+            site = Path(folder) / "site"
+            self.assertEqual(publish_from(checkout, "main", site), 0)
+            self.assertFalse([p for p in site.rglob("sketches")])
