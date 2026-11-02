@@ -1,6 +1,6 @@
 ## 1. Placing a page
 
-- [ ] 1.1 Add `bin/publish-spek-page <branch> <page> <site>`, in Python:
+- [x] 1.1 Add `bin/publish-spek-page <branch> <page> <site>`, in Python:
   - `main` → `<site>/index.html`;
   - `change/<name>` → `<site>/changes/<name>/index.html`, with `<name>` matching `[A-Za-z0-9_][A-Za-z0-9._-]*`;
   - anything else exits non-zero and writes nothing;

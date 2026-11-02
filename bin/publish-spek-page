@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+"""place a built Spek page in the GitHub Pages site folder for a branch.
+
+usage: publish-spek-page <branch> <page> <site>
+
+main goes to <site>/index.html and change/<name> to
+<site>/changes/<name>/index.html; any other branch is refused and nothing is
+written. It always writes <site>/.nojekyll and replaces only the one
+index.html, so publishing main never touches the change pages.
+"""
+
+import re
+import shutil
+import sys
+from pathlib import Path
+
+# a change name: no slashes, no leading dot or dash, nothing a shell could read as code
+NAME = re.compile(r"[A-Za-z0-9_][A-Za-z0-9._-]*")
+
+
+def target(branch):
+    """the page's path inside the site folder, or None for a branch that gets no page"""
+    if branch == "main":
+        return Path("index.html")
+    if branch.startswith("change/"):
+        name = branch[len("change/"):]
+        if NAME.fullmatch(name):
+            return Path("changes") / name / "index.html"
+    return None
+
+
+def main(argv):
+    if len(argv) != 4:
+        print("usage: publish-spek-page <branch> <page> <site>", file=sys.stderr)
+        return 2
+    branch, page, site = argv[1], Path(argv[2]), Path(argv[3])
+    relative = target(branch)
+    if relative is None:
+        print(f"no page for branch {branch!r}: only main and change/<name> are published", file=sys.stderr)
+        return 1
+    if not page.is_file():
+        print(f"no built page at {page}", file=sys.stderr)
+        return 1
+    destination = site / relative
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(page, destination)
+    (site / ".nojekyll").touch()
+    print(f"published {branch} at {relative.parent.as_posix() + '/' if relative.parent != Path('.') else ''}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
