@@ -106,4 +106,4 @@ No test calls GitHub. The first real publishes are live checks in the tasks.
 
 ## Open Questions
 
-- Nate's answer on natea/intentable ("those can be posted to that github repo which is public") is read here as "intentable's own changes, such as host-on-spark, get no page". To confirm with him at G2.
+none. Nate confirmed on 2 November 2026 that natea/intentable's own changes get no Spek page for now, as Spek publishing is for the newenglandmusic project.
