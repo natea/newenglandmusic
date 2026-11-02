@@ -156,7 +156,7 @@ The revise agent SHALL apply every blocking finding, and the non-blocking ones i
 
 ### Requirement: The review loop ends
 
-`bin/check-intentable-reviews` SHALL keep each round's three reports under `.intentable/reviews/<round>/`, and the revise notes written after round N under `.intentable/reviews/<N>/` with that round's reports. It SHALL end the loop when all three reports start `SATISFIED: yes`. It SHALL send the draft to revise when any says no, unless three rounds have run. After the third round it SHALL end the loop with the review not passed. A missing or unreadable report SHALL count as not satisfied.
+`bin/check-intentable-reviews` SHALL keep each round's three reports under `.intentable/reviews/<round>/`, and the revise notes written after round N under `.intentable/reviews/<N>/` with that round's reports. It SHALL end the loop when all three reports start `SATISFIED: yes`. It SHALL send the draft to revise when any says no, unless five rounds have run. After the fifth round it SHALL end the loop with the review not passed. A missing or unreadable report SHALL count as not satisfied.
 
 #### Scenario: All satisfied
 
@@ -170,8 +170,8 @@ The revise agent SHALL apply every blocking finding, and the non-blocking ones i
 
 #### Scenario: The round limit
 
-- **WHEN** a report of round 3 still says no
-- **THEN** the check ends the loop with the review not passed after 3 rounds
+- **WHEN** a report of round 5 still says no
+- **THEN** the check ends the loop with the review not passed after 5 rounds
 
 #### Scenario: Missing report
 
@@ -190,7 +190,7 @@ When the loop ends, `bin/check-intentable-reviews` SHALL write `.intentable/revi
 #### Scenario: Summary of a review not passed
 
 - **WHEN** the review ends at the round limit
-- **THEN** `.intentable/reviews/summary.md` starts with the line `Not passed by the reviewers after 3 rounds.`, and `.intentable/reviews/outcome` is `not-passed`
+- **THEN** `.intentable/reviews/summary.md` starts with the line `Not passed by the reviewers after 5 rounds.`, and `.intentable/reviews/outcome` is `not-passed`
 
 ### Requirement: The summary is collected with the result
 
@@ -316,4 +316,4 @@ The last step SHALL empty `.intentable/proposal/`, then copy the contents of `op
 #### Scenario: Guide
 
 - **WHEN** the tests read `docs/FABRO.md`
-- **THEN** it has a section on the `spec` workflow that names `.intentable/proposal/`, the three lenses and the three-round limit
+- **THEN** it has a section on the `spec` workflow that names `.intentable/proposal/`, the three lenses and the five-round limit

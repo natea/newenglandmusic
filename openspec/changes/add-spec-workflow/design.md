@@ -75,7 +75,7 @@ finish -> exit
   - the archived changes' designs, where Nate's dated decisions are kept.
 - The bridge posts as `natea` with its marker. Both `propose.md` and `fidelity.md` say such a comment is the bridge's, not Nate speaking, as the triage prompts do.
 
-**Round limit: 3** (Nate's decision, 2 November 2026; the skill itself sets no limit).
+**Round limit: 5** (Nate's decision, 2 November 2026: first 3, then 5 after the review of this very proposal took five rounds; the skill itself sets no limit). At the limit the run doesn't stop empty-handed: it ends with the draft marked not passed and the open findings in the summary.
 - The limit caps cost.
 - A run that hits it still ends with its draft, since a draft with open findings is more use to Nate than a failed run.
 - `review.md`'s first line and `reviewed: not-passed` both say it wasn't passed.
@@ -97,8 +97,8 @@ finish -> exit
 
 ## Risks / Trade-offs
 
-- **[Usage]** A run takes up to 13 agent sessions on the Max subscription, or 14 with sketches. → The round limit, and the bridge starts one `spec` run per issue.
-- **[Time]** Up to seven sequential agent phases, inside the bridge's three-hour sandbox lifetime. → The live check records the elapsed time. If the lifetime runs out, the run fails and is reported.
+- **[Usage]** A run takes up to 21 agent sessions on the Max subscription (1 propose, 15 review, 5 revise), or 22 with sketches. → The round limit, and the bridge starts one `spec` run per issue.
+- **[Time]** Up to twelve sequential agent phases, which may not fit the bridge's three-hour sandbox lifetime. → The live check records how long a round takes. If five rounds don't fit, Nate decides whether to raise `SANDBOX_LIFETIME_MINUTES` or lower the limit. If the lifetime runs out, the run fails and is reported.
 - **[A reviewer is never satisfied]** → The limit ends the loop with the draft and its findings for Nate.
 - **[The agent edits code]** The prompt forbids it, and only `.intentable/proposal/`, which holds just the change folder, leaves the sandbox.
 - **[Issue text steering the agent]** As with `triage`:
