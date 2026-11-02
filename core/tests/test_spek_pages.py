@@ -155,3 +155,32 @@ class SpekWorkflowQueueTestCase(SimpleTestCase):
     def test_a_failed_publish_doesnt_fail_the_commit(self):
         for s in spek_workflow()[2]["steps"]:
             self.assertIs(s.get("continue-on-error"), True, s.get("name"))
+
+
+class RuleAndGuideTestCase(SimpleTestCase):
+    """drafts published before the owner confirms them; a guide says where the pages are"""
+
+    def test_the_rule_is_written_down(self):
+        agents = (ROOT / "AGENTS.md").read_text()
+        for needed in (
+            "G2 is the owner confirming a proposal",
+            '"Draft" in the commit subject',
+            '"Confirm proposal <name> (G2)"',
+            "https://natea.github.io/newenglandmusic/changes/<name>/",
+            "`change/<name>` branches may be pushed here without asking",
+            "push `main` only when asked",
+            "Keep host and network names out of OpenSpec files",
+        ):
+            self.assertIn(needed, agents)
+
+    def test_guide_addresses(self):
+        guide = (ROOT / "docs" / "SPEK.md").read_text()
+        for needed in (
+            "https://natea.github.io/newenglandmusic/",
+            "https://natea.github.io/newenglandmusic/changes/<name>/",
+            "`.github/workflows/spek.yml`",
+            "whole repository's OpenSpec",
+            "Pages stay after a branch is deleted",
+            "Keep host and network names out of OpenSpec files",
+        ):
+            self.assertIn(needed, guide)

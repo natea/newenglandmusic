@@ -26,13 +26,13 @@
 
 ## 3. The rule and the guide
 
-- [ ] 3.1 In `AGENTS.md`:
+- [x] 3.1 In `AGENTS.md`:
   - define G2 as the owner confirming a proposal, and G4 as the owner accepting its implementation;
   - in the OpenSpec section: a proposal's draft is committed, with "Draft" in its subject, and its `change/` branch pushed to natea/newenglandmusic before G2, so it has a Spek page at `https://natea.github.io/newenglandmusic/changes/<name>/`; the confirmation is recorded by an empty commit "Confirm proposal <name> (G2)"; keep host and network names out of OpenSpec files;
   - in the line on pushing (now "Render deploys its `main` branch, so push only when asked"): `change/` branches may be pushed to natea/newenglandmusic without asking; `main` and the upstream still need the owner.
 
   `CLAUDE.md` links to `AGENTS.md`, so one edit covers both. Add a test for "The rule is written down".
-- [ ] 3.2 Add `docs/SPEK.md`:
+- [x] 3.2 Add `docs/SPEK.md`:
   - the site's address and a change page's address;
   - which pushes publish, and that a branch needs `.github/workflows/spek.yml`, from `main`, to get a page;
   - that each page shows the whole repository's OpenSpec, with the change found by name;
@@ -40,6 +40,7 @@
   - to keep host and network names out of OpenSpec files.
 
   Add a test for "Guide addresses". Run the full suite (`python manage.py test`).
+  - 2 November 2026: 1,464 tests, one failure, `test_youtube_preview_browser.test_click_opens_the_video`, which fails the same way on `main` without this change.
 
 ## 4. Live check
 
