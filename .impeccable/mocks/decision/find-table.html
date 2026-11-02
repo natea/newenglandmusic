@@ -1,0 +1,97 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Find box over a table</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:1440px;height:900px;overflow:hidden;background:#d4d0c7;font:15px/1.4 "Open Sans",sans-serif;color:#1a1a1a}
+.frames{display:grid;grid-template-columns:1fr 1fr;gap:28px;padding:22px 40px}
+.frame{min-width:0}
+.site{display:flex;align-items:baseline;gap:14px;margin-bottom:14px}
+.site h1{margin:0;font:800 26px/1 Helvetica,Arial,sans-serif;letter-spacing:-.01em}
+.site nav{margin-left:auto;font-size:13px}.site nav a{color:#000080}
+.tab{display:inline-block;margin:0;padding:.18em .45em .12em;background:#8b5d8b;color:#fff;font:800 34px/1.02 Helvetica,Arial,sans-serif;letter-spacing:-.015em}
+.card{background:#f6f4ee;border:1px solid #b9b4a8;border-top:3px solid #8b5d8b;box-shadow:0 1px 0 #b9b4a8;padding:16px 22px 18px}
+.find{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.find label{font-weight:700}
+.find input{flex:1;padding:7px 10px;border:1px solid #b9b4a8;background:#fff;font:inherit;font-size:16px;outline:2px solid #8b5d8b}
+.find .n{color:#4f4b44;font-size:13px;white-space:nowrap}
+.rail{display:flex;flex-wrap:wrap;gap:0 2px;padding:5px 8px;background:#eeeeff;font-weight:700;font-size:13px;margin-bottom:6px}
+.rail a{color:#000080;min-width:1.25em;text-align:center}.rail span{color:#4f4b44;font-weight:400;min-width:1.25em;text-align:center}
+.rail .on{background:#8b5d8b;color:#fff;text-decoration:none}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;padding:6px 8px 5px;border-bottom:2px solid #8b5d8b;font-size:12.5px;color:#4f4b44;white-space:nowrap}
+th a{color:#1a1a1a;text-decoration:none}th .sort{color:#8b5d8b}
+td{padding:5px 8px;border-bottom:1px solid #c9d3e6;vertical-align:baseline}
+td:first-child a{color:#000080;font-weight:700}
+td.k,td.f{color:#4f4b44;font-size:13px}
+td.d{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+th.d{text-align:right}
+mark{background:#eeeeff;color:inherit;padding:0 1px}
+h3{margin:18px 0 0;display:flex;align-items:baseline;gap:8px;font:700 17px/1.2 Helvetica,Arial,sans-serif}
+h3 small{font:400 13px "Open Sans",sans-serif;color:#4f4b44}
+.more{margin:6px 0 0;font-size:13px}.more a{color:#000080}
+</style></head><body><div class="frames">
+
+<section class="frame">
+ <div class="site"><h1>New England Music</h1><nav><a href="#">Saved shows</a> | <a href="#">Bands &amp; artists</a></nav></div>
+ <h2 class="tab">Bands &amp; artists</h2>
+ <div class="card">
+  <div class="find"><label for="f">Find</label><input id="f" value="be"><span class="n">142 of 3,118</span></div>
+  <nav class="rail"><a>#</a><a>A</a><a class="on">B</a><a>C</a><a>D</a><a>E</a><a>F</a><a>G</a><a>H</a><a>I</a><a>J</a><a>K</a><a>L</a><a>M</a><a>N</a><a>O</a><a>P</a><span>Q</span><a>R</a><a>S</a><a>T</a><a>U</a><a>V</a><a>W</a><span>X</span><a>Y</a><a>Z</a></nav>
+  <table>
+   <thead><tr><th><a>Name <span class="sort">▲</span></a></th><th><a>Kind</a></th><th><a>From</a></th><th class="d"><a>Next show</a></th></tr></thead>
+   <tbody>
+    <tr><td><a>Beach Vacation</a></td><td class="k">Band</td><td class="f">Oak Harbor</td><td class="d">Feb 27</td></tr>
+    <tr><td><a>Bear Rinehart</a></td><td class="k">Artist</td><td class="f">United States</td><td class="d"></td></tr>
+    <tr><td><a>Beartooth</a></td><td class="k">Band</td><td class="f">United States</td><td class="d">Nov 11</td></tr>
+    <tr><td><a>Beau Burchell</a></td><td class="k">Artist</td><td class="f">United States</td><td class="d"></td></tr>
+    <tr><td><a>Bedouine</a></td><td class="k">Artist</td><td class="f">Los Angeles</td><td class="d">Nov 12</td></tr>
+    <tr><td><a>Beefcake the Mighty</a></td><td class="k">Artist</td><td class="f"></td><td class="d"></td></tr>
+    <tr><td><a>Bees Deluxe</a></td><td class="k">Band</td><td class="f">Boston</td><td class="d">Jan 7</td></tr>
+    <tr><td><a>Béla Fleck</a></td><td class="k">Artist</td><td class="f">United States</td><td class="d"></td></tr>
+    <tr><td><a>Belen</a></td><td class="k">Artist</td><td class="f">Austin</td><td class="d">Nov 10</td></tr>
+    <tr><td><a>Bellcave</a></td><td class="k">Band</td><td class="f"></td><td class="d">Oct 31</td></tr>
+    <tr><td><a>Ben Bennet</a></td><td class="k">Artist</td><td class="f">United States</td><td class="d"></td></tr>
+    <tr><td><a>Ben Caplan</a></td><td class="k">Artist</td><td class="f">Canada</td><td class="d">Nov 15</td></tr>
+    <tr><td><a>Ben Cosgrove</a></td><td class="k">Artist</td><td class="f"></td><td class="d">Nov 7</td></tr>
+    <tr><td><a>Ben Deily</a></td><td class="k">Artist</td><td class="f">United States</td><td class="d"></td></tr>
+    <tr><td><a>Ben Holloway</a></td><td class="k">Artist</td><td class="f">Scotland</td><td class="d"></td></tr>
+    <tr><td><a>Ben Kachler</a></td><td class="k">Artist</td><td class="f"></td><td class="d"></td></tr>
+    <tr><td><a>Ben Katzman</a></td><td class="k">Artist</td><td class="f"></td><td class="d"></td></tr>
+   </tbody>
+  </table>
+ </div>
+</section>
+
+<section class="frame">
+ <div class="site"><h1>New England Music</h1><nav><a href="#">Saved shows</a> | <a href="#">Bands &amp; artists</a></nav></div>
+ <h2 class="tab">Search</h2>
+ <div class="card">
+  <div class="find"><label for="s">Search</label><input id="s" value="bel"><span class="n">6 acts · 14 shows</span></div>
+  <h3>Bands &amp; artists <small>6</small></h3>
+  <table>
+   <thead><tr><th>Name</th><th>Kind</th><th>From</th><th class="d">Next show</th></tr></thead>
+   <tbody>
+    <tr><td><a><mark>Bel</mark>en</a></td><td class="k">Artist</td><td class="f">Austin</td><td class="d">Nov 10</td></tr>
+    <tr><td><a><mark>Bel</mark>lcave</a></td><td class="k">Band</td><td class="f"></td><td class="d">Oct 31</td></tr>
+    <tr><td><a><mark>Bél</mark>a Fleck</a></td><td class="k">Artist</td><td class="f">United States</td><td class="d"></td></tr>
+    <tr><td><a>Callum <mark>Bel</mark>l</a></td><td class="k">Artist</td><td class="f"></td><td class="d">Nov 6</td></tr>
+    <tr><td><a>Dan Campb<mark>el</mark>l</a></td><td class="k">Artist</td><td class="f">United States</td><td class="d"></td></tr>
+    <tr><td><a>Eric Am<mark>bel</mark></a></td><td class="k">Artist</td><td class="f">United States</td><td class="d"></td></tr>
+   </tbody>
+  </table>
+  <h3>Shows <small>5 upcoming, 9 past</small></h3>
+  <table>
+   <thead><tr><th>Date</th><th>Show</th><th>Venue</th></tr></thead>
+   <tbody>
+    <tr><td class="d" style="text-align:left">Nov 3</td><td><a style="color:#000080;font-weight:700">Herald's Goose: Constellation X, Mourning Wood…</a></td><td class="f">The Government Center</td></tr>
+    <tr><td class="d" style="text-align:left">Nov 6</td><td><a style="color:#000080;font-weight:700">Irish Session: Callum <mark>Bel</mark>l &amp; friends</a></td><td class="f">The Burren</td></tr>
+    <tr><td class="d" style="text-align:left">Nov 8</td><td><a style="color:#000080;font-weight:700">Studio <mark>Bel</mark>t: Anywhere But Here</a></td><td class="f">The Burren</td></tr>
+    <tr><td class="d" style="text-align:left">Nov 9</td><td><a style="color:#000080;font-weight:700">AYĖL, <mark>Bel</mark>en, DÀN, &amp; Aydan Hill</a></td><td class="f">The Rockwell</td></tr>
+    <tr><td class="d" style="text-align:left">Nov 12</td><td><a style="color:#000080;font-weight:700">Jake Klar with Noble Dust &amp; Hayley Sabella</a></td><td class="f">The Rockwell</td></tr>
+   </tbody>
+  </table>
+  <p class="more"><a>Show 9 past shows</a></p>
+ </div>
+</section>
+</div></body></html>

@@ -1,0 +1,488 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-29T22:36:45-04:00",
+  "title": "Design System: New England Music",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Paper Grey",
+        "canonical": "oklch(85.8% 0.013 87)",
+        "tonalRamp": [
+          "#0c0b08",
+          "#282621",
+          "#47453f",
+          "#69665e",
+          "#8c8981",
+          "#b1aea7",
+          "#d3d1cb",
+          "#f0eee9"
+        ]
+      },
+      "card-stock": {
+        "role": "neutral",
+        "displayName": "Card Stock",
+        "canonical": "oklch(96.7% 0.008 91)",
+        "tonalRamp": [
+          "#0c0b09",
+          "#272623",
+          "#464541",
+          "#686661",
+          "#8b8984",
+          "#afaea9",
+          "#d2d1cd",
+          "#efeeeb"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(77.1% 0.018 88)",
+        "tonalRamp": [
+          "#0d0b07",
+          "#292620",
+          "#48453c",
+          "#6a665b",
+          "#8d897e",
+          "#b1aea4",
+          "#d4d1c9",
+          "#f1eee7"
+        ]
+      },
+      "plum": {
+        "role": "primary",
+        "displayName": "Divider Plum",
+        "canonical": "oklch(54.1% 0.092 327)",
+        "tonalRamp": [
+          "#160316",
+          "#361a37",
+          "#5a355a",
+          "#815381",
+          "#a477a4",
+          "#c79ec6",
+          "#e7c4e6",
+          "#ffe3ff"
+        ]
+      },
+      "lavender-strip": {
+        "role": "secondary",
+        "displayName": "Strip Lavender",
+        "canonical": "oklch(95.4% 0.023 286)",
+        "tonalRamp": [
+          "#0b0a10",
+          "#26252e",
+          "#44444f",
+          "#656472",
+          "#888896",
+          "#adadb9",
+          "#d0d0db",
+          "#ededf7"
+        ]
+      },
+      "ruled-blue": {
+        "role": "neutral",
+        "displayName": "Ruled Blue",
+        "canonical": "oklch(86.5% 0.028 263)",
+        "tonalRamp": [
+          "#080b12",
+          "#212730",
+          "#3e4552",
+          "#5e6676",
+          "#818999",
+          "#a7aebd",
+          "#cbd1de",
+          "#e9effa"
+        ]
+      },
+      "navy-link": {
+        "role": "secondary",
+        "displayName": "Link Navy",
+        "canonical": "oklch(27.1% 0.188 264)",
+        "tonalRamp": [
+          "#000037",
+          "#041c65",
+          "#173b96",
+          "#2e5ccb",
+          "#5283f0",
+          "#7eabff",
+          "#a8d0ff",
+          "#cbeeff"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0% 0 0)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "card-ink": {
+        "role": "neutral",
+        "displayName": "Card Ink",
+        "canonical": "oklch(21.8% 0 0)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "quiet": {
+        "role": "neutral",
+        "displayName": "Quiet Grey",
+        "canonical": "oklch(41.4% 0.013 82)",
+        "tonalRamp": [
+          "#0d0b08",
+          "#292622",
+          "#48453f",
+          "#6a665e",
+          "#8d8982",
+          "#b1ada7",
+          "#d4d0cb",
+          "#f1eee9"
+        ]
+      },
+      "divider": {
+        "role": "neutral",
+        "displayName": "Row Rule",
+        "canonical": "rgba(0, 0, 0, 0.3)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "teal-aside": {
+        "role": "tertiary",
+        "displayName": "Aside Teal",
+        "canonical": "oklch(54.3% 0.093 195)",
+        "tonalRamp": [
+          "#001112",
+          "#003030",
+          "#005151",
+          "#007676",
+          "#409999",
+          "#74bdbc",
+          "#a2dedd",
+          "#c7faf9"
+        ]
+      },
+      "tix-yellow": {
+        "role": "tertiary",
+        "displayName": "Ticket Yellow",
+        "canonical": "rgba(255, 255, 59, 0.8)",
+        "tonalRamp": [
+          "#1a1a00",
+          "#3a3a05",
+          "#5e5e10",
+          "#86861c",
+          "#adad2a",
+          "#d4d43a",
+          "#f2f24a",
+          "#ffff9e"
+        ]
+      },
+      "today-cream": {
+        "role": "tertiary",
+        "displayName": "Today Cream",
+        "canonical": "rgb(251, 247, 224)",
+        "tonalRamp": [
+          "#0d0b04",
+          "#29271b",
+          "#484536",
+          "#6a6754",
+          "#8d8a77",
+          "#b1ae9e",
+          "#d4d1c3",
+          "#f1efe2"
+        ]
+      },
+      "grid-line": {
+        "role": "neutral",
+        "displayName": "Grid Line",
+        "canonical": "oklch(89.8% 0 0)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "canonical": "oklch(68.3% 0 0)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "paper-white": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "gcal-blue": {
+        "role": "tertiary",
+        "displayName": "Calendar Blue",
+        "canonical": "oklch(57.4% 0.195 258)",
+        "tonalRamp": [
+          "#000038",
+          "#001e66",
+          "#003e98",
+          "#0260cd",
+          "#3b87f2",
+          "#6eaeff",
+          "#9bd3ff",
+          "#c1f1ff"
+        ]
+      },
+      "map-plum": {
+        "role": "tertiary",
+        "displayName": "Map Plum",
+        "canonical": "oklch(48.5% 0.145 353)",
+        "tonalRamp": [
+          "#21000e",
+          "#48072b",
+          "#72224b",
+          "#9f3e6d",
+          "#c56490",
+          "#e68fb4",
+          "#ffb7d6",
+          "#ffd8f3"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The act's name on the plum tab only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Masthead title and the sticky, centred day header."
+      },
+      "calendar-date": {
+        "displayName": "Calendar Date",
+        "purpose": "Day numbers in the month grid."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section headings inside the act card."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Listing rows and card text; names, venues and dates bold within it."
+      },
+      "body-lead": {
+        "displayName": "Body Lead",
+        "purpose": "The act card's meta line and next-show strip."
+      },
+      "body-ruled": {
+        "displayName": "Body Ruled",
+        "purpose": "The act's bio on 28px ruled lines, 65ch measure."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels in the card's 7.5em column, Quiet Grey."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Descriptions, prices, distance, pills, footnotes."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Photo captions and licence credits."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-edge",
+        "value": "0 1px 0 #b9b4a8",
+        "purpose": "Under the act card only; the system is otherwise flat."
+      }
+    ],
+    "motion": [
+      {
+        "name": "target-highlight",
+        "value": "highlight 2s ease-out (background #ffa600ae to #ffa60015)",
+        "purpose": "Flashes the listing row that is the URL's target (.event:target)."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "600px",
+        "purpose": "max-width; act card padding, stacked field labels, narrower show dates. The calendar itself has no breakpoints."
+      }
+    ],
+    "layout": {
+      "column": "42em",
+      "pageMargin": "8px",
+      "columnMargin": "15px auto"
+    }
+  },
+  "components": [
+    {
+      "name": "Content Link",
+      "kind": "custom",
+      "refersTo": "link",
+      "description": "Navy underlined link, the default for every content link.",
+      "html": "<p class=\"ds-p\">Next at <a class=\"ds-link\" href=\"#\">District Music Hall</a>, Norwalk, CT</p>",
+      "css": ".ds-p{font-family:\"Open Sans\",sans-serif;font-size:1rem;color:#000;margin:0}.ds-link{color:#000080;text-underline-offset:0.15em}.ds-link:hover{color:#000}.ds-link:focus-visible{outline:2px solid #000080;outline-offset:2px}"
+    },
+    {
+      "name": "Month Bar",
+      "kind": "nav",
+      "refersTo": "month-bar",
+      "description": "Plum bar of previous, current and next month links under the calendar.",
+      "html": "<nav class=\"ds-monthbar\"><a href=\"#\">&larr; sept</a><a href=\"#\">oct</a><a href=\"#\">nov &rarr;</a></nav>",
+      "css": ".ds-monthbar{display:flex;align-items:baseline;background:#8b5b8b;padding:1px 6px 2px;font-family:\"Open Sans\",sans-serif}.ds-monthbar a{flex:1;text-align:center;color:#fff}.ds-monthbar a:hover{text-decoration-thickness:2px}.ds-monthbar a:focus-visible{outline:2px solid #fff;outline-offset:1px}"
+    },
+    {
+      "name": "Filter Strip",
+      "kind": "input",
+      "refersTo": "filter-strip",
+      "description": "Lavender strip holding the region, state and metro selects.",
+      "html": "<div class=\"ds-filter\"><label>region <select><option>All</option></select></label><label>state <select><option>All</option></select></label><label>metro area <select><option>All</option></select></label></div>",
+      "css": ".ds-filter{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:6px;background:#eeeeff;font-family:\"Open Sans\",sans-serif}.ds-filter label{white-space:nowrap}.ds-filter select:focus-visible{outline:2px solid #000080;outline-offset:1px}"
+    },
+    {
+      "name": "Listing Row",
+      "kind": "custom",
+      "refersTo": "event-row",
+      "description": "One show in the calendar: time column, bold names, venue and town, small description, ticket badge.",
+      "html": "<div class=\"ds-row\"><span class=\"ds-time\">7:00pm</span><span class=\"ds-content\"><a href=\"#\"><b>Phantom Rider</b></a>, <b>Zipper</b> @ <b>AS220</b>, Providence, RI <span class=\"ds-desc\">// all ages</span></span><span class=\"ds-tix\"><span><a href=\"#\">tix</a></span></span></div>",
+      "css": ".ds-row{display:flex;align-items:baseline;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.3);font-family:\"Open Sans\",sans-serif;background:#d4d0c7}.ds-time{flex:0 0 auto;min-width:4.6em;padding-right:0.3em;font-variant-numeric:tabular-nums}.ds-content{flex:1;min-width:0}.ds-content a{color:#000080}.ds-desc{font-size:0.85rem}.ds-tix{flex:0 0 24px;text-align:right}.ds-tix span{background:rgba(255,255,59,0.8);border:1px solid #000;font-size:0.9rem;padding:0 1px}.ds-tix a{color:#000;text-decoration:none}.ds-tix a:hover{text-decoration:underline}"
+    },
+    {
+      "name": "Action Icon Row",
+      "kind": "custom",
+      "refersTo": "action-icon",
+      "description": "The event's 18px line icons, in listings and on the act card.",
+      "html": "<div class=\"ds-actions\"><a href=\"#\" title=\"Add to calendar (iCal)\"><svg viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2.5\"/><path d=\"M3 10h18M8 3v4M16 3v4M12 12.5v6M9.5 16l2.5 2.5 2.5-2.5\"/></svg></a><a href=\"#\" class=\"ds-gcal\" title=\"Add to Google Calendar\"><svg viewBox=\"0 0 24 24\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2.5\"/><path d=\"M3 10h18M8 3v4M16 3v4\"/><path class=\"ds-dot\" d=\"M8.5 14.5h2v2h-2zM13.5 14.5h2v2h-2z\"/></svg></a><a href=\"#\" class=\"ds-map\" title=\"Map\"><svg viewBox=\"0 0 24 24\"><path d=\"M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0C18.5 14.8 12 21 12 21z\"/><circle cx=\"12\" cy=\"10\" r=\"2.3\"/></svg></a><a href=\"#\" title=\"Share\"><svg viewBox=\"0 0 24 24\"><path d=\"M12 3v12M8 7l4-4 4 4\"/><path d=\"M7 10.5H5.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1H17\"/></svg></a><a href=\"#\" title=\"Save\"><svg viewBox=\"0 0 24 24\"><path d=\"M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z\"/></svg></a></div>",
+      "css": ".ds-actions{display:flex;align-items:center;gap:2px 10px}.ds-actions a{display:inline-flex;padding:2px;color:#000;border-radius:4px}.ds-actions a:hover{background:rgba(0,0,0,0.08)}.ds-actions a:focus-visible{outline:2px solid #000080;outline-offset:2px}.ds-actions svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ds-actions .ds-gcal{color:#1a73e8}.ds-actions .ds-gcal .ds-dot{fill:currentColor;stroke:none}.ds-actions .ds-map{color:#993366}"
+    },
+    {
+      "name": "Play Pill",
+      "kind": "chip",
+      "refersTo": "pill",
+      "description": "Bordered pill for listening previews and town chips; border takes the service colour on hover.",
+      "html": "<a class=\"ds-pill\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"12\" height=\"12\"><circle cx=\"12\" cy=\"12\" r=\"11\" fill=\"#1db954\"/></svg>&#9654; After</a>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;gap:4px;font-family:\"Open Sans\",sans-serif;font-size:0.85rem;color:#000;text-decoration:none;border:1px solid rgba(0,0,0,0.3);border-radius:12px;padding:1px 8px}.ds-pill:hover{border-color:#1db954}.ds-pill:focus-visible{outline:2px solid #000080;outline-offset:2px}"
+    },
+    {
+      "name": "Act Tab and Card",
+      "kind": "card",
+      "refersTo": "act-card",
+      "description": "The band page's index card: name on the plum tab, card stock with a hairline border and plum top edge, meta line and next-show strip.",
+      "html": "<article class=\"ds-act\"><h1 class=\"ds-tab\">Built To Spill</h1><div class=\"ds-card\"><p class=\"ds-meta\">Band &middot; indie rock &middot; United States &middot; since 1992</p><p class=\"ds-next\"><span class=\"ds-when\">Thu, Oct 29 &middot; 7:30 p.m.</span><span><a href=\"#\">District Music Hall</a>, Norwalk, CT</span><a class=\"ds-more\" href=\"#\">2 more shows</a></p></div></article>",
+      "css": ".ds-act{font-family:\"Open Sans\",sans-serif;background:#d4d0c7;padding:12px}.ds-tab{display:inline-block;margin:0;padding:0.18em 0.45em 0.12em;background:#8b5b8b;color:#fff;font:800 clamp(2rem,7vw,3.4rem)/1.02 Helvetica,Arial,sans-serif;letter-spacing:-0.015em;overflow-wrap:anywhere}.ds-card{background:#f6f4ee;border:1px solid #b9b4a8;border-top:3px solid #8b5b8b;box-shadow:0 1px 0 #b9b4a8;padding:18px 24px 22px;color:#1a1a1a}.ds-meta{margin:0 0 14px;font-size:1.05rem;color:#4f4b44}.ds-next{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:0;padding:10px 14px;background:#eeeeff;font-size:1.05rem;line-height:1.4}.ds-when{font-weight:700;font-variant-numeric:tabular-nums}.ds-next a{color:#000080;text-underline-offset:0.15em}.ds-next a:focus-visible{outline:2px solid #000080;outline-offset:2px}.ds-more{margin-left:auto;font-size:0.95rem}"
+    },
+    {
+      "name": "Field List and Ruled Bio",
+      "kind": "custom",
+      "refersTo": "field-label",
+      "description": "The card's definition list (bold quiet labels in a 7.5em column) and the bio on 28px ruled lines.",
+      "html": "<div class=\"ds-card2\"><dl class=\"ds-fields\"><dt>Links</dt><dd><a href=\"#\">Website</a> &middot; <a href=\"#\">Bandcamp</a></dd></dl><div class=\"ds-bio\"><p>Built to Spill is an American indie rock band formed in Boise, Idaho, in 1992. Centered on lead vocalist and guitarist Doug Martsch.</p></div></div>",
+      "css": ".ds-card2{background:#f6f4ee;padding:18px 24px;color:#1a1a1a;font-family:\"Open Sans\",sans-serif}.ds-fields{display:grid;grid-template-columns:7.5em 1fr;gap:12px 16px;margin:0 0 18px;padding-top:14px;border-top:2px solid #8b5b8b}.ds-fields dt{font-weight:700;color:#4f4b44;line-height:1.5}.ds-fields dd{margin:0;line-height:1.5}.ds-fields a{color:#000080;text-underline-offset:0.15em}.ds-fields a:focus-visible{outline:2px solid #000080;outline-offset:2px}.ds-bio{padding-top:14px;border-top:2px solid #8b5b8b;background-image:repeating-linear-gradient(to bottom,transparent 0 27px,#c9d3e6 27px 28px);background-origin:content-box}.ds-bio p{margin:0;max-width:65ch;font-size:1rem;line-height:28px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Record-Store Bin",
+    "overview": "New England Music is a long, honest list on warm grey paper: the calendar is the stock, sorted by month and day, and each act is a filed index card with its name printed on a plum divider tab. The look came with the nyc noise fork and is kept on purpose. It is dense, text-first and close to the browser's own defaults: bold sans names, navy underlined links, thin rules between rows, and a few flat colour bands (lavender for the strips you act on, plum for the dividers you navigate by). Nothing is decorative. Every colour band means something, and a sparse local act's card and a famous band's card use the same fields, so both read as the same kind of record.\n\nDensity is the point. A listing row is a time column, bold performer and venue names, a small grey description, and a row of 18px line icons, with no cards, thumbnails or spacing to soften it. The band page adds the system's one container, an off-white card on the grey ground, and keeps the same single 42em column, the same navy links, the same lavender strip and the same icon row as the calendar, so moving from a listing to an act feels like pulling one card out of the bin.",
+    "keyCharacteristics": [
+      "One 42em column on warm grey (#d4d0c7), for every page.",
+      "Flat colour bands with fixed meanings: lavender for filtering and the next show, plum for month navigation and the act's tab and rules.",
+      "Navy underlined links in content; bold names (performers, venues, dates) over regular-weight detail.",
+      "Text-first, dense listings with thin divider rules, never boxed cards.",
+      "One container, the act card: off-white stock, a hairline border, a 3px plum top edge, square corners.",
+      "18px line icons drawn with a 1.8 stroke in currentColor, the only icon language."
+    ],
+    "rules": [
+      {
+        "name": "The Band Means Something Rule",
+        "body": "Lavender marks where the visitor filters or acts (the filter, subscribe drawer, empty notice, next-show strip). Plum marks where they navigate or where a record starts (the month bar, the act tab, the card's section rules). A new surface uses each band for that job only, and never for decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Navy Underline Rule",
+        "body": "Content links are navy and underlined. Only the masthead title, the burger and the ticket badge drop the underline.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Time Rule",
+        "body": "Times, dates and year ranges use tabular figures: the listing's 4.6em time column, the next-show date, the show list's dates and the members' years. Columns of times line up.",
+        "section": "typography"
+      },
+      {
+        "name": "The Bold Names Rule",
+        "body": "The things a visitor scans for (performers, venues, the show's date) are bold. Everything around them is regular weight. Weight sets the hierarchy, not colour or size.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Column Rule",
+        "body": "Every page sits in the 42em column. New surfaces don't widen it or add sidebars; a container lives inside it.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Paper Rule",
+        "body": "No blurred or offset shadows. A surface separates from the ground by colour, a hairline and a rule.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep every surface in the single 42em column on the warm grey ground (#d4d0c7).",
+      "**Do** use lavender (#eeeeff) for the band where a visitor filters or acts, and plum for month navigation, an act's tab and its section rules (2px) and top edge (3px).",
+      "**Do** set content links in navy (#000080) with their underline.",
+      "**Do** make names, venues and dates bold, and set times, dates and years in tabular figures.",
+      "**Do** reuse the 18px line-icon action row (stroke 1.8, currentColor) wherever an event appears.",
+      "**Do** leave a field out when there is no data for it. Never draw a placeholder.",
+      "**Do** keep containers square, and round only small controls (4px icon plates, 12–14px pills)."
+    ],
+    "donts": [
+      "**Don't** add blurred or offset shadows. The act card's 1px hairline bottom edge (0 1px 0 #b9b4a8) is the only shadow.",
+      "**Don't** box listing rows into cards. A row is separated by its 1px rule.",
+      "**Don't** use plum or lavender as text colours, button fills or decorative tints.",
+      "**Don't** widen the column or add a sidebar. On an act page the name and next show come first, and a photo is a credited field after the bio, never a banner.",
+      "**Don't** introduce a second icon style (filled, duotone or glyph icons) alongside the line icons."
+    ]
+  }
+}

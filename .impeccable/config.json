@@ -1,0 +1,71 @@
+{
+  "hook": {
+    "enabled": true,
+    "limits": {
+      "maxFindings": 5,
+      "maxChars": 8000
+    }
+  },
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          ".playwright-mcp/story/index.html"
+        ],
+        "createdAt": "2026-10-30T13:54:51.744Z",
+        "reason": "claude: story page outside the site; low-contrast measured dark tokens on an unthemed white page, checked in a dark-mode render; day headers are full-width bands; its own fonts and sizes by choice"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".playwright-mcp/story/index.html"
+        ],
+        "createdAt": "2026-10-30T13:54:51.804Z",
+        "reason": "claude: story page outside the site; low-contrast measured dark tokens on an unthemed white page, checked in a dark-mode render; day headers are full-width bands; its own fonts and sizes by choice"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          ".playwright-mcp/story/index.html"
+        ],
+        "createdAt": "2026-10-30T13:54:51.855Z",
+        "reason": "claude: story page outside the site; low-contrast measured dark tokens on an unthemed white page, checked in a dark-mode render; day headers are full-width bands; its own fonts and sizes by choice"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".playwright-mcp/story/index.html"
+        ],
+        "createdAt": "2026-10-30T13:54:51.894Z",
+        "reason": "claude: story page outside the site; low-contrast measured dark tokens on an unthemed white page, checked in a dark-mode render; day headers are full-width bands; its own fonts and sizes by choice"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "*",
+        "files": [
+          ".playwright-mcp/story/index.html"
+        ],
+        "createdAt": "2026-10-30T13:54:51.925Z",
+        "reason": "claude: story page outside the site; low-contrast measured dark tokens on an unthemed white page, checked in a dark-mode render; day headers are full-width bands; its own fonts and sizes by choice"
+      },
+      {
+        "rule": "overused-font",
+        "value": "helvetica",
+        "createdAt": "2026-10-30T17:24:31.690Z",
+        "reason": "DESIGN.md: Helvetica is the site's recorded display face (act tab, card headings), inherited from nyc noise; sketches follow it"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "sans\",sans-serif",
+        "createdAt": "2026-11-01T02:44:10.764Z"
+      }
+    ]
+  }
+}

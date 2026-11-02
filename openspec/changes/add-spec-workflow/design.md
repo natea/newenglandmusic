@@ -30,7 +30,7 @@ route -> sketch -> check_sketches -> fork    (needs-design)
 route -> fork                                (otherwise)
 route -> finish                              (needs-info: no change, back with a question)
 fork -> risk, spec_fit, fidelity -> merge -> check_reviews
-check_reviews -> finish   [outcome=succeeded]   (all yes, or round limit reached)
+check_reviews -> finish   [context.review_done=true]   (all yes, or round limit reached)
 check_reviews -> revise   (otherwise)
 revise -> recheck -> fork  (recheck is the same draft check; the reviewers run again)
 finish -> exit
@@ -44,9 +44,9 @@ finish -> exit
   - it moves each round's reports and revise notes to `.intentable/reviews/<round>/`;
   - the revise notes written after round N are filed with round N's reports, the round they answer;
   - when the loop ends, it writes `.intentable/reviews/summary.md` and `.intentable/reviews/outcome`;
-  - it exits 0 when the loop should end, and 1 when another round is needed.
+  - it always exits 0, and prints `{"context_updates": {"review_done": "true"}}` when the loop should end, `"false"` when another round is needed. The step has `output_schema="routing"`, so Fabro merges that into the run context.
 
-  The edge into `revise` must therefore be the failure route, not the `on_failure="exit"` default. Task 1.1 checks this with `fabro validate` and a dry graph. If a conditional edge doesn't override `on_failure`, the script instead sets `context.review_done`, the edges branch on that, and the script always exits 0.
+  Task 1.1 found that an explicit `outcome=failed` edge is taken before `on_failure="exit"` applies, but `fabro validate` refuses a node whose outgoing edges all carry conditions. So the loop routes on `context.review_done`, with an unconditional edge to `revise` as the fallback. A crash in the script still exits nonzero and fails the run. `revise` has `max_visits=4`, the most the loop can reach.
 - **Reviewers run in one checkout**, since Fabro's fan-out shares it. Each writes only its own report file, so there is no race. Each is a separate agent node, and so a fresh session: it hasn't seen the propose agent's reasoning, only the files, which is the skill's rule that the author's conclusions stay out of the brief. From round 2, each prompt points at the previous round's `revise.md`, which is the skill's "told what changed since its read".
 - **`finish`** runs `bin/check-intentable-result spec`:
   1. it checks the draft again;
@@ -57,7 +57,7 @@ finish -> exit
   So `result.json`, `review.md` and the proposal files exist only in the `finish` stage's artifacts. No earlier step writes under those paths: the prompts say so, and Fabro records a path again only when its content changes, so an earlier identical copy would leave a file out of `finish`'s artifacts. The bridge would then refuse the draft loudly, as "a file missing". The bridge reads the proposal files from the same stage as the result, which avoids ambiguity between stage versions. Fabro numbers stages separately from retries.
 
 **Sketches** (Nate's decision, 2 November 2026: "sketches should be included in the proposal if design is needed").
-- After the first `check_draft`, a `route` script reads `.intentable/draft.json`. With `needs-design`, the graph goes to `sketch`; otherwise it goes straight to the fan-out. The edge mechanism is the one task 1.1 settles.
+- After the first `check_draft`, a `route` script reads `.intentable/draft.json`. It prints `{"context_updates": {"route": "sketch" | "back" | "review"}}` (`output_schema="routing"`), and the edges branch on `context.route`: `sketch` for `needs-design`, `back` for `needs-info` straight to `finish`, and the fan-out otherwise.
 - `sketch` is an ACP agent with the Impeccable plugin, installed in `install` from its marketplace (`pbakaus/impeccable`) at a pinned version. It is told to run Impeccable's decision step unattended: three options, each a self-contained HTML mock with inline CSS and no scripts, at 1440×900. It is also told not to generate images, so every file stays text. It copies the mocks and the options' payload into the change's `sketches/`, and adds a "Sketches" section to `design.md` that links each one.
 - It runs once. `check_sketches` checks the sketches at once, so a missing or unsafe one fails cheaply, before any reviewer. The reviewers then review the sketches with the rest of the change, and revise may edit a sketch but never regenerates the set. `recheck` checks their safety again.
 - `route` records the labels in `.intentable/route.json`, and revise may not change them, so the sketches always match the `needs-design` label. A reviewer who thinks the label is wrong says so in the report, and that goes to Nate in the summary. Nate corrects a wrong label himself; the run doesn't.
