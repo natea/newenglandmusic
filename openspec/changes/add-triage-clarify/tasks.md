@@ -1,9 +1,9 @@
 ## 1. The result checker
 
-- [ ] 1.1 Add `bin/check-intentable-result <triage|clarify> [path]`. It is Python with no dependencies, reads `.intentable/result.json` by default, holds the bridge's issue labels and states (citing `bridge/src/labels.ts` in natea/intentable), and exits non-zero with a plain reason. Add `core/tests/test_issue_triage.py` with tests for "No result file", "A label the bridge doesn't know" and "Not JSON", and a change-detector test that pins the label list.
-- [ ] 1.2 Check the triage rules (exactly one type, clarity, risk, blast and size label; `spec-review`, `needs-info` or `parked`) and refuse later-stage labels. Add tests for "A complete triage result", "A triage result missing a group", "Two labels of one group" and "A label for a later stage".
-- [ ] 1.3 Check the clarify rules (exactly one clarity label, at most one each of type, risk, blast and size; `spec-review` or `needs-info`). Add tests for "Clarify asks again" and "Clarify can't park".
-- [ ] 1.4 Check the clarity rule and the message:
+- [x] 1.1 Add `bin/check-intentable-result <triage|clarify> [path]`. It is Python with no dependencies, reads `.intentable/result.json` by default, holds the bridge's issue labels and states (citing `bridge/src/labels.ts` in natea/intentable), and exits non-zero with a plain reason. Add `core/tests/test_issue_triage.py` with tests for "No result file", "A label the bridge doesn't know" and "Not JSON", and a change-detector test that pins the label list.
+- [x] 1.2 Check the triage rules (exactly one type, clarity, risk, blast and size label; `spec-review`, `needs-info` or `parked`) and refuse later-stage labels. Add tests for "A complete triage result", "A triage result missing a group", "Two labels of one group" and "A label for a later stage".
+- [x] 1.3 Check the clarify rules (exactly one clarity label, at most one each of type, risk, blast and size; `spec-review` or `needs-info`). Add tests for "Clarify asks again" and "Clarify can't park".
+- [x] 1.4 Check the clarity rule and the message:
   - clarity 4–5 ↔ `spec-review`, 1–3 ↔ `needs-info`, `parked` any;
   - a message is always there;
   - a `needs-info` message has exactly one `?`;

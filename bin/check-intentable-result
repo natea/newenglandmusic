@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""check a triage or clarify run's result before the intentable bridge sees it.
+
+usage: check-intentable-result <triage|clarify> [path]
+
+reads .intentable/result.json (or path) and exits 0 when the bridge would
+accept it and it follows the issue-triage rules; otherwise prints one plain
+reason and exits 1, which fails the run (the workflows set on_failure="exit").
+"""
+
+import json
+import re
+import sys
+from pathlib import Path
+
+# the intentable bridge's issue labels, copied from bridge/src/labels.ts in
+# natea/intentable; a change to those labels must change this list too
+GROUPS = {
+    "type": ["type:bug", "type:feature", "type:refactor", "type:chore", "type:spike"],
+    "clarity": [f"clarity:{n}" for n in range(1, 6)],
+    "risk": [f"risk:{n}" for n in range(1, 6)],
+    "blast": [f"blast:{n}" for n in range(1, 6)],
+    "size": [f"size:{s}" for s in ("XS", "S", "M", "L", "XL")],
+}
+LATER_STAGES = [f"P{n}" for n in range(1, 6)] + ["needs-design", "ai-shippable"]
+ISSUE_LABELS = [label for labels in GROUPS.values() for label in labels] + LATER_STAGES
+STATES = ["triage", "needs-info", "spec-review", "needs-design", "building", "preview-ready", "merged", "parked"]
+
+# what each workflow may give
+ALLOWED_STATES = {"triage": ["spec-review", "needs-info", "parked"], "clarify": ["spec-review", "needs-info"]}
+MAX_MESSAGE = 2000
+# a GitHub mention: @login at the start of a word, so an email address isn't one
+MENTION = re.compile(r"(?<![\w.@])@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?")
+
+
+class Refused(Exception):
+    pass
+
+
+def group_of(label):
+    return next((name for name, labels in GROUPS.items() if label in labels), None)
+
+
+def check(workflow, text):
+    """the reason a result is refused, raised as Refused; returns the parsed result"""
+    try:
+        result = json.loads(text)
+    except ValueError:
+        raise Refused("the result isn't JSON")
+    if not isinstance(result, dict):
+        raise Refused("the result isn't a JSON object of labels, state and message")
+
+    labels = result.get("labels")
+    if not isinstance(labels, list) or not all(isinstance(label, str) for label in labels):
+        raise Refused("labels must be a list of label names")
+    for label in labels:
+        if label.startswith("state:"):
+            raise Refused(f"{label} is a state label; give the state as state instead")
+        if label not in ISSUE_LABELS:
+            raise Refused(f"{label} isn't one of the issue labels")
+        if label in LATER_STAGES:
+            raise Refused(f"{label} is for a later stage to set")
+
+    counts = {name: sum(1 for label in labels if group_of(label) == name) for name in GROUPS}
+    required = list(GROUPS) if workflow == "triage" else ["clarity"]
+    for name in GROUPS:
+        if counts[name] > 1:
+            raise Refused(f"more than one {name} label")
+        if name in required and counts[name] == 0:
+            raise Refused(f"no {name} label")
+
+    state = result.get("state")
+    if state not in STATES:
+        raise Refused(f"{state!r} isn't a state")
+    if state not in ALLOWED_STATES[workflow]:
+        raise Refused(f"{workflow} can't move an issue to {state}")
+
+    clarity = int(next(label for label in labels if group_of(label) == "clarity").split(":")[1])
+    if state == "spec-review" and clarity < 4:
+        raise Refused(f"clarity {clarity} needs a question, not spec review")
+    if state == "needs-info" and clarity >= 4:
+        raise Refused(f"clarity {clarity} goes to spec review, not another question")
+
+    message = result.get("message")
+    if not isinstance(message, str) or not message.strip():
+        raise Refused("the message is missing")
+    if state == "needs-info" and message.count("?") != 1:
+        raise Refused("ask one question: the message must have exactly one question mark")
+    if MENTION.search(message):
+        raise Refused("messages mention no one")
+    if len(message) > MAX_MESSAGE:
+        raise Refused(f"the message is too long: {len(message)} characters, at most {MAX_MESSAGE}")
+    return result
+
+
+def main(argv):
+    if len(argv) not in (2, 3) or argv[1] not in ALLOWED_STATES:
+        print("usage: check-intentable-result <triage|clarify> [path]", file=sys.stderr)
+        return 2
+    path = Path(argv[2] if len(argv) == 3 else ".intentable/result.json")
+    if not path.is_file():
+        print(f"the result is missing: no {path}", file=sys.stderr)
+        return 1
+    try:
+        check(argv[1], path.read_text())
+    except Refused as reason:
+        print(f"result refused: {reason}", file=sys.stderr)
+        return 1
+    print(f"{argv[1]} result accepted")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
