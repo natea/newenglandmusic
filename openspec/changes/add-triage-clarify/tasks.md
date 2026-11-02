@@ -28,8 +28,9 @@
 
 ## 3. The guide
 
-- [ ] 3.1 Add sections to `docs/FABRO.md` for `triage` and `clarify`: what each does, which issues start them (through the intentable bridge), what the result looks like, and how to try one by hand, with `fabro run natea/newenglandmusic@<branch>:triage --environment daytona --target natea/newenglandmusic@<branch>` and the five inputs. Add a test for "Guide sections".
-- [ ] 3.2 Run the full suite (`python manage.py test`) and fix what this change broke
+- [x] 3.1 Add sections to `docs/FABRO.md` for `triage` and `clarify`: what each does, which issues start them (through the intentable bridge), what the result looks like, and how to try one by hand, with `fabro run natea/newenglandmusic@<branch>:triage --environment daytona --target natea/newenglandmusic@<branch>` and the five inputs. Add a test for "Guide sections".
+- [x] 3.2 Run the full suite (`python manage.py test`) and fix what this change broke
+  - 2 November 2026: 1,479 tests, one failure, `test_youtube_preview_browser.test_click_opens_the_video` ("150 not greater than or equal to 200"). It fails the same way on `main` (503401b) without this change, so it isn't this change's; it came with other work on `main`. Everything this change adds passes.
 
 ## 4. Live check on the Spark
 

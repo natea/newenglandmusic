@@ -287,3 +287,18 @@ class PromptRulesTestCase(SimpleTestCase):
         self.assertNotIn("`parked`", prompt("clarify"))
         self.assertIn("clarity is 4 or 5", prompt("triage"))
         self.assertIn("clarity is 4 or 5", prompt("clarify"))
+
+
+class GuideTestCase(SimpleTestCase):
+    """a guide explains the workflows"""
+
+    def test_guide_sections(self):
+        guide = (FABRO.parent / "docs" / "FABRO.md").read_text()
+        headings = [line.lstrip("#").strip() for line in guide.splitlines() if line.startswith("#")]
+        for name in WORKFLOWS:
+            self.assertIn(name, headings)
+        trials = [line for line in guide.splitlines() if line.startswith("fabro run") and ":triage" in line]
+        self.assertEqual(len(trials), 1)
+        self.assertIn("--environment daytona", trials[0])
+        self.assertIn("--target natea/newenglandmusic@<branch>", trials[0])
+
