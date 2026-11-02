@@ -39,7 +39,8 @@ This needs the intentable change that makes `FABRO_WORKFLOW_REF` also set the ru
 - [ ] 4.1 Push the change branch to natea/newenglandmusic, set `FABRO_WORKFLOW_REF` to it in the Spark's `bridge.env`, and restart the bridge.
   - First, list the open issues from intake users with no state label: #9 on 2 November, while the list is only `natea`. The restart's catch-up starts triage on each of them; agree that list with Nate at the time. An issue he leaves off gets a state label by hand before the restart, so catch-up skips it.
   - From then until 4.4, every intake user's issue or reply runs the change branch's workflows.
-- [ ] 4.2 Watch the triage run that catch-up starts for #9. Check:
+  - 2 November 2026: the open intake issues with no state were #9 only (intake list `natea`; Sooz's #5 and #6 are not on it). The bridge was updated on the Spark (test branch as target), `FABRO_WORKFLOW_REF=change/add-triage-clarify` set, and restarted. Fabro refused the run: "no LLM provider is ready, and the workflow has a node that runs a model". Fabro counts Anthropic as ready only with an `ANTHROPIC_API_KEY`; the subscription token isn't a provider credential. Nate chose to add an Anthropic API key to the Spark's Fabro vault. The sandbox still gets an empty `ANTHROPIC_API_KEY` from the `daytona` environment, so Claude Code runs on the Max subscription. The bridge posted "couldn't start" on #9 and rolled back its label, as specified.
+- [x] 4.2 Watch the triage run that catch-up starts for #9. Check:
   - the issue gets five labels and a state;
   - the message is plain and asks one question, or summarises;
   - no question waits in Fabro;
@@ -47,6 +48,7 @@ This needs the intentable change that makes `FABRO_WORKFLOW_REF` also set the ru
   - the run's sandbox is deleted.
 
   Record the run ID, labels, state, message and time here. No redelivery: catch-up already started it.
+  - 2 November 2026: with the Anthropic key in the Spark's vault, a restart still started nothing, because Nate had added `state:triage` and `state:needs-info` to #9 by hand (thinking that would start a run; catch-up skips any issue with a state). With both labels removed and the bridge restarted, catch-up started run 01M6F1FFYE2HCWBRE465XCQ9FE. It succeeded in about 2 minutes. #9 got `type:feature`, `clarity:3`, `risk:2`, `blast:2`, `size:L` and `state:needs-info`, and one plain question with three options (booking basics only; basics plus capacity, sound system and pay norms; or a separate artist view), drawn from the venue fields in the code. No question waited in Fabro. The bridge gave the sandbox its three limits and deleted it when the run succeeded.
 - [ ] 4.3 If #9 went to `needs-info`, Nate replies on #9. Check that clarify runs, reads the thread, and either asks the next single question or moves #9 to `spec-review`. Record the run and result here.
 - [ ] 4.4 Remove `FABRO_WORKFLOW_REF` from the Spark's `bridge.env`, restart the bridge, and delete the pushed change branch from the fork. The restart's catch-up finds #9 with a state, so it starts nothing. An intake issue still without a state would get "the agent couldn't start" until the change is merged, and so would a reply on #9 if it is still `needs-info`.
 
