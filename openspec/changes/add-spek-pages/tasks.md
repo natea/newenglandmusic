@@ -10,7 +10,7 @@
 
 ## 2. The workflow
 
-- [ ] 2.1 Add `.github/workflows/spek.yml`:
+- [x] 2.1 Add `.github/workflows/spek.yml`:
   - triggers: `push` to `change/*` only, with `paths: [openspec/**, .github/workflows/spek.yml]`; a daily `schedule` and `workflow_dispatch`, both building `main`; no `delete` trigger;
   - `permissions: contents: write`;
   - the `natea/newenglandmusic` guard on the job;
@@ -22,7 +22,7 @@
     - `git ls-remote --exit-code --heads origin gh-pages`, its exit code captured (`rc=0; … || rc=$?`) rather than tripping `set -e`: 2 starts an orphan `gh-pages`, 0 fetches it and notes its commit, anything else stops;
     - `bin/publish-spek-page "$BRANCH" …` with `BRANCH: ${{ github.ref_name }}` from `env:`;
     - amend the branch's single commit as `github-actions[bot]`, and push with `--force-with-lease=gh-pages:<that commit>`, or `--force-with-lease=gh-pages:` (the branch must still not exist) the first time.
-- [ ] 2.2 Add tests, parsing the workflow with PyYAML (`data[True]` is `on:`), checking among other things that the build step has `id: build` and the gate names it, for "Main's trigger", "Change branches' trigger", "A failure can't wipe the pages", "No removal on delete", "Pinned and narrow", "Never upstream", "One at a time" and "A failed publish doesn't fail the commit".
+- [x] 2.2 Add tests, parsing the workflow with PyYAML (`data[True]` is `on:`), checking among other things that the build step has `id: build` and the gate names it, for "Main's trigger", "Change branches' trigger", "A failure can't wipe the pages", "No removal on delete", "Pinned and narrow", "Never upstream", "One at a time" and "A failed publish doesn't fail the commit".
 
 ## 3. The rule and the guide
 

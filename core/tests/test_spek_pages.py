@@ -3,6 +3,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import yaml
 from django.test import SimpleTestCase
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -64,3 +65,93 @@ class PlacingAPageTestCase(SimpleTestCase):
                 site = Path(folder)
                 self.assertNotEqual(publish(branch, site), 0, branch)
                 self.assertEqual(files_in(site), {}, branch)
+
+
+WORKFLOW = ROOT / ".github" / "workflows" / "spek.yml"
+SPEK_COMMIT = "5542fa2dfda6c52a08fb0610a140670052056c66"
+
+
+def spek_workflow():
+    """the workflow's triggers, and its one job; PyYAML reads the bare `on:` key as True"""
+    data = yaml.safe_load(WORKFLOW.read_text())
+    return data, data[True], data["jobs"]["publish"]
+
+
+def step(job, step_id):
+    return next(s for s in job["steps"] if s.get("id") == step_id)
+
+
+def publish_step(job):
+    return next(s for s in job["steps"] if "run" in s)
+
+
+class SpekWorkflowTriggersTestCase(SimpleTestCase):
+    """when the Spek workflow runs"""
+
+    def test_mains_trigger(self):
+        triggers = spek_workflow()[1]
+        self.assertIn("schedule", triggers)
+        self.assertEqual(len(triggers["schedule"]), 1)
+        self.assertIn("workflow_dispatch", triggers)
+        self.assertNotIn("main", triggers["push"]["branches"])
+
+    def test_change_branches_trigger(self):
+        push = spek_workflow()[1]["push"]
+        self.assertEqual(push["branches"], ["change/*"])
+        self.assertEqual(push["paths"], ["openspec/**", ".github/workflows/spek.yml"])
+
+    def test_no_removal_on_delete(self):
+        data, triggers, job = spek_workflow()
+        self.assertNotIn("delete", triggers)
+        for s in job["steps"]:
+            self.assertNotRegex(s.get("run", ""), r"\b(rm|git rm)\b")
+
+
+class SpekWorkflowSafetyTestCase(SimpleTestCase):
+    """the build is pinned and least-privileged; a failure can't wipe the pages"""
+
+    def test_a_failure_cant_wipe_the_pages(self):
+        job = spek_workflow()[2]
+        publish_ = publish_step(job)
+        self.assertEqual(publish_["if"], "steps.build.outcome == 'success'")
+        self.assertEqual(step(job, "build")["uses"].split("@")[0], "spekhq/spek")
+        script = publish_["run"]
+        self.assertTrue(script.lstrip().startswith("set -euo pipefail"))
+        self.assertIn("git ls-remote --exit-code --heads origin gh-pages >/dev/null || rc=$?", script)
+        self.assertIn('if [ "$rc" -eq 2 ]; then', script)
+        self.assertIn('lease="gh-pages:"', script)
+        self.assertIn('lease="gh-pages:$fetched"', script)
+        self.assertIn('--force-with-lease="$lease"', script)
+
+    def test_pinned_and_narrow(self):
+        data, triggers, job = spek_workflow()
+        build = step(job, "build")
+        self.assertEqual(build["uses"], f"spekhq/spek@{SPEK_COMMIT}")
+        self.assertEqual(build["with"]["spek-version"], SPEK_COMMIT)
+        self.assertEqual(step(job, "checkout")["with"]["fetch-depth"], 0)
+        self.assertEqual(data["permissions"], {"contents": "write"})
+        script = publish_step(job)["run"]
+        pushes = [line for line in script.splitlines() if " push " in line]
+        self.assertEqual(len(pushes), 1)
+        self.assertIn("HEAD:refs/heads/gh-pages", pushes[0])
+        for s in job["steps"]:
+            self.assertNotIn("${{ github.ref", s.get("run", ""))
+            self.assertNotIn("${{ github.event", s.get("run", ""))
+        self.assertEqual(publish_step(job)["env"]["BRANCH"], "${{ github.ref_name }}")
+
+    def test_never_upstream(self):
+        self.assertNotIn("nycnoise/nycnoise", WORKFLOW.read_text())
+        self.assertEqual(spek_workflow()[2]["if"], "github.repository == 'natea/newenglandmusic'")
+
+
+class SpekWorkflowQueueTestCase(SimpleTestCase):
+    """publishes queue, and never fail a commit's checks"""
+
+    def test_one_at_a_time(self):
+        self.assertEqual(
+            spek_workflow()[0]["concurrency"], {"group": "spek-pages", "cancel-in-progress": False, "queue": "max"}
+        )
+
+    def test_a_failed_publish_doesnt_fail_the_commit(self):
+        for s in spek_workflow()[2]["steps"]:
+            self.assertIs(s.get("continue-on-error"), True, s.get("name"))
