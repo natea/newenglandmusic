@@ -17,7 +17,8 @@ The repo SHALL have a `spec` workflow in `.fabro/workflows/spec/`. It SHALL inst
 - **THEN** it installs pinned versions of Claude Code, the ACP adapter and `openspec`. In order, it has:
   - a `propose` agent using `propose.md`;
   - the draft check;
-  - the `sketch` agent on the `needs-design` route;
+  - the `route` step;
+  - the `sketch` agent and the `check_sketches` step on the `needs-design` route;
   - a fan-out to the agents `risk`, `spec_fit` and `fidelity`, each using its own prompt;
   - a merge;
   - the review check;
@@ -49,12 +50,17 @@ When the draft is labelled `needs-design`, a `sketch` agent with the Impeccable 
 
 ### Requirement: Sketches are checked as soon as they are made
 
-A `check_sketches` step SHALL run right after `sketch`, before the fan-out, running `bin/check-intentable-result spec --sketches`: the sketches are present, linked from `design.md`, and safe to publish. The draft check after revise SHALL check the safety of any sketches again. The first draft check, before `sketch`, SHALL NOT require sketches.
+A `check_sketches` step SHALL run right after `sketch`, before the fan-out, running `bin/check-intentable-result spec --sketches`: the sketches are present, linked from `design.md`, and safe to publish. The draft check after revise SHALL check the safety of any sketches again, and the last step SHALL repeat the full `--sketches` check when the recorded labels include `needs-design`. The first draft check, before `sketch`, SHALL NOT require sketches.
 
 #### Scenario: Unsafe sketch caught before review
 
 - **WHEN** the sketch agent writes a `b.html` that loads a stylesheet from another address
 - **THEN** `check_sketches` fails the run before any reviewer starts
+
+#### Scenario: A sketch lost in revise
+
+- **WHEN** revise deletes `sketches/c.html` from a `needs-design` change
+- **THEN** the last step exits with a failure naming the missing sketch
 
 #### Scenario: First draft check without sketches
 

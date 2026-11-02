@@ -19,16 +19,21 @@ When `bin/publish-spek-page` publishes a `change/<name>` branch, it SHALL also c
 - **WHEN** the site has `changes/add-venue-hours/sketches/c.html` and the branch no longer has `c.html`
 - **THEN** after the publish the site has no `changes/add-venue-hours/sketches/c.html`
 
-### Requirement: Published sketches can't run code or call out
-
-Every sketch `bin/publish-spek-page` publishes SHALL begin its `<head>` with `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'">`, added by the script, so the browser refuses scripts, outside resources and form posts on the fork's Pages domain, even for a sketch pushed without the run's checker.
-
-#### Scenario: Policy added
-
-- **WHEN** `sketches/a.html` is published
-- **THEN** the published copy's `<head>` starts with that policy, and the rest of the file is unchanged
-
 #### Scenario: No sketches on main
 
 - **WHEN** `main` is published
 - **THEN** no `sketches/` folder is written anywhere
+
+### Requirement: Published sketches can't run code or call out
+
+Every sketch `bin/publish-spek-page` publishes SHALL begin, right after any doctype, with `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'">`, added by the script, so the browser refuses scripts, outside resources and form posts on the fork's Pages domain, even for a sketch pushed without the run's checker.
+
+#### Scenario: Policy added
+
+- **WHEN** `sketches/a.html` is published
+- **THEN** the published copy starts with that policy after its doctype, and the rest of the file is unchanged
+
+#### Scenario: A sketch with no head
+
+- **WHEN** a sketch on a change branch has no `<head>` and starts with a `<script>`
+- **THEN** the published copy starts with the policy, before the script

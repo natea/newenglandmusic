@@ -20,12 +20,12 @@
   - without `--draft`, empty and fill `.intentable/proposal/`, copy the summary to `.intentable/review.md`, and write the result with `reviewed` and `files`.
 - [ ] 2.2 Add `bin/check-intentable-reviews`: rounds, reports and the revise notes filed with the round they answer, the limit, and the summary with its fixed first line and the outcome
 - [ ] 2.3 Add a fake `openspec` executable for the tests, placed first on `PATH`
-- [ ] 2.4 Add tests for "Summary beside the result", "Draft check reads the draft file", "Sketches required with needs-design", "Unsafe sketch caught before review", "First draft check without sketches", "A sketch with a script", "A sketch that calls out", "A safe sketch", "Revise adds needs-design", "A good result", "Only the final text", "A name that isn't plain", "A change that already existed", "No change folder", "A state or another label", "Too many files", "A file Fabro wouldn't collect", "Invalid change", "A message that mentions someone", "All satisfied", "One not satisfied", "The round limit", "Missing report", "Summary written" and "Summary of a review not passed"
+- [ ] 2.4 Add tests for "Summary beside the result", "Draft check reads the draft file", "Sketches required with needs-design", "Unsafe sketch caught before review", "A sketch lost in revise", "First draft check without sketches", "A sketch with a script", "A sketch that calls out", "A safe sketch", "Revise adds needs-design", "A good result", "Only the final text", "A name that isn't plain", "A change that already existed", "No change folder", "A state or another label", "Too many files", "A file Fabro wouldn't collect", "Invalid change", "A message that mentions someone", "All satisfied", "One not satisfied", "The round limit", "Missing report", "Summary written" and "Summary of a review not passed"
 
 ## 3. Sketches on the Spek page
 
-- [ ] 3.1 Copy a change's regular `sketches/*.html` files in `bin/publish-spek-page`, replacing that change's `sketches/` folder whole, and add the Content-Security-Policy tag
-- [ ] 3.2 Add tests for "Sketches published", "A sketch removed", "A link instead of a file", "Policy added" and "No sketches on main"
+- [ ] 3.1 Copy a change's regular `sketches/*.html` files in `bin/publish-spek-page`, replacing that change's `sketches/` folder whole, and add the Content-Security-Policy tag at the start of each, after any doctype
+- [ ] 3.2 Add tests for "Sketches published", "A sketch removed", "A link instead of a file", "Policy added", "A sketch with no head" and "No sketches on main"
 
 ## 4. Guide
 
