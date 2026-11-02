@@ -5,6 +5,7 @@
 The repo SHALL have a `spec` workflow in `.fabro/workflows/spec/`. It SHALL install Claude Code, its ACP adapter and the `openspec` CLI at pinned versions. Then, in order, it SHALL run:
 - an agent that writes the proposal;
 - a step that checks the draft;
+- a sketch agent, only when the proposal needs screens;
 - three reviewer agents in parallel;
 - a step that reads their reports;
 - a revise agent, after which the draft is checked and reviewed again;
@@ -16,6 +17,7 @@ The repo SHALL have a `spec` workflow in `.fabro/workflows/spec/`. It SHALL inst
 - **THEN** it installs pinned versions of Claude Code, the ACP adapter and `openspec`. In order, it has:
   - a `propose` agent using `propose.md`;
   - the draft check;
+  - the `sketch` agent on the `needs-design` route;
   - a fan-out to the agents `risk`, `spec_fit` and `fidelity`, each using its own prompt;
   - a merge;
   - the review check;
@@ -30,6 +32,29 @@ Every agent step of the `spec` workflow SHALL be Claude Code through ACP (`backe
 
 - **WHEN** the configuration tests read every agent step of the graph
 - **THEN** each has `backend="acp"` and the `claude-agent-acp` command, and no step is a prompt stage that calls a model directly
+
+### Requirement: A proposal that needs screens includes sketches
+
+When the draft is labelled `needs-design`, a `sketch` agent with the Impeccable skill (pinned) SHALL run once, before the first review, and write three options to `openspec/changes/<change>/sketches/`: `a.html`, `b.html`, `c.html`, and `options.json` with each option's label, thesis and risk. `design.md` SHALL link each sketch. Otherwise the step SHALL be skipped (Nate's decision, 2 November 2026).
+
+#### Scenario: Sketch step only for needs-design
+
+- **WHEN** the configuration tests read the graph
+- **THEN** a `sketch` agent using `sketch.md` is reached from the first draft check only on the route for `needs-design`, leads to the fan-out, and is not on the revise loop
+
+#### Scenario: Sketches required with needs-design
+
+- **WHEN** the draft has the label `needs-design` and `openspec/changes/add-venue-hours/sketches/` lacks `c.html` or `options.json`, or `design.md` doesn't link `sketches/a.html`
+- **THEN** the checker, without `--draft`, exits with a failure naming what is missing
+
+### Requirement: Sketches are safe to publish
+
+Each sketch SHALL be one self-contained HTML file: no `<script>`, no event-handler attribute such as `onclick=`, no `javascript:` URL, and no resource loaded from another address. `bin/check-intentable-result spec` SHALL fail the run, naming the file and the problem, otherwise.
+
+#### Scenario: A sketch with a script
+
+- **WHEN** `sketches/b.html` contains `<script>` or loads `https://fonts.example/x.css`
+- **THEN** the checker exits with a failure naming `sketches/b.html`
 
 ### Requirement: The spec workflow follows the workflow contract
 

@@ -18,18 +18,20 @@ The review loop is the `dev-review-proposal` skill from intentable: three fresh 
 
 **Non-Goals:**
 - Starting the run and committing the draft. Those are the bridge's job, in intentable's `add-spec-runs`.
-- G2 through the issue, moves out of `spec-review`, revising a draft after Nate comments, and Impeccable sketches.
+- G2 through the issue, moves out of `spec-review`, revising a draft after Nate comments, and Sooz or Mark picking a sketch.
 
 ## Decisions
 
 **The graph.**
 
 ```
-start -> install -> propose -> check_draft -> fork
+start -> install -> propose -> check_draft -> route
+route -> sketch -> fork    (needs-design)
+route -> fork              (otherwise)
 fork -> risk, spec_fit, fidelity -> merge -> check_reviews
 check_reviews -> finish   [outcome=succeeded]   (all yes, or round limit reached)
 check_reviews -> revise   (otherwise)
-revise -> check_draft      (then the reviewers run again)
+revise -> recheck -> fork  (recheck is the same draft check; the reviewers run again)
 finish -> exit
 ```
 
@@ -53,6 +55,14 @@ finish -> exit
 
   So `result.json`, `review.md` and the proposal files exist only in the `finish` stage's artifacts. No earlier step writes under those paths: the prompts say so, and Fabro records a path again only when its content changes, so an earlier identical copy would leave a file out of `finish`'s artifacts. The bridge would then refuse the draft loudly, as "a file missing". The bridge reads the proposal files from the same stage as the result, which avoids ambiguity between stage versions. Fabro numbers stages separately from retries.
 
+**Sketches** (Nate's decision, 2 November 2026: "sketches should be included in the proposal if design is needed").
+- After the first `check_draft`, a `route` script reads `.intentable/draft.json`. With `needs-design`, the graph goes to `sketch`; otherwise it goes straight to the fan-out. The edge mechanism is the one task 1.1 settles.
+- `sketch` is an ACP agent with the Impeccable plugin, installed in `install` from its marketplace (`pbakaus/impeccable`) at a pinned version. It is told to run Impeccable's decision step unattended: three options, each a self-contained HTML mock with inline CSS and no scripts, at 1440×900. It is also told not to generate images, so every file stays text. It copies the mocks and the options' payload into the change's `sketches/`, and adds a "Sketches" section to `design.md` that links each one.
+- It runs once. The reviewers then review the sketches with the rest of the change, and revise may edit a sketch but never regenerates the set.
+- Impeccable's own context files, `PRODUCT.md`, `DESIGN.md` and `.impeccable/`, aren't committed to this repository today. In the sandbox the agent therefore works from the site's templates and CSS. Committing them is the open question below.
+- Picking one option is left to the later stage where Sooz or Mark choose. At G2 Nate sees all three.
+- The sketches are published beside the Spek page (`spec-pages` delta), at `changes/<name>/sketches/a.html` and so on. That page is served from the fork's Pages domain, so the checker refuses anything that could run code there or call out.
+
 **Briefs.** Each reviewer prompt gives its lens, the change folder path, `openspec/specs/`, `AGENTS.md`, `openspec/config.yaml` and the report format.
 - There is no project dictionary in this repo, so spec fit checks vocabulary against the existing specs.
 - Fidelity has no memory file in the sandbox. Its decision record is:
@@ -61,7 +71,7 @@ finish -> exit
   - the archived changes' designs, where Nate's dated decisions are kept.
 - The bridge posts as `natea` with its marker. Both `propose.md` and `fidelity.md` say such a comment is the bridge's, not Nate speaking, as the triage prompts do.
 
-**Round limit: 3.** This is a decision taken without Nate, about 80% likely to be his; the skill itself sets no limit.
+**Round limit: 3** (Nate's decision, 2 November 2026; the skill itself sets no limit).
 - The limit caps cost.
 - A run that hits it still ends with its draft, since a draft with open findings is more use to Nate than a failed run.
 - `review.md`'s first line and `reviewed: not-passed` both say it wasn't passed.
@@ -83,7 +93,7 @@ finish -> exit
 
 ## Risks / Trade-offs
 
-- **[Usage]** A run takes up to 13 agent sessions on the Max subscription. → The round limit, and the bridge starts one `spec` run per issue.
+- **[Usage]** A run takes up to 13 agent sessions on the Max subscription, or 14 with sketches. → The round limit, and the bridge starts one `spec` run per issue.
 - **[Time]** Up to seven sequential agent phases, inside the bridge's three-hour sandbox lifetime. → The live check records the elapsed time. If the lifetime runs out, the run fails and is reported.
 - **[A reviewer is never satisfied]** → The limit ends the loop with the draft and its findings for Nate.
 - **[The agent edits code]** The prompt forbids it, and only `.intentable/proposal/`, which holds just the change folder, leaves the sandbox.
@@ -95,6 +105,5 @@ finish -> exit
 
 ## Open Questions
 
-- Should the round limit be 3? Or should the run fail when the reviewers don't agree?
-- For a `needs-design` proposal, the plan puts sketches before G2. Should Nate's link say the sketches come first? Or is G2 open at once, with sketches after? This change only adds the label; the bridge's wording is in `add-spec-runs`.
+- Should `PRODUCT.md`, `DESIGN.md` and `.impeccable/` be committed, so the sketch agent works from the site's recorded design context? They exist only untracked in one checkout today.
 - Should the agent be able to say an issue isn't ready for a proposal after all, sending it back to `needs-info` with a question? This change leaves that out. Once in `spec-review`, the agent writes the best proposal it can and records the gaps as open questions.
