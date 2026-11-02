@@ -88,7 +88,7 @@ The revise agent SHALL apply every blocking finding, and the non-blocking ones i
 #### Scenario: Revise prompt
 
 - **WHEN** the configuration tests read `revise.md`
-- **THEN** it says to apply every blocking finding, to write each finding with its fix or reason to `.intentable/reviews/revise.md`, and not to rename the change
+- **THEN** it says to apply every blocking finding, to write each finding with its fix or reason to `.intentable/reviews/revise.md`, not to rename the change, and to write nothing under `.intentable/proposal/`
 
 ### Requirement: The review loop ends
 
