@@ -5,17 +5,18 @@ The `triage` and `clarify` workflows move an issue to `spec-review` once it is c
 ## What Changes
 
 - **A `spec` workflow** in `.fabro/workflows/spec/`, started by the intentable bridge for an issue in `spec-review`. It takes the same five issue inputs as `triage` and `clarify`.
-  - **Propose.** Claude Code, through ACP, reads the issue thread and the site's code. It then writes a complete OpenSpec change for it: proposal, delta specs, design and tasks. It uses the `openspec` CLI at a pinned version and follows this repository's `openspec/config.yaml` and `AGENTS.md`.
-  - **Review.** Three reviewers run in parallel, each a fresh agent with one lens: risk, spec fit and fidelity. The lenses are the ones in the `dev-review-proposal` skill. Fidelity is checked against what the person who asked said in the thread and against this repository's recorded rules. Each reviewer writes a report and edits nothing.
-  - **Revise.** A fourth agent applies every blocking finding, plus the non-blocking ones it agrees with. It records each finding it doesn't apply, with the reason. Then the three reviewers run again on the revised text.
+  - **Every agent step is Claude Code through ACP, on Nate's Max subscription** (Nate's decision D8), like `triage` and `clarify`; none is a Fabro prompt stage, which would bill the API key.
+  - **Propose.** Claude Code reads the issue thread and the site's code. It then writes a complete OpenSpec change for it: proposal, delta specs, design and tasks. It uses the `openspec` CLI at a pinned version and follows this repository's `openspec/config.yaml` and `AGENTS.md`.
+  - **Review.** Three reviewers run in parallel, each a fresh agent with one lens: risk, spec fit and fidelity. The lenses are the ones in the `dev-review-proposal` skill. Fidelity is checked against what the person who asked said in the thread and against this repository's recorded rules. Each reviewer writes a report and edits nothing. From the second round on, each is told what revise changed.
+  - **Revise.** A fourth agent applies every blocking finding, plus the non-blocking ones it agrees with. It writes down how it fixed each finding, or why it didn't apply it, and never renames the change. Then the three reviewers run again on the revised text.
   - The loop stops when all three are satisfied in the same round, or after three rounds. If it stops at the limit, the run still ends with the draft, marked as not passed by the reviewers, so Nate sees the open findings (decision taken without Nate, see design).
-- **The run pushes nothing (Nate's decision, 2 November 2026: runs read the code and push nothing).** Like `triage` and `clarify`, it opens no pull request, pushes no run branch and asks Fabro for no GitHub permissions. The last step copies the finished change into `.intentable/proposal/`, which Fabro collects as artifacts. The intentable bridge commits it from there to a `change/<name>` branch on the fork, under its own change. That push gives the draft its Spek page.
-- **The result.** `.intentable/result.json` names the change and gives a plain-words message for the issue. It may add the `needs-design` label when the proposal needs screens sketched, which the plan's next step uses. It gives no state, so the issue stays in `spec-review` until Nate confirms. `.intentable/review.md` sums up the review: rounds, blocking findings and their fixes, findings not applied with their reasons, and open questions. The bridge uses it as the draft commit's message.
+- **The run pushes nothing (Nate's decision, 2 November 2026: runs read the code and push nothing).** Like `triage` and `clarify`, it opens no pull request, pushes no run branch and asks Fabro for no GitHub permissions. The last step, and only the last, copies the finished change into `.intentable/proposal/` and writes the result. Fabro collects both as artifacts. The intentable bridge commits it from there to a `change/<name>` branch on the fork, under its own change. That push gives the draft its Spek page.
+- **The result.** While the run works, the change's name and message live in `.intentable/draft.json`. At the end, `.intentable/result.json` names the change, gives a plain-words message for the issue, says whether the reviewers passed it (`reviewed`), and lists the files copied. It may add the `needs-design` label when the proposal needs screens sketched, which the plan's next step uses. It gives no state, so the issue stays in `spec-review` until Nate confirms. `.intentable/review.md` starts with a fixed line, `Passed by the reviewers after <n> round(s).` or `Not passed by the reviewers after <n> rounds.`, then sums up the review: rounds, blocking findings and their fixes, findings not applied with their reasons, and open questions. The bridge uses it as the draft commit's message.
 - **The result checker** gains a `spec` mode, `bin/check-intentable-result spec`. It fails the run when:
   - the change name isn't a plain kebab-case name;
   - the change already exists in `openspec/changes/` or its archive on the run's base;
   - the change doesn't pass `openspec validate --strict`;
-  - the change has too many files for Fabro to collect;
+  - the change has too many files for Fabro to collect, a file that isn't text, or a folder name Fabro skips;
   - the result names a state, or any label other than `needs-design`;
   - the message breaks the existing message rules.
 - **`docs/FABRO.md`** describes the workflow.
@@ -43,4 +44,4 @@ Out of scope:
   - `bin/check-intentable-reviews`, which reads the three reports and decides whether to run another round;
   - `core/tests/test_issue_proposals.py`.
 - **Changed:** `bin/check-intentable-result` gains the `spec` mode; `docs/FABRO.md`.
-- **Cost:** a run is up to 1 propose, 9 review and 3 revise agent sessions on Nate's Anthropic key, inside one sandbox and within the bridge's sandbox lifetime (three hours).
+- **Usage:** a run is up to 1 propose, 9 review and 3 revise agent sessions on Nate's Max subscription, inside one sandbox and within the bridge's sandbox lifetime (three hours).

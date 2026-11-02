@@ -1,8 +1,11 @@
 ## Context
 
-`triage` and `clarify` (archived as `2026-11-02-add-triage-clarify`) leave an issue in `spec-review` with a summary. The intentable bridge starts runs over Fabro's API, in the `daytona` environment, targeting a commit of natea/newenglandmusic. It reads a run's `.intentable/result.json` from its artifacts, applies the result, and deletes the run's sandboxes. Nate's rules apply here too:
+`triage` and `clarify` (archived as `2026-11-02-add-triage-clarify`) leave an issue in `spec-review` with a summary. The intentable bridge starts runs over Fabro's API, in the `daytona` environment, targeting a commit of natea/newenglandmusic. It reads a run's `.intentable/result.json` from its artifacts, applies it, and deletes the run's sandboxes.
+
+Nate's rules apply here too:
 - runs read the code and push nothing;
 - every run ends with its result;
+- Claude Code runs on the Max subscription through ACP, and the vault's API key only satisfies Fabro's provider check;
 - drafts are published before G2 on a `change/<name>` branch with "Draft" in the commit subject, so their Spek page builds (`AGENTS.md`, `spec-pages`).
 
 The review loop is the `dev-review-proposal` skill from intentable: three fresh reviewers, one lens each, revising until all three are satisfied on one revision.
@@ -10,7 +13,7 @@ The review loop is the `dev-review-proposal` skill from intentable: three fresh 
 ## Goals / Non-Goals
 
 **Goals:**
-- An issue in `spec-review` gets a complete OpenSpec change, passed by three reviewers or marked as not passed, without any person's input during the run.
+- An issue in `spec-review` gets a complete OpenSpec change. Three reviewers either pass it or mark it as not passed, and no person's input is needed during the run.
 - The draft reaches a `change/` branch, and so its Spek page, with no GitHub write access in the sandbox.
 
 **Non-Goals:**
@@ -26,41 +29,70 @@ start -> install -> propose -> check_draft -> fork
 fork -> risk, spec_fit, fidelity -> merge -> check_reviews
 check_reviews -> finish   [outcome=succeeded]   (all yes, or round limit reached)
 check_reviews -> revise   (otherwise)
-revise -> check_draft      (the reviewers run again on the revised text)
+revise -> check_draft      (then the reviewers run again)
 finish -> exit
 ```
 
-- **`install`** pins Claude Code and the ACP adapter at the versions `triage` uses, and `@fission-ai/openspec` at 1.16.0, the version this repository's artifacts were written with. It also writes the names of every folder in `openspec/changes/` and `openspec/changes/archive/` to `.intentable/existing-changes.txt`. That record is how the checker later tells a new change from an existing one. The record is made before the agent runs, because Fabro's local checkpoint commits make the checkout's `HEAD` an unreliable base.
-- **`check_draft`** runs `bin/check-intentable-result spec --draft`: the name rules and `openspec validate --strict`. Its failure ends the run, like every failed step (`on_failure="exit"`). An invalid draft is never shown to reviewers.
-- **`check_reviews`** is `bin/check-intentable-reviews`. It keeps the round number in `.intentable/reviews/round`, and moves each round's reports to `.intentable/reviews/<round>/` so revise and the summary can read every round. It exits 0 when the loop should end, and 1 when another round is needed. The edge into `revise` must therefore be the graph's failure route, not the `on_failure="exit"` default. Task 1.1 checks with `fabro validate` and a dry graph that a conditional edge on `outcome` overrides `on_failure="exit"`. If it doesn't, the script instead writes `context.review_done` and the edges branch on that, with the script always exiting 0.
-- **Reviewers run in one checkout** (Fabro's fan-out shares it), and each writes only its own report file, so there is no race. Each is a separate agent node, and therefore a fresh session: it hasn't seen the propose agent's reasoning, only the files. This matches the skill's rule that the author's conclusions aren't in the brief.
+- **Every agent step** (`propose`, the three reviewers, `revise`) is `backend="acp"` with `acp.command="claude-agent-acp"`, as in `triage`. Each one therefore runs Claude Code on the Max subscription. None is a Fabro prompt stage, which would call the provider API with the vault key.
+- **`install`** pins Claude Code and the ACP adapter at the versions `triage` uses, and `@fission-ai/openspec` at 1.16.0, the version this repository's artifacts were written with. It also writes the names of every folder in `openspec/changes/` and `openspec/changes/archive/` to `.intentable/existing-changes.txt`. It writes them before the agent runs, because Fabro's local checkpoint commits make the checkout's `HEAD` an unreliable base. The checker strips an archive folder's `YYYY-MM-DD-` prefix before comparing.
+- **`check_draft`** runs `bin/check-intentable-result spec --draft` on `.intentable/draft.json`. It applies the name rules, the bounds and `openspec validate --strict`, and writes nothing. If it fails, the run ends (`on_failure="exit"`), so an invalid draft is never shown to reviewers.
+- **`check_reviews`** is `bin/check-intentable-reviews`:
+  - it keeps the round number in `.intentable/reviews/round`;
+  - it moves each round's reports and revise notes to `.intentable/reviews/<round>/`;
+  - when the loop ends, it writes `.intentable/review.md`;
+  - it exits 0 when the loop should end, and 1 when another round is needed.
 
-**Briefs.** Each reviewer prompt gives its lens, the change folder path, `openspec/specs/`, `AGENTS.md` and `openspec/config.yaml`, the issue thread as the record of the requester's decisions, and the report format. There is no project dictionary in this repo, so spec fit checks vocabulary against the existing specs. The fidelity lens has no memory file in the sandbox. Its sources are the thread and `AGENTS.md`. A decision the proposal takes that neither settles must be flagged as an open question in the design.
+  The edge into `revise` must therefore be the failure route, not the `on_failure="exit"` default. Task 1.1 checks this with `fabro validate` and a dry graph. If a conditional edge doesn't override `on_failure`, the script instead sets `context.review_done`, the edges branch on that, and the script always exits 0.
+- **Reviewers run in one checkout**, since Fabro's fan-out shares it. Each writes only its own report file, so there is no race. Each is a separate agent node, and so a fresh session: it hasn't seen the propose agent's reasoning, only the files, which is the skill's rule that the author's conclusions stay out of the brief. From round 2, each prompt points at the previous round's `revise.md`, which is the skill's "told what changed since its read".
+- **`finish`** runs `bin/check-intentable-result spec`:
+  1. it checks the draft again;
+  2. it empties `.intentable/proposal/` and copies the change folder's contents into it;
+  3. only then does it write `.intentable/result.json`.
 
-**Round limit: 3** (decision taken without Nate, about 80% likely to be his; the skill itself sets no limit). The limit caps cost. A run that hits it still ends with its draft, because a draft with open findings is more use to Nate than a failed run. `review.md` and the bridge's message both say it wasn't passed.
+  So `result.json` and the proposal files exist only in the `finish` stage's artifacts. The bridge reads the proposal files from the same stage as the result, which avoids ambiguity between stage versions. Fabro numbers stages separately from retries.
+
+**Briefs.** Each reviewer prompt gives its lens, the change folder path, `openspec/specs/`, `AGENTS.md`, `openspec/config.yaml` and the report format.
+- There is no project dictionary in this repo, so spec fit checks vocabulary against the existing specs.
+- Fidelity has no memory file in the sandbox. Its decision record is:
+  - the thread, for the requester's decisions;
+  - `AGENTS.md`;
+  - the archived changes' designs, where Nate's dated decisions are kept.
+- The bridge posts as `natea` with its marker. Both `propose.md` and `fidelity.md` say such a comment is the bridge's, not Nate speaking, as the triage prompts do.
+
+**Round limit: 3.** This is a decision taken without Nate, about 80% likely to be his; the skill itself sets no limit.
+- The limit caps cost.
+- A run that hits it still ends with its draft, since a draft with open findings is more use to Nate than a failed run.
+- `review.md`'s first line and `reviewed: not-passed` both say it wasn't passed.
 
 **The result.**
 - `labels` may carry `needs-design`, the one later-stage label this stage knows about. The plan says `needs-design` routes the issue to Impeccable.
 - `state` is always none. The issue leaves `spec-review` only at G2, which a later change builds.
-- `finish` runs `bin/check-intentable-result spec`: the result's rules, the draft checks again, a 90-file cap under Fabro's 100-file collection limit (leaving room for the result and the summary), and the copy into `.intentable/proposal/`. The copy is made last, so the collected proposal is the final text only. Fabro records each artifact path once per content, and earlier drafts never sat under that path.
+- `reviewed` gives the bridge the review's outcome as data, so it doesn't have to read words out of `review.md`. `files` lets it check that it received every file.
+- The 90-file cap leaves room under Fabro's 100-file collection limit for the result and the summary. Path segments Fabro prunes (`target`, `dist` and the like) and non-text files are refused, because they would silently go missing or be mangled on the way to the branch.
 
-**Name rule.** The name is `^[a-z0-9]+(-[a-z0-9]+)*$`, at most 60 characters. That is the same set `bin/publish-spek-page` accepts for a change page. The checker passes it to `openspec` only as a separate argument, never through a shell.
+**Name rule.** The name must match `^[a-z0-9]+(-[a-z0-9]+)*$`, at most 60 characters. That is stricter than `bin/publish-spek-page`, which accepts any name its page path can hold, so every accepted name gets a page. The checker passes the name to `openspec` only as a separate argument, never through a shell.
 
 **Testing.** No external service is called in tests:
 - the configuration tests read the workflow files;
-- the checkers are run as subprocesses on temporary folders holding fixture changes and reports;
-- `openspec` is run for real, since it is a local, pinned CLI;
+- the checkers run as subprocesses on temporary folders holding fixture changes and reports;
+- `openspec` is replaced by a fake executable placed first on `PATH`. It exits with a chosen status and prints a chosen summary line, so the suite runs offline and where `openspec` isn't installed (CI);
 - Fabro, Claude and GitHub aren't touched;
-- the live check on the Spark is a manual task.
+- the live check is a manual task.
 
 ## Risks / Trade-offs
 
-- **[Cost]** Up to 13 agent sessions a run. → The round limit; the bridge starts one `spec` run per issue.
-- **[A reviewer is too harsh or never satisfied]** → The limit ends the loop with the draft and its findings for Nate.
-- **[The agent edits code]** The prompt forbids it. Only `.intentable/proposal/` leaves the sandbox, and that holds only the change folder, so a stray edit elsewhere never leaves the sandbox.
-- **[Issue text steering the agent]** As with `triage`: inputs never reach a command, the sandbox has read-only git, and the result is checked before the bridge uses it.
+- **[Usage]** A run takes up to 13 agent sessions on the Max subscription. → The round limit, and the bridge starts one `spec` run per issue.
+- **[Time]** Up to seven sequential agent phases, inside the bridge's three-hour sandbox lifetime. → The live check records the elapsed time. If the lifetime runs out, the run fails and is reported.
+- **[A reviewer is never satisfied]** → The limit ends the loop with the draft and its findings for Nate.
+- **[The agent edits code]** The prompt forbids it, and only `.intentable/proposal/`, which holds just the change folder, leaves the sandbox.
+- **[Issue text steering the agent]** As with `triage`:
+  - inputs never reach a command;
+  - git access is read-only;
+  - the result is checked before the bridge uses it.
+- **[A name already used by an unmerged branch]** The agent can't see branch names, so the bridge finds the clash only after the run. → Accepted as a known cost; the bridge reports it.
 
 ## Open Questions
 
-- Should the round limit be 3, or should the run fail instead when the reviewers don't agree?
-- Should the agent also be able to say an issue isn't ready for a proposal after all (a question back to `needs-info`)? This change leaves it out: once in `spec-review`, the agent writes the best proposal it can and records the gaps as open questions.
+- Should the round limit be 3? Or should the run fail when the reviewers don't agree?
+- For a `needs-design` proposal, the plan puts sketches before G2. Should Nate's link say the sketches come first? Or is G2 open at once, with sketches after? This change only adds the label; the bridge's wording is in `add-spec-runs`.
+- Should the agent be able to say an issue isn't ready for a proposal after all, sending it back to `needs-info` with a question? This change leaves that out. Once in `spec-review`, the agent writes the best proposal it can and records the gaps as open questions.
