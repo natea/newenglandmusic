@@ -672,3 +672,18 @@ class ReviewLoopTestCase(SimpleTestCase):
             self.assertEqual(
                 run.path(".intentable/existing-changes.txt").read_text(), "2026-11-02-add-spek-pages\nadd-venue-hours\n"
             )
+
+
+class GuideTestCase(SimpleTestCase):
+    """a guide explains the spec workflow"""
+
+    def test_guide(self):
+        guide = (ROOT / "docs" / "FABRO.md").read_text()
+        section = guide.split("#### spec", 1)[1]
+        for needed in (
+            "`.intentable/proposal/`",
+            "risk, spec fit, fidelity",
+            "five-round limit",
+            "the bridge commits the draft",
+        ):
+            self.assertIn(needed, section, needed)

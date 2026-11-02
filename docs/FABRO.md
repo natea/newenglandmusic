@@ -81,3 +81,18 @@ fabro run natea/newenglandmusic@<branch>:triage --environment daytona --target n
 
 The bridge does the same when `FABRO_WORKFLOW_REF` is set on the Spark. A hand-started run's sandbox isn't deleted when it ends, but the bridge gives it the usual limits, so Daytona stops it after 30 idle minutes and destroys it within three hours.
 
+
+#### spec
+
+Started by the intentable bridge when a triage or clarify result moves an issue to `spec-review`, once per time the issue gets there. It writes the issue up as an OpenSpec proposal and has it reviewed, all in one sandbox, every agent being Claude Code through ACP on Nate's Max subscription:
+
+1. **propose** reads the thread and the code and writes one OpenSpec change (proposal, delta specs, design, tasks), naming it in `.intentable/draft.json`. If the issue isn't clear enough after all, it writes no change and sends the issue back to `needs-info` with one question, skipping everything below.
+2. **sketch**, only when the draft is labelled `needs-design`: Impeccable's decision step makes three self-contained HTML options in the change's `sketches/` folder, checked at once by `bin/check-intentable-result spec --sketches`.
+3. **review**: three fresh reviewers in parallel, one lens each (risk, spec fit, fidelity), each writing a report and editing nothing.
+4. **revise** applies the blocking findings and writes what it did and didn't do; the reviewers then read the revised text.
+
+The loop ends when all three are satisfied in one round, or after the five-round limit, when the draft is still kept, marked not passed. `bin/check-intentable-reviews` keeps the rounds and writes the summary, whose first line is `Passed by the reviewers after <n> round(s).` or `Not passed by the reviewers after <n> rounds.`.
+
+The last step, `bin/check-intentable-result spec`, copies the change into `.intentable/proposal/`, the summary to `.intentable/review.md`, and writes `.intentable/result.json` with the change's name, the message, `reviewed` and `files`. The run itself pushes nothing: the bridge commits the draft from those artifacts to `change/<name>` on the fork, which publishes its Spek page and, beside it, its sketches.
+
+Try it on a branch the same way as triage, with `:spec` and an issue that is clear enough to write up.

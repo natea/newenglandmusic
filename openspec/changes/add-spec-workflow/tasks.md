@@ -29,8 +29,8 @@
 
 ## 4. Guide
 
-- [ ] 4.1 Add the `spec` section to `docs/FABRO.md`
-- [ ] 4.2 Add the test for "Guide"
+- [x] 4.1 Add the `spec` section to `docs/FABRO.md`
+- [x] 4.2 Add the test for "Guide"
 
 ## 5. Live check (with intentable's `add-spec-runs`)
 
