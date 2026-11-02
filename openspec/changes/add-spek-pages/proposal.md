@@ -15,7 +15,8 @@ Nate asked that whenever OpenSpec is used, the change's artifacts be published w
   - Spek is pinned by commit, for its action and its build;
   - branch names reach commands only through the environment;
   - publishes queue without dropping any;
-  - a failed publish never fails the commit's checks, since Render deploys `main` only when every check passes.
+  - a failed publish never fails the commit's checks, since Render deploys `main` only when every check passes;
+  - a failure can never wipe the published pages: the publish runs only after a good build, and pushes only over the `gh-pages` it fetched.
 - **GitHub Pages is turned on** for the fork, serving the `gh-pages` branch, with Nate's go-ahead.
 - **`docs/SPEK.md`** says where the pages are, how a change gets one, and what not to put in OpenSpec files.
 
@@ -36,7 +37,7 @@ Out of scope:
 ## Impact
 
 - **New files:** `.github/workflows/spek.yml`, `bin/publish-spek-page`, `docs/SPEK.md` and `core/tests/test_spek_pages.py`.
-- **Changed:** `AGENTS.md`, in its OpenSpec section.
+- **Changed:** `AGENTS.md`: the OpenSpec section (drafts before G2, G2 defined, the confirmation commit, host and network names kept out) and its line on pushing (`change/` branches without asking).
 - **On GitHub, with Nate's go-ahead:** GitHub Pages turned on for the fork. The `gh-pages` branch is created and written only by the workflow.
 - **What becomes public:** everything published is already public, since the fork is public and every `change/` branch is pushed. Pages are easier to find than branch files, so `docs/SPEK.md` asks authors to keep host and network names out of OpenSpec files.
-- **Render:** the Spek run adds a check to each commit it builds, including merges to `main`, but it can't fail. Render's deploy still depends only on the Django tests passing.
+- **Render:** the Spek run adds a check to each commit it builds, including merges to `main`. It can't fail, so it can't block a deploy, but a deploy of `main` waits for it to finish, about a minute plus any queue.

@@ -24,7 +24,7 @@ See proposal.md for why. What the design rests on, checked on 2 November 2026:
 
 **Goals:**
 - Every `change/<name>` branch that contains the workflow has a page at a stable address, from its draft onward, and `main` has the site root.
-- Publishing can't touch the code branches, delay the site's deploy, run a branch name as code, or reach the upstream repository.
+- Publishing can't touch the code branches, fail or block the site's deploy, wipe published pages, run a branch name as code, or reach the upstream repository. A deploy of `main` may wait for its own publish, about a minute plus any queue.
 
 **Non-Goals:**
 - Pages for branches not named `change/<name>`.
@@ -37,13 +37,23 @@ See proposal.md for why. What the design rests on, checked on 2 November 2026:
 
 **Change branches get pages too, beyond the plan's "every push to main" (agent's decision, made necessary by Nate's).** Nate wants to read proposals on Spek while reviewing them (G2), before they reach `main`. So `change/<name>` branches publish to `/changes/<name>/`.
 
-**Drafts are pushed before G2 (Nate's decision, 2 November 2026).** Asked how to get a Spek view at G2, Nate chose "Push drafts before G2", an exception to Igor's G2 rule. A proposal's artifacts are committed as a draft on its `change/` branch and pushed. His confirmation is still recorded: the G2 commit, or a note in the branch history, says when he confirmed. Pushing `change/` branches is a standing go-ahead (Nate's decision, 2 November 2026). `AGENTS.md` records both.
+**Drafts are pushed before G2 (Nate's decision, 2 November 2026).** Asked how to get a Spek view at G2, Nate chose "Push drafts before G2", an exception to Igor's G2 rule. G2 is the gate where the owner confirms a proposal.
+- A proposal's artifacts are committed on its `change/` branch with "Draft" in the commit's subject, and pushed. Revisions after review are further draft commits.
+- When Nate confirms, an empty commit "Confirm proposal <name> (G2)" records it, so the branch history shows when (agent's decision on the form).
+- Pushing `change/` branches is a standing go-ahead (Nate's decision, 2 November 2026); `main` and the upstream still need him.
+- `AGENTS.md` records all of this, defines G2, and says to keep host and network names out of OpenSpec files. With the standing go-ahead nobody checks each push, so that rule belongs where agents read it every session. `AGENTS.md`'s line on pushing `main` changes to match.
+- The exception lives in nycnoise's `AGENTS.md`. intentable's change-cycle skill and rules still describe Igor's G2; for nycnoise, its own `AGENTS.md` takes precedence.
 
 **Pages are kept (Nate's decision, 2 November 2026).** There is no `delete` trigger. A page shows its branch's last published state, normally the archived change, and later links from the bridge or dashboard keep working.
 
 **A `gh-pages` branch with one folder per change (agent's decision).** GitHub's "deploy from Actions" Pages mode publishes a whole site per run, so each branch's run would wipe the others' pages. A `gh-pages` branch updated file by file keeps every page: `index.html` at the root for `main`, `changes/<name>/index.html` for each change, and `.nojekyll`. Pages serves the branch from its root.
 
-**One commit on `gh-pages`, force-pushed (agent's decision).** Each page is about 5 MB, and GitHub caps a Pages site at 1 GB. Keeping every publish in history would reach that after roughly 200 publishes. Each publish amends `gh-pages`' single commit and force-pushes it, so the branch holds only the current pages. Nothing else writes that branch.
+**One commit on `gh-pages`, force-pushed (agent's decision).** Each page is about 5 MB, and GitHub caps a Pages site at 1 GB. Keeping every publish in history would reach that after roughly 200 publishes. Each publish amends `gh-pages`' single commit and force-pushes it, so the branch holds only the current pages. Nothing else writes that branch. Igor's rules ask before force-pushing published history; Nate's G2 of this change approves exactly this one: the workflow force-pushing `gh-pages`.
+
+**A failure never wipes the pages (from the risk review).** With the force-push, starting `gh-pages` afresh by mistake would replace the whole site. So:
+- the publish is one shell step with `set -euo pipefail`, running only `if: steps.build.outcome == 'success'`;
+- it starts `gh-pages` as an orphan only when `git ls-remote --exit-code --heads origin gh-pages` exits 2, meaning no such branch; any other failure stops it;
+- it pushes with `--force-with-lease=gh-pages:<the commit it fetched>`, so a push never overwrites a `gh-pages` it didn't start from.
 
 **`bin/publish-spek-page <branch> <page> <site>` does the placing (agent's decision).**
 - `main` writes `<site>/index.html`.
@@ -58,7 +68,7 @@ See proposal.md for why. What the design rests on, checked on 2 November 2026:
 - `permissions: contents: write`;
 - `if: github.repository == 'natea/newenglandmusic'` on the job;
 - `concurrency: { group: spek-pages, cancel-in-progress: false, queue: max }`, so no publish is dropped;
-- `continue-on-error: true` on every step, so a failed publish never fails the commit's checks or delays Render. A failure shows in the Actions log, and the next push publishes again;
+- `continue-on-error: true` on every step, so a failed publish never fails the commit's checks or blocks Render. A failure shows in the Actions log, and the next push publishes again. GitHub must accept the workflow file itself, `queue:` included, which only the live check can show;
 - the branch name reaches the script only through `env:` (`BRANCH: ${{ github.ref_name }}`), never pasted into a `run:` script.
 
 **Pinned by commit (agent's decision).** `spekhq/spek@5542fa2dfda6c52a08fb0610a140670052056c66` (v1.20.2) and the same commit as `spek-version`. A tag can move, and Spek's `master` is its development branch. Spek's own composite pins its inner actions by major version, which this change doesn't control.
@@ -83,7 +93,7 @@ No test calls GitHub. The first real publishes are live checks in the tasks.
 
 1. Push `change/add-spek-pages` (standing go-ahead). The workflow builds and creates `gh-pages` with `changes/add-spek-pages/`.
 2. With Nate's go-ahead, turn Pages on for `gh-pages` at `/`, and check the page.
-3. After G4: archive, merge into `main`, and push `main` with his go-ahead, which also deploys the site on Render. Check that the root page appears and `changes/add-spek-pages/` is still served. Then `change/add-triage-clarify` merges `main` in and is pushed, and gets its page.
+3. After G4: archive, merge into `main`, and push `main` with his go-ahead, which also deploys the site on Render. Check that the root page appears and `changes/add-spek-pages/` is still served. Then `change/add-triage-clarify` merges `main` in and is pushed, and gets its page. These steps come after the archive, so they are follow-ups, not tasks.
 
 **Rollback:** turn Pages off, delete `gh-pages`, and remove the workflow file. Pages may serve cached copies for a short while.
 

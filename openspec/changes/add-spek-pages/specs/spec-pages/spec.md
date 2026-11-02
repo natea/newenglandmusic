@@ -6,7 +6,7 @@ Publish the newenglandmusic project's OpenSpec specs and changes as Spek pages o
 
 ### Requirement: Main's specs are published at the site root
 
-A push to `main` that touches `openspec/` or the Spek workflow, `.github/workflows/spek.yml`, SHALL publish Spek's page for `main` as the `index.html` at the root of natea/newenglandmusic's GitHub Pages site, replacing only that file.
+A push to `main` that touches `openspec/` or the Spek workflow, `.github/workflows/spek.yml`, SHALL publish Spek's page for `main` as the `index.html` at the root of natea/newenglandmusic's GitHub Pages site, replacing only that file and `.nojekyll`.
 
 #### Scenario: The main page
 
@@ -39,7 +39,12 @@ A push to a branch named `change/<name>` that touches `openspec/` or the Spek wo
 
 ### Requirement: Pages are kept
 
-A change's page SHALL stay published when its branch is deleted, so links to it keep working. It shows the branch's last published state.
+A change's page SHALL stay published when its branch is deleted, so links to it keep working; it shows the branch's last published state. A failed step SHALL NOT remove any page: the publish SHALL run only after Spek's build succeeded, SHALL start the `gh-pages` branch afresh only when it doesn't exist, and SHALL push only over the `gh-pages` commit it fetched.
+
+#### Scenario: A failure can't wipe the pages
+
+- **WHEN** the tests read the Spek workflow
+- **THEN** its publish step runs only when the build step succeeded, stops at its first failing command, starts `gh-pages` afresh only when `git ls-remote --exit-code` reports the branch missing, and pushes with `--force-with-lease` naming the commit it fetched
 
 #### Scenario: No removal on delete
 
@@ -62,7 +67,7 @@ The workflow SHALL use Spek's action and Spek's build at the same pinned commit,
 
 ### Requirement: Publishes queue, and never block the site's deploy
 
-Publishes SHALL run one at a time without dropping any queued run, and a failed publish SHALL NOT fail the commit's checks, since Render deploys `main` only when every check on the commit passes.
+Publishes SHALL run one at a time without dropping any queued run, and a failed publish SHALL NOT fail the commit's checks, since Render deploys `main` only when every check on the commit passes. A deploy may still wait for the publish to finish.
 
 #### Scenario: One at a time
 
@@ -74,20 +79,20 @@ Publishes SHALL run one at a time without dropping any queued run, and a failed 
 - **WHEN** the tests read the Spek workflow
 - **THEN** every step of its job may fail without failing the job
 
-### Requirement: Draft proposals are published before G2
+### Requirement: Draft proposals are published before the owner confirms them
 
-A proposal SHALL be committed as a draft and its `change/<name>` branch pushed to natea/newenglandmusic before the owner's G2, so the owner can read it on its Spek page while reviewing it. `AGENTS.md` SHALL say so.
+A proposal SHALL be committed as a draft and its `change/<name>` branch pushed to natea/newenglandmusic before the owner confirms the proposal (the gate called G2 in the change cycle), so the owner can read it on its Spek page while reviewing it. `AGENTS.md` SHALL say so, define G2, say how the confirmation is recorded, give the standing go-ahead for pushing `change/` branches, and say to keep host and network names out of OpenSpec files.
 
 #### Scenario: The rule is written down
 
-- **WHEN** the tests read `AGENTS.md`'s OpenSpec section
-- **THEN** it says a proposal's draft is pushed on its `change/` branch before G2, and names the change page's address
+- **WHEN** the tests read `AGENTS.md`
+- **THEN** it defines G2 as the owner confirming a proposal, says a proposal's draft is pushed on its `change/` branch before G2 with "Draft" in its commit, says the confirmation is recorded by a commit "Confirm proposal <name> (G2)", names the change page's address, allows pushing `change/` branches without asking while `main` and the upstream still need the owner, and says to keep host and network names out of OpenSpec files
 
 ### Requirement: A guide says where the pages are
 
-`docs/SPEK.md` SHALL give the site's address, a change page's address, which pushes publish, that a branch gets a page only once it contains the Spek workflow, that each page shows the whole repository's OpenSpec with the change found by name, and to keep host and network names out of OpenSpec files.
+`docs/SPEK.md` SHALL give the site's address, a change page's address, which pushes publish, that a branch gets a page only once it contains the Spek workflow, that each page shows the whole repository's OpenSpec with the change found by name, that pages stay after a branch is deleted, and to keep host and network names out of OpenSpec files.
 
 #### Scenario: Guide addresses
 
 - **WHEN** the tests read `docs/SPEK.md`
-- **THEN** it names `https://natea.github.io/newenglandmusic/` and `https://natea.github.io/newenglandmusic/changes/<name>/`, and says a branch needs `.github/workflows/spek.yml` to get a page
+- **THEN** it names `https://natea.github.io/newenglandmusic/` and `https://natea.github.io/newenglandmusic/changes/<name>/`, says a branch needs `.github/workflows/spek.yml` to get a page, that a page shows the whole repository's OpenSpec, and that pages stay, and asks to keep host and network names out

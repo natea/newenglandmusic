@@ -18,12 +18,20 @@
   - `continue-on-error: true` on every step;
   - checkout with `fetch-depth: 0`;
   - `spekhq/spek@5542fa2dfda6c52a08fb0610a140670052056c66` with the same `spek-version`, a title, and an output path outside the checkout;
-  - a step that checks out `gh-pages` into a separate folder, or starts it as an orphan the first time, runs `bin/publish-spek-page "$BRANCH" …` with `BRANCH: ${{ github.ref_name }}` from `env:`, amends the branch's single commit as `github-actions[bot]`, and force-pushes `gh-pages`.
-- [ ] 2.2 Add tests, parsing the workflow with PyYAML (`data[True]` is `on:`), for "Main's trigger", "Change branches' trigger", "No removal on delete", "Pinned and narrow", "Never upstream", "One at a time" and "A failed publish doesn't fail the commit".
+  - one publish step, `if: steps.build.outcome == 'success'`, a shell script with `set -euo pipefail`:
+    - `git ls-remote --exit-code --heads origin gh-pages`: exit 2 starts an orphan `gh-pages`; otherwise fetch it and note its commit; any other failure stops;
+    - `bin/publish-spek-page "$BRANCH" …` with `BRANCH: ${{ github.ref_name }}` from `env:`;
+    - amend the branch's single commit as `github-actions[bot]`, and push with `--force-with-lease=gh-pages:<that commit>`.
+- [ ] 2.2 Add tests, parsing the workflow with PyYAML (`data[True]` is `on:`), for "Main's trigger", "Change branches' trigger", "A failure can't wipe the pages", "No removal on delete", "Pinned and narrow", "Never upstream", "One at a time" and "A failed publish doesn't fail the commit".
 
 ## 3. The rule and the guide
 
-- [ ] 3.1 In `AGENTS.md`'s OpenSpec section, add that a proposal's draft is committed and its `change/` branch pushed to natea/newenglandmusic before the owner's G2, so it has a Spek page at `https://natea.github.io/newenglandmusic/changes/<name>/`, and that the G2 commit records the confirmation. Add a test for "The rule is written down".
+- [ ] 3.1 In `AGENTS.md`:
+  - define G2 as the owner confirming a proposal;
+  - in the OpenSpec section: a proposal's draft is committed, with "Draft" in its subject, and its `change/` branch pushed to natea/newenglandmusic before G2, so it has a Spek page at `https://natea.github.io/newenglandmusic/changes/<name>/`; the confirmation is recorded by an empty commit "Confirm proposal <name> (G2)"; keep host and network names out of OpenSpec files;
+  - in the line on pushing (now "Render deploys its `main` branch, so push only when asked"): `change/` branches may be pushed to natea/newenglandmusic without asking; `main` and the upstream still need the owner.
+
+  `CLAUDE.md` links to `AGENTS.md`, so one edit covers both. Add a test for "The rule is written down".
 - [ ] 3.2 Add `docs/SPEK.md`:
   - the site's address and a change page's address;
   - which pushes publish, and that a branch needs `.github/workflows/spek.yml`, from `main`, to get a page;
@@ -37,12 +45,12 @@
 
 One go-ahead from Nate covers 4.2. Pushing `change/` branches is his standing go-ahead.
 
-- [ ] 4.1 Push `change/add-spek-pages` to natea/newenglandmusic. Check the workflow run succeeds and creates `gh-pages` holding `changes/add-spek-pages/index.html` and `.nojekyll`, and that the commit's Django and Render checks are unaffected.
+- [ ] 4.1 Push `change/add-spek-pages` to natea/newenglandmusic. Check the workflow run succeeds, which also shows GitHub accepts the file and its `queue: max`, and creates `gh-pages` holding `changes/add-spek-pages/index.html` and `.nojekyll`. Check the commit's Django and Render checks are unaffected.
 - [ ] 4.2 With Nate's go-ahead, turn GitHub Pages on for the fork from `gh-pages` at `/`. Open `https://natea.github.io/newenglandmusic/changes/add-spek-pages/` and check the change shows with its proposal, design, tasks and spec. Record the run and what was seen here.
 
-## 5. After the merge
+## Workflow follow-up
 
-These follow Nate's G4, archive and merge.
-
-- [ ] 5.1 With Nate's go-ahead, push `main`, which also deploys the site on Render. Check that the root page appears, that `changes/add-spek-pages/` is still served, and that Render's deploy wasn't held up.
-- [ ] 5.2 Merge `main` into `change/add-triage-clarify`, push it, and give Nate its page's address.
+These come after Nate's G4, the archive and the merge, so they aren't tasks:
+- With Nate's go-ahead, push `main`, which also deploys the site on Render. Check that the root page appears, that `changes/add-spek-pages/` is still served, and that Render deployed, at most about a minute later than the Django check.
+- Merge `main` into `change/add-triage-clarify`, push it, and give Nate its page's address.
+- Update the Spek memory note with the commit pin.
