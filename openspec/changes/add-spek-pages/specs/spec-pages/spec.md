@@ -44,7 +44,7 @@ A change's page SHALL stay published when its branch is deleted, so links to it 
 #### Scenario: A failure can't wipe the pages
 
 - **WHEN** the tests read the Spek workflow
-- **THEN** its publish step runs only when the build step succeeded, stops at its first failing command, starts `gh-pages` afresh only when `git ls-remote --exit-code` reports the branch missing, and pushes with `--force-with-lease` naming the commit it fetched
+- **THEN** its publish step runs only when the build step succeeded, stops at its first failing command, starts `gh-pages` afresh only when `git ls-remote --exit-code` reports the branch missing, and pushes with `--force-with-lease` naming the commit it fetched, or requiring the branch still be absent when it started one
 
 #### Scenario: No removal on delete
 

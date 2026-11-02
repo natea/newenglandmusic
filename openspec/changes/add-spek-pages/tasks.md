@@ -17,17 +17,17 @@
   - `concurrency: { group: spek-pages, cancel-in-progress: false, queue: max }`;
   - `continue-on-error: true` on every step;
   - checkout with `fetch-depth: 0`;
-  - `spekhq/spek@5542fa2dfda6c52a08fb0610a140670052056c66` with the same `spek-version`, a title, and an output path outside the checkout;
+  - `spekhq/spek@5542fa2dfda6c52a08fb0610a140670052056c66`, with `id: build`, the same `spek-version`, a title, and an output path outside the checkout;
   - one publish step, `if: steps.build.outcome == 'success'`, a shell script with `set -euo pipefail`:
-    - `git ls-remote --exit-code --heads origin gh-pages`: exit 2 starts an orphan `gh-pages`; otherwise fetch it and note its commit; any other failure stops;
+    - `git ls-remote --exit-code --heads origin gh-pages`, its exit code captured (`rc=0; … || rc=$?`) rather than tripping `set -e`: 2 starts an orphan `gh-pages`, 0 fetches it and notes its commit, anything else stops;
     - `bin/publish-spek-page "$BRANCH" …` with `BRANCH: ${{ github.ref_name }}` from `env:`;
-    - amend the branch's single commit as `github-actions[bot]`, and push with `--force-with-lease=gh-pages:<that commit>`.
-- [ ] 2.2 Add tests, parsing the workflow with PyYAML (`data[True]` is `on:`), for "Main's trigger", "Change branches' trigger", "A failure can't wipe the pages", "No removal on delete", "Pinned and narrow", "Never upstream", "One at a time" and "A failed publish doesn't fail the commit".
+    - amend the branch's single commit as `github-actions[bot]`, and push with `--force-with-lease=gh-pages:<that commit>`, or `--force-with-lease=gh-pages:` (the branch must still not exist) the first time.
+- [ ] 2.2 Add tests, parsing the workflow with PyYAML (`data[True]` is `on:`), checking among other things that the build step has `id: build` and the gate names it, for "Main's trigger", "Change branches' trigger", "A failure can't wipe the pages", "No removal on delete", "Pinned and narrow", "Never upstream", "One at a time" and "A failed publish doesn't fail the commit".
 
 ## 3. The rule and the guide
 
 - [ ] 3.1 In `AGENTS.md`:
-  - define G2 as the owner confirming a proposal;
+  - define G2 as the owner confirming a proposal, and G4 as the owner accepting its implementation;
   - in the OpenSpec section: a proposal's draft is committed, with "Draft" in its subject, and its `change/` branch pushed to natea/newenglandmusic before G2, so it has a Spek page at `https://natea.github.io/newenglandmusic/changes/<name>/`; the confirmation is recorded by an empty commit "Confirm proposal <name> (G2)"; keep host and network names out of OpenSpec files;
   - in the line on pushing (now "Render deploys its `main` branch, so push only when asked"): `change/` branches may be pushed to natea/newenglandmusic without asking; `main` and the upstream still need the owner.
 
@@ -53,4 +53,3 @@ One go-ahead from Nate covers 4.2. Pushing `change/` branches is his standing go
 These come after Nate's G4, the archive and the merge, so they aren't tasks:
 - With Nate's go-ahead, push `main`, which also deploys the site on Render. Check that the root page appears, that `changes/add-spek-pages/` is still served, and that Render deployed, at most about a minute later than the Django check.
 - Merge `main` into `change/add-triage-clarify`, push it, and give Nate its page's address.
-- Update the Spek memory note with the commit pin.

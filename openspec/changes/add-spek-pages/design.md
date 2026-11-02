@@ -53,7 +53,8 @@ See proposal.md for why. What the design rests on, checked on 2 November 2026:
 **A failure never wipes the pages (from the risk review).** With the force-push, starting `gh-pages` afresh by mistake would replace the whole site. So:
 - the publish is one shell step with `set -euo pipefail`, running only `if: steps.build.outcome == 'success'`;
 - it starts `gh-pages` as an orphan only when `git ls-remote --exit-code --heads origin gh-pages` exits 2, meaning no such branch; any other failure stops it;
-- it pushes with `--force-with-lease=gh-pages:<the commit it fetched>`, so a push never overwrites a `gh-pages` it didn't start from.
+- it pushes with `--force-with-lease=gh-pages:<the commit it fetched>`, or `--force-with-lease=gh-pages:` when it started the branch, so a push never overwrites a `gh-pages` it didn't start from;
+- the publish gate names the build step by `id: build`, and `ls-remote`'s exit code is captured explicitly, since `set -e` would otherwise stop the script before reading it.
 
 **`bin/publish-spek-page <branch> <page> <site>` does the placing (agent's decision).**
 - `main` writes `<site>/index.html`.
@@ -83,6 +84,8 @@ No test calls GitHub. The first real publishes are live checks in the tasks.
 ## Risks / Trade-offs
 
 - **Drafts are public before Nate confirms them.** → His decision. The fork is already public, and drafts are labelled as such in their commits. `docs/SPEK.md` asks authors to keep host and network names out of OpenSpec files.
+- **A failure in GitHub's job setup** (downloading Spek's action at its commit, or a workflow file GitHub rejects) fails the job whatever the steps say, and on a `main` commit would hold back Render. → Rare. Task 4.1 shows GitHub accepts the file before anything reaches `main`, and a re-run clears a download failure.
+- **An empty "Confirm proposal (G2)" commit publishes nothing.** It touches no files, so the page keeps the last draft, which is what Nate confirmed.
 - **A failed publish is quiet.** The commit stays green. → The Actions log shows it, and the next publish to that branch replaces the page. The live checks look at the first ones.
 - **Each page is the whole repository's OpenSpec,** about 60 changes, not just the change it's named for. → `docs/SPEK.md` says to find the change by name in the page.
 - **Pages builds after a push by the job's token aren't confirmed.** → The live check watches for it. The fallback is re-saving the Pages source, or switching to "deploy from Actions" with the whole `gh-pages` tree uploaded.
@@ -99,4 +102,4 @@ No test calls GitHub. The first real publishes are live checks in the tasks.
 
 ## Open Questions
 
-none
+- Nate's answer on natea/intentable ("those can be posted to that github repo which is public") is read here as "intentable's own changes, such as host-on-spark, get no page". To confirm with him at G2.
