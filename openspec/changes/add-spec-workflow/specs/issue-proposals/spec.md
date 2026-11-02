@@ -17,7 +17,7 @@ The repo SHALL have a `spec` workflow in `.fabro/workflows/spec/`. It SHALL inst
 - **THEN** it installs pinned versions of Claude Code, the ACP adapter and `openspec`. In order, it has:
   - a `propose` agent using `propose.md`;
   - the draft check;
-  - the `route` step;
+  - the `route` step, which sends a `needs-info` draft straight to the last step;
   - the `sketch` agent and the `check_sketches` step on the `needs-design` route;
   - a fan-out to the agents `risk`, `spec_fit` and `fidelity`, each using its own prompt;
   - a merge;
@@ -201,6 +201,20 @@ The last step SHALL copy `.intentable/reviews/summary.md` to `.intentable/review
 - **WHEN** the last step accepts a draft
 - **THEN** `.intentable/review.md` is the same text as `.intentable/reviews/summary.md`, and no earlier step wrote `.intentable/review.md`
 
+### Requirement: An issue that isn't ready goes back with a question
+
+When the propose agent finds the issue isn't clear enough to write up, it SHALL write no change and set `.intentable/draft.json` to the state `needs-info`, exactly one `clarity:` label from 1 to 3, and a message that asks exactly one question (Nate's decision, 2 November 2026). The `route` step SHALL then send the run straight to the last step, with no sketch and no review. The last step SHALL write a result with that state, label and message, and no `change`, `reviewed` or `files`.
+
+#### Scenario: Not ready
+
+- **WHEN** the propose agent's draft has the state `needs-info`, the label `clarity:3` and one question
+- **THEN** no reviewer or sketch step runs, and the result has the state `needs-info`, `clarity:3`, that question, and no change
+
+#### Scenario: A send-back that breaks the rules
+
+- **WHEN** a `needs-info` draft has `clarity:4`, two questions, or a change folder
+- **THEN** the checker exits with a failure naming the problem
+
 ### Requirement: The draft is named in its own file
 
 The propose agent SHALL name the change and give its message in `.intentable/draft.json`, as `change`, `labels` and `message`. The revise agent may change the message, but not the labels or the change name. No step before the last SHALL write `.intentable/result.json`, `.intentable/review.md` or anything under `.intentable/proposal/`.
@@ -275,7 +289,7 @@ The last step SHALL empty `.intentable/proposal/`, then copy the contents of `op
 
 ### Requirement: Spec drafts give no state and follow the message rules
 
-`bin/check-intentable-result spec`, with or without `--draft`, SHALL fail the run, naming the problem, when the draft has a `state` key with any value other than none, or a label other than `needs-design`, or when its message is missing, mentions anyone, or is longer than the other workflows allow.
+`bin/check-intentable-result spec`, with or without `--draft`, SHALL fail the run, naming the problem, when the draft has a `state` other than none or `needs-info`, a label other than `needs-design` for a draft with a change, or when its message is missing, mentions anyone, or is longer than the other workflows allow.
 
 #### Scenario: A state or another label
 
@@ -289,14 +303,7 @@ The last step SHALL empty `.intentable/proposal/`, then copy the contents of `op
 
 ### Requirement: The proposal prompt states the rules
 
-`propose.md` SHALL tell the agent to:
-- take the OpenSpec propose stance, writing planning artifacts only and no code;
-- ground the change in the site's code;
-- follow `openspec/config.yaml` and `AGENTS.md`;
-- choose a new change name;
-- keep host and network names out of OpenSpec files;
-- record any decision the thread doesn't settle as an open question, never as settled;
-- write the message in two to four plain sentences, with no @-mentions.
+`propose.md` SHALL tell the agent to write planning artifacts only, grounded in the site's code; to follow `openspec/config.yaml` and `AGENTS.md`; to choose a new change name; to keep host and network names out; to record unsettled decisions as open questions; to send the issue back with one question when it isn't clear enough; and to write the message in two to four plain sentences, with no @-mentions.
 
 #### Scenario: The prompt gives the rules
 
@@ -306,6 +313,7 @@ The last step SHALL empty `.intentable/proposal/`, then copy the contents of `op
   - to follow `openspec/config.yaml` and `AGENTS.md`;
   - to keep host and network names out;
   - to record unsettled decisions as open questions;
+  - when to send the issue back with one question;
   - to write the message in two to four sentences without @-mentions;
   - to write `.intentable/draft.json`.
 

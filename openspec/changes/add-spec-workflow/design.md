@@ -28,6 +28,7 @@ The review loop is the `dev-review-proposal` skill from intentable: three fresh 
 start -> install -> propose -> check_draft -> route
 route -> sketch -> check_sketches -> fork    (needs-design)
 route -> fork                                (otherwise)
+route -> finish                              (needs-info: no change, back with a question)
 fork -> risk, spec_fit, fidelity -> merge -> check_reviews
 check_reviews -> finish   [outcome=succeeded]   (all yes, or round limit reached)
 check_reviews -> revise   (otherwise)
@@ -75,6 +76,8 @@ finish -> exit
   - the archived changes' designs, where Nate's dated decisions are kept.
 - The bridge posts as `natea` with its marker. Both `propose.md` and `fidelity.md` say such a comment is the bridge's, not Nate speaking, as the triage prompts do.
 
+**Sending an issue back** (Nate's decision, 2 November 2026). If the propose agent finds the issue isn't clear enough to write up after all, it writes no change. Instead it gives `needs-info`, a `clarity:` label of 1 to 3, and one question, under the same rules as `clarify`. `route` skips the sketch and the review, and `finish` writes that result. The bridge moves the issue back to `needs-info`, and the person's reply starts `clarify` as usual.
+
 **Round limit: 5** (Nate's decision, 2 November 2026: first 3, then 5 after the review of this very proposal took five rounds; the skill itself sets no limit). At the limit the run doesn't stop empty-handed: it ends with the draft marked not passed and the open findings in the summary.
 - The limit caps cost.
 - A run that hits it still ends with its draft, since a draft with open findings is more use to Nate than a failed run.
@@ -109,4 +112,4 @@ finish -> exit
 
 ## Open Questions
 
-- Should the agent be able to say an issue isn't ready for a proposal after all, sending it back to `needs-info` with a question? This change leaves that out. Once in `spec-review`, the agent writes the best proposal it can and records the gaps as open questions.
+None.
