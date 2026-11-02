@@ -171,3 +171,6 @@ core/static/core/scss/*.css
 
 # review lists and other run output written next to the logs
 logs/*.csv
+
+# the result a triage or clarify run leaves for the intentable bridge
+.intentable/

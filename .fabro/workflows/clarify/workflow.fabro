@@ -1,0 +1,26 @@
+digraph Clarify {
+    graph [goal="Clarify an issue on the New England Music Project site from the reply: ask the next question, or write it up"]
+    rankdir=LR
+    on_failure="exit"
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    install [
+        label="Install Claude Code",
+        shape=parallelogram,
+        script="python3 --version && npm install -g --prefix /usr/local @anthropic-ai/claude-code@2.1.316 @agentclientprotocol/claude-agent-acp@0.99.1"
+    ]
+
+    think [
+        label="Clarify (Claude Code, ACP)",
+        type="agent",
+        backend="acp",
+        acp.command="claude-agent-acp",
+        prompt="@prompt.md"
+    ]
+
+    check [label="Check the result", shape=parallelogram, script="python3 bin/check-intentable-result clarify"]
+
+    start -> install -> think -> check -> exit
+}

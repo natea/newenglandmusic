@@ -14,12 +14,12 @@
 
 ## 2. The workflows
 
-- [ ] 2.1 Add `.fabro/workflows/triage/`:
+- [x] 2.1 Add `.fabro/workflows/triage/`:
   - `workflow.toml`: the five inputs with `""` defaults, pull requests and run-branch pushing off, `[run.artifacts] include = [".intentable/result.json"]`;
   - `workflow.fabro`: `on_failure="exit"`, `start → install → think → check → exit`. `install` runs `python3 --version`, then the pinned installs from `claude-max`. `think` is an ACP agent with `prompt="@prompt.md"`. `check` runs `python3 bin/check-intentable-result triage`;
   - `prompt.md`, with the rules in design.md. It names roles, not people, and never names the upstream repository.
-- [ ] 2.2 Add `.fabro/workflows/clarify/` the same way, with the clarify rules, and its check running `python3 bin/check-intentable-result clarify`.
-- [ ] 2.3 Add `.intentable/` to `.gitignore`. Add tests for:
+- [x] 2.2 Add `.fabro/workflows/clarify/` the same way, with the clarify rules, and its check running `python3 bin/check-intentable-result clarify`.
+- [x] 2.3 Add `.intentable/` to `.gitignore`. Add tests for:
   - "Workflow shape", "Inputs declared and used" and "Commands without inputs";
   - "Nothing pushed", "No human gate" and "Result collected, not committed";
   - "Prompt rules".

@@ -1,10 +1,13 @@
 import json
+import re
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 from django.test import SimpleTestCase
+
+from core.tests.test_fabro_config import FABRO, workflow
 
 ROOT = Path(__file__).resolve().parents[2]
 CHECKER = ROOT / "bin" / "check-intentable-result"
@@ -185,3 +188,102 @@ class MessagesStayOnTheIssueTestCase(SimpleTestCase):
         status, output = run_checker("triage", triage(labels=labels, state="spec-review", message="x" * 2001))
         self.assertEqual(status, 1)
         self.assertIn("too long", output)
+
+
+# the workflows' configuration
+
+WORKFLOWS = ("triage", "clarify")
+INPUTS = ["issue_number", "issue_title", "issue_body", "issue_author", "issue_thread"]
+STATES = {"triage": ["spec-review", "needs-info", "parked"], "clarify": ["spec-review", "needs-info"]}
+GROUPS = ["type:", "clarity:", "risk:", "blast:", "size:"]
+
+
+def attribute(attrs, name):
+    """a step attribute's quoted value, or None"""
+    found = re.search(rf'(?<![\w.]){re.escape(name)}\s*=\s*"((?:[^"\\]|\\.)*)"', attrs)
+    return found.group(1) if found else None
+
+
+def prompt(name):
+    return (FABRO / "workflows" / name / "prompt.md").read_text()
+
+
+class WorkflowShapeTestCase(SimpleTestCase):
+    """triage and clarify workflows exist"""
+
+    def test_workflow_shape(self):
+        for name in WORKFLOWS:
+            settings, graph, steps, edges = workflow(name)
+            self.assertEqual(edges, [" install -> think -> check "], name)
+            install = attribute(steps["install"], "script")
+            self.assertIn("@anthropic-ai/claude-code@2.1.316", install)
+            self.assertIn("@agentclientprotocol/claude-agent-acp@0.99.1", install)
+            self.assertIn("python3 --version", install)
+            self.assertEqual(attribute(steps["think"], "type"), "agent")
+            self.assertEqual(attribute(steps["think"], "backend"), "acp")
+            self.assertEqual(attribute(steps["think"], "prompt"), "@prompt.md")
+            self.assertEqual(attribute(steps["check"], "script"), f"python3 bin/check-intentable-result {name}")
+            self.assertEqual(settings["workflow"]["graph"], "workflow.fabro")
+
+
+class InputsTestCase(SimpleTestCase):
+    """the workflows take the issue as inputs; issue text never reaches a command"""
+
+    def test_inputs_declared_and_used(self):
+        for name in WORKFLOWS:
+            settings = workflow(name)[0]
+            self.assertEqual(sorted(settings["run"]["inputs"]), sorted(INPUTS), name)
+            for key in INPUTS:
+                self.assertIn(f"{{{{ inputs.{key} }}}}", prompt(name), (name, key))
+
+    def test_commands_without_inputs(self):
+        for name in WORKFLOWS:
+            for step, attrs in workflow(name)[2].items():
+                script = attribute(attrs, "script")
+                if script is not None:
+                    self.assertNotIn("{{ inputs.", script, (name, step))
+
+
+class NothingPushedTestCase(SimpleTestCase):
+    """the workflows read the code and push nothing"""
+
+    def test_nothing_pushed(self):
+        for name in WORKFLOWS:
+            run = workflow(name)[0]["run"]
+            self.assertIs(run["pull_request"]["enabled"], False, name)
+            self.assertIs(run["run_branch"]["push"], False, name)
+            # GitHub permissions would replace the sandbox's read-only git access
+            self.assertNotIn("integrations", run, name)
+
+
+class RunEndsWithItsResultTestCase(SimpleTestCase):
+    """a run ends with its result; the result is kept for the bridge"""
+
+    def test_no_human_gate(self):
+        for name in WORKFLOWS:
+            graph = workflow(name)[1]
+            self.assertNotIn("hexagon", graph, name)
+            self.assertRegex(graph, r'(?m)^\s*on_failure="exit"\s*$')
+
+    def test_result_collected_not_committed(self):
+        for name in WORKFLOWS:
+            self.assertEqual(workflow(name)[0]["run"]["artifacts"]["include"], [".intentable/result.json"], name)
+        ignored = [line.strip() for line in (FABRO.parent / ".gitignore").read_text().splitlines()]
+        self.assertIn(".intentable/", ignored)
+
+
+class PromptRulesTestCase(SimpleTestCase):
+    """the prompts state the rules"""
+
+    def test_prompt_rules(self):
+        for name in WORKFLOWS:
+            text = prompt(name)
+            for needed in ("explore stance", ".intentable/result.json", "<!-- intentable-bridge -->", "exactly one question", "Change no file", "4"):
+                self.assertIn(needed, text, (name, needed))
+            for group in GROUPS:
+                self.assertIn(f"`{group}", text, (name, group))
+            for state in STATES[name]:
+                self.assertIn(f"`{state}`", text, (name, state))
+        self.assertNotIn("`parked`", prompt("clarify"))
+        self.assertIn("clarity is 4 or 5", prompt("triage"))
+        self.assertIn("clarity is 4 or 5", prompt("clarify"))

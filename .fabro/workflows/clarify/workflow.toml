@@ -1,0 +1,25 @@
+_version = 1
+
+[workflow]
+graph = "workflow.fabro"
+
+# Started by the intentable bridge for an issue on natea/newenglandmusic, in the
+# server's daytona environment. The bridge passes all five inputs as text; the
+# empty defaults only let a run started by hand be created.
+[run.inputs]
+issue_number = ""
+issue_title = ""
+issue_body = ""
+issue_author = ""
+issue_thread = ""
+
+# The agent reads the code; nothing is pushed and no pull request is opened.
+[run.pull_request]
+enabled = false
+
+[run.run_branch]
+push = false
+
+# The bridge reads the result from the run's artifacts; .intentable/ is git-ignored.
+[run.artifacts]
+include = [".intentable/result.json"]
