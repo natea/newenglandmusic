@@ -9,7 +9,7 @@
 
 ## 2. The checkers
 
-- [ ] 2.1 Add the `spec` mode and `--draft` to `bin/check-intentable-result`:
+- [x] 2.1 Add the `spec` mode and `--draft` to `bin/check-intentable-result`:
   - read `.intentable/draft.json`;
   - check the name rule, and the existing-changes record with archive dates stripped;
   - run `openspec validate --strict`;
@@ -18,9 +18,9 @@
   - `--sketches`: the sketches are there, linked from `design.md`, and pass the allowlist; `--draft` checks only the safety of any sketches present;
   - the labels against `.intentable/route.json`;
   - without `--draft`, empty and fill `.intentable/proposal/`, copy the summary to `.intentable/review.md`, and write the result with `reviewed` and `files`.
-- [ ] 2.2 Add `bin/check-intentable-reviews`: rounds, reports and the revise notes filed with the round they answer, the limit, and the summary with its fixed first line and the outcome
-- [ ] 2.3 Add a fake `openspec` executable for the tests, placed first on `PATH`
-- [ ] 2.4 Add tests for "Not ready", "A send-back that breaks the rules", "Summary beside the result", "Draft check reads the draft file", "Sketches required with needs-design", "Unsafe sketch caught before review", "A sketch lost in revise", "First draft check without sketches", "A sketch with a script", "A sketch that calls out", "A safe sketch", "Revise adds needs-design", "A good result", "Only the final text", "A name that isn't plain", "A change that already existed", "No change folder", "A state or another label", "Too many files", "A file Fabro wouldn't collect", "Invalid change", "A message that mentions someone", "All satisfied", "One not satisfied", "The round limit", "Missing report", "Summary written" and "Summary of a review not passed"
+- [x] 2.2 Add `bin/check-intentable-reviews`: rounds, reports and the revise notes filed with the round they answer, the limit, and the summary with its fixed first line and the outcome
+- [x] 2.3 Add a fake `openspec` executable for the tests, placed first on `PATH`
+- [x] 2.4 Add tests for "Not ready", "A send-back that breaks the rules", "Summary beside the result", "Draft check reads the draft file", "Sketches required with needs-design", "Unsafe sketch caught before review", "A sketch lost in revise", "First draft check without sketches", "A sketch with a script", "A sketch that calls out", "A safe sketch", "Revise adds needs-design", "A good result", "Only the final text", "A name that isn't plain", "A change that already existed", "No change folder", "A state or another label", "Too many files", "A file Fabro wouldn't collect", "Invalid change", "A message that mentions someone", "All satisfied", "One not satisfied", "The round limit", "Missing report", "Summary written" and "Summary of a review not passed"
 
 ## 3. Sketches on the Spek page
 
