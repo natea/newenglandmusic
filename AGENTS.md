@@ -8,7 +8,7 @@ This checkout started as [nyc noise](https://nyc-noise.com/), a Django NYC music
 
 - **Two remotes, and only one to push to:**
   - **`origin`:** the upstream `nycnoise/nycnoise` repo. Never push or open pull requests there.
-  - **`github`:** this site's own public repo, [natea/newenglandmusic](https://github.com/natea/newenglandmusic). Render deploys its `main` branch, so push only when asked.
+  - **`github`:** this site's own public repo, [natea/newenglandmusic](https://github.com/natea/newenglandmusic). Render deploys its `main` branch, so push `main` only when asked. `change/<name>` branches may be pushed here without asking, so their proposals get a Spek page (see below).
 - Commit locally, on a branch, when asked. `main` is what deploys; see `PRODUCTION.md`.
 - The schema has diverged from nycnoise on purpose. Don't keep NYC-specific fields or behavior for compatibility.
 
@@ -93,6 +93,9 @@ Write the output of long command runs to `logs/`, never to a temporary or scratc
 
 - **Propose every major change before building it.** Create an OpenSpec proposal (`/opsx:propose`) for any major change: a new feature, capability or data source; a model or schema change; a new external API; or a change to behavior a spec in `openspec/specs/` describes. Implement only after the user has reviewed it, with `/opsx:apply` and then `/opsx:archive`. Small bug fixes and minor tweaks don't need a proposal, but they still need tests. If unsure, ask.
 - **OpenSpec layout:** plans live in `openspec/` (spec-driven schema), and the main specs in `openspec/specs/` describe current behavior.
+- **Gates:** G2 is the owner confirming a proposal; G4 is the owner accepting its implementation.
+- **Drafts are published before G2.** Commit a proposal's artifacts on its `change/<name>` branch with "Draft" in the commit subject, and push the branch to `github`, so the owner can read it on its Spek page, `https://natea.github.io/newenglandmusic/changes/<name>/`, while reviewing it. Revisions are further draft commits. When the owner confirms, record it with an empty commit "Confirm proposal <name> (G2)". This is the owner's exception to committing a proposal only after G2 (`docs/SPEK.md`).
+- **Keep host and network names out of OpenSpec files.** Pushed branches and their Spek pages are public: no machine names, tailnet or internal addresses, or anything secret.
 - **A feature is complete only when every spec scenario has a passing automated test.** Don't archive a change until it does and all its tasks are checked.
 - **Tests never touch the network.** Mock Google Sheets (`gog`), venue websites, Anthropic, Ticketmaster, Eventbrite, SeatGeek, Spotify, Apple Music, YouTube, Last.fm, Wikidata, MusicBrainz, OpenStreetMap (Nominatim and Overpass) and Google Places, or replay recorded fixtures with the keys stripped (`core/tests/fixtures/`). The suite must pass with outbound network blocked.
 - **When a real run contradicts the design**, update the change's design and tasks. Don't paper over it in code.
