@@ -46,8 +46,9 @@
 
 One go-ahead from Nate covers 4.2. Pushing `change/` branches is his standing go-ahead.
 
-- [ ] 4.1 Push `change/add-spek-pages` to natea/newenglandmusic. Check the workflow run succeeds, which also shows GitHub accepts the file and its `queue: max`, and creates `gh-pages` holding `changes/add-spek-pages/index.html` and `.nojekyll`. Check the commit's Django and Render checks are unaffected.
-- [ ] 4.2 With Nate's go-ahead, turn GitHub Pages on for the fork from `gh-pages` at `/`. Open `https://natea.github.io/newenglandmusic/changes/add-spek-pages/` and check the change shows with its proposal, design, tasks and spec. Record the run and what was seen here.
+- [x] 4.1 Push `change/add-spek-pages` to natea/newenglandmusic. Check the workflow run succeeds, which also shows GitHub accepts the file and its `queue: max`, and creates `gh-pages` holding `changes/add-spek-pages/index.html` and `.nojekyll`. Check the commit's Django and Render checks are unaffected.
+- [x] 4.2 With Nate's go-ahead, turn GitHub Pages on for the fork from `gh-pages` at `/`. Open `https://natea.github.io/newenglandmusic/changes/add-spek-pages/` and check the change shows with its proposal, design, tasks and spec. Record the run and what was seen here.
+  - 2 November 2026: the first run (41521304348, on `change/add-spek-pages`) succeeded at every step, so GitHub accepted the file and `queue: max`. It created `gh-pages` with `changes/add-spek-pages/index.html` (2,659,630 bytes) and `.nojekyll`. No Django CI run started for the change branch, so Render wasn't involved. Nate turned Pages on (source `gh-pages`, `/`); the page answers 200 at `https://natea.github.io/newenglandmusic/changes/add-spek-pages/` and shows the change.
 
 ## Workflow follow-up
 
