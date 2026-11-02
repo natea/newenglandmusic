@@ -4,9 +4,9 @@ Nate asked that whenever OpenSpec is used, the change's artifacts be published w
 
 ## What Changes
 
-- **A GitHub Actions workflow on the fork,** `.github/workflows/spek.yml`, builds Spek's viewer from the repo's `openspec/` folder: specs, active changes and archived changes, each artifact as a tab. It runs on pushes that touch `openspec/` or the workflow itself; a code-only push builds nothing.
+- **A GitHub Actions workflow on the fork,** `.github/workflows/spek.yml`, builds Spek's viewer from the repo's `openspec/` folder: specs, active changes and archived changes, each artifact as a tab. Change branches build on pushes that touch `openspec/` or the workflow itself; a code-only push builds nothing.
 - **Where the pages go,** on the fork's GitHub Pages (`gh-pages` branch):
-  - `main` publishes at the site root, `https://natea.github.io/newenglandmusic/`;
+  - `main` is published at the site root, `https://natea.github.io/newenglandmusic/`, once a day and on demand, never on a push to `main`, so Render's deploy never waits for Spek (Nate's decision, 2 November 2026);
   - each `change/<name>` branch publishes at `/changes/<name>/`;
   - a page stays when its branch is deleted, so links to it keep working (Nate's decision, 2 November 2026).
 - **Draft proposals are pushed before G2 (Nate's decision, 2 November 2026).** A proposal is committed as a draft and its branch pushed to the fork before Nate's G2, so he reads it on its Spek page while reviewing. That is an exception to Igor's G2 rule, which commits a proposal only after confirmation. `AGENTS.md` records it. Pushing `change/` branches to the fork is a standing go-ahead (Nate's decision, 2 November 2026); `main` and anything upstream still need his go-ahead.
@@ -15,7 +15,7 @@ Nate asked that whenever OpenSpec is used, the change's artifacts be published w
   - Spek is pinned by commit, for its action and its build;
   - branch names reach commands only through the environment;
   - publishes queue without dropping any;
-  - a failed publish never fails the commit's checks, since Render deploys `main` only when every check passes;
+  - a failed publish never fails a commit's checks;
   - a failure can never wipe the published pages: the publish runs only after a good build, and pushes only over the `gh-pages` it fetched.
 - **GitHub Pages is turned on** for the fork, serving the `gh-pages` branch, with Nate's go-ahead.
 - **`docs/SPEK.md`** says where the pages are, how a change gets one, and what not to put in OpenSpec files.
@@ -40,4 +40,4 @@ Out of scope:
 - **Changed:** `AGENTS.md`: the OpenSpec section (drafts before G2, G2 defined, the confirmation commit, host and network names kept out) and its line on pushing (`change/` branches without asking).
 - **On GitHub, with Nate's go-ahead:** GitHub Pages turned on for the fork. The `gh-pages` branch is created and written only by the workflow.
 - **What becomes public:** everything published is already public, since the fork is public and every `change/` branch is pushed. Pages are easier to find than branch files, so `docs/SPEK.md` asks authors to keep host and network names out of OpenSpec files.
-- **Render:** the Spek run adds a check to each commit it builds, including merges to `main`. It can't fail, so it can't block a deploy, but a deploy of `main` waits for it to finish, about a minute plus any queue.
+- **Render:** unaffected. Spek never runs on a push to `main`, so Render's deploy waits only for the Django tests, as today. The root page can be up to a day behind `main`.

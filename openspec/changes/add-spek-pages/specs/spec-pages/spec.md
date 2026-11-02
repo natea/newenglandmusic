@@ -6,7 +6,7 @@ Publish the newenglandmusic project's OpenSpec specs and changes as Spek pages o
 
 ### Requirement: Main's specs are published at the site root
 
-A push to `main` that touches `openspec/` or the Spek workflow, `.github/workflows/spek.yml`, SHALL publish Spek's page for `main` as the `index.html` at the root of natea/newenglandmusic's GitHub Pages site, replacing only that file and `.nojekyll`.
+The Spek workflow, `.github/workflows/spek.yml`, SHALL publish Spek's page for `main` as the `index.html` at the root of natea/newenglandmusic's GitHub Pages site once a day and when started by hand, replacing only that file and `.nojekyll`. It SHALL NOT run on a push to `main`, so no Spek check sits on `main`'s commits and Render's deploy never waits for one (Nate's decision, 2 November 2026).
 
 #### Scenario: The main page
 
@@ -16,7 +16,7 @@ A push to `main` that touches `openspec/` or the Spek workflow, `.github/workflo
 #### Scenario: Main's trigger
 
 - **WHEN** the tests read the Spek workflow
-- **THEN** it runs on pushes to `main` that touch `openspec/**` or `.github/workflows/spek.yml`
+- **THEN** it runs on a daily schedule and on demand, and no push trigger names `main`
 
 ### Requirement: Each change branch gets its own page
 
@@ -65,9 +65,9 @@ The workflow SHALL use Spek's action and Spek's build at the same pinned commit,
 - **WHEN** the tests read the Spek workflow
 - **THEN** it doesn't name nycnoise/nycnoise, and its job runs only when the repository is natea/newenglandmusic
 
-### Requirement: Publishes queue, and never block the site's deploy
+### Requirement: Publishes queue, and never fail a commit's checks
 
-Publishes SHALL run one at a time without dropping any queued run, and a failed publish SHALL NOT fail the commit's checks, since Render deploys `main` only when every check on the commit passes. A deploy may still wait for the publish to finish.
+Publishes SHALL run one at a time without dropping any queued run, and a failed publish SHALL NOT fail the checks of the commit it ran for.
 
 #### Scenario: One at a time
 

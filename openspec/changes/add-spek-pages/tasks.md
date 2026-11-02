@@ -11,7 +11,7 @@
 ## 2. The workflow
 
 - [ ] 2.1 Add `.github/workflows/spek.yml`:
-  - triggers: `push` to `main` and `change/*`, with `paths: [openspec/**, .github/workflows/spek.yml]`, and no `delete` trigger;
+  - triggers: `push` to `change/*` only, with `paths: [openspec/**, .github/workflows/spek.yml]`; a daily `schedule` and `workflow_dispatch`, both building `main`; no `delete` trigger;
   - `permissions: contents: write`;
   - the `natea/newenglandmusic` guard on the job;
   - `concurrency: { group: spek-pages, cancel-in-progress: false, queue: max }`;
@@ -51,5 +51,5 @@ One go-ahead from Nate covers 4.2. Pushing `change/` branches is his standing go
 ## Workflow follow-up
 
 These come after Nate's G4, the archive and the merge, so they aren't tasks:
-- With Nate's go-ahead, push `main`, which also deploys the site on Render. Check that the root page appears, that `changes/add-spek-pages/` is still served, and that Render deployed, at most about a minute later than the Django check.
+- With Nate's go-ahead, push `main`, which also deploys the site on Render as today. Check that no Spek run started for that push. Start the workflow by hand, and check that the root page appears and `changes/add-spek-pages/` is still served.
 - Merge `main` into `change/add-triage-clarify`, push it, and give Nate its page's address.

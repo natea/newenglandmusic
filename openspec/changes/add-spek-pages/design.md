@@ -24,7 +24,7 @@ See proposal.md for why. What the design rests on, checked on 2 November 2026:
 
 **Goals:**
 - Every `change/<name>` branch that contains the workflow has a page at a stable address, from its draft onward, and `main` has the site root.
-- Publishing can't touch the code branches, fail or block the site's deploy, wipe published pages, run a branch name as code, or reach the upstream repository. A deploy of `main` may wait for its own publish, about a minute plus any queue.
+- Publishing can't touch the code branches, touch or delay the site's deploy, wipe published pages, run a branch name as code, or reach the upstream repository.
 
 **Non-Goals:**
 - Pages for branches not named `change/<name>`.
@@ -63,13 +63,15 @@ See proposal.md for why. What the design rests on, checked on 2 November 2026:
 - It always writes `<site>/.nojekyll`, and replaces only the one `index.html`, so publishing `main` can't wipe `changes/`.
 - It's Python, run by Django tests through `subprocess`. The workflow's git steps around it (checking out `gh-pages`, amending, force-pushing) are plain shell, with no third-party deploy action.
 
-**Triggers:** `push` to `main` and `change/*` with `paths: [openspec/**, .github/workflows/spek.yml]`. `change/*` matches one level, so `change/a/b` never starts a run.
+**Triggers:**
+- `push` to `change/*` with `paths: [openspec/**, .github/workflows/spek.yml]`. `change/*` matches one level, so `change/a/b` never starts a run.
+- For `main`: a daily `schedule` and `workflow_dispatch`, never a push (Nate's decision, 2 November 2026, after he asked why Render was involved). A push to `main` would put a Spek check on that commit, and Render's `checksPass` waits for every check, so each deploy would wait for Spek. Scheduled and manual runs build the default branch.
 
 **Guards:**
 - `permissions: contents: write`;
 - `if: github.repository == 'natea/newenglandmusic'` on the job;
 - `concurrency: { group: spek-pages, cancel-in-progress: false, queue: max }`, so no publish is dropped;
-- `continue-on-error: true` on every step, so a failed publish never fails the commit's checks or blocks Render. A failure shows in the Actions log, and the next push publishes again. GitHub must accept the workflow file itself, `queue:` included, which only the live check can show;
+- `continue-on-error: true` on every step, so a failed publish never fails a commit's checks. A failure shows in the Actions log, and the next push or day publishes again. GitHub must accept the workflow file itself, `queue:` included, which only the live check can show;
 - the branch name reaches the script only through `env:` (`BRANCH: ${{ github.ref_name }}`), never pasted into a `run:` script.
 
 **Pinned by commit (agent's decision).** `spekhq/spek@5542fa2dfda6c52a08fb0610a140670052056c66` (v1.20.2) and the same commit as `spek-version`. A tag can move, and Spek's `master` is its development branch. Spek's own composite pins its inner actions by major version, which this change doesn't control.
@@ -84,7 +86,9 @@ No test calls GitHub. The first real publishes are live checks in the tasks.
 ## Risks / Trade-offs
 
 - **Drafts are public before Nate confirms them.** → His decision. The fork is already public, and drafts are labelled as such in their commits. `docs/SPEK.md` asks authors to keep host and network names out of OpenSpec files.
-- **A failure in GitHub's job setup** (downloading Spek's action at its commit, or a workflow file GitHub rejects) fails the job whatever the steps say, and on a `main` commit would hold back Render. → Rare. Task 4.1 shows GitHub accepts the file before anything reaches `main`, and a re-run clears a download failure.
+- **A failure in GitHub's job setup** (downloading Spek's action at its commit, or a workflow file GitHub rejects) fails the job whatever the steps say. → It never runs on a `main` push, so it can't touch Render. Task 4.1 shows GitHub accepts the file, and a re-run clears a download failure.
+- **The root page can be up to a day behind `main`.** → Nate chose that over making deploys wait. A run started by hand refreshes it at once.
+- **GitHub turns off scheduled workflows in a public repository after 60 days without activity,** and runs schedules only from the workflow file on the default branch. → The root page then stops refreshing until something is pushed or the workflow is re-enabled. Change pages, which publish on push, are unaffected.
 - **An empty "Confirm proposal (G2)" commit publishes nothing.** It touches no files, so the page keeps the last draft, which is what Nate confirmed.
 - **A failed publish is quiet.** The commit stays green. → The Actions log shows it, and the next publish to that branch replaces the page. The live checks look at the first ones.
 - **Each page is the whole repository's OpenSpec,** about 60 changes, not just the change it's named for. → `docs/SPEK.md` says to find the change by name in the page.
@@ -96,7 +100,7 @@ No test calls GitHub. The first real publishes are live checks in the tasks.
 
 1. Push `change/add-spek-pages` (standing go-ahead). The workflow builds and creates `gh-pages` with `changes/add-spek-pages/`.
 2. With Nate's go-ahead, turn Pages on for `gh-pages` at `/`, and check the page.
-3. After G4: archive, merge into `main`, and push `main` with his go-ahead, which also deploys the site on Render. Check that the root page appears and `changes/add-spek-pages/` is still served. Then `change/add-triage-clarify` merges `main` in and is pushed, and gets its page. These steps come after the archive, so they are follow-ups, not tasks.
+3. After G4: archive, merge into `main`, and push `main` with his go-ahead, which also deploys the site on Render as today. Start the workflow by hand once, and check that the root page appears and `changes/add-spek-pages/` is still served. Then `change/add-triage-clarify` merges `main` in and is pushed, and gets its page. These steps come after the archive, so they are follow-ups, not tasks.
 
 **Rollback:** turn Pages off, delete `gh-pages`, and remove the workflow file. Pages may serve cached copies for a short while.
 
