@@ -61,7 +61,7 @@ Each reviewer SHALL be its own agent step with its own prompt and one lens: risk
 #### Scenario: Three lenses
 
 - **WHEN** the configuration tests read the three reviewer prompts
-- **THEN** each names one of the lenses risk, spec fit and fidelity, no two name the same, and the fidelity prompt says an unflagged decision is blocking
+- **THEN** each names one of the lenses risk, spec fit and fidelity, and no two name the same. The risk prompt asks for readers the task list misses. The spec fit prompt names `openspec/config.yaml` and `AGENTS.md` as the design rules. The fidelity prompt says an unflagged decision is blocking.
 
 ### Requirement: The fidelity reviewer reads the decision record
 
@@ -83,7 +83,7 @@ Each reviewer SHALL write its report to `.intentable/reviews/<lens>.md` in the `
 
 ### Requirement: Revise records what it did
 
-The revise agent SHALL apply every blocking finding, and the non-blocking ones it agrees with. It SHALL write `.intentable/reviews/revise.md` listing each finding with how it was fixed, or why it wasn't applied. It SHALL NOT rename the change.
+The revise agent SHALL apply every blocking finding, and the non-blocking ones it agrees with. It SHALL write `.intentable/reviews/revise.md` listing each finding with how it was fixed, or why it wasn't applied. It SHALL NOT rename the change, and SHALL write nothing under `.intentable/proposal/`.
 
 #### Scenario: Revise prompt
 
@@ -92,7 +92,7 @@ The revise agent SHALL apply every blocking finding, and the non-blocking ones i
 
 ### Requirement: The review loop ends
 
-`bin/check-intentable-reviews` SHALL read the three reports and the revise notes for the current round and keep them under `.intentable/reviews/<round>/`. It SHALL end the loop when all three reports start `SATISFIED: yes`. It SHALL send the draft to revise when any says no, unless three rounds have run. After the third round it SHALL end the loop with the review not passed. A missing or unreadable report SHALL count as not satisfied.
+`bin/check-intentable-reviews` SHALL keep each round's three reports under `.intentable/reviews/<round>/`, and the revise notes written after round N under `.intentable/reviews/<N>/` with that round's reports. It SHALL end the loop when all three reports start `SATISFIED: yes`. It SHALL send the draft to revise when any says no, unless three rounds have run. After the third round it SHALL end the loop with the review not passed. A missing or unreadable report SHALL count as not satisfied.
 
 #### Scenario: All satisfied
 
@@ -116,25 +116,30 @@ The revise agent SHALL apply every blocking finding, and the non-blocking ones i
 
 ### Requirement: The review is summed up for Nate
 
-When the loop ends, `bin/check-intentable-reviews` SHALL write `.intentable/review.md`. Its first line SHALL be exactly one of these:
-- `Passed by the reviewers after <n> round(s).`;
-- `Not passed by the reviewers after <n> rounds.`
-
-It SHALL follow that line with every round's blocking findings, and each round's revise notes: what was fixed, and what wasn't applied, with the reason.
+When the loop ends, `bin/check-intentable-reviews` SHALL write `.intentable/reviews/outcome`, `passed` or `not-passed`, and the review summary, `.intentable/reviews/summary.md`. The summary's first line SHALL be exactly `Passed by the reviewers after <n> round(s).` or `Not passed by the reviewers after <n> rounds.`, followed by every round's blocking findings and the revise notes filed with them.
 
 #### Scenario: Summary written
 
 - **WHEN** a run's review ends after 2 rounds with all three satisfied
-- **THEN** `.intentable/review.md` starts with the line `Passed by the reviewers after 2 round(s).` and holds round 1's blocking findings and revise notes
+- **THEN** `.intentable/reviews/summary.md` starts with the line `Passed by the reviewers after 2 round(s).` and holds round 1's blocking findings and the revise notes filed with them, and `.intentable/reviews/outcome` is `passed`
 
 #### Scenario: Summary of a review not passed
 
 - **WHEN** the review ends at the round limit
-- **THEN** `.intentable/review.md` starts with the line `Not passed by the reviewers after 3 rounds.`
+- **THEN** `.intentable/reviews/summary.md` starts with the line `Not passed by the reviewers after 3 rounds.`, and `.intentable/reviews/outcome` is `not-passed`
+
+### Requirement: The summary is collected with the result
+
+The last step SHALL copy `.intentable/reviews/summary.md` to `.intentable/review.md`, so it is collected in the same stage as the result.
+
+#### Scenario: Summary beside the result
+
+- **WHEN** the last step accepts a draft
+- **THEN** `.intentable/review.md` is the same text as `.intentable/reviews/summary.md`, and no earlier step wrote `.intentable/review.md`
 
 ### Requirement: The draft is named in its own file
 
-The propose agent SHALL name the change and give its message in `.intentable/draft.json`, as `change`, `labels` and `message`. The revise agent may change the message and labels, but not the change name. No step before the last SHALL write `.intentable/result.json`.
+The propose agent SHALL name the change and give its message in `.intentable/draft.json`, as `change`, `labels` and `message`. The revise agent may change the message and labels, but not the change name. No step before the last SHALL write `.intentable/result.json`, `.intentable/review.md` or anything under `.intentable/proposal/`.
 
 #### Scenario: Draft check reads the draft file
 
@@ -143,18 +148,12 @@ The propose agent SHALL name the change and give its message in `.intentable/dra
 
 ### Requirement: The spec result names the change
 
-The last step, `bin/check-intentable-result spec`, SHALL write `.intentable/result.json` from `.intentable/draft.json` and the review's outcome. The result SHALL hold:
-- `change`: the change's name;
-- `labels`: none, or only `needs-design`, when the proposal needs screens;
-- `state`: none;
-- `message`: plain text for the person who asked, saying what the proposal covers;
-- `reviewed`: `passed` or `not-passed`;
-- `files`: the paths it copied.
+The last step, `bin/check-intentable-result spec`, SHALL write `.intentable/result.json` from `.intentable/draft.json` and `.intentable/reviews/outcome`. It SHALL hold `change`, the change's name; `labels`, none or only `needs-design`; `state`, none; `message`, plain text for the person who asked; `reviewed`, `passed` or `not-passed`; and `files`, every path copied, relative to the change folder, dotfiles such as `.openspec.yaml` included.
 
 #### Scenario: A good result
 
 - **WHEN** the draft names `add-venue-hours`, which validates and is new, with no labels and a two-sentence message, and the review passed
-- **THEN** the checker writes a result with that change, no state, the message, `reviewed: passed` and the copied files
+- **THEN** the checker writes a result with that change, no state, the message, `reviewed: passed` and `files` such as `[".openspec.yaml", "design.md", "proposal.md", "specs/venues/spec.md", "tasks.md"]`
 
 ### Requirement: The proposal is copied last
 
@@ -212,7 +211,7 @@ The last step SHALL empty `.intentable/proposal/`, then copy the contents of `op
 
 ### Requirement: Spec drafts give no state and follow the message rules
 
-`bin/check-intentable-result spec`, with or without `--draft`, SHALL fail the run, naming the problem, when the draft names a state or a label other than `needs-design`, or when its message is missing, mentions anyone, or is longer than the other workflows allow.
+`bin/check-intentable-result spec`, with or without `--draft`, SHALL fail the run, naming the problem, when the draft has a `state` key with any value other than none, or a label other than `needs-design`, or when its message is missing, mentions anyone, or is longer than the other workflows allow.
 
 #### Scenario: A state or another label
 

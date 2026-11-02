@@ -14,10 +14,10 @@
   - run `openspec validate --strict`;
   - check the bounds: file cap, text only, skipped folder names;
   - check labels, state and the message rules;
-  - without `--draft`, empty and fill `.intentable/proposal/` and write the result.
-- [ ] 2.2 Add `bin/check-intentable-reviews`: rounds, reports and revise notes kept per round, the limit, and `.intentable/review.md` with its fixed first line
+  - without `--draft`, empty and fill `.intentable/proposal/`, copy the summary to `.intentable/review.md`, and write the result with `reviewed` and `files`.
+- [ ] 2.2 Add `bin/check-intentable-reviews`: rounds, reports and the revise notes filed with the round they answer, the limit, and the summary with its fixed first line and the outcome
 - [ ] 2.3 Add a fake `openspec` executable for the tests, placed first on `PATH`
-- [ ] 2.4 Add tests for "Draft check reads the draft file", "A good result", "Only the final text", "A name that isn't plain", "A change that already existed", "No change folder", "A state or another label", "Too many files", "A file Fabro wouldn't collect", "Invalid change", "A message that mentions someone", "All satisfied", "One not satisfied", "The round limit", "Missing report", "Summary written" and "Summary of a review not passed"
+- [ ] 2.4 Add tests for "Summary beside the result", "Draft check reads the draft file", "A good result", "Only the final text", "A name that isn't plain", "A change that already existed", "No change folder", "A state or another label", "Too many files", "A file Fabro wouldn't collect", "Invalid change", "A message that mentions someone", "All satisfied", "One not satisfied", "The round limit", "Missing report", "Summary written" and "Summary of a review not passed"
 
 ## 3. Guide
 

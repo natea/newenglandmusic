@@ -39,7 +39,8 @@ finish -> exit
 - **`check_reviews`** is `bin/check-intentable-reviews`:
   - it keeps the round number in `.intentable/reviews/round`;
   - it moves each round's reports and revise notes to `.intentable/reviews/<round>/`;
-  - when the loop ends, it writes `.intentable/review.md`;
+  - the revise notes written after round N are filed with round N's reports, the round they answer;
+  - when the loop ends, it writes `.intentable/reviews/summary.md` and `.intentable/reviews/outcome`;
   - it exits 0 when the loop should end, and 1 when another round is needed.
 
   The edge into `revise` must therefore be the failure route, not the `on_failure="exit"` default. Task 1.1 checks this with `fabro validate` and a dry graph. If a conditional edge doesn't override `on_failure`, the script instead sets `context.review_done`, the edges branch on that, and the script always exits 0.
@@ -47,9 +48,10 @@ finish -> exit
 - **`finish`** runs `bin/check-intentable-result spec`:
   1. it checks the draft again;
   2. it empties `.intentable/proposal/` and copies the change folder's contents into it;
-  3. only then does it write `.intentable/result.json`.
+  3. it copies the summary to `.intentable/review.md`;
+  4. only then does it write `.intentable/result.json`, with `reviewed` read from `.intentable/reviews/outcome`, and `files` as paths relative to the change folder (Fabro's globs match leading dots, so `.openspec.yaml` is collected).
 
-  So `result.json` and the proposal files exist only in the `finish` stage's artifacts. The bridge reads the proposal files from the same stage as the result, which avoids ambiguity between stage versions. Fabro numbers stages separately from retries.
+  So `result.json`, `review.md` and the proposal files exist only in the `finish` stage's artifacts. No earlier step writes under those paths: the prompts say so, and Fabro records a path again only when its content changes, so an earlier identical copy would leave a file out of `finish`'s artifacts. The bridge would then refuse the draft loudly, as "a file missing". The bridge reads the proposal files from the same stage as the result, which avoids ambiguity between stage versions. Fabro numbers stages separately from retries.
 
 **Briefs.** Each reviewer prompt gives its lens, the change folder path, `openspec/specs/`, `AGENTS.md`, `openspec/config.yaml` and the report format.
 - There is no project dictionary in this repo, so spec fit checks vocabulary against the existing specs.
