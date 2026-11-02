@@ -36,7 +36,7 @@
 
 This needs the intentable change that makes `FABRO_WORKFLOW_REF` also set the run's target. One go-ahead from Nate covers the steps below. It touches GitHub: a pushed branch on the fork, comments and labels from the bridge on the issues named in 4.1, a reply on #9, then deleting the pushed branch.
 
-- [ ] 4.1 Push the change branch to natea/newenglandmusic, set `FABRO_WORKFLOW_REF` to it in the Spark's `bridge.env`, and restart the bridge.
+- [x] 4.1 Push the change branch to natea/newenglandmusic, set `FABRO_WORKFLOW_REF` to it in the Spark's `bridge.env`, and restart the bridge.
   - First, list the open issues from intake users with no state label: #9 on 2 November, while the list is only `natea`. The restart's catch-up starts triage on each of them; agree that list with Nate at the time. An issue he leaves off gets a state label by hand before the restart, so catch-up skips it.
   - From then until 4.4, every intake user's issue or reply runs the change branch's workflows.
   - 2 November 2026: the open intake issues with no state were #9 only (intake list `natea`; Sooz's #5 and #6 are not on it). The bridge was updated on the Spark (test branch as target), `FABRO_WORKFLOW_REF=change/add-triage-clarify` set, and restarted. Fabro refused the run: "no LLM provider is ready, and the workflow has a node that runs a model". Fabro counts Anthropic as ready only with an `ANTHROPIC_API_KEY`; the subscription token isn't a provider credential. Nate chose to add an Anthropic API key to the Spark's Fabro vault. The sandbox still gets an empty `ANTHROPIC_API_KEY` from the `daytona` environment, so Claude Code runs on the Max subscription. The bridge posted "couldn't start" on #9 and rolled back its label, as specified.
