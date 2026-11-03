@@ -117,8 +117,12 @@ CHANGE_NAME = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 MAX_NAME = 60
 # the bridge commits at most 100 files; this stays well under it
 MAX_FILES = 90
+# Fabro's record of a run's files marks anything larger as truncated, and the bridge then refuses the draft
+MAX_FILE_BYTES = 256 * 1024
+MAX_FILE_LINES = 20000
 # path segments Fabro skips in its records of a run, so a file under one could go missing
-SKIPPED = {".git", "node_modules", "target", "dist", ".venv", ".cache"}
+SKIPPED = {".git", "node_modules", "target", "dist", ".venv", "venv", ".cache", ".pnpm-store", ".npm", ".next",
+           "__pycache__", ".tox", ".pytest_cache"}
 SKETCHES = ("a.html", "b.html", "c.html")
 ARCHIVE_DATE = re.compile(r"\d{4}-\d{2}-\d{2}-")
 
@@ -149,6 +153,14 @@ def existing_changes():
     return {ARCHIVE_DATE.sub("", line.strip(), count=1) for line in record.read_text().splitlines() if line.strip()}
 
 
+def new_change_folders():
+    """change folders that weren't there before the agent ran"""
+    if not CHANGES.is_dir():
+        return []
+    existing = existing_changes()
+    return [p.name for p in sorted(CHANGES.iterdir()) if p.is_dir() and p.name != "archive" and p.name not in existing]
+
+
 def check_draft(draft):
     """the draft's rules; returns (change or None, labels, state)"""
     if not isinstance(draft, dict):
@@ -158,8 +170,12 @@ def check_draft(draft):
         raise Refused("labels must be a list of label names")
     state = draft.get("state")
     recorded = INTENTABLE / "route.json"
-    if recorded.is_file() and sorted(json.loads(recorded.read_text()).get("labels", [])) != sorted(labels):
-        raise Refused("the labels changed after routing; revise may not change them")
+    if recorded.is_file():
+        route = json.loads(recorded.read_text())
+        if sorted(route.get("labels", [])) != sorted(labels):
+            raise Refused("the labels changed after routing; revise may not change them")
+        if route.get("change") != draft.get("change"):
+            raise Refused("the change was renamed after routing; revise may not rename it")
     check_message(draft.get("message"))
     if state == "needs-info":
         if draft.get("change") is not None:
@@ -168,6 +184,9 @@ def check_draft(draft):
             raise Refused("a needs-info draft gives exactly one label, clarity:1 to clarity:3")
         if draft["message"].count("?") != 1:
             raise Refused("ask one question: the message must have exactly one question mark")
+        stray = new_change_folders()
+        if stray:
+            raise Refused(f"a needs-info draft writes no change, but {stray[0]} is new")
         return None, labels, state
     if state is not None:
         raise Refused(f"{state!r} isn't a state a spec draft may give; only needs-info")
@@ -196,10 +215,13 @@ def change_files(change):
             continue
         if SKIPPED & set(relative.parts):
             raise Refused(f"{relative} is under a folder Fabro skips when collecting")
+        data = path.read_bytes()
         try:
-            path.read_bytes().decode("utf-8")
+            data.decode("utf-8")
         except UnicodeDecodeError:
             raise Refused(f"{relative} isn't UTF-8 text")
+        if len(data) > MAX_FILE_BYTES or data.count(b"\n") > MAX_FILE_LINES:
+            raise Refused(f"{relative} is too large: at most {MAX_FILE_BYTES} bytes and {MAX_FILE_LINES} lines")
         files.append(relative.as_posix())
     if len(files) > MAX_FILES:
         raise Refused(f"the change has {len(files)} files, at most {MAX_FILES}")
@@ -219,16 +241,12 @@ SAFE_ELEMENTS = {
     "aside", "div", "span", "p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "dl", "dt", "dd", "table",
     "thead", "tbody", "tfoot", "tr", "th", "td", "caption", "colgroup", "col", "a", "img", "figure", "figcaption",
     "strong", "em", "b", "i", "u", "s", "small", "mark", "code", "pre", "blockquote", "br", "hr", "time", "abbr",
-    "sup", "sub", "button", "label", "svg", "g", "path", "circle", "rect", "line", "polyline", "polygon",
-    "ellipse", "text", "tspan",
+    "sup", "sub", "button", "label",
 }
 SAFE_ATTRIBUTES = {
     "class", "id", "style", "title", "lang", "dir", "role", "alt", "width", "height", "colspan", "rowspan",
-    "scope", "span", "datetime", "type", "charset", "name", "content", "href", "src", "viewbox", "xmlns", "fill",
-    "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "fill-rule", "d", "cx", "cy", "r", "rx", "ry",
-    "x", "y", "x1", "y1", "x2", "y2", "points", "transform", "opacity", "font-size", "font-weight", "text-anchor",
+    "scope", "span", "datetime", "type", "charset", "name", "content", "href", "src",
 }
-SVG_NAMESPACE = "http://www.w3.org/2000/svg"
 CSS_URL = re.compile(r"url\(\s*['\"]?([^'\")]*)", re.IGNORECASE)
 
 
@@ -236,7 +254,8 @@ def css_problem(css):
     lowered = css.lower()
     if "\\" in css:
         return "a backslash escape in CSS"
-    for banned in ("@import", "expression(", "javascript:", "behavior:", "-moz-binding"):
+    for banned in ("@import", "@font-face", "@namespace", "image-set(", "cross-fade(", "element(", "src(", "expression(",
+                   "javascript:", "behavior:", "-moz-binding"):
         if banned in lowered:
             return f"{banned} in CSS"
     for url in CSS_URL.findall(css):
@@ -260,8 +279,11 @@ class SketchChecker(HTMLParser):
         if tag not in SAFE_ELEMENTS:
             return self.refuse(f"the element <{tag}>")
         values = dict(attrs)
-        if tag == "meta" and not (set(values) <= {"charset"} or values.get("name") == "viewport"):
-            return self.refuse("a <meta> other than charset or viewport")
+        if tag == "meta":
+            charset_only = set(values) == {"charset"} and (values["charset"] or "").lower() == "utf-8"
+            viewport = set(values) == {"name", "content"} and values["name"] == "viewport"
+            if not (charset_only or viewport):
+                return self.refuse("a <meta> other than charset=utf-8 or viewport")
         for name, value in attrs:
             value = (value or "").strip()
             if name.startswith("aria-") or name.startswith("data-"):
@@ -272,15 +294,16 @@ class SketchChecker(HTMLParser):
                 return self.refuse(f"the link {value!r}")
             if name == "src" and not (tag == "img" and value.lower().startswith("data:image/")):
                 return self.refuse(f"the source {value!r}")
-            if name == "xmlns" and value != SVG_NAMESPACE:
-                return self.refuse(f"the namespace {value!r}")
-            if name == "style" and css_problem(value):
-                return self.refuse(css_problem(value))
+            if css_problem(value):
+                return self.refuse(f"{css_problem(value)} in {name}=")
             if "javascript:" in value.lower().replace(" ", ""):
                 return self.refuse(f"a javascript: URL in {name}=")
         self.in_style = tag == "style"
 
     def handle_startendtag(self, tag, attrs):
+        # a browser ignores the slash on <style/>, and reads what follows as CSS
+        if tag == "style":
+            return self.refuse("a self-closed <style>")
         self.handle_starttag(tag, attrs)
         self.in_style = False
 
@@ -288,6 +311,8 @@ class SketchChecker(HTMLParser):
         self.in_style = False
 
     def handle_data(self, data):
+        if self.in_style and "<" in data:
+            self.refuse("markup inside <style>")
         if self.in_style and css_problem(data):
             self.refuse(css_problem(data))
 
@@ -297,12 +322,41 @@ class SketchChecker(HTMLParser):
     def unknown_decl(self, data):
         self.refuse("an unknown declaration")
 
+    def handle_comment(self, data):
+        self.refuse("an HTML comment")
+
+
+# Python and browsers disagree on odd comments and declarations (<!-->, --!>), so none is allowed
+ONLY_DOCTYPE = re.compile(r"<!(?!doctype\s+html\s*>)", re.IGNORECASE)
+
 
 def sketch_problem(text):
+    if ONLY_DOCTYPE.search(text) or "--!>" in text:
+        return "a comment or declaration other than the doctype"
+    if "http-equiv" in text.lower():
+        return "http-equiv, which the page's policy can't stop"
     checker = SketchChecker()
     checker.feed(text)
     checker.close()
     return checker.problem
+
+
+def check_options(path):
+    """each sketch's entry in options.json, with the label, thesis and risk the issue comment shows"""
+    try:
+        options = json.loads(path.read_text())
+    except ValueError:
+        raise Refused("sketches/options.json isn't JSON")
+    if not isinstance(options, list) or not all(isinstance(option, dict) for option in options):
+        raise Refused("sketches/options.json must be a list of options")
+    by_file = {option.get("file"): option for option in options}
+    for name in SKETCHES:
+        if name not in by_file:
+            raise Refused(f"sketches/options.json has no entry for {name}")
+        for field in ("label", "thesis", "risk"):
+            value = by_file[name].get(field)
+            if not isinstance(value, str) or not value.strip():
+                raise Refused(f"sketches/options.json has no {field} for {name}")
 
 
 def check_sketches(change, required):
@@ -312,6 +366,7 @@ def check_sketches(change, required):
         for name in SKETCHES + ("options.json",):
             if not (folder / name).is_file():
                 raise Refused(f"the sketch sketches/{name} is missing")
+        check_options(folder / "options.json")
         design = (CHANGES / change / "design.md").read_text() if (CHANGES / change / "design.md").is_file() else ""
         for name in SKETCHES:
             if f"sketches/{name}" not in design:

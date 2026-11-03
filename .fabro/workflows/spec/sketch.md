@@ -6,9 +6,9 @@ Use the Impeccable skill's decision step, unattended: nobody will answer a quest
 
 Write them into `openspec/changes/<change>/sketches/`:
 
-- `a.html`, `b.html` and `c.html`: one self-contained HTML file per option, laid out at 1440×900, with all styling in an inline `<style>` element or `style` attributes. Use system fonts only (`font-family: system-ui, sans-serif` and the like). No scripts, no event handlers, no forms, no iframes, and nothing loaded from another address: no web fonts, no outside stylesheets or images. An image, if you need one, is a `data:image/` URL. Links are `#` fragments only.
+- `a.html`, `b.html` and `c.html`: one self-contained HTML file per option, laid out at 1440×900, with all styling in an inline `<style>` element or `style` attributes. Use system fonts only (`font-family: system-ui, sans-serif` and the like). No scripts, no event handlers, no forms, no iframes, no SVG, no HTML comments, no `<meta>` but `charset="utf-8"`, and nothing loaded from another address: no web fonts, no outside stylesheets or images. An image, if you need one, is a `data:image/` URL. Links are `#` fragments only.
 - `options.json`: a list with one object per option, `{"file": "a.html", "label": "…", "thesis": "…", "risk": "…"}`.
 
-Then add a "Sketches" section to the change's `design.md` that links `sketches/a.html`, `sketches/b.html` and `sketches/c.html` and gives each option's label and thesis.
+Then add a "Sketches" section to the change's `design.md` that links `sketches/a.html`, `sketches/b.html` and `sketches/c.html` and gives each option's label, thesis and risk.
 
 Change nothing else: no other file in the change, no code, nothing under `.intentable/`. A later step checks the sketches, and the run fails if one breaks these rules.

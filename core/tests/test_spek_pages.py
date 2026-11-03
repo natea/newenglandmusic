@@ -130,7 +130,8 @@ class SpekWorkflowSafetyTestCase(SimpleTestCase):
         self.assertEqual(build["uses"], f"spekhq/spek@{SPEK_COMMIT}")
         self.assertEqual(build["with"]["spek-version"], SPEK_COMMIT)
         self.assertEqual(step(job, "checkout")["with"]["fetch-depth"], 0)
-        self.assertEqual(data["permissions"], {"contents": "write"})
+        self.assertEqual(data["permissions"], {})
+        self.assertEqual(job["permissions"], {"contents": "write"})
         script = publish_step(job)["run"]
         pushes = [line for line in script.splitlines() if " push " in line]
         self.assertEqual(len(pushes), 1)
@@ -142,7 +143,8 @@ class SpekWorkflowSafetyTestCase(SimpleTestCase):
 
     def test_never_upstream(self):
         self.assertNotIn("nycnoise/nycnoise", WORKFLOW.read_text())
-        self.assertEqual(spek_workflow()[2]["if"], "github.repository == 'natea/newenglandmusic'")
+        self.assertIn("github.repository == 'natea/newenglandmusic'", spek_workflow()[2]["if"])
+        self.assertIn("github.repository == 'natea/newenglandmusic'", spek_workflow()[0]["jobs"]["thumbnails"]["if"])
 
 
 class SpekWorkflowQueueTestCase(SimpleTestCase):
@@ -154,8 +156,9 @@ class SpekWorkflowQueueTestCase(SimpleTestCase):
         )
 
     def test_a_failed_publish_doesnt_fail_the_commit(self):
-        for s in spek_workflow()[2]["steps"]:
-            self.assertIs(s.get("continue-on-error"), True, s.get("name"))
+        for name, job in spek_workflow()[0]["jobs"].items():
+            for s in job["steps"]:
+                self.assertIs(s.get("continue-on-error"), True, (name, s.get("name")))
 
 
 class RuleAndGuideTestCase(SimpleTestCase):
@@ -191,35 +194,47 @@ SKETCH = "<!doctype html><html><head><title>A</title></head><body><p>hours</p></
 POLICY_START = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\';'
 
 
-# stands in for Chrome in tests: writes what its --screenshot flag names, or fails
+# stands in for Chrome in tests: records its arguments and writes what --screenshot names, or fails
 FAKE_CHROME = """#!/bin/sh
 [ -n "$FAKE_CHROME_FAILS" ] && exit 1
+echo "$@" >> "$FAKE_CHROME_LOG"
 for arg in "$@"; do
   case "$arg" in --screenshot=*) printf png > "${arg#--screenshot=}";; esac
 done
 """
 
 
-def publish_from(checkout, branch, site, chrome=None):
-    """runs the script for a branch from a checkout, as the workflow does; PATH holds no browser but a fake one"""
+def publish_from(checkout, branch, site, thumbnails=None):
+    """runs the script for a branch from a checkout folder, as the workflow does from the repo root"""
     with tempfile.TemporaryDirectory() as build:
         page = Path(build) / "spek.html"
         page.write_text("<html>new page</html>")
-        env = {**os.environ, "PATH": build}
+        args = [branch, str(page), str(site)] + ([str(thumbnails)] if thumbnails else [])
+        return subprocess.run(
+            [sys.executable, str(PUBLISH), *args], cwd=checkout, capture_output=True, text=True, timeout=30
+        ).returncode
+
+
+def render_from(checkout, branch, out, chrome="works"):
+    """runs the thumbnail job's command; PATH holds no browser but the fake one; returns (status, Chrome's arguments)"""
+    with tempfile.TemporaryDirectory() as build:
+        log = Path(build) / "chrome.log"
+        env = {**os.environ, "PATH": build, "FAKE_CHROME_LOG": str(log)}
         if chrome:
             fake = Path(build) / "google-chrome"
             fake.write_text(FAKE_CHROME.replace("#!/bin/sh", f"#!/bin/sh\nPATH={os.environ['PATH']}"))
             fake.chmod(0o755)
             if chrome == "fails":
                 env["FAKE_CHROME_FAILS"] = "1"
-        return subprocess.run(
-            [sys.executable, str(PUBLISH), branch, str(page), str(site)],
+        done = subprocess.run(
+            [sys.executable, str(PUBLISH), "--thumbnails", branch, str(out)],
             cwd=checkout,
             capture_output=True,
             text=True,
             timeout=30,
             env=env,
-        ).returncode
+        )
+        return done.returncode, log.read_text() if log.exists() else ""
 
 
 def checkout_with_sketches(folder, name="add-venue-hours", sketches=("a.html", "b.html", "c.html"), text=SKETCH):
@@ -301,8 +316,13 @@ class SketchPagesTestCase(SimpleTestCase):
     def test_thumbnails_made(self):
         with tempfile.TemporaryDirectory() as folder:
             checkout = checkout_with_sketches(folder)
+            out = Path(folder) / "thumbs"
+            status, chrome = render_from(checkout, "change/add-venue-hours", out)
+            self.assertEqual(status, 0)
+            self.assertEqual(sorted(p.name for p in out.iterdir()), ["a.png", "b.png", "c.png"])
+            self.assertIn("--host-resolver-rules=MAP * ~NOTFOUND", chrome)
             site = Path(folder) / "site"
-            self.assertEqual(publish_from(checkout, "change/add-venue-hours", site, chrome="works"), 0)
+            self.assertEqual(publish_from(checkout, "change/add-venue-hours", site, out), 0)
             for sketch in ("a", "b", "c"):
                 self.assertEqual(
                     (site / "changes" / "add-venue-hours" / "sketches" / f"{sketch}.png").read_text(), "png"
@@ -312,8 +332,34 @@ class SketchPagesTestCase(SimpleTestCase):
         for chrome in (None, "fails"):
             with tempfile.TemporaryDirectory() as folder:
                 checkout = checkout_with_sketches(folder)
+                out = Path(folder) / "thumbs"
+                self.assertEqual(render_from(checkout, "change/add-venue-hours", out, chrome=chrome)[0], 0, chrome)
                 site = Path(folder) / "site"
-                self.assertEqual(publish_from(checkout, "change/add-venue-hours", site, chrome=chrome), 0, chrome)
+                self.assertEqual(publish_from(checkout, "change/add-venue-hours", site, out), 0, chrome)
                 sketches = site / "changes" / "add-venue-hours" / "sketches"
                 self.assertTrue((sketches / "a.html").is_file(), chrome)
                 self.assertFalse((sketches / "a.png").exists(), chrome)
+
+    def test_thumbnails_rendered_apart(self):
+        data = spek_workflow()[0]
+        job = data["jobs"]["thumbnails"]
+        self.assertEqual(job["permissions"], {"contents": "read"})
+        checkout = next(s for s in job["steps"] if s.get("id") == "checkout")
+        self.assertIs(checkout["with"]["persist-credentials"], False)
+        self.assertEqual(data["jobs"]["publish"]["needs"], "thumbnails")
+        for s in data["jobs"]["publish"]["steps"]:
+            self.assertNotIn("--thumbnails", s.get("run", ""))
+
+    def test_a_sketch_with_http_equiv(self):
+        with tempfile.TemporaryDirectory() as folder:
+            refresh = '<!doctype html><!--><meta http-equiv=refresh content="0;url=https://x.example/">-->'
+            checkout = checkout_with_sketches(folder, sketches=("a.html",), text=refresh)
+            (checkout / "openspec" / "changes" / "add-venue-hours" / "sketches" / "b.html").write_text(SKETCH)
+            site = Path(folder) / "site"
+            out = Path(folder) / "thumbs"
+            _, chrome = render_from(checkout, "change/add-venue-hours", out)
+            self.assertEqual(publish_from(checkout, "change/add-venue-hours", site), 0)
+            sketches = site / "changes" / "add-venue-hours" / "sketches"
+            self.assertFalse((sketches / "a.html").exists())
+            self.assertTrue((sketches / "b.html").is_file())
+            self.assertNotIn("a.png", chrome)

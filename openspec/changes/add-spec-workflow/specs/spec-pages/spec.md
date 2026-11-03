@@ -26,21 +26,35 @@ When `bin/publish-spek-page` publishes a `change/<name>` branch, it SHALL also c
 
 ### Requirement: Published sketches get thumbnails
 
-When a Chrome is on `PATH`, `bin/publish-spek-page` SHALL render each published sketch, with its policy, to a half-size screenshot beside it, `<sketch>.png` (Nate's request, 2 November 2026). A thumbnail that can't be made SHALL be reported and SHALL NOT stop the publish.
+A separate job SHALL render each publishable sketch, with its policy, to a half-size screenshot `<sketch>.png` (Nate's request, 2 November 2026), and `bin/publish-spek-page` SHALL publish them beside the sketches. A thumbnail that can't be made SHALL be reported and SHALL NOT stop the publish.
 
 #### Scenario: Thumbnails made
 
-- **WHEN** `sketches/a.html`, `b.html` and `c.html` are published with a Chrome on `PATH`
+- **WHEN** `sketches/a.html`, `b.html` and `c.html` are rendered with a Chrome on `PATH`, and then published
 - **THEN** the site folder has `a.png`, `b.png` and `c.png` beside them
 
 #### Scenario: A thumbnail that can't be made
 
 - **WHEN** no Chrome is on `PATH`, or it fails
-- **THEN** the sketches are still published, with no thumbnail, and the script exits 0
+- **THEN** the sketches are still published, with no thumbnail, and the scripts exit 0
+
+### Requirement: Sketches are rendered apart from the write token
+
+Chrome SHALL render sketches only in a job with read-only permission and no saved credentials, with its network cut. The job that pushes to `gh-pages` SHALL NOT run Chrome, because a sketch is written by an agent from issue text.
+
+#### Scenario: Thumbnails rendered apart
+
+- **WHEN** the tests read the workflow
+- **THEN** the `thumbnails` job has `contents: read` and `persist-credentials: false`, the `publish` job needs it and runs no render, and Chrome's arguments cut name resolution
 
 ### Requirement: Published sketches can't run code or call out
 
 Every sketch `bin/publish-spek-page` publishes SHALL begin, right after any doctype, with `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'">`, added by the script, so the browser refuses scripts, outside resources and form posts on the fork's Pages domain, even for a sketch pushed without the run's checker.
+
+#### Scenario: A sketch with http-equiv
+
+- **WHEN** a sketch has `http-equiv`, which a policy tag can't stop
+- **THEN** it isn't rendered or published, and the other sketches are
 
 #### Scenario: Policy added
 

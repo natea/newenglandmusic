@@ -20,12 +20,12 @@
   - without `--draft`, copy the summary to `.intentable/review.md` and write the result with `reviewed` and `files`.
 - [x] 2.2 Add `bin/check-intentable-reviews`: rounds, reports and the revise notes filed with the round they answer, the limit, and the summary with its fixed first line and the outcome
 - [x] 2.3 Add a fake `openspec` executable for the tests, placed first on `PATH`
-- [x] 2.4 Add tests for "Not ready", "A send-back that breaks the rules", "Summary beside the result", "Draft check reads the draft file", "Sketches required with needs-design", "Unsafe sketch caught before review", "A sketch lost in revise", "First draft check without sketches", "A sketch with a script", "A sketch that calls out", "A safe sketch", "Revise adds needs-design", "A good result", "A name that isn't plain", "A change that already existed", "No change folder", "A state or another label", "Too many files", "A file Fabro wouldn't collect", "Invalid change", "A message that mentions someone", "All satisfied", "One not satisfied", "The round limit", "Missing report", "Summary written" and "Summary of a review not passed"
+- [x] 2.4 Add tests for "Not ready", "A send-back that breaks the rules", "Summary beside the result", "Draft check reads the draft file", "Sketches required with needs-design", "Unsafe sketch caught before review", "A sketch lost in revise", "First draft check without sketches", "Options for each sketch", "A sketch with a script", "A sketch browsers read differently", "Revise renames the change", "A file too large", "Last round's other findings in the summary", "A fenced report", "A sketch that calls out", "A safe sketch", "Revise adds needs-design", "A good result", "A name that isn't plain", "A change that already existed", "No change folder", "A state or another label", "Too many files", "A file Fabro wouldn't collect", "Invalid change", "A message that mentions someone", "All satisfied", "One not satisfied", "The round limit", "Missing report", "Summary written" and "Summary of a review not passed"
 
 ## 3. Sketches on the Spek page
 
-- [x] 3.1 Copy a change's regular `sketches/*.html` files in `bin/publish-spek-page`, replacing that change's `sketches/` folder whole, add the Content-Security-Policy tag at the start of each, after any doctype, and render each to a thumbnail
-- [x] 3.2 Add tests for "Sketches published", "A sketch removed", "A link instead of a file", "Policy added", "A sketch with no head", "No sketches on main", "Thumbnails made" and "A thumbnail that can't be made"
+- [x] 3.1 Copy a change's regular `sketches/*.html` files in `bin/publish-spek-page`, replacing that change's `sketches/` folder whole, add the Content-Security-Policy tag at the start of each, after any doctype, and render each to a thumbnail in a `thumbnails` job with a read-only token and no network
+- [x] 3.2 Add tests for "Sketches published", "A sketch removed", "A link instead of a file", "Policy added", "A sketch with no head", "No sketches on main", "Thumbnails made", "A thumbnail that can't be made", "Thumbnails rendered apart" and "A sketch with http-equiv"
 
 ## 4. Guide
 
@@ -36,3 +36,4 @@
 
 - [x] 5.1 With Nate's go-ahead, run `spec` from this branch for issue #9, already in `spec-review` (Nate's choice, 2 November 2026); check the run's artifacts, `review.md`, the agent count, the elapsed time against the sandbox lifetime, and, if it needs design, whether Impeccable's decision step runs unattended without a browser
 - [x] 5.2 Check that the bridge's draft branch builds its Spek page; that page is kept, like every page
+- [ ] 5.3 On the next spec run with sketches, check that the `thumbnails` job's PNGs reach the page, and how long it takes

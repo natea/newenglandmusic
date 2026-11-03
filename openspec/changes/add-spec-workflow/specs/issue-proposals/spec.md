@@ -36,7 +36,7 @@ Every agent step of the `spec` workflow SHALL be Claude Code through ACP (`backe
 
 ### Requirement: A proposal that needs screens includes sketches
 
-When the draft is labelled `needs-design`, a `sketch` agent with the Impeccable skill (pinned) SHALL run once, before the first review, and write three options to `openspec/changes/<change>/sketches/`: `a.html`, `b.html`, `c.html`, and `options.json` with each option's label, thesis and risk. `design.md` SHALL link each sketch. Otherwise the step SHALL be skipped (Nate's decision, 2 November 2026).
+When the draft is labelled `needs-design`, a `sketch` agent with the Impeccable skill (pinned) SHALL run once, before the first review, and write three options to `openspec/changes/<change>/sketches/`: `a.html`, `b.html`, `c.html`, and `options.json`, a list with each option's `file`, `label`, `thesis` and `risk`. `design.md` SHALL link each sketch. Otherwise the step SHALL be skipped (Nate's decision, 2 November 2026).
 
 #### Scenario: Sketch step only for needs-design
 
@@ -47,6 +47,11 @@ When the draft is labelled `needs-design`, a `sketch` agent with the Impeccable 
 
 - **WHEN** the draft has the label `needs-design` and `openspec/changes/add-venue-hours/sketches/` lacks `c.html` or `options.json`, or `design.md` doesn't link `sketches/a.html`
 - **THEN** `bin/check-intentable-result spec --sketches` exits with a failure naming what is missing
+
+#### Scenario: Options for each sketch
+
+- **WHEN** `options.json` isn't a JSON list, has no entry for `c.html`, or has an empty thesis or risk
+- **THEN** `--sketches` exits with a failure naming what is missing, since the issue comment shows them (Nate's decision, 3 November 2026)
 
 ### Requirement: Sketches are checked as soon as they are made
 
@@ -69,7 +74,12 @@ A `check_sketches` step SHALL run right after `sketch`, before the fan-out, runn
 
 ### Requirement: Sketches are safe to publish
 
-`bin/check-intentable-result` SHALL parse each sketch as HTML, entities decoded, and accept it only if every element and attribute is on an allowlist of static markup and inline styling, and every URL, in attributes or CSS, is a fragment (`#…`) or a `data:image/` URL. Otherwise it SHALL fail, naming the file and the problem.
+`bin/check-intentable-result` SHALL parse each sketch as HTML, entities decoded, and accept it only if every element and attribute is on an allowlist of static HTML and inline styling, and every URL, in attributes or CSS, is a fragment (`#…`) or a `data:image/` URL. It SHALL refuse what browsers and its own parser could read differently: comments, SVG, declarations but the doctype, and markup inside `<style>`. Otherwise it SHALL fail, naming the file and the problem.
+
+#### Scenario: A sketch browsers read differently
+
+- **WHEN** a sketch has `<!-->` or `<!---` hiding a tag, any comment, `<svg><style>` or `<svg><title>` holding a tag, `<style/>`, a `<meta>` but `charset="utf-8"` or viewport, `image-set(` or `url(` to an address anywhere
+- **THEN** the checker exits with a failure naming the file
 
 #### Scenario: A sketch with a script
 
@@ -88,7 +98,12 @@ A `check_sketches` step SHALL run right after `sketch`, before the fan-out, runn
 
 ### Requirement: The draft's labels are fixed before review
 
-The `route` step SHALL record the draft's labels in `.intentable/route.json`. The revise agent SHALL NOT change the labels, and every later check SHALL fail the run when `.intentable/draft.json`'s labels differ from the recorded ones.
+The `route` step SHALL record the draft's labels and change in `.intentable/route.json`. The revise agent SHALL NOT change the labels, and every later check SHALL fail the run when `.intentable/draft.json`'s labels or change differ from the recorded ones.
+
+#### Scenario: Revise renames the change
+
+- **WHEN** route recorded `add-venue-hours` and, after revise, the draft names `add-venue-times`
+- **THEN** the recheck exits with a failure saying the change was renamed
 
 #### Scenario: Revise adds needs-design
 
@@ -180,12 +195,22 @@ The revise agent SHALL apply every blocking finding, and the non-blocking ones i
 
 ### Requirement: The review is summed up for Nate
 
-When the loop ends, `bin/check-intentable-reviews` SHALL write `.intentable/reviews/outcome`, `passed` or `not-passed`, and the review summary, `.intentable/reviews/summary.md`. The summary's first line SHALL be exactly `Passed by the reviewers after <n> round(s).` or `Not passed by the reviewers after <n> rounds.`, followed by every round's blocking findings and the revise notes filed with them.
+When the loop ends, `bin/check-intentable-reviews` SHALL write `.intentable/reviews/outcome`, `passed` or `not-passed`, and the review summary, `.intentable/reviews/summary.md`. The summary's first line SHALL be exactly `Passed by the reviewers after <n> round(s).` or `Not passed by the reviewers after <n> rounds.`, followed by every round's blocking findings, the revise notes filed with them, and the last round's non-blocking findings, which no revise answers.
 
 #### Scenario: Summary written
 
 - **WHEN** a run's review ends after 2 rounds with all three satisfied
 - **THEN** `.intentable/reviews/summary.md` starts with the line `Passed by the reviewers after 2 round(s).` and holds round 1's blocking findings and the revise notes filed with them, and `.intentable/reviews/outcome` is `passed`
+
+#### Scenario: Last round's other findings in the summary
+
+- **WHEN** a report of the last round lists a non-blocking finding
+- **THEN** the summary holds it
+
+#### Scenario: A fenced report
+
+- **WHEN** a report is wrapped in a code fence and starts `SATISFIED: yes`
+- **THEN** it counts as satisfied
 
 #### Scenario: Summary of a review not passed
 
@@ -194,7 +219,7 @@ When the loop ends, `bin/check-intentable-reviews` SHALL write `.intentable/revi
 
 ### Requirement: The summary is collected with the result
 
-The last step SHALL copy `.intentable/reviews/summary.md` to `.intentable/review.md`, so it is collected in the same stage as the result.
+For a draft with a change, the last step SHALL copy `.intentable/reviews/summary.md` to `.intentable/review.md`, so it is collected in the same stage as the result.
 
 #### Scenario: Summary beside the result
 
@@ -212,7 +237,7 @@ When the propose agent finds the issue isn't clear enough to write up, it SHALL 
 
 #### Scenario: A send-back that breaks the rules
 
-- **WHEN** a `needs-info` draft has `clarity:4`, two questions, or a change folder
+- **WHEN** a `needs-info` draft has `clarity:4`, two questions, names a change, or leaves a new folder in `openspec/changes/`
 - **THEN** the checker exits with a failure naming the problem
 
 ### Requirement: The draft is named in its own file
@@ -226,7 +251,7 @@ The propose agent SHALL name the change and give its message in `.intentable/dra
 
 ### Requirement: The spec result names the change
 
-The last step, `bin/check-intentable-result spec`, SHALL write `.intentable/result.json` from `.intentable/draft.json` and `.intentable/reviews/outcome`. It SHALL hold `change`, the change's name; `labels`, none or only `needs-design`; `state`, none; `message`, plain text for the person who asked; `reviewed`, `passed` or `not-passed`; and `files`, every path copied, relative to the change folder, dotfiles such as `.openspec.yaml` included.
+The last step, `bin/check-intentable-result spec`, SHALL write `.intentable/result.json` from `.intentable/draft.json` and `.intentable/reviews/outcome`. For a draft with a change, it SHALL hold `change`, the change's name; `labels`, none or only `needs-design`; `state`, none; `message`, plain text for the person who asked; `reviewed`, `passed` or `not-passed`; and `files`, every file of the change, relative to its folder, dotfiles such as `.openspec.yaml` included.
 
 #### Scenario: A good result
 
@@ -243,7 +268,7 @@ The last step, `bin/check-intentable-result spec`, SHALL write `.intentable/resu
 #### Scenario: A name that isn't plain
 
 - **WHEN** the draft's `change` is `../add-x` or `Add Venue Hours`
-- **THEN** the checker exits with a failure about the name, and copies nothing
+- **THEN** the checker exits with a failure about the name
 
 #### Scenario: A change that already existed
 
@@ -259,7 +284,7 @@ The last step, `bin/check-intentable-result spec`, SHALL write `.intentable/resu
 
 `bin/check-intentable-result spec`, with or without `--draft`, SHALL also fail the run, naming the problem, when:
 - the change doesn't pass `openspec validate <change> --strict`;
-- the change has more than 90 files;
+- the change has more than 90 files, or a file over 256 KiB or 20,000 lines, past which Fabro's record of the file is cut;
 - the change has a file that isn't UTF-8 text;
 - the change has a path segment that Fabro skips when collecting: `.git`, `node_modules`, `target`, `dist`, `.venv` or `.cache`.
 
@@ -271,6 +296,11 @@ The last step, `bin/check-intentable-result spec`, SHALL write `.intentable/resu
 #### Scenario: A file Fabro wouldn't collect
 
 - **WHEN** the change has `specs/dist/spec.md` or a binary image
+- **THEN** the checker exits with a failure naming the file
+
+#### Scenario: A file too large
+
+- **WHEN** a change's file is over 256 KiB or 20,000 lines
 - **THEN** the checker exits with a failure naming the file
 
 #### Scenario: Invalid change

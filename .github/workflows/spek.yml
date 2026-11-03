@@ -12,8 +12,8 @@ on:
     - cron: "17 6 * * *"
   workflow_dispatch:
 
-permissions:
-  contents: write
+# each job says what it may do
+permissions: {}
 
 # one publish at a time, none dropped
 concurrency:
@@ -22,9 +22,44 @@ concurrency:
   queue: max
 
 jobs:
-  publish:
-    if: github.repository == 'natea/newenglandmusic'
+  # Sketches are written by an agent from issue text, so Chrome renders them here:
+  # no write token, no saved credentials, and no network for Chrome.
+  thumbnails:
+    if: github.repository == 'natea/newenglandmusic' && startsWith(github.ref_name, 'change/')
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the repository
+        id: checkout
+        continue-on-error: true
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Render the thumbnails
+        if: steps.checkout.outcome == 'success'
+        continue-on-error: true
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: python3 bin/publish-spek-page --thumbnails "$BRANCH" "$RUNNER_TEMP/thumbnails"
+
+      - name: Keep the thumbnails for the publish
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: thumbnails
+          path: ${{ runner.temp }}/thumbnails
+          if-no-files-found: ignore
+          retention-days: 1
+
+  publish:
+    needs: thumbnails
+    # runs after the thumbnails however they went, and on main, which has none
+    if: always() && github.repository == 'natea/newenglandmusic'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       # every step may fail without failing the job, so a commit's checks stay green
       - name: Check out the repository
@@ -44,6 +79,14 @@ jobs:
           title: "New England Music Project - OpenSpec"
           output-path: ${{ runner.temp }}/spek/spek.html
 
+      - name: Fetch the thumbnails
+        if: steps.build.outcome == 'success' && startsWith(github.ref_name, 'change/')
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: thumbnails
+          path: ${{ runner.temp }}/thumbnails
+
       - name: Publish to gh-pages
         if: steps.build.outcome == 'success'
         continue-on-error: true
@@ -51,6 +94,7 @@ jobs:
           BRANCH: ${{ github.ref_name }}
           PAGE: ${{ runner.temp }}/spek/spek.html
           SITE: ${{ runner.temp }}/site
+          THUMBNAILS: ${{ runner.temp }}/thumbnails
         run: |
           set -euo pipefail
           git config --global user.name "github-actions[bot]"
@@ -73,7 +117,7 @@ jobs:
             echo "couldn't read gh-pages (git ls-remote exited $rc); publishing nothing" >&2
             exit 1
           fi
-          python3 bin/publish-spek-page "$BRANCH" "$PAGE" "$SITE"
+          python3 bin/publish-spek-page "$BRANCH" "$PAGE" "$SITE" "$THUMBNAILS"
           git -C "$SITE" add --all
           if git -C "$SITE" rev-parse --verify --quiet HEAD >/dev/null; then
             git -C "$SITE" commit --quiet --amend -m "Spek pages"
