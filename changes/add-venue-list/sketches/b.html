@@ -1,0 +1,45 @@
+<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'"><html lang="en"><head><meta charset="utf-8"><title>Option B – Table</title>
+<style>
+*{box-sizing:border-box}body{margin:0;width:1440px;height:900px;overflow:hidden;background:#d4d0c7;color:#000;font:15px/1.35 system-ui,sans-serif}
+a{color:#000080}.bar{background:#8b5b8b;color:#fff;padding:2px 12px;font-weight:700}
+.wrap{padding:12px 20px;display:flex;gap:20px}
+.side{width:260px}.main{width:1100px}
+h1{font:800 2rem/1.05 Helvetica,Arial,sans-serif;margin:4px 0 10px}
+.box{background:#eeeeff;border:1px solid #b9b4a8;padding:8px 10px;margin-bottom:10px}
+.box h2{font:700 .85rem Helvetica,Arial,sans-serif;margin:0 0 6px;text-transform:uppercase;letter-spacing:.08em}
+.box p{margin:3px 0}
+.artbox{background:#fbf7e0;border:2px solid #8b5b8b}
+table{border-collapse:collapse;width:100%;background:#f6f4ee}
+th{text-align:left;background:#8b5b8b;color:#fff;padding:3px 8px;font-size:.85rem}
+td{padding:3px 8px;border-bottom:1px solid #b9b4a8;font-size:.92rem}
+tr.L td{background:#d4d0c7;font:700 1.1rem Helvetica,Arial,sans-serif;border-bottom:2px solid #000}
+.cap{font-size:.8rem;color:#4f4b44;margin:0 0 4px;text-transform:uppercase;letter-spacing:.08em}
+.yes{font-weight:700}.pop{background:#f6f4ee;border:1px solid #b9b4a8;padding:10px 14px;margin-top:14px;width:640px}
+.pop h2{font:700 1.25rem Helvetica,Arial,sans-serif;margin:0 0 4px}
+.pop dl{display:grid;grid-template-columns:7.5em 1fr;gap:4px 8px;margin:6px 0}.pop dt{font-weight:700}.pop dd{margin:0}
+.tabs a{display:inline-block;padding:3px 10px;border:1px solid #b9b4a8;background:#eee;text-decoration:none;color:#000}
+.tabs a[aria-current]{background:#f6f4ee;font-weight:700}
+</style></head><body>
+<div class="bar">New England Music · Calendar · Acts · Venues · Map</div>
+<div class="wrap">
+<aside class="side"><p class="cap">Filters</p>
+<div class="box"><h2>Place</h2><p><b>Massachusetts</b> ✕</p><p>Boston ✕ &nbsp; Cambridge ✕</p><p><a href="#">Change place</a> · <a href="#">Show all</a></p></div>
+<div class="box"><h2>Genre</h2><p>▸ Any genre</p><p>Folk · Jazz · Punk · Rock · Blues…</p></div>
+<div class="box artbox"><h2>For artists</h2><p>☑ <b>Takes open bookings</b></p><p style="font-size:.85rem">Only rooms marked as taking open bookings. Shows booking type and links to the artist view.</p></div>
+<p style="font-size:.85rem">A B C D E F G H I J K L M N O P Q R S T U V W Y Z</p></aside>
+<section class="main"><p class="cap">Screen 1 · /venues?open_booking=1 &nbsp;|&nbsp; Screen 2 below</p>
+<h1>Venues <span style="font-size:1rem;font-weight:400">47 taking open bookings</span></h1>
+<table><tr><th>Venue</th><th>Town</th><th>Kind</th><th>Size</th><th>Genres</th><th>Booking</th></tr>
+<tr class="L"><td colspan="6">A</td></tr>
+<tr><td><a href="#">Atwood's Tavern</a></td><td>Cambridge, MA</td><td>Bar</td><td>Small</td><td>Folk, Rock</td><td class="yes">Submit an Artist · <a href="#">details</a></td></tr>
+<tr><td><a href="#">Aeronaut Brewing</a></td><td>Somerville, MA</td><td>Brewery</td><td>Medium</td><td>Any</td><td class="yes">Locals Only · <a href="#">details</a></td></tr>
+<tr class="L"><td colspan="6">C</td></tr>
+<tr><td><a href="#">Club Passim</a></td><td>Cambridge, MA</td><td>Listening room</td><td>Small</td><td>Folk</td><td class="yes">Submit an Artist · <a href="#">details</a></td></tr>
+<tr><td><a href="#">The Cantab Lounge</a></td><td>Cambridge, MA</td><td>Bar</td><td>Small</td><td>Blues, Funk</td><td class="yes">Dart Throw · <a href="#">details</a></td></tr>
+<tr class="L"><td colspan="6">O</td></tr>
+<tr><td><a href="#">Oracle Arts House</a></td><td>Roxbury, MA</td><td>DIY space</td><td>Small</td><td>Punk</td><td class="yes">Submit an Artist · <a href="#">details</a></td></tr>
+</table>
+<div class="pop"><p class="cap">Screen 2 · /venues/club-passim/booking</p><div class="tabs"><a href="#">For fans</a><a href="#" aria-current="page">For artists</a></div>
+<h2 style="margin-top:8px">Club Passim — takes open bookings</h2>
+<dl><dt>Booking type</dt><dd>Submit an Artist: send a pitch; the room picks acts.</dd><dt>Apply</dt><dd><a href="#">passim.org/book-passim</a></dd><dt>Notes</dt><dd>Prefers original material.</dd><dt>Also</dt><dd>Open mic Mondays · Small · Folk</dd></dl></div>
+</section></div></body></html>
