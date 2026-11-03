@@ -101,6 +101,8 @@ finish -> exit
 - Fabro, Claude, GitHub and Impeccable aren't touched (Impeccable's install and the sketch agent are covered by the configuration tests and the live check);
 - the live check is a manual task.
 
+**Folders Fabro skips.** A path segment Fabro leaves out of its record of a run fails the check: `.git`, `node_modules`, `target`, `dist`, `.venv`, `venv`, `.cache`, `.pnpm-store`, `.npm`, `.next`, `__pycache__`, `.tox` and `.pytest_cache`.
+
 ## Risks / Trade-offs
 
 - **[Usage]** A run takes up to 20 agent sessions on the Max subscription (1 propose, 15 review, 4 revise), or 21 with sketches. → The round limit, and the bridge starts one `spec` run per issue.

@@ -5,7 +5,7 @@ You are revising an OpenSpec proposal for the New England Music Project website 
 1. Apply every blocking finding.
 2. Apply the non-blocking findings you agree with.
 3. Keep the artifacts agreeing with one another, and run `openspec validate <change> --strict` until it passes.
-4. You may edit a sketch in `sketches/` if a finding is about it, keeping it a self-contained HTML file with system fonts only and nothing loaded from elsewhere.
+4. You may edit a sketch in `sketches/` if a finding is about it, keeping it a self-contained HTML file with system fonts only and nothing loaded from elsewhere: no scripts, event handlers, forms, iframes, SVG or HTML comments, and no `<meta>` but `charset="utf-8"`. A later step checks it, and the run fails if it breaks these rules.
 5. You may update the `message` in `.intentable/draft.json` if the proposal's scope changed, keeping it to two to four plain sentences for a non-developer, with no file or spec names and no @-mentions. Do not change its `labels` or its `change`: do not rename the change. If a reviewer thinks a label is wrong, say so in your notes; the owner decides.
 
 Then write `.intentable/reviews/revise.md`: every finding from the three reports, each with how you fixed it, or why you didn't apply it.

@@ -286,7 +286,7 @@ The last step, `bin/check-intentable-result spec`, SHALL write `.intentable/resu
 - the change doesn't pass `openspec validate <change> --strict`;
 - the change has more than 90 files, or a file over 256 KiB or 20,000 lines, past which Fabro's record of the file is cut;
 - the change has a file that isn't UTF-8 text;
-- the change has a path segment that Fabro skips when collecting: `.git`, `node_modules`, `target`, `dist`, `.venv` or `.cache`.
+- the change has a path segment that Fabro skips when collecting, such as `node_modules` or `dist`; the design lists them all.
 
 #### Scenario: Too many files
 

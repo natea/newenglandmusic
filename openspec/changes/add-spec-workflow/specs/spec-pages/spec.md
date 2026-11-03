@@ -1,8 +1,38 @@
+## MODIFIED Requirements
+
+### Requirement: The build is pinned and least-privileged
+
+The workflow SHALL use Spek's action and Spek's build at the same pinned commit, write only to the `gh-pages` branch, and pass branch names to commands only through the environment. Its `publish` job SHALL check out the full history and ask for no permission beyond writing the repository's contents; any other job SHALL ask only to read them.
+
+#### Scenario: Pinned and narrow
+
+- **WHEN** the tests read the Spek workflow
+- **THEN** it uses `spekhq/spek` and `spek-version` at commit `5542fa2dfda6c52a08fb0610a140670052056c66` (v1.20.2), has no permissions at the top level, `publish` checks out with `fetch-depth: 0` and asks only for `contents: write`, `thumbnails` asks only for `contents: read`, names no branch but `gh-pages` in a push, and puts no `${{ github.ref` or `${{ github.event` expression inside a `run:` script
+
+#### Scenario: Never upstream
+
+- **WHEN** the tests read the Spek workflow
+- **THEN** it doesn't name nycnoise/nycnoise, and its jobs run only when the repository is natea/newenglandmusic
+
+### Requirement: Publishes queue, and never fail a commit's checks
+
+Publishes SHALL run one at a time without dropping any queued run, and a failed publish SHALL NOT fail the checks of the commit it ran for.
+
+#### Scenario: One at a time
+
+- **WHEN** the tests read the Spek workflow
+- **THEN** it has one concurrency group for every run, which doesn't cancel a run in progress and queues up to the maximum
+
+#### Scenario: A failed publish doesn't fail the commit
+
+- **WHEN** the tests read the Spek workflow
+- **THEN** every step of its jobs may fail without failing the job
+
 ## ADDED Requirements
 
 ### Requirement: A change's sketches are published beside its page
 
-When `bin/publish-spek-page` publishes a `change/<name>` branch, it SHALL also copy that change's sketches, if any: each regular file directly in `openspec/changes/<name>/sketches/` whose name ends in `.html`, to `changes/<name>/sketches/` in the site folder. Each publish SHALL replace that change's `sketches/` folder whole, and SHALL touch no other change's files or the root page. Main's publish copies no sketches.
+When `bin/publish-spek-page` publishes a `change/<name>` branch, it SHALL also copy that change's sketches, if any: each regular UTF-8 file directly in `openspec/changes/<name>/sketches/` whose name ends in `.html` and that has no `http-equiv`, to `changes/<name>/sketches/` in the site folder. Each publish SHALL replace that change's `sketches/` folder whole, and SHALL touch no other change's files or the root page. Main's publish copies no sketches.
 
 #### Scenario: A link instead of a file
 
@@ -49,7 +79,12 @@ Chrome SHALL render sketches only in a job with read-only permission and no save
 
 ### Requirement: Published sketches can't run code or call out
 
-Every sketch `bin/publish-spek-page` publishes SHALL begin, right after any doctype, with `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'">`, added by the script, so the browser refuses scripts, outside resources and form posts on the fork's Pages domain, even for a sketch pushed without the run's checker.
+Every sketch `bin/publish-spek-page` publishes SHALL begin, right after any doctype, with `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'">`, added by the script, so the browser refuses scripts, outside resources and form posts on the fork's Pages domain, even for a sketch pushed without the run's checker. A sketch with `http-equiv` SHALL be neither rendered nor published.
+
+#### Scenario: A sketch that isn't UTF-8
+
+- **WHEN** a sketch pushed by hand isn't UTF-8 text
+- **THEN** it isn't rendered or published, and the other sketches are
 
 #### Scenario: A sketch with http-equiv
 

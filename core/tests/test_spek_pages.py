@@ -350,6 +350,20 @@ class SketchPagesTestCase(SimpleTestCase):
         for s in data["jobs"]["publish"]["steps"]:
             self.assertNotIn("--thumbnails", s.get("run", ""))
 
+    def test_a_sketch_that_isnt_utf8(self):
+        with tempfile.TemporaryDirectory() as folder:
+            checkout = checkout_with_sketches(folder, sketches=("b.html",))
+            (checkout / "openspec" / "changes" / "add-venue-hours" / "sketches" / "a.html").write_bytes(
+                b"<p>\xff\xfe</p>"
+            )
+            site = Path(folder) / "site"
+            _, chrome = render_from(checkout, "change/add-venue-hours", Path(folder) / "thumbs")
+            self.assertEqual(publish_from(checkout, "change/add-venue-hours", site), 0)
+            sketches = site / "changes" / "add-venue-hours" / "sketches"
+            self.assertFalse((sketches / "a.html").exists())
+            self.assertTrue((sketches / "b.html").is_file())
+            self.assertNotIn("a.png", chrome)
+
     def test_a_sketch_with_http_equiv(self):
         with tempfile.TemporaryDirectory() as folder:
             refresh = '<!doctype html><!--><meta http-equiv=refresh content="0;url=https://x.example/">-->'

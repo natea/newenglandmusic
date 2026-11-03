@@ -225,6 +225,7 @@ class ReviewerPromptsTestCase(SimpleTestCase):
         self.assertIn("`.intentable/reviews/<round>/`", text)
         self.assertIn("`.intentable/reviews/round`", text)
         self.assertIn("two to four plain sentences", text)
+        self.assertIn("SVG or HTML comments", text)
         self.assertIn("`.intentable/reviews/revise.md`", text)
         self.assertIn("do not rename the change", text)
         self.assertIn("Do not change its `labels`", text)
@@ -489,6 +490,14 @@ class BoundsTestCase(SimpleTestCase):
             self.assertEqual(status, 1)
             self.assertIn("sketch.png", output)
 
+    def test_each_folder_fabro_skips(self):
+        for segment in ("dist", "venv", ".pnpm-store", ".npm", ".next", "__pycache__", ".tox", ".pytest_cache"):
+            with tempfile.TemporaryDirectory() as folder:
+                path = f"specs/{segment}/spec.md"
+                status, output = Run(folder, files={**CHANGE_FILES, path: "x\n"}).check("--draft")
+                self.assertEqual(status, 1, segment)
+                self.assertIn(path, output)
+
     def test_a_file_too_large(self):
         for big in ("x" * (256 * 1024 + 1), "x\n" * 20001):
             with tempfile.TemporaryDirectory() as folder:
@@ -570,6 +579,17 @@ class SketchTestCase(SimpleTestCase):
                 status, output = self.sketch_run(folder, extra={"sketches/b.html": sketch}).check("--draft")
                 self.assertEqual(status, 1, bad)
                 self.assertIn("sketches/b.html", output, bad)
+
+    def test_the_behavior_property(self):
+        with tempfile.TemporaryDirectory() as folder:
+            sketch = SAFE_SKETCH.replace("</main>", '<p style="scroll-behavior:smooth">x</p></main>')
+            status, output = self.sketch_run(folder, extra={"sketches/b.html": sketch}).check("--draft")
+            self.assertEqual(status, 0, output)
+        with tempfile.TemporaryDirectory() as folder:
+            sketch = SAFE_SKETCH.replace("</main>", '<p style="behavior:url(#x)">x</p></main>')
+            status, output = self.sketch_run(folder, extra={"sketches/b.html": sketch}).check("--draft")
+            self.assertEqual(status, 1)
+            self.assertIn("behavior", output)
 
     def test_a_sketch_browsers_read_differently(self):
         refresh = '<meta http-equiv=refresh content="0;url=https://evil.example/">'

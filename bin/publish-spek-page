@@ -68,7 +68,12 @@ def sketches_of(name):
     for sketch in sorted(source.glob("*.html")) if source.is_dir() else []:
         if not sketch.is_file() or sketch.is_symlink():
             continue
-        if "http-equiv" in sketch.read_text(errors="replace").lower():
+        try:
+            text = sketch.read_text()
+        except UnicodeDecodeError:
+            print(f"not publishing {sketch.name}: it isn't UTF-8")
+            continue
+        if "http-equiv" in text.lower():
             print(f"not publishing {sketch.name}: it has http-equiv")
             continue
         found.append(sketch)
