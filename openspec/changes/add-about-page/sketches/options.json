@@ -1,0 +1,20 @@
+[
+  {
+    "file": "a.html",
+    "label": "Plain page",
+    "thesis": "Match the privacy page: headings and prose on the grey ground, with the tour as a plain linked list. Cheapest and most consistent.",
+    "risk": "Reads as a wall of text; the invitation to contribute sits last and is easy to miss."
+  },
+  {
+    "file": "b.html",
+    "label": "Index card",
+    "thesis": "Put the page on the act card with a plum About tab, sections divided by plum rules and a label column, and the invitation as a lavender strip.",
+    "risk": "Borrows the act card, which means one act, so About may read as a band page."
+  },
+  {
+    "file": "c.html",
+    "label": "Invitation first",
+    "thesis": "Lead with a lavender strip and two pill buttons for writing in or adding a show, then plum bars for Why, What it does and Who.",
+    "risk": "Puts the team after the pitch, and plum bars are meant for navigation, so it stretches the band-colour rules."
+  }
+]
