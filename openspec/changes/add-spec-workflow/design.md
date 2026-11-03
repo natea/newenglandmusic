@@ -117,6 +117,6 @@ finish -> exit
 
 ## Open Questions
 
-- **Should sketches really be clickable?** Nate kept HTML because clickable prototypes may be more useful, and these aren't. CSS-only state changes, `:target` panels switched by `#id` links, look possible under the allowlist and policy, though untried in a browser, and would let tabs and switches work. Real multi-page prototypes would need serving somewhere other than the shared Pages domain.
+- **Should sketches really be clickable?** Nate kept HTML because clickable prototypes may be more useful, and these aren't. Tried on 3 November 2026 with a test sketch: CSS-only `:target` panels switched by `#id` links pass today's checker, and under the published policy they switched views, restyled the tab, opened a detail panel and followed the back button in a browser, with no errors. A page has one target at a time, so every state has to be written out, and a thumbnail shows only the first. `<details>`, inputs and popovers are refused by the checker. The sketch prompt doesn't ask for panels, so sketches stay static until Nate decides. Real multi-page prototypes would need serving somewhere other than the shared Pages domain.
 
 These came after G2 (`3402ad1`), at Nate's request or from the live check and the review of the built code: thumbnails and rendering them apart, removing the `.intentable/proposal/` copy, requiring thesis and risk, the stricter sketch check, the size limit, and the last round's non-blocking findings in the summary.
