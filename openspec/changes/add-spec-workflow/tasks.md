@@ -25,7 +25,7 @@
 ## 3. Sketches on the Spek page
 
 - [x] 3.1 Copy a change's regular `sketches/*.html` files in `bin/publish-spek-page`, replacing that change's `sketches/` folder whole, add the Content-Security-Policy tag at the start of each, after any doctype, and render each to a thumbnail in a `thumbnails` job with a read-only token and no network
-- [x] 3.2 Keep "Pinned and narrow", "Never upstream", "One at a time" and "A failed publish doesn't fail the commit" passing with the two jobs, and add tests for "Sketches published", "A sketch removed", "A link instead of a file", "Policy added", "A sketch with no head", "No sketches on main", "Thumbnails made", "A thumbnail that can't be made", "Thumbnails rendered apart" and "A sketch that isn't UTF-8", "A sketch with http-equiv"
+- [x] 3.2 Keep "Pinned and narrow", "Never upstream", "One at a time" and "A failed publish doesn't fail the commit" passing with the two jobs, and add tests for "Sketches published", "A sketch removed", "A link instead of a file", "Policy added", "A sketch with no head", "No sketches on main", "Thumbnails made", "A thumbnail that can't be made", "Thumbnails rendered apart", "A sketch that isn't UTF-8" and "A sketch with http-equiv"
 
 ## 4. Guide
 

@@ -226,6 +226,7 @@ class ReviewerPromptsTestCase(SimpleTestCase):
         self.assertIn("`.intentable/reviews/round`", text)
         self.assertIn("two to four plain sentences", text)
         self.assertIn("SVG or HTML comments", text)
+        self.assertIn("`#` fragments only", text)
         self.assertIn("`.intentable/reviews/revise.md`", text)
         self.assertIn("do not rename the change", text)
         self.assertIn("Do not change its `labels`", text)
