@@ -1,0 +1,50 @@
+<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'"><html lang="en"><head><meta charset="utf-8"><title>Option C – Audience switch</title>
+<style>
+*{box-sizing:border-box}body{margin:0;width:1440px;height:900px;overflow:hidden;background:#d4d0c7;color:#000;font:16px/1.4 system-ui,sans-serif}
+a{color:#000080}.bar{background:#8b5b8b;color:#fff;padding:2px 12px;font-weight:700}
+.wrap{padding:14px 20px;display:flex;gap:24px}
+.half{width:680px}
+h1{font:800 2.2rem/1.02 Helvetica,Arial,sans-serif;margin:4px 0 8px;letter-spacing:-.015em}
+.cap{font-size:.8rem;color:#4f4b44;margin:0 0 4px;text-transform:uppercase;letter-spacing:.08em}
+.mode{display:flex;border:2px solid #000;width:fit-content;margin-bottom:8px}
+.mode a{padding:4px 16px;text-decoration:none;color:#000;font-weight:700}
+.mode a[aria-current]{background:#8b5b8b;color:#fff}
+.strip{background:#eeeeff;padding:6px 8px;border:1px solid #b9b4a8;margin-bottom:8px;font-size:.92rem}
+.row{display:grid;grid-template-columns:1fr 150px 130px;gap:8px;padding:5px 8px;background:#f6f4ee;border-bottom:1px solid #b9b4a8;align-items:baseline}
+.row strong{font:700 1.05rem Helvetica,Arial,sans-serif}
+.row small{color:#4f4b44;display:block;font-size:.8rem}
+.L{font:700 1.2rem Helvetica,Arial,sans-serif;padding:6px 0 2px;border-bottom:2px solid #000}
+.pill{background:#ffff3bcc;border-radius:12px;padding:0 8px;font-size:.8rem;font-weight:700}
+.hero{background:#f6f4ee;border:1px solid #b9b4a8;padding:14px 18px}
+.big{font:800 1.6rem Helvetica,Arial,sans-serif;background:#fbf7e0;border-left:8px solid #8b5b8b;padding:6px 12px;margin:10px 0}
+.steps{margin:6px 0;padding-left:22px}
+.btn{display:inline-block;background:#000080;color:#fff;padding:5px 14px;text-decoration:none;font-weight:700}
+dl{display:grid;grid-template-columns:7.5em 1fr;gap:5px 8px}dt{font-weight:700}dd{margin:0}
+</style></head><body>
+<div class="bar">New England Music · Calendar · Acts · Venues · Map</div>
+<div class="wrap">
+<section class="half"><p class="cap">Screen 1 · /venues — same list, audience switch</p>
+<h1>Venues</h1>
+<div class="mode"><a href="#" aria-current="true">I'm going out</a><a href="#">I'm playing</a></div>
+<div class="strip">Place: <b>Massachusetts › Boston</b> ✕ · Genre: <b>Any ▾</b> · <a href="#">Show all</a></div>
+<div class="L">A</div>
+<div class="row"><span><strong><a href="#">Atwood's Tavern</a></strong><small>Cambridge, MA</small></span><span>Bar · Small</span><span>Folk, Rock</span></div>
+<div class="row"><span><strong><a href="#">Aeronaut Brewing</a></strong><small>Somerville, MA</small></span><span>Brewery · Medium</span><span>Any genre</span></div>
+<div class="L">C</div>
+<div class="row"><span><strong><a href="#">Club Passim</a></strong><small>Cambridge, MA</small></span><span>Listening room · Small</span><span>Folk</span></div>
+<div class="row"><span><strong><a href="#">The Cantab Lounge</a></strong><small>Cambridge, MA</small></span><span>Bar · Small</span><span>Blues, Funk</span></div>
+<div class="L">M</div>
+<div class="row"><span><strong><a href="#">Middle East Downstairs</a></strong><small>Cambridge, MA</small></span><span>Club · Medium</span><span>Rock, Punk</span></div>
+<p style="font-size:.85rem;color:#4f4b44">Choosing “I'm playing” keeps your place and genre, adds “Takes open bookings”, and shows each room's booking type here.</p>
+</section>
+<section class="half"><p class="cap">Screen 2 · /venues/club-passim/booking — apply-first</p>
+<h1>Club Passim</h1>
+<div class="mode"><a href="#">For fans</a><a href="#" aria-current="true">For artists</a></div>
+<div class="hero"><span class="pill">Takes open bookings</span>
+<div class="big">Submit an Artist</div>
+<p style="margin:0">Send a pitch; the room picks acts from submissions.</p>
+<ol class="steps"><li>Read the notes: prefers original material, apply 3 months ahead.</li><li>Use the booking link below.</li></ol>
+<p><a class="btn" href="#">Apply link: passim.org</a></p>
+<dl><dt>Open mic</dt><dd>Mondays</dd><dt>Size</dt><dd>Small</dd><dt>Genres</dt><dd>Folk, Americana</dd></dl>
+<p style="font-size:.9rem;margin-bottom:0"><a href="#">← Venue page for fans</a></p></div>
+</section></div></body></html>
