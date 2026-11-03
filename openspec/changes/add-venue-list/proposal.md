@@ -1,3 +1,5 @@
+Issue: [#9 Create venue page and venue listing](https://github.com/natea/newenglandmusic/issues/9)
+
 ## Why
 
 The site keeps about 730 editor-curated venues, but a visitor can't browse them or find one: venues show only as a name in event listings (`add-venue-pages` gives each venue a page, but nothing lists them). Fans want to look through the rooms in their area; bands want to find rooms that will take them and learn how to ask. GitHub issue 9 asks for both: a venue page and a venue list that serve fans and artists.

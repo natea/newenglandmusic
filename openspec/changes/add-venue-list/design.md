@@ -1,3 +1,5 @@
+Issue: [#9 Create venue page and venue listing](https://github.com/natea/newenglandmusic/issues/9)
+
 ## Context
 
 - `Venue` already holds everything shown: `city_town`, `state`, `neighborhood`, `venue_type`, `size`, `genres` (a list, `["ALL"]` for venues that book anything), `open_booking` (null when unknown), `booking_type`, `booking_url`, `booking_notes`, `open_mic`, `website`, `is_active` (only `False` means closed). See `core/models.py`.

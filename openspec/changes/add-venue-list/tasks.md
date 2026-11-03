@@ -1,3 +1,5 @@
+Issue: [#9 Create venue page and venue listing](https://github.com/natea/newenglandmusic/issues/9)
+
 ## 1. Before building
 
 - [ ] 1.1 Edit `add-venue-pages` (its spec, design and tasks) so the fan page drops booking type, link and notes and its fact line links to the artist view; verify with `openspec validate add-venue-pages --strict`. Remove its "Playing here" booking fields, its fact-line "Open booking" link and its "Open booking" and "Closed booking" scenarios, and make its tab the shared "For fans / For artists" partial. This is a hard prerequisite: do it before this change is accepted or applied. If it is already built, make the same change in code and tests.
