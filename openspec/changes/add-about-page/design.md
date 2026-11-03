@@ -1,3 +1,5 @@
+Issue: [#11 Let's make an About page](https://github.com/natea/newenglandmusic/issues/11)
+
 # Design
 
 ## Context
