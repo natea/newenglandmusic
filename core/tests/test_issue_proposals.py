@@ -169,7 +169,6 @@ class NothingPushedTestCase(SimpleTestCase):
             [
                 ".intentable/result.json",
                 ".intentable/review.md",
-                ".intentable/proposal/**",
             ],
         )
 
@@ -226,7 +225,6 @@ class ReviewerPromptsTestCase(SimpleTestCase):
         self.assertIn("`.intentable/reviews/revise.md`", text)
         self.assertIn("do not rename the change", text)
         self.assertIn("Do not change its `labels`", text)
-        self.assertIn("nothing under `.intentable/proposal/`", text)
 
 
 class ProposePromptTestCase(SimpleTestCase):
@@ -359,7 +357,6 @@ class DraftFileTestCase(SimpleTestCase):
             status, output = run.check("--draft")
             self.assertEqual(status, 0, output)
             self.assertFalse(run.path(".intentable/result.json").exists())
-            self.assertFalse(run.path(".intentable/proposal").exists())
 
     def test_not_ready(self):
         draft = {"state": "needs-info", "labels": ["clarity:3"], "message": "Should hours come from the venue's site?"}
@@ -372,7 +369,6 @@ class DraftFileTestCase(SimpleTestCase):
             self.assertEqual(status, 0, output)
             result = json.loads(run.path(".intentable/result.json").read_text())
             self.assertEqual(result, {"labels": ["clarity:3"], "state": "needs-info", "message": draft["message"]})
-            self.assertFalse(run.path(".intentable/proposal").exists())
 
     def test_a_send_back_that_breaks_the_rules(self):
         base = {"state": "needs-info", "labels": ["clarity:3"], "message": "Which venues?"}
@@ -389,7 +385,7 @@ class DraftFileTestCase(SimpleTestCase):
 
 
 class SpecResultTestCase(SimpleTestCase):
-    """the spec result names the change; the summary is collected with the result; the proposal is copied last"""
+    """the spec result names the change; the summary is collected with the result"""
 
     def test_a_good_result(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -419,19 +415,6 @@ class SpecResultTestCase(SimpleTestCase):
             self.assertEqual(run.check("--draft")[0], 0)
             self.assertFalse(run.path(".intentable/review.md").exists())
 
-    def test_only_the_final_text(self):
-        with tempfile.TemporaryDirectory() as folder:
-            run = Run(folder)
-            run.passed_review()
-            run.write(".intentable/proposal/notes.md", "stale\n")
-            self.assertEqual(run.check()[0], 0)
-            copied = sorted(
-                p.relative_to(run.path(".intentable/proposal")).as_posix()
-                for p in run.path(".intentable/proposal").rglob("*")
-                if p.is_file()
-            )
-            self.assertEqual(copied, sorted(CHANGE_FILES))
-
 
 class ChangeNameTestCase(SimpleTestCase):
     """the change name is plain and new"""
@@ -443,7 +426,6 @@ class ChangeNameTestCase(SimpleTestCase):
                 status, output = run.check()
                 self.assertEqual(status, 1, name)
                 self.assertIn("isn't a change name", output, name)
-                self.assertFalse(run.path(".intentable/proposal").exists())
 
     def test_a_change_that_already_existed(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -681,7 +663,7 @@ class GuideTestCase(SimpleTestCase):
         guide = (ROOT / "docs" / "FABRO.md").read_text()
         section = guide.split("#### spec", 1)[1]
         for needed in (
-            "`.intentable/proposal/`",
+            "Fabro's record of the files the run changed",
             "risk, spec fit, fidelity",
             "five-round limit",
             "the bridge commits the draft",

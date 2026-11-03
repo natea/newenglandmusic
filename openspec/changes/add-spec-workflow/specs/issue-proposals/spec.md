@@ -111,12 +111,12 @@ The `spec` workflow SHALL declare the inputs `issue_number`, `issue_title`, `iss
 
 ### Requirement: The spec workflow pushes nothing
 
-The `spec` workflow SHALL NOT push a run branch or open a pull request, and SHALL ask Fabro for no GitHub permissions. The finished change SHALL leave the sandbox only as run artifacts.
+The `spec` workflow SHALL NOT push a run branch or open a pull request, and SHALL ask Fabro for no GitHub permissions. The finished change SHALL leave the sandbox only through Fabro's record of the files the run changed, and the result and summary as run artifacts.
 
 #### Scenario: Nothing pushed
 
 - **WHEN** the configuration tests read the workflow's settings
-- **THEN** it disables pull requests and run-branch pushing, declares no GitHub integration permissions, and collects exactly `.intentable/result.json`, `.intentable/review.md` and `.intentable/proposal/**`
+- **THEN** it disables pull requests and run-branch pushing, declares no GitHub integration permissions, and collects exactly `.intentable/result.json` and `.intentable/review.md`
 
 ### Requirement: Reviewers are fresh, one lens each
 
@@ -147,12 +147,12 @@ Each reviewer SHALL write its report to `.intentable/reviews/<lens>.md` in the `
 
 ### Requirement: Revise records what it did
 
-The revise agent SHALL apply every blocking finding, and the non-blocking ones it agrees with. It SHALL write `.intentable/reviews/revise.md` listing each finding with how it was fixed, or why it wasn't applied. It SHALL NOT rename the change, and SHALL write nothing under `.intentable/proposal/`.
+The revise agent SHALL apply every blocking finding, and the non-blocking ones it agrees with. It SHALL write `.intentable/reviews/revise.md` listing each finding with how it was fixed, or why it wasn't applied. It SHALL NOT rename the change.
 
 #### Scenario: Revise prompt
 
 - **WHEN** the configuration tests read `revise.md`
-- **THEN** it says to apply every blocking finding, to write each finding with its fix or reason to `.intentable/reviews/revise.md`, not to rename the change, and to write nothing under `.intentable/proposal/`
+- **THEN** it says to apply every blocking finding, to write each finding with its fix or reason to `.intentable/reviews/revise.md`, and not to rename the change
 
 ### Requirement: The review loop ends
 
@@ -217,12 +217,12 @@ When the propose agent finds the issue isn't clear enough to write up, it SHALL 
 
 ### Requirement: The draft is named in its own file
 
-The propose agent SHALL name the change and give its message in `.intentable/draft.json`, as `change`, `labels` and `message`. The revise agent may change the message, but not the labels or the change name. No step before the last SHALL write `.intentable/result.json`, `.intentable/review.md` or anything under `.intentable/proposal/`.
+The propose agent SHALL name the change and give its message in `.intentable/draft.json`, as `change`, `labels` and `message`. The revise agent may change the message, but not the labels or the change name. No step before the last SHALL write `.intentable/result.json` or `.intentable/review.md`.
 
 #### Scenario: Draft check reads the draft file
 
 - **WHEN** `bin/check-intentable-result spec --draft` runs with `.intentable/draft.json` naming a valid new change
-- **THEN** it accepts the draft and writes neither `.intentable/result.json` nor `.intentable/proposal/`
+- **THEN** it accepts the draft and doesn't write `.intentable/result.json`
 
 ### Requirement: The spec result names the change
 
@@ -232,15 +232,6 @@ The last step, `bin/check-intentable-result spec`, SHALL write `.intentable/resu
 
 - **WHEN** the draft names `add-venue-hours`, which validates and is new, with no labels and a two-sentence message, and the review passed
 - **THEN** the checker writes a result with that change, no state, the message, `reviewed: passed` and `files` such as `[".openspec.yaml", "design.md", "proposal.md", "specs/venues/spec.md", "tasks.md"]`
-
-### Requirement: The proposal is copied last
-
-The last step SHALL empty `.intentable/proposal/`, then copy the contents of `openspec/changes/<change>/` into it, so `.intentable/proposal/proposal.md` is the change's `proposal.md`.
-
-#### Scenario: Only the final text
-
-- **WHEN** `.intentable/proposal/` holds a stale `notes.md` and the checker accepts `add-venue-hours`
-- **THEN** `.intentable/proposal/` holds exactly the contents of `openspec/changes/add-venue-hours/`, without `notes.md`
 
 ### Requirement: The change name is plain and new
 
@@ -324,4 +315,4 @@ The last step SHALL empty `.intentable/proposal/`, then copy the contents of `op
 #### Scenario: Guide
 
 - **WHEN** the tests read `docs/FABRO.md`
-- **THEN** it has a section on the `spec` workflow that names `.intentable/proposal/`, the three lenses and the five-round limit
+- **THEN** it has a section on the `spec` workflow that says the bridge commits the draft from Fabro's record of the files the run changed, and names the three lenses and the five-round limit

@@ -15,7 +15,8 @@ issue_author = ""
 issue_thread = ""
 
 # The agents write a proposal in the sandbox; nothing is pushed and no pull
-# request is opened. The bridge commits the draft from the artifacts.
+# request is opened. The bridge commits the draft from Fabro's record of the
+# files the run changed.
 [run.pull_request]
 enabled = false
 
@@ -24,4 +25,4 @@ push = false
 
 # Only the last step writes these; .intentable/ is git-ignored.
 [run.artifacts]
-include = [".intentable/result.json", ".intentable/review.md", ".intentable/proposal/**"]
+include = [".intentable/result.json", ".intentable/review.md"]

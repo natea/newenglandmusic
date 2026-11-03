@@ -10,4 +10,4 @@ Read the three reports in `.intentable/reviews/`: `risk.md`, `spec_fit.md` and `
 
 Then write `.intentable/reviews/revise.md`: every finding from the three reports, each with how you fixed it, or why you didn't apply it.
 
-Write nothing else under `.intentable/`, and nothing under `.intentable/proposal/`. Change no code.
+Write nothing else under `.intentable/`. Change no code.

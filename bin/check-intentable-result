@@ -12,9 +12,8 @@ on_failure="exit").
 spec: reads .intentable/draft.json and the change it names, following the
 issue-proposals rules. --draft checks the draft and any sketches' safety,
 writing nothing; --sketches also requires the sketches; with no flag it is the
-run's last step: it checks everything again, copies the change into
-.intentable/proposal/ and the review summary to .intentable/review.md, and
-writes .intentable/result.json.
+run's last step: it checks everything again, copies the review summary to
+.intentable/review.md, and writes .intentable/result.json.
 """
 
 import json
@@ -116,9 +115,9 @@ CHANGES = Path("openspec/changes")
 # a change name, the same set the bridge accepts
 CHANGE_NAME = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 MAX_NAME = 60
-# Fabro collects at most 100 files a stage; this leaves room for the result and the summary
+# the bridge commits at most 100 files; this stays well under it
 MAX_FILES = 90
-# path segments Fabro skips when collecting artifacts, so a file under one would go missing
+# path segments Fabro skips in its records of a run, so a file under one could go missing
 SKIPPED = {".git", "node_modules", "target", "dist", ".venv", ".cache"}
 SKETCHES = ("a.html", "b.html", "c.html")
 ARCHIVE_DATE = re.compile(r"\d{4}-\d{2}-\d{2}-")
@@ -325,7 +324,7 @@ def check_sketches(change, required):
 
 
 def spec(mode):
-    """the spec checks; with no mode, also writes the run's result and its files"""
+    """the spec checks; with no mode, also writes the run's result and the summary"""
     change, labels, state = check_draft(read_json(INTENTABLE / "draft.json", "the draft"))
     draft = json.loads((INTENTABLE / "draft.json").read_text())
     if change is not None:
@@ -334,8 +333,6 @@ def spec(mode):
         check_sketches(change, required=mode == "--sketches" or (mode is None and "needs-design" in labels))
     if mode is not None:
         return
-    proposal = INTENTABLE / "proposal"
-    shutil.rmtree(proposal, ignore_errors=True)
     if change is None:
         result = {"labels": labels, "state": state, "message": draft["message"]}
     else:
@@ -346,10 +343,6 @@ def spec(mode):
         summary = INTENTABLE / "reviews" / "summary.md"
         if not summary.is_file():
             raise Refused("the review summary is missing")
-        for relative in files:
-            target = proposal / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(CHANGES / change / relative, target)
         shutil.copyfile(summary, INTENTABLE / "review.md")
         result = {
             "change": change, "labels": labels, "state": None, "message": draft["message"],

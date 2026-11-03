@@ -50,11 +50,10 @@ finish -> exit
 - **Reviewers run in one checkout**, since Fabro's fan-out shares it. Each writes only its own report file, so there is no race. Each is a separate agent node, and so a fresh session: it hasn't seen the propose agent's reasoning, only the files, which is the skill's rule that the author's conclusions stay out of the brief. From round 2, each prompt points at the previous round's `revise.md`, which is the skill's "told what changed since its read".
 - **`finish`** runs `bin/check-intentable-result spec`:
   1. it checks the draft again;
-  2. it empties `.intentable/proposal/` and copies the change folder's contents into it;
-  3. it copies the summary to `.intentable/review.md`;
-  4. only then does it write `.intentable/result.json`, with `reviewed` read from `.intentable/reviews/outcome`, and `files` as paths relative to the change folder (Fabro's globs match leading dots, so `.openspec.yaml` is collected).
+  2. it copies the summary to `.intentable/review.md`;
+  3. only then does it write `.intentable/result.json`, with `reviewed` read from `.intentable/reviews/outcome`, and `files` as paths relative to the change folder.
 
-  So `result.json`, `review.md` and the proposal files exist only in the `finish` stage's artifacts. No earlier step writes under those paths: the prompts say so, and Fabro records a path again only when its content changes, so an earlier identical copy would leave a file out of `finish`'s artifacts. The bridge would then refuse the draft loudly, as "a file missing". The bridge reads the proposal files from the same stage as the result, which avoids ambiguity between stage versions. Fabro numbers stages separately from retries.
+  So `result.json` and `review.md` exist only in the `finish` stage's artifacts. The change's files reach the bridge another way, from Fabro's record of what the run changed (`GET /runs/<id>/files`). The live check on issue #9 led to this: `finish` first copied the change to `.intentable/proposal/` as artifacts, but Fabro collected nothing from that folder, while its record held all 11 files. The copy is gone. `.intentable/` is git-ignored, so none of it appears in that record.
 
 **Sketches** (Nate's decision, 2 November 2026: "sketches should be included in the proposal if design is needed").
 - After the first `check_draft`, a `route` script reads `.intentable/draft.json`. It prints `{"context_updates": {"route": "sketch" | "back" | "review"}}` (`output_schema="routing"`), and the edges branch on `context.route`: `sketch` for `needs-design`, `back` for `needs-info` straight to `finish`, and the fan-out otherwise.
@@ -87,7 +86,7 @@ finish -> exit
 - `labels` may carry `needs-design`, the one later-stage label this stage knows about. The plan says `needs-design` routes the issue to Impeccable.
 - `state` is always none. The issue leaves `spec-review` only at G2, which a later change builds.
 - `reviewed` gives the bridge the review's outcome as data, so it doesn't have to read words out of `review.md`. `files` lets it check that it received every file.
-- The 90-file cap leaves room under Fabro's 100-file collection limit for the result and the summary. Path segments Fabro prunes (`target`, `dist` and the like) and non-text files are refused, because they would silently go missing or be mangled on the way to the branch.
+- The 90-file cap stays well under the bridge's 100. Path segments Fabro prunes (`target`, `dist` and the like) and non-text files are refused, because they would silently go missing or be mangled on the way to the branch.
 
 **Name rule.** The name must match `^[a-z0-9]+(-[a-z0-9]+)*$`, at most 60 characters. That is stricter than `bin/publish-spek-page`, which accepts any name its page path can hold, so every accepted name gets a page. The checker passes the name to `openspec` only as a separate argument, never through a shell.
 
@@ -103,7 +102,7 @@ finish -> exit
 - **[Usage]** A run takes up to 21 agent sessions on the Max subscription (1 propose, 15 review, 5 revise), or 22 with sketches. → The round limit, and the bridge starts one `spec` run per issue.
 - **[Time]** Up to twelve sequential agent phases, which may not fit the bridge's three-hour sandbox lifetime. → The live check records how long a round takes. If five rounds don't fit, Nate decides whether to raise `SANDBOX_LIFETIME_MINUTES` or lower the limit. If the lifetime runs out, the run fails and is reported.
 - **[A reviewer is never satisfied]** → The limit ends the loop with the draft and its findings for Nate.
-- **[The agent edits code]** The prompt forbids it, and only `.intentable/proposal/`, which holds just the change folder, leaves the sandbox.
+- **[The agent edits code]** The prompt forbids it, and the bridge commits only files under the change's own folder, so a stray edit elsewhere never leaves the run.
 - **[Issue text steering the agent]** As with `triage`:
   - inputs never reach a command;
   - git access is read-only;
