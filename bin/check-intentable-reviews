@@ -49,7 +49,7 @@ def record_existing():
 def route():
     draft = json.loads((INTENTABLE / "draft.json").read_text())
     labels = draft.get("labels", [])
-    (INTENTABLE / "route.json").write_text(json.dumps({"labels": labels}) + "\n")
+    (INTENTABLE / "route.json").write_text(json.dumps({"labels": labels, "change": draft.get("change")}) + "\n")
     if draft.get("state") == "needs-info":
         routing(route="back")
     elif "needs-design" in labels:
@@ -62,24 +62,27 @@ def satisfied(report):
     """true only for a report whose first line is SATISFIED: yes; a missing one counts as no"""
     if not report.is_file():
         return False
-    lines = [line.strip() for line in report.read_text().splitlines() if line.strip()]
+    try:
+        text = report.read_text()
+    except UnicodeDecodeError:
+        return False
+    # an agent may keep the prompt's code fence around its report
+    lines = [line.strip() for line in text.splitlines() if line.strip() and not line.strip().startswith("```")]
     return bool(lines) and lines[0].lower() == "satisfied: yes"
 
 
-def blocking(report):
-    """the BLOCKING section of a report, as its lines"""
+def section(report, wanted):
+    """one section of a report, BLOCKING: or NON-BLOCKING:, as its lines"""
     if not report.is_file():
         return ["- (no report)"]
-    section, inside = [], False
-    for line in report.read_text().splitlines():
+    lines, inside = [], False
+    for line in report.read_text(errors="replace").splitlines():
         heading = line.strip().upper()
-        if heading == "BLOCKING:":
-            inside = True
-        elif heading in ("NON-BLOCKING:", "CONFIRMED OK:"):
-            inside = False
-        elif inside and line.strip():
-            section.append(line.rstrip())
-    return section or ["none"]
+        if heading in ("BLOCKING:", "NON-BLOCKING:", "CONFIRMED OK:"):
+            inside = heading == wanted
+        elif inside and line.strip() and not line.strip().startswith("```"):
+            lines.append(line.rstrip())
+    return lines or ["none"]
 
 
 def summary(rounds, passed):
@@ -90,7 +93,10 @@ def summary(rounds, passed):
         lines += [f"## Round {number}", ""]
         for lens in LENSES:
             lines += [f"{lens.replace('_', ' ')}: {'satisfied' if satisfied(folder / f'{lens}.md') else 'not satisfied'}"]
-            lines += blocking(folder / f"{lens}.md")
+            lines += section(folder / f"{lens}.md", "BLOCKING:")
+            # no revise follows the last round, so its other findings would otherwise be lost
+            if number == rounds:
+                lines += ["Non-blocking, not acted on:"] + section(folder / f"{lens}.md", "NON-BLOCKING:")
         notes = folder / "revise.md"
         if notes.is_file():
             lines += ["", "Revise notes:", notes.read_text().rstrip()]

@@ -18,7 +18,7 @@ The review loop is the `dev-review-proposal` skill from intentable: three fresh 
 
 **Non-Goals:**
 - Starting the run and committing the draft. Those are the bridge's job, in intentable's `add-spec-runs`.
-- G2 through the issue, moves out of `spec-review`, revising a draft after Nate comments, and Sooz or Mark picking a sketch.
+- G2 through the issue, moves out of `spec-review` other than the send-back, revising a draft after Nate comments, and Sooz or Mark picking a sketch.
 
 ## Decisions
 
@@ -50,22 +50,25 @@ finish -> exit
 - **Reviewers run in one checkout**, since Fabro's fan-out shares it. Each writes only its own report file, so there is no race. Each is a separate agent node, and so a fresh session: it hasn't seen the propose agent's reasoning, only the files, which is the skill's rule that the author's conclusions stay out of the brief. From round 2, each prompt points at the previous round's `revise.md`, which is the skill's "told what changed since its read".
 - **`finish`** runs `bin/check-intentable-result spec`:
   1. it checks the draft again;
-  2. it empties `.intentable/proposal/` and copies the change folder's contents into it;
-  3. it copies the summary to `.intentable/review.md`;
-  4. only then does it write `.intentable/result.json`, with `reviewed` read from `.intentable/reviews/outcome`, and `files` as paths relative to the change folder (Fabro's globs match leading dots, so `.openspec.yaml` is collected).
+  2. it copies the summary to `.intentable/review.md`;
+  3. only then does it write `.intentable/result.json`, with `reviewed` read from `.intentable/reviews/outcome`, and `files` as paths relative to the change folder.
 
-  So `result.json`, `review.md` and the proposal files exist only in the `finish` stage's artifacts. No earlier step writes under those paths: the prompts say so, and Fabro records a path again only when its content changes, so an earlier identical copy would leave a file out of `finish`'s artifacts. The bridge would then refuse the draft loudly, as "a file missing". The bridge reads the proposal files from the same stage as the result, which avoids ambiguity between stage versions. Fabro numbers stages separately from retries.
+  So `result.json` and `review.md` exist only in the `finish` stage's artifacts. The change's files reach the bridge another way, from Fabro's record of what the run changed (`GET /runs/<id>/files`). The live check on issue #9 led to this: `finish` first copied the change to `.intentable/proposal/` as artifacts, but Fabro collected nothing from that folder, while its record held all 11 files. The copy is gone. `.intentable/` is git-ignored, so none of it appears in that record.
 
 **Sketches** (Nate's decision, 2 November 2026: "sketches should be included in the proposal if design is needed").
 - After the first `check_draft`, a `route` script reads `.intentable/draft.json`. It prints `{"context_updates": {"route": "sketch" | "back" | "review"}}` (`output_schema="routing"`), and the edges branch on `context.route`: `sketch` for `needs-design`, `back` for `needs-info` straight to `finish`, and the fan-out otherwise.
-- `sketch` is an ACP agent with the Impeccable plugin, installed in `install` from its marketplace (`pbakaus/impeccable`) at a pinned version. It is told to run Impeccable's decision step unattended: three options, each a self-contained HTML mock with inline CSS and no scripts, at 1440×900. It is also told not to generate images, so every file stays text. It copies the mocks and the options' payload into the change's `sketches/`, and adds a "Sketches" section to `design.md` that links each one.
+- `sketch` is an ACP agent with the Impeccable plugin, installed in `install` from its marketplace (`pbakaus/impeccable`) at a pinned version. It is told to run Impeccable's decision step unattended: three options, each a self-contained HTML mock with inline CSS and no scripts, at 1440×900. It is also told not to generate images, so every file stays text. Nate also prefers HTML to image comps for this ("those may be less useful than clickable prototypes", 2 November 2026). It copies the mocks and the options' payload into the change's `sketches/`, and adds a "Sketches" section to `design.md` that links each one.
 - It runs once. `check_sketches` checks the sketches at once, so a missing or unsafe one fails cheaply, before any reviewer. The reviewers then review the sketches with the rest of the change, and revise may edit a sketch but never regenerates the set. `recheck` checks their safety again.
 - `route` records the labels in `.intentable/route.json`, and revise may not change them, so the sketches always match the `needs-design` label. A reviewer who thinks the label is wrong says so in the report, and that goes to Nate in the summary. Nate corrects a wrong label himself; the run doesn't.
 - `sketch.md` says to use system fonts or inline styles only, so sketches show layout and colour but not the site's own typefaces (the policy below blocks font files too): no web fonts, no outside stylesheets or images. Three of the Impeccable mocks committed as context load Google Fonts, and the sketch agent would otherwise tend to copy them.
-- **Safety.** Sketches are written by an agent from issue text and served from the fork's Pages domain, which natea's other Pages sites share. So there are two checks. The run's checker parses each sketch against an allowlist (decoded entities; static elements and inline styles only; URLs only `#…` or `data:image/`). `bin/publish-spek-page` also adds a Content-Security-Policy meta tag to every published sketch, and copies only regular files, never links, in case something reaches a `change/` branch without the checker. The tag goes at the very start of the file, after any doctype, so the browser applies it before anything else in the file. A policy in a meta tag can't stop a `meta` refresh redirect or framing by another site; the allowlist keeps both out of the run's sketches, and for anything else the worst left is a redirect away, not code running on the domain.
+- **Safety.** Sketches are written by an agent from issue text and served from the fork's Pages domain, which natea's other Pages sites share. So there are two checks. The run's checker parses each sketch against an allowlist (decoded entities; static HTML and inline styles only; URLs only `#…` or `data:image/`). It also refuses comments, SVG, other declarations and markup inside `<style>`. The review showed why: Python's parser and Chrome read `<!-->` and `<svg><style>` differently, and a refresh hidden that way passed the check. No live sketch uses any of these. `bin/publish-spek-page` also adds a Content-Security-Policy meta tag to every published sketch, and copies only regular files, never links, in case something reaches a `change/` branch without the checker. The tag goes at the very start of the file, after any doctype, so the browser applies it before anything else in the file. A policy in a meta tag can't stop a `meta` refresh or framing by another site, so `publish-spek-page` also refuses any sketch with `http-equiv`.
 - Impeccable's design context is committed with this change, so the sandbox's checkout has it (Nate's decision, 2 November 2026: the `.impeccable` files are useful for making new sketches). That means `.impeccable/config.json`, `design.json`, `surfaces/` and `mocks/`. It also means `PRODUCT.md`, which Impeccable reads first (Nate confirmed, 2 November 2026). `DESIGN.md` is already committed. Task 1.4 checks that the JSON files parse, since another session is editing them. Left out are the per-machine and per-session files: `config.local.json` and `hook.cache.json` (already excluded locally), `questions/` (one session's question logs) and `review/` (screenshots, binary). These files come from another session's design work in the main checkout. They are committed as they stand when this change is applied, and that session keeps editing them.
 - Picking one option is left to the later stage where Sooz or Mark choose. At G2 Nate sees all three.
 - The sketches are published beside the Spek page (`spec-pages` delta), at `changes/<name>/sketches/a.html` and so on. This replaces the plan's separate assets branch for sketches, since Nate put them in the proposal itself.
+- **Thumbnails** (Nate's request, 2 November 2026). Chrome screenshots each sketch at half size, 720×450, for the issue comment. It runs in a `thumbnails` job of its own: `contents: read`, no saved credentials, and name resolution cut, and the `publish` job, which holds the write token, only copies the PNGs from an artifact. The first version rendered inside the publish job. The review reproduced a sketch that passed the check, redirected Chrome and ran script under `--no-sandbox` there. Reading the token would have needed a Chrome exploit, but the job needn't hold one. On issue #11 thumbnails added about 2 seconds to the job. The second job's timing hasn't been measured yet.
+- **The sketches aren't clickable** (for Nate to decide, see Open Questions). They are static pictures in a browser. Under the policy they can't run scripts, and the checker refuses links to other pages, so every link is `#` and clicking does nothing: option C on issue #9, "Audience switch", can't switch.
+- `options.json` must give each sketch a label, thesis and risk, because the comment shows them (Nate's decision, 3 November 2026), and the checker refuses it otherwise.
+- The comment asks the person who asked to reply a, b or c (Nate's request, 2 November 2026). The reply stays in the thread, and nothing acts on it until the picking stage exists.
 - Nate's decision, 2 November 2026: a sketch is chosen before anything design-related is built, but G2 needn't wait for the pick. Later he may drop the choosing step and have the design built without waiting for confirmation. The picking stage carries this.
 
 **Briefs.** Each reviewer prompt gives its lens, the change folder path, `openspec/specs/`, `AGENTS.md`, `openspec/config.yaml` and the report format.
@@ -85,9 +88,9 @@ finish -> exit
 
 **The result.**
 - `labels` may carry `needs-design`, the one later-stage label this stage knows about. The plan says `needs-design` routes the issue to Impeccable.
-- `state` is always none. The issue leaves `spec-review` only at G2, which a later change builds.
+- For a draft, `state` is none, and the issue leaves `spec-review` at G2, which a later change builds. The only other way out is the send-back.
 - `reviewed` gives the bridge the review's outcome as data, so it doesn't have to read words out of `review.md`. `files` lets it check that it received every file.
-- The 90-file cap leaves room under Fabro's 100-file collection limit for the result and the summary. Path segments Fabro prunes (`target`, `dist` and the like) and non-text files are refused, because they would silently go missing or be mangled on the way to the branch.
+- The 90-file cap stays well under the bridge's 100. Path segments Fabro prunes (`target`, `dist` and the like) and non-text files are refused, because they would silently go missing or be mangled on the way to the branch.
 
 **Name rule.** The name must match `^[a-z0-9]+(-[a-z0-9]+)*$`, at most 60 characters. That is stricter than `bin/publish-spek-page`, which accepts any name its page path can hold, so every accepted name gets a page. The checker passes the name to `openspec` only as a separate argument, never through a shell.
 
@@ -98,12 +101,14 @@ finish -> exit
 - Fabro, Claude, GitHub and Impeccable aren't touched (Impeccable's install and the sketch agent are covered by the configuration tests and the live check);
 - the live check is a manual task.
 
+**Folders Fabro skips.** A path segment Fabro leaves out of its record of a run fails the check: `.git`, `node_modules`, `target`, `dist`, `.venv`, `venv`, `.cache`, `.pnpm-store`, `.npm`, `.next`, `__pycache__`, `.tox` and `.pytest_cache`.
+
 ## Risks / Trade-offs
 
-- **[Usage]** A run takes up to 21 agent sessions on the Max subscription (1 propose, 15 review, 5 revise), or 22 with sketches. → The round limit, and the bridge starts one `spec` run per issue.
-- **[Time]** Up to twelve sequential agent phases, which may not fit the bridge's three-hour sandbox lifetime. → The live check records how long a round takes. If five rounds don't fit, Nate decides whether to raise `SANDBOX_LIFETIME_MINUTES` or lower the limit. If the lifetime runs out, the run fails and is reported.
+- **[Usage]** A run takes up to 20 agent sessions on the Max subscription (1 propose, 15 review, 4 revise), or 21 with sketches. → The round limit, and the bridge starts one `spec` run per issue.
+- **[Time]** Up to eleven sequential agent phases, inside the bridge's three-hour sandbox lifetime. Live, #9 passed in 4 rounds with sketches in 19 minutes and #11 in 1 round in about 10, so three hours looks ample. If it runs out, the run fails and is reported.
 - **[A reviewer is never satisfied]** → The limit ends the loop with the draft and its findings for Nate.
-- **[The agent edits code]** The prompt forbids it, and only `.intentable/proposal/`, which holds just the change folder, leaves the sandbox.
+- **[The agent edits code]** The prompt forbids it, and the bridge commits only files under the change's own folder, so a stray edit elsewhere never leaves the run.
 - **[Issue text steering the agent]** As with `triage`:
   - inputs never reach a command;
   - git access is read-only;
@@ -112,4 +117,6 @@ finish -> exit
 
 ## Open Questions
 
-None.
+- **Should sketches really be clickable?** Nate kept HTML because clickable prototypes may be more useful, and these aren't. Tried on 3 November 2026 with a test sketch: CSS-only `:target` panels switched by `#id` links pass today's checker, and under the published policy they switched views, restyled the tab, opened a detail panel and followed the back button in a browser, with no errors. A page has one target at a time, so every state has to be written out, and a thumbnail shows only the first. `<details>`, inputs and popovers are refused by the checker. The sketch prompt doesn't ask for panels, so sketches stay static until Nate decides. Real multi-page prototypes would need serving somewhere other than the shared Pages domain.
+
+These came after G2 (`3402ad1`), at Nate's request or from the live check and the review of the built code: thumbnails and rendering them apart, removing the `.intentable/proposal/` copy, requiring thesis and risk, the stricter sketch check, the size limit, and the last round's non-blocking findings in the summary.

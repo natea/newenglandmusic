@@ -27,7 +27,7 @@ Its comments, oldest first, as JSON (`[{author, body}]`):
 
 ## What changed since the last round
 
-If `.intentable/reviews/` has numbered folders, this isn't the first round. Read the latest round's `revise.md`, which says what was fixed and what wasn't, with the reason, and check those claims against the files.
+If `.intentable/reviews/revise.md` exists, this isn't the first round. It says what was fixed since the last round and what wasn't, with the reason. Check those claims against the files.
 
 ## Your report
 

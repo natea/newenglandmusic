@@ -93,6 +93,8 @@ Started by the intentable bridge when a triage or clarify result moves an issue 
 
 The loop ends when all three are satisfied in one round, or after the five-round limit, when the draft is still kept, marked not passed. `bin/check-intentable-reviews` keeps the rounds and writes the summary, whose first line is `Passed by the reviewers after <n> round(s).` or `Not passed by the reviewers after <n> rounds.`.
 
-The last step, `bin/check-intentable-result spec`, copies the change into `.intentable/proposal/`, the summary to `.intentable/review.md`, and writes `.intentable/result.json` with the change's name, the message, `reviewed` and `files`. The run itself pushes nothing: the bridge commits the draft from those artifacts to `change/<name>` on the fork, which publishes its Spek page and, beside it, its sketches.
+The last step, `bin/check-intentable-result spec`, copies the summary to `.intentable/review.md` and writes `.intentable/result.json` with the change's name, the message, `reviewed` and `files`. The run itself pushes nothing: the bridge commits the draft, from Fabro's record of the files the run changed, to `change/<name>` on the fork, which publishes its Spek page and, beside it, its sketches and their thumbnails. Chrome renders those in a `thumbnails` job with a read-only token and no network, because a sketch is untrusted.
+
+The sketches are static: scripts and links to other pages are refused, so clicks go nowhere.
 
 Try it on a branch the same way as triage, with `:spec` and an issue that is clear enough to write up.

@@ -169,7 +169,6 @@ class NothingPushedTestCase(SimpleTestCase):
             [
                 ".intentable/result.json",
                 ".intentable/review.md",
-                ".intentable/proposal/**",
             ],
         )
 
@@ -218,15 +217,19 @@ class ReviewerPromptsTestCase(SimpleTestCase):
                 self.assertIn(heading, text, (reviewer, heading))
             self.assertIn("`none` under an empty heading", text, reviewer)
             self.assertIn("Edit nothing else", text, reviewer)
-            self.assertIn("`revise.md`", text, reviewer)
+            self.assertIn("`.intentable/reviews/revise.md`", text, reviewer)
 
     def test_revise_prompt(self):
         text = prompt("revise")
         self.assertIn("Apply every blocking finding", text)
+        self.assertIn("`.intentable/reviews/<round>/`", text)
+        self.assertIn("`.intentable/reviews/round`", text)
+        self.assertIn("two to four plain sentences", text)
+        self.assertIn("SVG or HTML comments", text)
+        self.assertIn("`#` fragments only", text)
         self.assertIn("`.intentable/reviews/revise.md`", text)
         self.assertIn("do not rename the change", text)
         self.assertIn("Do not change its `labels`", text)
-        self.assertIn("nothing under `.intentable/proposal/`", text)
 
 
 class ProposePromptTestCase(SimpleTestCase):
@@ -281,7 +284,12 @@ SKETCH_FILES = {
     "sketches/a.html": SAFE_SKETCH,
     "sketches/b.html": SAFE_SKETCH,
     "sketches/c.html": SAFE_SKETCH,
-    "sketches/options.json": "[]\n",
+    "sketches/options.json": json.dumps(
+        [
+            {"file": f"{s}.html", "label": f"Option {s}", "thesis": "Why it fits.", "risk": "What could go wrong."}
+            for s in "abc"
+        ]
+    ),
 }
 DRAFT = {"change": "add-venue-hours", "labels": [], "message": "This covers opening hours. It leaves out holidays."}
 FAKE_OPENSPEC = """#!/bin/sh
@@ -308,7 +316,7 @@ class Run:
         if draft is not None:
             (intentable / "draft.json").write_text(json.dumps(draft))
         if route is not None:
-            (intentable / "route.json").write_text(json.dumps({"labels": route}))
+            (intentable / "route.json").write_text(json.dumps({"labels": route, "change": (draft or {}).get("change")}))
         change = (draft or {}).get("change")
         if change and files is not None:
             for relative, text in files.items():
@@ -359,7 +367,6 @@ class DraftFileTestCase(SimpleTestCase):
             status, output = run.check("--draft")
             self.assertEqual(status, 0, output)
             self.assertFalse(run.path(".intentable/result.json").exists())
-            self.assertFalse(run.path(".intentable/proposal").exists())
 
     def test_not_ready(self):
         draft = {"state": "needs-info", "labels": ["clarity:3"], "message": "Should hours come from the venue's site?"}
@@ -372,7 +379,15 @@ class DraftFileTestCase(SimpleTestCase):
             self.assertEqual(status, 0, output)
             result = json.loads(run.path(".intentable/result.json").read_text())
             self.assertEqual(result, {"labels": ["clarity:3"], "state": "needs-info", "message": draft["message"]})
-            self.assertFalse(run.path(".intentable/proposal").exists())
+
+    def test_a_send_back_with_a_stray_change(self):
+        draft = {"state": "needs-info", "labels": ["clarity:3"], "message": "Which venues?"}
+        with tempfile.TemporaryDirectory() as folder:
+            run = Run(folder, draft=draft)
+            run.write("openspec/changes/stray/proposal.md", "x\n")
+            status, output = run.check("--draft")
+            self.assertEqual(status, 1)
+            self.assertIn("stray is new", output)
 
     def test_a_send_back_that_breaks_the_rules(self):
         base = {"state": "needs-info", "labels": ["clarity:3"], "message": "Which venues?"}
@@ -389,7 +404,7 @@ class DraftFileTestCase(SimpleTestCase):
 
 
 class SpecResultTestCase(SimpleTestCase):
-    """the spec result names the change; the summary is collected with the result; the proposal is copied last"""
+    """the spec result names the change; the summary is collected with the result"""
 
     def test_a_good_result(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -419,19 +434,6 @@ class SpecResultTestCase(SimpleTestCase):
             self.assertEqual(run.check("--draft")[0], 0)
             self.assertFalse(run.path(".intentable/review.md").exists())
 
-    def test_only_the_final_text(self):
-        with tempfile.TemporaryDirectory() as folder:
-            run = Run(folder)
-            run.passed_review()
-            run.write(".intentable/proposal/notes.md", "stale\n")
-            self.assertEqual(run.check()[0], 0)
-            copied = sorted(
-                p.relative_to(run.path(".intentable/proposal")).as_posix()
-                for p in run.path(".intentable/proposal").rglob("*")
-                if p.is_file()
-            )
-            self.assertEqual(copied, sorted(CHANGE_FILES))
-
 
 class ChangeNameTestCase(SimpleTestCase):
     """the change name is plain and new"""
@@ -443,7 +445,6 @@ class ChangeNameTestCase(SimpleTestCase):
                 status, output = run.check()
                 self.assertEqual(status, 1, name)
                 self.assertIn("isn't a change name", output, name)
-                self.assertFalse(run.path(".intentable/proposal").exists())
 
     def test_a_change_that_already_existed(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -489,6 +490,21 @@ class BoundsTestCase(SimpleTestCase):
             status, output = run.check("--draft")
             self.assertEqual(status, 1)
             self.assertIn("sketch.png", output)
+
+    def test_each_folder_fabro_skips(self):
+        for segment in ("dist", "venv", ".pnpm-store", ".npm", ".next", "__pycache__", ".tox", ".pytest_cache"):
+            with tempfile.TemporaryDirectory() as folder:
+                path = f"specs/{segment}/spec.md"
+                status, output = Run(folder, files={**CHANGE_FILES, path: "x\n"}).check("--draft")
+                self.assertEqual(status, 1, segment)
+                self.assertIn(path, output)
+
+    def test_a_file_too_large(self):
+        for big in ("x" * (256 * 1024 + 1), "x\n" * 20001):
+            with tempfile.TemporaryDirectory() as folder:
+                status, output = Run(folder, files={**CHANGE_FILES, "design.md": big}).check("--draft")
+                self.assertEqual(status, 1)
+                self.assertIn("design.md is too large", output)
 
     def test_invalid_change(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -565,6 +581,52 @@ class SketchTestCase(SimpleTestCase):
                 self.assertEqual(status, 1, bad)
                 self.assertIn("sketches/b.html", output, bad)
 
+    def test_the_behavior_property(self):
+        with tempfile.TemporaryDirectory() as folder:
+            sketch = SAFE_SKETCH.replace("</main>", '<p style="scroll-behavior:smooth">x</p></main>')
+            status, output = self.sketch_run(folder, extra={"sketches/b.html": sketch}).check("--draft")
+            self.assertEqual(status, 0, output)
+        with tempfile.TemporaryDirectory() as folder:
+            sketch = SAFE_SKETCH.replace("</main>", '<p style="behavior:url(#x)">x</p></main>')
+            status, output = self.sketch_run(folder, extra={"sketches/b.html": sketch}).check("--draft")
+            self.assertEqual(status, 1)
+            self.assertIn("behavior", output)
+
+    def test_a_sketch_browsers_read_differently(self):
+        refresh = '<meta http-equiv=refresh content="0;url=https://evil.example/">'
+        for bad in (
+            f"<!-->{refresh}-->",
+            "<!---><script>go()</script>-->",
+            "<!-- a note -->",
+            "<!x><p>x</p>",
+            f"<svg><style>{refresh}</style></svg>",
+            f"<svg><title>{refresh}</title></svg>",
+            "<style/>@import url(https://evil.example/x.css)</style>",
+            "<style><img src=x></style>",
+            '<meta charset="iso-2022-jp">',
+            "<div style=\"background:image-set('https://evil.example/x.png' 1x)\">x</div>",
+            '<p title="url(https://evil.example/x)">x</p>',
+        ):
+            with tempfile.TemporaryDirectory() as folder:
+                sketch = SAFE_SKETCH.replace("</main>", bad + "</main>")
+                status, output = self.sketch_run(folder, extra={"sketches/b.html": sketch}).check("--draft")
+                self.assertEqual(status, 1, bad)
+                self.assertIn("sketches/b.html", output, bad)
+
+    def test_options_for_each_sketch(self):
+        good = json.loads(SKETCH_FILES["sketches/options.json"])
+        for bad, needle in (
+            ("not json", "isn't JSON"),
+            (json.dumps({"options": good}), "must be a list"),
+            (json.dumps(good[:2]), "no entry for c.html"),
+            (json.dumps([{**good[0], "risk": " "}, good[1], good[2]]), "no risk for a.html"),
+            (json.dumps([{**good[0], "thesis": None}, good[1], good[2]]), "no thesis for a.html"),
+        ):
+            with tempfile.TemporaryDirectory() as folder:
+                status, output = self.sketch_run(folder, extra={"sketches/options.json": bad}).check("--sketches")
+                self.assertEqual(status, 1, bad)
+                self.assertIn(needle, output, bad)
+
     def test_a_safe_sketch(self):
         with tempfile.TemporaryDirectory() as folder:
             status, output = self.sketch_run(folder).check("--draft")
@@ -586,13 +648,27 @@ class SketchTestCase(SimpleTestCase):
             self.assertEqual(status, 1)
             self.assertIn("labels changed after routing", output)
 
+    def test_revise_renames_the_change(self):
+        with tempfile.TemporaryDirectory() as folder:
+            run = Run(folder)
+            self.assertEqual(run.reviews("--route")[0], 0)
+            draft = {**DRAFT, "change": "add-venue-times"}
+            run.write(".intentable/draft.json", json.dumps(draft))
+            run.write("openspec/changes/add-venue-times/proposal.md", "x\n")
+            status, output = run.check("--draft")
+            self.assertEqual(status, 1)
+            self.assertIn("renamed after routing", output)
+
     def test_route_records_labels(self):
         with tempfile.TemporaryDirectory() as folder:
             run = Run(folder, draft={**DRAFT, "labels": ["needs-design"]})
             status, output = run.reviews("--route")
             self.assertEqual(status, 0, output)
             self.assertEqual(json.loads(output.strip().splitlines()[-1]), {"context_updates": {"route": "sketch"}})
-            self.assertEqual(json.loads(run.path(".intentable/route.json").read_text()), {"labels": ["needs-design"]})
+            self.assertEqual(
+                json.loads(run.path(".intentable/route.json").read_text()),
+                {"labels": ["needs-design"], "change": DRAFT["change"]},
+            )
         with tempfile.TemporaryDirectory() as folder:
             output = Run(folder).reviews("--route")[1]
             self.assertEqual(json.loads(output.strip().splitlines()[-1]), {"context_updates": {"route": "review"}})
@@ -652,6 +728,24 @@ class ReviewLoopTestCase(SimpleTestCase):
             self.assertTrue(run.path(".intentable/reviews/1/revise.md").is_file())
             self.assertEqual(run.path(".intentable/reviews/outcome").read_text().strip(), "passed")
 
+    def test_last_rounds_other_findings_in_the_summary(self):
+        with tempfile.TemporaryDirectory() as folder:
+            run = Run(folder)
+            run.write(
+                ".intentable/reviews/risk.md",
+                "SATISFIED: yes\nBLOCKING:\nnone\nNON-BLOCKING:\n- a small risk\nCONFIRMED OK:\n- fine\n",
+            )
+            self.round(run, risk=None)
+            text = run.path(".intentable/reviews/summary.md").read_text()
+            self.assertIn("- a small risk", text)
+            self.assertNotIn("- fine", text)
+
+    def test_a_fenced_report(self):
+        with tempfile.TemporaryDirectory() as folder:
+            run = Run(folder)
+            run.write(".intentable/reviews/risk.md", "```\n" + report(True) + "```\n")
+            self.assertEqual(self.round(run, risk=None), "true")
+
     def test_summary_of_a_review_not_passed(self):
         with tempfile.TemporaryDirectory() as folder:
             run = Run(folder)
@@ -681,7 +775,7 @@ class GuideTestCase(SimpleTestCase):
         guide = (ROOT / "docs" / "FABRO.md").read_text()
         section = guide.split("#### spec", 1)[1]
         for needed in (
-            "`.intentable/proposal/`",
+            "Fabro's record of the files the run changed",
             "risk, spec fit, fidelity",
             "five-round limit",
             "the bridge commits the draft",
