@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""the spec workflow's bookkeeping: what existed, where the run goes, and when the review ends.
+
+usage: check-intentable-reviews --record-existing
+       check-intentable-reviews --route
+       check-intentable-reviews
+
+--record-existing, in the install step before any agent runs: writes the
+names of every change in openspec/changes/ and its archive to
+.intentable/existing-changes.txt, so a later check can tell a new change from
+an old one (Fabro's checkpoint commits make HEAD an unreliable base).
+
+--route, after the first draft check: records the draft's labels in
+.intentable/route.json and prints the route as a Fabro routing object:
+"back" for a needs-info draft, "sketch" for needs-design, else "review".
+
+with no flag, after each round of review: files the round's three reports,
+and the revise notes written after the round before, under
+.intentable/reviews/<round>/, then prints review_done "true" when all three
+are satisfied or the fifth round is in, "false" for another round. When the
+loop ends it writes .intentable/reviews/outcome and summary.md. It always
+exits 0 unless something is broken, which then fails the run.
+"""
+
+import json
+import sys
+from pathlib import Path
+
+INTENTABLE = Path(".intentable")
+REVIEWS = INTENTABLE / "reviews"
+CHANGES = Path("openspec/changes")
+LENSES = ("risk", "spec_fit", "fidelity")
+MAX_ROUNDS = 5
+
+
+def routing(**updates):
+    # Fabro reads the last JSON object with a routing field from the output
+    print(json.dumps({"context_updates": updates}))
+
+
+def record_existing():
+    INTENTABLE.mkdir(exist_ok=True)
+    names = [p.name for p in CHANGES.iterdir() if p.is_dir() and p.name != "archive"] if CHANGES.is_dir() else []
+    archive = CHANGES / "archive"
+    names += [p.name for p in archive.iterdir() if p.is_dir()] if archive.is_dir() else []
+    (INTENTABLE / "existing-changes.txt").write_text("".join(f"{name}\n" for name in sorted(names)))
+
+
+def route():
+    draft = json.loads((INTENTABLE / "draft.json").read_text())
+    labels = draft.get("labels", [])
+    (INTENTABLE / "route.json").write_text(json.dumps({"labels": labels, "change": draft.get("change")}) + "\n")
+    if draft.get("state") == "needs-info":
+        routing(route="back")
+    elif "needs-design" in labels:
+        routing(route="sketch")
+    else:
+        routing(route="review")
+
+
+def satisfied(report):
+    """true only for a report whose first line is SATISFIED: yes; a missing one counts as no"""
+    if not report.is_file():
+        return False
+    try:
+        text = report.read_text()
+    except UnicodeDecodeError:
+        return False
+    # an agent may keep the prompt's code fence around its report
+    lines = [line.strip() for line in text.splitlines() if line.strip() and not line.strip().startswith("```")]
+    return bool(lines) and lines[0].lower() == "satisfied: yes"
+
+
+def section(report, wanted):
+    """one section of a report, BLOCKING: or NON-BLOCKING:, as its lines"""
+    if not report.is_file():
+        return ["- (no report)"]
+    lines, inside = [], False
+    for line in report.read_text(errors="replace").splitlines():
+        heading = line.strip().upper()
+        if heading in ("BLOCKING:", "NON-BLOCKING:", "CONFIRMED OK:"):
+            inside = heading == wanted
+        elif inside and line.strip() and not line.strip().startswith("```"):
+            lines.append(line.rstrip())
+    return lines or ["none"]
+
+
+def summary(rounds, passed):
+    first = f"Passed by the reviewers after {rounds} round(s)." if passed else f"Not passed by the reviewers after {rounds} rounds."
+    lines = [first, ""]
+    for number in range(1, rounds + 1):
+        folder = REVIEWS / str(number)
+        lines += [f"## Round {number}", ""]
+        for lens in LENSES:
+            lines += [f"{lens.replace('_', ' ')}: {'satisfied' if satisfied(folder / f'{lens}.md') else 'not satisfied'}"]
+            lines += section(folder / f"{lens}.md", "BLOCKING:")
+            # no revise follows the last round, so its other findings would otherwise be lost
+            if number == rounds:
+                lines += ["Non-blocking, not acted on:"] + section(folder / f"{lens}.md", "NON-BLOCKING:")
+        notes = folder / "revise.md"
+        if notes.is_file():
+            lines += ["", "Revise notes:", notes.read_text().rstrip()]
+        lines.append("")
+    return "\n".join(lines)
+
+
+def review():
+    REVIEWS.mkdir(parents=True, exist_ok=True)
+    counter = REVIEWS / "round"
+    previous = int(counter.read_text()) if counter.is_file() else 0
+    current = previous + 1
+    # the revise notes answer the round before this one
+    notes = REVIEWS / "revise.md"
+    if notes.is_file() and previous:
+        notes.replace(REVIEWS / str(previous) / "revise.md")
+    folder = REVIEWS / str(current)
+    folder.mkdir(exist_ok=True)
+    for lens in LENSES:
+        report = REVIEWS / f"{lens}.md"
+        if report.is_file():
+            report.replace(folder / f"{lens}.md")
+    counter.write_text(f"{current}\n")
+    passed = all(satisfied(folder / f"{lens}.md") for lens in LENSES)
+    done = passed or current >= MAX_ROUNDS
+    if done:
+        (REVIEWS / "outcome").write_text("passed\n" if passed else "not-passed\n")
+        (REVIEWS / "summary.md").write_text(summary(current, passed))
+    routing(review_done="true" if done else "false")
+
+
+def main(argv):
+    if argv[1:] == ["--record-existing"]:
+        record_existing()
+    elif argv[1:] == ["--route"]:
+        route()
+    elif argv[1:] == []:
+        review()
+    else:
+        print(__doc__.split("\n\n")[1], file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

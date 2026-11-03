@@ -1,0 +1,46 @@
+{
+  "title": "Choose the band page's structure",
+  "question": "Three structures for the band page, all in the site's existing look. The roll leads with the index card. Keep it, take another, or re-roll.",
+  "options": [
+    {
+      "id": "index-card",
+      "kind": "assigned",
+      "label": "Record-store index card",
+      "kicker": "THE ROLL",
+      "lineage": "record-store bin dividers and library catalog cards",
+      "thesis": "Each band is a filed card: a purple name tab, typed fields, then the bio on ruled lines.",
+      "palette": ["#d4d0c7", "#f6f4ee", "#8b5d8b", "#eeeeff", "#000080"],
+      "materials": ["card stock", "ruled lines", "typed fields"],
+      "viewport": "Name tab and big name; a lavender 'Next show' strip right under it; fields for members, links and photo; bio on ruled lines with its Wikipedia credit.",
+      "risk": "A no-photo, no-bio local band leaves a short card, which reads finished only if the empty fields simply aren't drawn.",
+      "html": ".impeccable/mocks/decision/lead-index-card.html"
+    },
+    {
+      "id": "infobox",
+      "kind": "dealt",
+      "label": "Encyclopedia infobox",
+      "lineage": "Wikipedia and reference-book infoboxes",
+      "thesis": "A reading column of bio and shows, with a right-hand fact box for photo, origin, members and links.",
+      "palette": ["#d4d0c7", "#f6f4ee", "#8b5d8b", "#b9b4a8", "#000080"],
+      "materials": ["reference table", "fact box", "section rules"],
+      "viewport": "Name and bio on the left, an upcoming-shows table below; the fact box on the right holds the photo slot, origin, active years, members, past members and links.",
+      "risk": "Familiar to the point of borrowed: it looks like a Wikipedia page, and sparse bands leave an empty-looking box.",
+      "html": ".impeccable/mocks/decision/dealt-infobox.html"
+    },
+    {
+      "id": "itinerary",
+      "kind": "dealt",
+      "label": "Tour itinerary",
+      "lineage": "the dates on the back of a tour shirt or poster",
+      "thesis": "Shows lead: a huge name, then the Northeast dates as a bold timetable, with who they are underneath.",
+      "palette": ["#d4d0c7", "#e6e2d9", "#8b5d8b", "#111111", "#000080"],
+      "materials": ["tour-shirt dates", "bold caps", "timetable rows"],
+      "viewport": "Name in heavy caps with links on one line; a purple 'Upcoming in the Northeast' bar over date rows (date, town, venue, save); About and Members side by side below.",
+      "risk": "A band with no upcoming shows loses its lead section, so the page must fall back to identity first.",
+      "html": ".impeccable/mocks/decision/dealt-itinerary.html"
+    }
+  ],
+  "reroll": true,
+  "steer": true,
+  "buildPath": { "value": "code", "toggle": false }
+}

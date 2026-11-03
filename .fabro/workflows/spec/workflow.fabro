@@ -1,0 +1,102 @@
+digraph Spec {
+    graph [goal="Write an issue on the New England Music Project site up as an OpenSpec proposal, reviewed by three fresh reviewers, or send it back with one question"]
+    rankdir=LR
+    on_failure="exit"
+
+    start [shape=Mdiamond, label="Start"]
+    exit  [shape=Msquare, label="Exit"]
+
+    // Claude Code, its ACP adapter and openspec at pinned versions; Impeccable
+    // from its tagged release; and the changes that existed before the agent ran
+    install [
+        label="Install the tools",
+        shape=parallelogram,
+        script="python3 --version && npm install -g --prefix /usr/local @anthropic-ai/claude-code@2.1.316 @agentclientprotocol/claude-agent-acp@0.99.1 @fission-ai/openspec@1.16.0 && git clone --quiet --depth 1 --branch skill-v4.8.0 https://github.com/pbakaus/impeccable /tmp/impeccable && claude plugin marketplace add /tmp/impeccable && claude plugin install impeccable@impeccable && python3 bin/check-intentable-reviews --record-existing"
+    ]
+
+    propose [
+        label="Propose (Claude Code, ACP)",
+        type="agent",
+        backend="acp",
+        acp.command="claude-agent-acp",
+        prompt="@propose.md"
+    ]
+
+    check_draft [label="Check the draft", shape=parallelogram, script="python3 bin/check-intentable-result spec --draft"]
+
+    // prints {"context_updates": {"route": "sketch" | "back" | "review"}} and records the labels
+    route [label="Route", shape=parallelogram, output_schema="routing", script="python3 bin/check-intentable-reviews --route"]
+
+    sketch [
+        label="Sketch (Claude Code, ACP, Impeccable)",
+        type="agent",
+        backend="acp",
+        acp.command="claude-agent-acp",
+        prompt="@sketch.md"
+    ]
+
+    check_sketches [label="Check the sketches", shape=parallelogram, script="python3 bin/check-intentable-result spec --sketches"]
+
+    fork  [label="Review", shape=component]
+
+    risk [
+        label="Risk review (Claude Code, ACP)",
+        type="agent",
+        backend="acp",
+        acp.command="claude-agent-acp",
+        prompt="@risk.md"
+    ]
+
+    spec_fit [
+        label="Spec fit review (Claude Code, ACP)",
+        type="agent",
+        backend="acp",
+        acp.command="claude-agent-acp",
+        prompt="@spec_fit.md"
+    ]
+
+    fidelity [
+        label="Fidelity review (Claude Code, ACP)",
+        type="agent",
+        backend="acp",
+        acp.command="claude-agent-acp",
+        prompt="@fidelity.md"
+    ]
+
+    merge [label="Reviews in", shape=tripleoctagon]
+
+    // prints {"context_updates": {"review_done": "true"}} when the loop ends (all satisfied,
+    // or the fifth round), "false" for another round; a crash fails the run
+    check_reviews [label="Read the reviews", shape=parallelogram, output_schema="routing", script="python3 bin/check-intentable-reviews"]
+
+    // at most four revisions: the fifth round's check always ends the loop
+    revise [
+        label="Revise (Claude Code, ACP)",
+        max_visits=4,
+        type="agent",
+        backend="acp",
+        acp.command="claude-agent-acp",
+        prompt="@revise.md"
+    ]
+
+    recheck [label="Check the revised draft", shape=parallelogram, script="python3 bin/check-intentable-result spec --draft"]
+
+    finish [label="Write the result", shape=parallelogram, script="python3 bin/check-intentable-result spec"]
+
+    start -> install -> propose -> check_draft -> route
+    route -> sketch [condition="context.route=sketch"]
+    route -> finish [condition="context.route=back"]
+    route -> fork
+    sketch -> check_sketches -> fork
+    fork -> risk
+    fork -> spec_fit
+    fork -> fidelity
+    risk -> merge
+    spec_fit -> merge
+    fidelity -> merge
+    merge -> check_reviews
+    check_reviews -> finish [condition="context.review_done=true"]
+    check_reviews -> revise
+    revise -> recheck -> fork
+    finish -> exit
+}
