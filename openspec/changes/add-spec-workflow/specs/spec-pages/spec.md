@@ -24,6 +24,20 @@ When `bin/publish-spek-page` publishes a `change/<name>` branch, it SHALL also c
 - **WHEN** `main` is published
 - **THEN** no `sketches/` folder is written anywhere
 
+### Requirement: Published sketches get thumbnails
+
+When a Chrome is on `PATH`, `bin/publish-spek-page` SHALL render each published sketch, with its policy, to a half-size screenshot beside it, `<sketch>.png` (Nate's request, 2 November 2026). A thumbnail that can't be made SHALL be reported and SHALL NOT stop the publish.
+
+#### Scenario: Thumbnails made
+
+- **WHEN** `sketches/a.html`, `b.html` and `c.html` are published with a Chrome on `PATH`
+- **THEN** the site folder has `a.png`, `b.png` and `c.png` beside them
+
+#### Scenario: A thumbnail that can't be made
+
+- **WHEN** no Chrome is on `PATH`, or it fails
+- **THEN** the sketches are still published, with no thumbnail, and the script exits 0
+
 ### Requirement: Published sketches can't run code or call out
 
 Every sketch `bin/publish-spek-page` publishes SHALL begin, right after any doctype, with `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'">`, added by the script, so the browser refuses scripts, outside resources and form posts on the fork's Pages domain, even for a sketch pushed without the run's checker.

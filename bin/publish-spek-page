@@ -13,12 +13,16 @@ regular file directly in openspec/changes/<name>/sketches/ (read from the
 current directory, the branch's checkout) whose name ends in .html, to
 <site>/changes/<name>/sketches/, replacing that folder whole. Each published
 sketch starts with a Content-Security-Policy meta tag, so a browser refuses
-scripts, outside resources and form posts on the Pages domain.
+scripts, outside resources and form posts on the Pages domain. When a Chrome
+is on PATH, each also gets a thumbnail beside it, <sketch>.png, for the issue
+comment; a thumbnail that can't be made is only reported.
 """
 
 import re
 import shutil
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 # a change name: no slashes, no leading dot or dash, nothing a shell could read as code
@@ -52,6 +56,22 @@ def with_policy(html):
     return POLICY + html
 
 
+def thumbnail(chrome, sketch):
+    """a half-size screenshot beside the published sketch, whose policy stops it running or calling out"""
+    with tempfile.TemporaryDirectory() as profile:
+        try:
+            subprocess.run(
+                [
+                    chrome, "--headless=new", "--no-sandbox", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
+                    f"--user-data-dir={profile}", "--window-size=1440,900", "--force-device-scale-factor=0.5",
+                    f"--screenshot={sketch.resolve().with_suffix('.png')}", sketch.resolve().as_uri(),
+                ],
+                check=True, capture_output=True, timeout=180,
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            print(f"no thumbnail for {sketch.name}: {error}")
+
+
 def publish_sketches(name, site):
     """replaces the change's published sketches with the checkout's; returns how many"""
     source = Path("openspec") / "changes" / name / "sketches"
@@ -63,6 +83,9 @@ def publish_sketches(name, site):
     for sketch in sketches:
         destination.mkdir(parents=True, exist_ok=True)
         (destination / sketch.name).write_text(with_policy(sketch.read_text()))
+        chrome = next(filter(None, map(shutil.which, ("google-chrome", "google-chrome-stable", "chromium"))), None)
+        if chrome:
+            thumbnail(chrome, destination / sketch.name)
     return len(sketches)
 
 

@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import tempfile
@@ -190,17 +191,34 @@ SKETCH = "<!doctype html><html><head><title>A</title></head><body><p>hours</p></
 POLICY_START = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\';'
 
 
-def publish_from(checkout, branch, site):
-    """runs the script for a branch from a checkout folder, as the workflow does from the repo root"""
+# stands in for Chrome in tests: writes what its --screenshot flag names, or fails
+FAKE_CHROME = """#!/bin/sh
+[ -n "$FAKE_CHROME_FAILS" ] && exit 1
+for arg in "$@"; do
+  case "$arg" in --screenshot=*) printf png > "${arg#--screenshot=}";; esac
+done
+"""
+
+
+def publish_from(checkout, branch, site, chrome=None):
+    """runs the script for a branch from a checkout, as the workflow does; PATH holds no browser but a fake one"""
     with tempfile.TemporaryDirectory() as build:
         page = Path(build) / "spek.html"
         page.write_text("<html>new page</html>")
+        env = {**os.environ, "PATH": build}
+        if chrome:
+            fake = Path(build) / "google-chrome"
+            fake.write_text(FAKE_CHROME.replace("#!/bin/sh", f"#!/bin/sh\nPATH={os.environ['PATH']}"))
+            fake.chmod(0o755)
+            if chrome == "fails":
+                env["FAKE_CHROME_FAILS"] = "1"
         return subprocess.run(
             [sys.executable, str(PUBLISH), branch, str(page), str(site)],
             cwd=checkout,
             capture_output=True,
             text=True,
             timeout=30,
+            env=env,
         ).returncode
 
 
@@ -279,3 +297,23 @@ class SketchPagesTestCase(SimpleTestCase):
             site = Path(folder) / "site"
             self.assertEqual(publish_from(checkout, "main", site), 0)
             self.assertFalse([p for p in site.rglob("sketches")])
+
+    def test_thumbnails_made(self):
+        with tempfile.TemporaryDirectory() as folder:
+            checkout = checkout_with_sketches(folder)
+            site = Path(folder) / "site"
+            self.assertEqual(publish_from(checkout, "change/add-venue-hours", site, chrome="works"), 0)
+            for sketch in ("a", "b", "c"):
+                self.assertEqual(
+                    (site / "changes" / "add-venue-hours" / "sketches" / f"{sketch}.png").read_text(), "png"
+                )
+
+    def test_a_thumbnail_that_cant_be_made(self):
+        for chrome in (None, "fails"):
+            with tempfile.TemporaryDirectory() as folder:
+                checkout = checkout_with_sketches(folder)
+                site = Path(folder) / "site"
+                self.assertEqual(publish_from(checkout, "change/add-venue-hours", site, chrome=chrome), 0, chrome)
+                sketches = site / "changes" / "add-venue-hours" / "sketches"
+                self.assertTrue((sketches / "a.html").is_file(), chrome)
+                self.assertFalse((sketches / "a.png").exists(), chrome)
