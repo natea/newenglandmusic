@@ -251,6 +251,18 @@ class ProposePromptTestCase(SimpleTestCase):
         ):
             self.assertIn(needed, text, needed)
 
+    def test_the_propose_agent_finishes_its_own_work(self):
+        text = prompt("propose")
+        for needed in (
+            "Don't review the draft yourself",
+            "Start no subagents and no background tasks",
+            "stop only once `.intentable/draft.json` is written",
+        ):
+            self.assertIn(needed, text, needed)
+        # every agent sees the goal; issue #14's propose agent ran its own reviewers from it
+        goal = re.search(r'goal="([^"]*)"', (SPEC / "workflow.fabro").read_text()).group(1)
+        self.assertNotIn("reviewed by", goal)
+
     def test_sketch_prompt_rules(self):
         text = prompt("sketch")
         for needed in (

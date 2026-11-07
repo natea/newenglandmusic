@@ -338,6 +338,15 @@ The last step, `bin/check-intentable-result spec`, SHALL write `.intentable/resu
   - to write the message in two to four sentences without @-mentions;
   - to write `.intentable/draft.json`.
 
+### Requirement: The propose agent leaves reviewing to later steps
+
+`propose.md` SHALL tell the agent not to review the draft itself, to start no subagents or background tasks, and to stop only once `.intentable/draft.json` is written. The graph's goal, which every agent sees, SHALL NOT ask for reviewers (issue #14's first spec run, 6 November 2026: the propose agent started its own reviewers from the goal's wording and its session ended while it waited for them, with no draft).
+
+#### Scenario: The propose agent finishes its own work
+
+- **WHEN** the configuration tests read `propose.md` and the `spec` graph
+- **THEN** the prompt says not to review the draft, to start no subagents or background tasks, and to stop only once `.intentable/draft.json` is written, and the graph's goal doesn't say the proposal is reviewed by reviewers
+
 ### Requirement: A guide explains the spec workflow
 
 `docs/FABRO.md` SHALL describe the `spec` workflow: when the bridge starts it, the review loop and its limit, what the run leaves, and that the bridge, not the run, pushes the draft.
