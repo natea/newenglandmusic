@@ -1,5 +1,5 @@
 digraph Spec {
-    graph [goal="Write an issue on the New England Music Project site up as an OpenSpec proposal, reviewed by three fresh reviewers, or send it back with one question"]
+    graph [goal="Write an issue on the New England Music Project site up as an OpenSpec proposal, or send it back with one question; later steps review the proposal"]
     rankdir=LR
     on_failure="exit"
 

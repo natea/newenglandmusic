@@ -50,3 +50,5 @@ The message is for the person who asked, who is not a developer: two to four pla
 ```
 
 Write nothing under `.intentable/` except `draft.json`. A later step checks the draft, and the run fails if it breaks these rules.
+
+Don't review the draft yourself: later steps in this workflow check it and have three fresh reviewers read it. Start no subagents and no background tasks, and don't wait on anything. Your session ends when you stop, and anything still running is lost, so stop only once `.intentable/draft.json` is written.
