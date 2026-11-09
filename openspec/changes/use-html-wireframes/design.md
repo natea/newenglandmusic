@@ -62,7 +62,7 @@ cp -R /tmp/effective-html/skills/html-wireframe ~/.claude/skills/
 
 **Consent to install effective-html.** Nate's 7 November choice is consent to use the skill in the sandbox; this change installs it nowhere else, and nothing runs it before his G4 and the live check he starts (tasks 3.1 and 4.1). `tot` isn't installed and nothing is published to tot.page.
 
-**Only `html-wireframe`.** `design-artifact` is optional for the wireframe skill and is mostly about editorial polish, which the wireframe contract avoids. `html` (the router) and `html-prototype` aren't wanted at this stage. Open question for Nate below.
+**Only `html-wireframe`** (Nate's decision, 9 November 2026: "we're not doing any styling of the sketches, and they're grayscale only"). `design-artifact`, which the wireframe skill reads when it is there, is mostly about palette, type and editorial polish, so it isn't copied. `html` (the router) and `html-prototype` aren't wanted at this stage either.
 
 **The prompt overrides the skill's defaults.** `sketch.md`:
 - names the `html-wireframe` skill and says to use it unattended: nobody answers questions while it works. The skill only runs when it is named;
@@ -101,4 +101,3 @@ The existing phrases the prompt test checks ("system fonts only", "No scripts", 
 ## Open Questions
 
 - **Should sketches be clickable?** Still Nate's question from `add-spec-workflow`. The prompt keeps them static until he decides.
-- **Should `design-artifact` be copied too?** The wireframe skill reads it when it is there, for composition and hierarchy. I'd leave it out to keep the sketches plain, but it's Nate's call.
