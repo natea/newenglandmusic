@@ -17,4 +17,4 @@ Issue: [#14 Create an Export to CSV/Excel option for the venue database](https:/
 
 ## 4. Docs
 
-- [ ] 4.1 Note in the admin docs what the file holds and what is left out and why. Verify: the note matches the spec's column list.
+- [x] 4.1 Note in the admin docs what the file holds and what is left out and why. Verify: the note matches the spec's column list.
