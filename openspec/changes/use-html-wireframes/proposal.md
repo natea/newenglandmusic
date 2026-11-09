@@ -17,7 +17,7 @@ effective-html's `html-wireframe` skill is built for that earlier question: low 
 
 Out of scope:
 - a workflow for building the picked design with Impeccable;
-- clickable sketches, which stay Nate's open question from `add-spec-workflow` (CSS-only `:target` panels would pass today's checker; scripts would not);
+- clickable sketches: they stay static (Nate's decision, 9 November 2026);
 - a link to the comparison page in the bridge's issue comment, which is intentable's;
 - intentable's own docs and diagrams that name Impeccable for this step, which are updated in intentable.
 

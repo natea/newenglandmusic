@@ -26,7 +26,7 @@ The skill puts "the user's explicit instructions" first in its order of authorit
 - The skill pinned, so a run uses the version that was reviewed.
 
 **Non-Goals:**
-- Clickable sketches. `add-spec-workflow` left "Should sketches really be clickable?" for Nate: CSS-only `:target` panels pass today's checker and worked under the published policy on 3 November 2026; scripts don't pass. This change keeps sketches static and leaves that question open.
+- Clickable sketches. `add-spec-workflow` left "Should sketches really be clickable?" for Nate. CSS-only `:target` panels would pass today's checker; scripts wouldn't. Nate decided on 9 November 2026 to keep the sketches static: every state would have to be written out, the thumbnail shows only the first, and clicks inside the comparison page's panels would undo its switching.
 - The build stage that uses Impeccable on the picked sketch.
 - Changing the checker's allowlist (the comparison page needs only new required-file checks).
 - Linking the comparison page from the bridge's issue comment, which is intentable's.
@@ -100,4 +100,4 @@ The existing phrases the prompt test checks ("system fonts only", "No scripts", 
 
 ## Open Questions
 
-- **Should sketches be clickable?** Still Nate's question from `add-spec-workflow`. The prompt keeps them static until he decides.
+None. Nate answered the last ones on 9 November 2026: three files plus the comparison page, no `design-artifact`, and static sketches.
