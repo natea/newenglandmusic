@@ -23,7 +23,7 @@ When the draft is labelled `needs-design`, a `sketch` agent with effective-html'
 
 ### Requirement: Sketches are low-fidelity wireframes
 
-The `spec` workflow SHALL install the `html-wireframe` skill from effective-html at a fixed commit, and SHALL NOT install Impeccable. `sketch.md` SHALL name the skill and ask for three structurally different options in three files: grayscale, system fonts, labelled placeholders, no scripts and no forms, laid out at 1440×900 and readable at 390px wide (Nate's decision, 7 November 2026: wireframes now, Impeccable later).
+The `spec` workflow SHALL install the `html-wireframe` skill from effective-html at a fixed commit, and SHALL NOT install Impeccable. `sketch.md` SHALL name the skill and ask for three structurally different static options in three files: grayscale, system fonts, labelled placeholders, no scripts and no forms, laid out at 1440×900 and reflowing at 390px. `revise.md` SHALL keep edited sketches grayscale (Nate's decision, 7 November 2026, as worked out in this change's design).
 
 #### Scenario: Wireframe skill pinned
 
@@ -33,4 +33,9 @@ The `spec` workflow SHALL install the `html-wireframe` skill from effective-html
 #### Scenario: The sketch prompt asks for wireframes
 
 - **WHEN** the configuration tests read `sketch.md`
-- **THEN** it names `html-wireframe`, asks for three files `a.html`, `b.html` and `c.html` rather than one file with a selector, says grayscale, no scripts and no forms, and doesn't point the agent at `DESIGN.md` or `.impeccable/`
+- **THEN** it names `html-wireframe`; asks for three files `a.html`, `b.html` and `c.html` rather than one file with a selector; says grayscale, labelled placeholders, 1440×900 and 390px; says no scripts and no forms; names the refused `label for=`; and doesn't name `DESIGN.md`, `.impeccable/design.json` or `.impeccable/mocks/`
+
+#### Scenario: Revise keeps sketches plain
+
+- **WHEN** the configuration tests read `revise.md`
+- **THEN** it says an edited sketch stays a grayscale wireframe
