@@ -11,7 +11,7 @@
 
 ## 2. Docs
 
-- [ ] 2.1 Update the sketch step in `docs/FABRO.md`
+- [x] 2.1 Update the sketch step in `docs/FABRO.md`
 
 ## 3. Merge
 

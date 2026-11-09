@@ -87,7 +87,7 @@ The bridge does the same when `FABRO_WORKFLOW_REF` is set on the Spark. A hand-s
 Started by the intentable bridge when a triage or clarify result moves an issue to `spec-review`, once per time the issue gets there. It writes the issue up as an OpenSpec proposal and has it reviewed, all in one sandbox, every agent being Claude Code through ACP on Nate's Max subscription:
 
 1. **propose** reads the thread and the code and writes one OpenSpec change (proposal, delta specs, design, tasks), naming it in `.intentable/draft.json`. If the issue isn't clear enough after all, it writes no change and sends the issue back to `needs-info` with one question, skipping everything below.
-2. **sketch**, only when the draft is labelled `needs-design`: Impeccable's decision step makes three self-contained HTML options in the change's `sketches/` folder, checked at once by `bin/check-intentable-result spec --sketches`.
+2. **sketch**, only when the draft is labelled `needs-design`: effective-html's `html-wireframe` skill, pinned by commit, makes three grayscale, low-fidelity wireframes (`a.html`, `b.html`, `c.html`) in the change's `sketches/` folder, and a `compare.html` that switches between them with CSS `:target`. They are checked at once by `bin/check-intentable-result spec --sketches`. Impeccable isn't used at this stage; its files in `.impeccable/` stay for building the design that is picked.
 3. **review**: three fresh reviewers in parallel, one lens each (risk, spec fit, fidelity), each writing a report and editing nothing.
 4. **revise** applies the blocking findings and writes what it did and didn't do; the reviewers then read the revised text.
 
@@ -95,6 +95,6 @@ The loop ends when all three are satisfied in one round, or after the five-round
 
 The last step, `bin/check-intentable-result spec`, copies the summary to `.intentable/review.md` and writes `.intentable/result.json` with the change's name, the message, `reviewed` and `files`. The run itself pushes nothing: the bridge commits the draft, from Fabro's record of the files the run changed, to `change/<name>` on the fork, which publishes its Spek page and, beside it, its sketches and their thumbnails. Chrome renders those in a `thumbnails` job with a read-only token and no network, because a sketch is untrusted.
 
-The sketches are static: scripts and links to other pages are refused, so clicks go nowhere.
+The sketches are static: scripts and links to other pages are refused, so clicks go nowhere. On `compare.html`, only the three links at the top do anything: they switch between the options.
 
 Try it on a branch the same way as triage, with `:spec` and an issue that is clear enough to write up.
