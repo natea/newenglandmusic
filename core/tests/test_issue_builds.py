@@ -556,3 +556,16 @@ class BuildFinishTestCase(SimpleTestCase):
         self.repo.record()
         self.assertEqual(self.repo.run("finish").returncode, 0)
         self.assertFalse((self.repo.dir / ".intentable" / "pull-request.md").exists())
+
+
+class BuildGuideTestCase(SimpleTestCase):
+    """issue-builds: A guide explains the build workflow"""
+
+    def test_guide_section(self):
+        guide = (ROOT / "docs" / "FABRO.md").read_text()
+        section = guide.split("#### build", 1)[1]
+        for needed in ("/approve", "change_name", "change/<name>", "outcome", "stopped", "pull-request.md", "retry-build.ts", "FABRO_WORKFLOW_REF"):
+            self.assertIn(needed, section, needed)
+        for line in (l for l in section.splitlines() if l.lstrip().startswith("fabro run")):
+            self.assertIn("natea/newenglandmusic", line)
+            self.assertIn("--environment daytona", line)

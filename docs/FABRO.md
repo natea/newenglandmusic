@@ -98,3 +98,26 @@ The last step, `bin/check-intentable-result spec`, copies the summary to `.inten
 The sketches are static: scripts and links to other pages are refused, so clicks go nowhere.
 
 Try it on a branch the same way as triage, with `:spec` and an issue that is clear enough to write up.
+
+
+#### build
+
+Started by the intentable bridge once Nate confirms a proposal at gate G2, by commenting `/approve` on its issue. It builds the change on its draft branch: the run targets `change/<name>` at the G2 commit, and gets the change's name as `change_name`, besides the issue's inputs. Its agents see only the change's name and the issue's number and title, never the body or thread: the confirmed proposal is their instruction. Every agent is Claude Code through ACP on Nate's Max subscription.
+
+1. **setup** installs what CI has (the pinned agent tools, Python 3.11 through `uv`, a local Postgres of 14 or later, Chromium, the compiled CSS), writes the test environment to `.intentable/test.env`, and records the commit the run targeted in `.intentable/start`. It fails if it changed a tracked file.
+2. **apply** works through the change's `tasks.md` one group at a time: each group's changes, its boxes ticked, the whole suite run, and one commit only when it passes. A check by hand in a browser, or a live check against an outside system, is left unticked and named for Nate. A group that can't pass is discarded, and the build stops there. So does a decision the proposal leaves open, with the question in the message: no build waits for an answer.
+3. **route** sends a stopped build straight to finish.
+4. **refactor** makes the refactoring pass, at most one commit and only on green. Circular dependencies, dead code and new groupings are reported for Nate, never changed.
+5. **finish** refuses a merge, a Fabro checkpoint commit holding work, a closing keyword in a commit message, a change under `.github/` or `.fabro/` or to `bin/publish-spek-page`, and, in a complete build, an unticked task that isn't left for a person. It runs the suite once more, then writes `.intentable/result.json` (no labels, no state, the message, the `outcome`, `complete` or `stopped`, and the change) and `.intentable/pull-request.md`, the summary for the pull request.
+
+The run pushes its own branch, `fabro/run/<id>`, and opens no pull request. The bridge checks that branch, fast-forwards `change/<name>` to it and opens the pull request. A `stopped` build is only reported on the issue: nothing is published.
+
+**Answering a stopped build's question.** Once Mark or Sooz answers on the issue, write the answer into the change's design (or proposal) on `change/<name>`, as a commit after the G2 commit. If an agent writes it for you, read the commit first. Then run `bun ~/intentable/deploy/spark/retry-build.ts <issue>` on the Spark, which builds again from the branch's head. A retry works only while no build's work is on the branch.
+
+**Trying it on a branch.** Set `FABRO_WORKFLOW_REF` to the branch on the Spark, so the bridge reads `build` from it, then approve an issue. Or start one by hand against a draft branch, knowing the bridge won't publish a run it didn't start:
+
+```bash
+fabro run natea/newenglandmusic@<branch>:build --environment daytona --target natea/newenglandmusic@change/<name> \
+  -I change_name=<name> -I issue_number=0 -I issue_author=natea -I issue_title='Try the build workflow' \
+  -I issue_body='' -I issue_thread='[]'
+```

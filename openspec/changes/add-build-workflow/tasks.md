@@ -61,7 +61,7 @@
 
 ## 4. Guide
 
-- [ ] 4.1 Add a build workflow section to `docs/FABRO.md`, covering:
+- [x] 4.1 Add a build workflow section to `docs/FABRO.md`, covering:
   - what starts it (the bridge, after `/approve`);
   - its inputs and target;
   - its steps;
