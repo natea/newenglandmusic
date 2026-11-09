@@ -75,7 +75,8 @@
 
 ## 5. Live check (with intentable's `add-build-runs`)
 
-- [ ] 5.1 After Nate's G2 and once groups 1–4 are green, push `change/add-build-workflow` to the fork. Verify with `gh api 'repos/natea/newenglandmusic/contents/.fabro/workflows/build?ref=change/add-build-workflow'` that every file of the folder is there.
+- [x] 5.1 After Nate's G2 and once groups 1–4 are green, push `change/add-build-workflow` to the fork. Verify with `gh api 'repos/natea/newenglandmusic/contents/.fabro/workflows/build?ref=change/add-build-workflow'` that every file of the folder is there.
+  - 9 November 2026: pushed at 1665f43; the fork lists `apply.md`, `refactor.md`, `workflow.fabro` and `workflow.toml`.
 - [ ] 5.2 With Nate's go-ahead and intentable's task 8.3 done, deploy the bridge with `FABRO_WORKFLOW_REF=change/add-build-workflow`. Nate comments `/approve` on issue #14.
 - [ ] 5.3 From the run, record in `design.md`, and fix the design and code if the run contradicts them:
   - root or `sudo`;
