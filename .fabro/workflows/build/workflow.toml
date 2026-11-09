@@ -1,0 +1,29 @@
+_version = 1
+
+[workflow]
+graph = "workflow.fabro"
+
+# Started by the intentable bridge once Nate confirms a proposal at gate G2
+# (his /approve on the issue), in the server's daytona environment. The bridge
+# passes all six inputs as text; the empty defaults only let a run started by
+# hand be created. The run targets the change's draft branch, change/<name>.
+[run.inputs]
+issue_number = ""
+issue_title = ""
+issue_body = ""
+issue_author = ""
+issue_thread = ""
+change_name = ""
+
+# Unlike the other workflows, the build pushes its run branch, fabro/run/<id>:
+# that is its work. It opens no pull request: the bridge checks the run branch,
+# fast-forwards change/<name> to it and opens the pull request itself.
+[run.pull_request]
+enabled = false
+
+[run.run_branch]
+push = true
+
+# Only the finish step writes these; .intentable/ is git-ignored.
+[run.artifacts]
+include = [".intentable/result.json", ".intentable/pull-request.md"]

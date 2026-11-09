@@ -1,20 +1,20 @@
 ## 1. Settings and setup
 
-- [ ] 1.1 Add `!/.fabro/workflows/build/` to `.gitignore` right after `build/`, and verify `git check-ignore .fabro/workflows/build/workflow.fabro` reports nothing
-- [ ] 1.2 Add `.fabro/workflows/build/workflow.toml`:
+- [x] 1.1 Add `!/.fabro/workflows/build/` to `.gitignore` right after `build/`, and verify `git check-ignore .fabro/workflows/build/workflow.fabro` reports nothing
+- [x] 1.2 Add `.fabro/workflows/build/workflow.toml`:
   - the six inputs with empty defaults;
   - `[run.run_branch] push = true` and `[run.pull_request] enabled = false`;
   - no GitHub permissions table;
   - artifacts `.intentable/result.json` and `.intentable/pull-request.md`;
   - comments saying who starts it and why it pushes.
-- [ ] 1.3 Add `workflow.fabro` with `on_failure="exit"` and its setup command, with a 30-minute `timeout`:
+- [x] 1.3 Add `workflow.fabro` with `on_failure="exit"` and its setup command, with a 30-minute `timeout`:
   - the pinned tools;
   - `uv`, Python 3.11, `venv/` and `requirements-dev.txt`;
   - Postgres started as root or with `sudo`, with a `djtesting` database, failing unless `server_version_num` is at least 140000;
   - `playwright install --with-deps chromium` and `compilescss`;
   - `.intentable/test.env` with CI's test environment, and `.intentable/start`;
   - a final `git status --porcelain` check that fails on any change.
-- [ ] 1.4 Add `core/tests/test_issue_builds.py`. Its step parser follows each quoted attribute to its closing quote, so a `]` inside a script doesn't cut it short. Verify with tests for "Nothing ignored", "Declared inputs", "Build settings", "The other workflows still push nothing", "Setup's tools", "Commands without inputs", "No script from the checkout" and "Inline scripts without escapes", and that `venv/bin/python manage.py test core.tests.test_issue_builds core.tests.test_fabro_config` passes.
+- [x] 1.4 Add `core/tests/test_issue_builds.py`. Its step parser follows each quoted attribute to its closing quote, so a `]` inside a script doesn't cut it short. Verify with tests for "Nothing ignored", "Declared inputs", "Build settings", "The other workflows still push nothing", "Setup's tools", "Commands without inputs" and "No script from the checkout", and that `venv/bin/python manage.py test core.tests.test_issue_builds core.tests.test_fabro_config` passes.
 
 ## 2. The agents
 
@@ -51,7 +51,7 @@
 
   Each failure gets one plain reason, naming the commit, path or task.
 - [ ] 3.3 In the tests, extract the route and finish scripts from `workflow.fabro` and run them in temporary git repositories, with the suite command set to `true` or `false`. Verify with tests for:
-  - "Routing on the outcome", "The build graph" and "Setup and finish check the tree";
+  - "Routing on the outcome", "The build graph", "Inline scripts without escapes" and "Setup and finish check the tree";
   - "A clean complete build" (with empty checkpoint commits), "A merge commit", "Work left uncommitted", "A closing keyword" (with the colon, cross-repository, address and several-reference forms) and "A protected file";
   - "An unticked box", "Nothing built", "A task left for a person", "A listed task that isn't left", "A stopped build with an unfinished group" and "A failing suite";
   - "A malformed record", "No record", "A message that breaks the rules" and "Code in the message";
