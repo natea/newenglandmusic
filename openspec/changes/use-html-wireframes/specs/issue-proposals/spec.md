@@ -1,0 +1,36 @@
+## MODIFIED Requirements
+
+### Requirement: A proposal that needs screens includes sketches
+
+When the draft is labelled `needs-design`, a `sketch` agent with effective-html's `html-wireframe` skill (pinned) SHALL run once, before the first review, and write three options to `openspec/changes/<change>/sketches/`: `a.html`, `b.html`, `c.html`, and `options.json`, a list with each option's `file`, `label`, `thesis` and `risk`. `design.md` SHALL link each sketch. Otherwise the step SHALL be skipped (Nate's decisions, 2 and 7 November 2026).
+
+#### Scenario: Sketch step only for needs-design
+
+- **WHEN** the configuration tests read the graph
+- **THEN** a `sketch` agent using `sketch.md` is reached from the first draft check only on the route for `needs-design`, leads to the fan-out, and is not on the revise loop
+
+#### Scenario: Sketches required with needs-design
+
+- **WHEN** the draft has the label `needs-design` and `openspec/changes/add-venue-hours/sketches/` lacks `c.html` or `options.json`, or `design.md` doesn't link `sketches/a.html`
+- **THEN** `bin/check-intentable-result spec --sketches` exits with a failure naming what is missing
+
+#### Scenario: Options for each sketch
+
+- **WHEN** `options.json` isn't a JSON list, has no entry for `c.html`, or has an empty thesis or risk
+- **THEN** `--sketches` exits with a failure naming what is missing, since the issue comment shows them (Nate's decision, 3 November 2026)
+
+## ADDED Requirements
+
+### Requirement: Sketches are low-fidelity wireframes
+
+The `spec` workflow SHALL install the `html-wireframe` skill from effective-html at a fixed commit, and SHALL NOT install Impeccable. `sketch.md` SHALL name the skill and ask for three structurally different options in three files: grayscale, system fonts, labelled placeholders, no scripts and no forms, laid out at 1440×900 and readable at 390px wide (Nate's decision, 7 November 2026: wireframes now, Impeccable later).
+
+#### Scenario: Wireframe skill pinned
+
+- **WHEN** the configuration tests read the `install` step
+- **THEN** it fetches `plannotator/effective-html` at a full 40-character commit and copies `skills/html-wireframe` into Claude Code's user skills, and it installs no Impeccable plugin
+
+#### Scenario: The sketch prompt asks for wireframes
+
+- **WHEN** the configuration tests read `sketch.md`
+- **THEN** it names `html-wireframe`, asks for three files `a.html`, `b.html` and `c.html` rather than one file with a selector, says grayscale, no scripts and no forms, and doesn't point the agent at `DESIGN.md` or `.impeccable/`
