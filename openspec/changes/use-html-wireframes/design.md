@@ -22,20 +22,26 @@ The skill puts "the user's explicit instructions" first in its order of authorit
 
 **Goals:**
 - Sketches at G2 that show structure, content and order, not a finished look.
-- No change to what the sketch step hands on: same files, same checks, same thumbnails and comment.
+- What the sketch step hands on stays the same, with one file added: the same three files, checks, thumbnails and comment, plus the comparison page.
 - The skill pinned, so a run uses the version that was reviewed.
 
 **Non-Goals:**
 - Clickable sketches. `add-spec-workflow` left "Should sketches really be clickable?" for Nate: CSS-only `:target` panels pass today's checker and worked under the published policy on 3 November 2026; scripts don't pass. This change keeps sketches static and leaves that question open.
 - The build stage that uses Impeccable on the picked sketch.
-- Changing the checker's allowlist.
+- Changing the checker's allowlist (the comparison page needs only new required-file checks).
+- Linking the comparison page from the bridge's issue comment, which is intentable's.
 
 ## Decisions
 
 **Three static files, not one file with a picker.** The skill's default is one file with a selector. We keep three files because everything downstream is per file: the checker requires `a.html`, `b.html` and `c.html`; `options.json` is keyed by `file`; the thumbnails job makes one image per file, so a picker file would give one thumbnail showing only its first direction; and the bridge's comment shows one thumbnail per file and asks for a, b or c. The skill's selector uses script or form controls, which the checker refuses.
 - Alternative: one file with a CSS `:target` picker (`#a`, `#b`, `#c` links), which would pass the checker. It would mean changing the checker's required files, `options.json`, the thumbnails job (a screenshot per fragment), the bridge's comment and the spec's scenarios, and deciding how the a, b or c reply maps onto it.
-- Alternative: three files plus a fourth comparison page that switches between them with `:target`. Nothing reads the fourth file today, so it would also need the checker and the comment to know about it.
-- Nate asked about this on 9 November 2026; see Open Questions.
+- Alternative, taken alongside the three files: a fourth comparison page that switches between them with `:target` (Nate's choice, 9 November 2026). See the next decision.
+
+**A comparison page beside the three files** (Nate's choice, 9 November 2026). The sketch agent also writes `sketches/compare.html`: one page with a panel for each option, `id="a"`, `id="b"` and `id="c"`, and a bar of `#a`, `#b` and `#c` links at the top, each labelled with the option's `label`. CSS shows the targeted panel (`.option:target`) and shows `a` when nothing is targeted (`.options:not(:has(:target)) #a`), so the page opens on A and the back button steps through the views. Each panel holds that option's screen as in its own file, with the option's styles prefixed by its panel's id so the three don't collide. No script is needed, and the existing allowlist accepts it: `:target` and `:has` are plain CSS, and the links are fragments.
+- **Written by the agent, not generated.** A script could only build it by merging three pages' styles, which means rewriting CSS selectors safely; the agent can write it with the styles already scoped. The cost is that a panel can drift from its file. → The prompt says to write `a.html`, `b.html` and `c.html` first and copy each into its panel unchanged but for the prefixes, and revise is told to keep `compare.html` in step when it edits a sketch. The reviewers and Nate see both.
+- **Checked like the others, and required.** `--sketches` requires `compare.html` with `#a`, `#b` and `#c` links and an element with each of those ids, and requires `design.md` to link it. The safety check already covers every `.html` in `sketches/`.
+- **Published, not in the comment yet.** `publish-spek-page` already publishes every safe `.html` in `sketches/` and makes a thumbnail of each, so `compare.html` is published beside the others with one thumbnail of its default view. The bridge's comment matches only single-letter files (`sketches/[a-z].html`), so it ignores `compare.html` and keeps one column per option and the a, b or c reply. Linking the comparison page from the comment is a change to intentable's bridge, left for later; until then it is linked from the change's design, so it is one click from the Spek page.
+- **Not clickable sketches.** The panels switch between options; inside each panel the option is as static as its file. Whether the options themselves should be clickable stays an open question.
 
 **Copy the one skill from a pinned commit, don't install the plugin.** `install` runs:
 
@@ -57,7 +63,7 @@ cp -R /tmp/effective-html/skills/html-wireframe ~/.claude/skills/
 
 **The prompt overrides the skill's defaults.** `sketch.md`:
 - names the `html-wireframe` skill and says to use it unattended: nobody answers questions while it works. The skill only runs when it is named;
-- asks for three structurally different directions, one per static file (`a.html`, `b.html`, `c.html`), not one file with a selector, and no `:target` panels or click-through. The skill wants two or three; three is our contract;
+- asks for three structurally different directions, one per static file (`a.html`, `b.html`, `c.html`), not one file with a selector, and no `:target` panels or click-through inside them. The skill wants two or three; three is our contract. Then it asks for `compare.html` as described above, the one place `:target` is used;
 - keeps every existing rule the checker enforces: inline `<style>` only, system fonts, no scripts or event handlers, no forms or iframes, no SVG, no comments, nothing loaded from another address, `#` links only;
 - lists the elements and attributes the checker allows, and names the likely refusals the skill would otherwise reach for: `label for=`, `tabindex`, `hidden`, `disabled`, `placeholder`, `address`, `fieldset` and `legend`, `details` and `summary`, `textarea`, `kbd`, and backslash escapes in CSS;
 - says to draw a text field, select or checkbox as a labelled box, since `input` and `select` are refused;
@@ -69,7 +75,7 @@ cp -R /tmp/effective-html/skills/html-wireframe ~/.claude/skills/
 
 The existing phrases the prompt test checks ("system fonts only", "No scripts", "nothing loaded from another address", "`options.json`", "Do not generate images") stay.
 
-**Revise keeps the wireframes plain.** This follows from Nate's 7 November choice rather than being a decision of his own. `revise.md` gains one line: a sketch it edits stays a grayscale wireframe under the same rules, so a finding that a sketch is off-brand is answered in the summary, not by adding colour. It also allows the viewport `<meta>`, like `sketch.md`.
+**Revise keeps the wireframes plain.** This follows from Nate's 7 November choice rather than being a decision of his own. `revise.md` gains one line: a sketch it edits stays a grayscale wireframe under the same rules, and its panel in `compare.html` changes with it, so a finding that a sketch is off-brand is answered in the summary, not by adding colour. It also allows the viewport `<meta>`, like `sketch.md`.
 
 **Impeccable leaves `install`.** Its clone and `claude plugin install` go. The `.impeccable/` files, `PRODUCT.md` and `DESIGN.md` stay committed: `add-venue-pages` builds from `.impeccable/mocks/`, and the later build stage will use them.
 
@@ -85,10 +91,10 @@ The existing phrases the prompt test checks ("system fonts only", "No scripts", 
 - **Grayscale isn't checked by a machine.** The checker enforces safety, not style. → Reviewers and Nate see the sketches at G2, revise is told to keep them plain, and the prompt test checks that the prompt asks for grayscale.
 - **Every spec run depends on the fetch.** `install` runs on every spec run, not only for `needs-design`, as Impeccable's clone did. A bare commit on a tagless repository is a weaker anchor than a tag: if the commit stopped being fetchable, every spec run would fail at `install`. → Bumping the pin is a one-line change. Fetching only on the sketch route is possible if that ever happens.
 - **The skill reaches outside.** `SKILL.md` links `../design-artifact/SKILL.md`, which isn't copied, and an outside docs page; the sandbox has network access. → Harmless: neither changes the files the step writes, and the checker reads those.
+- **The comparison page can drift from the three files.** → See the decision above; the checker checks its shape, not that each panel matches its file.
 - **Fewer controls to sketch with.** Without `input` or `select`, a search form is a drawn box. → Acceptable for low fidelity.
 
 ## Open Questions
 
-- **Three files or one file with a picker?** (Nate asked, 9 November 2026.) The design keeps three files for the reasons above. A `:target` picker in one file, or a fourth comparison page beside the three, is possible; either is its own change to the checker, the thumbnails, the bridge's comment and the spec.
 - **Should sketches be clickable?** Still Nate's question from `add-spec-workflow`. The prompt keeps them static until he decides.
 - **Should `design-artifact` be copied too?** The wireframe skill reads it when it is there, for composition and hierarchy. I'd leave it out to keep the sketches plain, but it's Nate's call.

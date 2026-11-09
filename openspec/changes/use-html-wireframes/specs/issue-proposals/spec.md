@@ -39,3 +39,27 @@ The `spec` workflow SHALL install the `html-wireframe` skill from effective-html
 
 - **WHEN** the configuration tests read `revise.md`
 - **THEN** it says an edited sketch stays a grayscale wireframe
+
+### Requirement: A comparison page switches between the sketches
+
+With the three sketches, the `sketch` agent SHALL write `sketches/compare.html`: a panel for each option with the ids `a`, `b` and `c`, switched by `#a`, `#b` and `#c` links with CSS `:target` and no script, showing `a` when nothing is targeted. `--sketches` SHALL require it, its three panels and links, and a link to it from `design.md`, and SHALL check its safety like any sketch (Nate's choice, 9 November 2026).
+
+#### Scenario: Comparison page required
+
+- **WHEN** a `needs-design` change has `a.html`, `b.html`, `c.html` and `options.json` but no `sketches/compare.html`, or `design.md` doesn't link `sketches/compare.html`
+- **THEN** `--sketches` exits with a failure naming what is missing
+
+#### Scenario: A panel missing from the comparison page
+
+- **WHEN** `compare.html` has no element with the id `c`, or no link to `#c`
+- **THEN** `--sketches` exits with a failure naming `compare.html` and `c`
+
+#### Scenario: A comparison page that passes
+
+- **WHEN** `compare.html` has the three panels and links, inline styles using `:target` and `:has`, and nothing else the allowlist refuses
+- **THEN** `--sketches` accepts it
+
+#### Scenario: The sketch prompt asks for the comparison page
+
+- **WHEN** the configuration tests read `sketch.md` and `revise.md`
+- **THEN** `sketch.md` asks for `compare.html` with `:target` panels `a`, `b` and `c`, written after the three files, and `revise.md` says to keep `compare.html` in step with an edited sketch
