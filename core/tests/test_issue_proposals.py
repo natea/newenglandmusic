@@ -59,7 +59,6 @@ class WorkflowShapeTestCase(SimpleTestCase):
             "@anthropic-ai/claude-code@2.1.316",
             "@agentclientprotocol/claude-agent-acp@0.99.1",
             "@fission-ai/openspec@1.16.0",
-            "--branch skill-v4.8.0 https://github.com/pbakaus/impeccable",
         ):
             self.assertIn(pinned, install)
         self.assertEqual(next_steps(edges, "start"), {("install", None)})
@@ -263,6 +262,47 @@ class ProposePromptTestCase(SimpleTestCase):
         goal = re.search(r'goal="([^"]*)"', (SPEC / "workflow.fabro").read_text()).group(1)
         self.assertNotIn("reviewed by", goal)
 
+    def test_wireframe_skill_pinned(self):
+        install = attribute(graph()[1]["install"], "script")
+        self.assertRegex(
+            install, r"fetch --quiet --depth 1 https://github\.com/plannotator/effective-html [0-9a-f]{40} "
+        )
+        self.assertIn("cp -R /tmp/effective-html/skills/html-wireframe ~/.claude/skills/", install)
+        self.assertNotIn("impeccable", install.lower())
+
+    def test_the_sketch_prompt_asks_for_wireframes(self):
+        text = prompt("sketch")
+        for needed in (
+            "`html-wireframe` skill",
+            "`a.html`, `b.html` and `c.html`",
+            "Do not put the options in one file with a selector",
+            "grayscale",
+            "labelled placeholders",
+            "1440×900",
+            "390px",
+            "No scripts",
+            "no forms",
+            "`label for=`",
+        ):
+            self.assertIn(needed, text, needed)
+        for absent in ("DESIGN.md", "design.json", ".impeccable/mocks"):
+            self.assertNotIn(absent, text, absent)
+
+    def test_revise_keeps_sketches_plain(self):
+        self.assertIn("It stays a grayscale wireframe", prompt("revise"))
+
+    def test_the_sketch_prompt_asks_for_the_comparison_page(self):
+        text = prompt("sketch")
+        for needed in (
+            "When the three files are done, write `compare.html`",
+            ".option:target",
+            "the ids `a`, `b` and `c`",
+            "turn its links into `<span>` text",
+            "drop its ids",
+        ):
+            self.assertIn(needed, text, needed)
+        self.assertIn("keep `compare.html` in step", prompt("revise"))
+
     def test_sketch_prompt_rules(self):
         text = prompt("sketch")
         for needed in (
@@ -292,7 +332,16 @@ CHANGE_FILES = {
     "tasks.md": "- [ ] 1.1 Do it\n",
     "specs/venues/spec.md": "## ADDED Requirements\n",
 }
+SAFE_COMPARE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Compare</title>
+<style>.option { display: none; } .option:target { display: block; } .options:not(:has(:target)) #a { display: block; }
+#a .bill { border: 1px solid #999; } #b { font-family: system-ui, sans-serif; }</style>
+</head><body><nav><a href="#a">Bill</a> <a href="#b">Map</a> <a href="#c">List</a></nav>
+<div class="options"><section class="option" id="a"><p class="bill">A <span class="link">Top</span></p></section>
+<section class="option" id="b"><p>B</p></section><section class="option" id="c"><p>C</p></section></div></body></html>
+"""
 SKETCH_FILES = {
+    "sketches/compare.html": SAFE_COMPARE,
     "sketches/a.html": SAFE_SKETCH,
     "sketches/b.html": SAFE_SKETCH,
     "sketches/c.html": SAFE_SKETCH,
@@ -538,7 +587,7 @@ class BoundsTestCase(SimpleTestCase):
 class SketchTestCase(SimpleTestCase):
     """sketches: required with needs-design, checked as soon as they are made, safe to publish; labels fixed"""
 
-    def sketch_run(self, folder, extra=None, design="sketches/a.html sketches/b.html sketches/c.html", **kwargs):
+    def sketch_run(self, folder, extra=None, design="sketches/a.html sketches/b.html sketches/c.html sketches/compare.html", **kwargs):
         files = {**CHANGE_FILES, **SKETCH_FILES, "design.md": design, **(extra or {})}
         return Run(folder, draft={**DRAFT, "labels": ["needs-design"]}, files=files, **kwargs)
 
@@ -552,7 +601,7 @@ class SketchTestCase(SimpleTestCase):
             self.assertEqual(status, 1)
             self.assertIn("sketches/c.html is missing", output)
         with tempfile.TemporaryDirectory() as folder:
-            status, output = self.sketch_run(folder, design="sketches/b.html sketches/c.html").check("--sketches")
+            status, output = self.sketch_run(folder, design="sketches/b.html sketches/c.html sketches/compare.html").check("--sketches")
             self.assertEqual(status, 1)
             self.assertIn("doesn't link sketches/a.html", output)
 
@@ -642,6 +691,48 @@ class SketchTestCase(SimpleTestCase):
     def test_a_safe_sketch(self):
         with tempfile.TemporaryDirectory() as folder:
             status, output = self.sketch_run(folder).check("--draft")
+            self.assertEqual(status, 0, output)
+
+    def test_comparison_page_required(self):
+        with tempfile.TemporaryDirectory() as folder:
+            run = self.sketch_run(folder)
+            run.path("openspec/changes/add-venue-hours/sketches/compare.html").unlink()
+            status, output = run.check("--sketches")
+            self.assertEqual(status, 1)
+            self.assertIn("sketches/compare.html is missing", output)
+        with tempfile.TemporaryDirectory() as folder:
+            design = "sketches/a.html sketches/b.html sketches/c.html"
+            status, output = self.sketch_run(folder, design=design).check("--sketches")
+            self.assertEqual(status, 1)
+            self.assertIn("doesn't link sketches/compare.html", output)
+
+    def test_a_panel_missing_from_the_comparison_page(self):
+        for bad in (
+            SAFE_COMPARE.replace('<section class="option" id="c"><p>C</p></section>', ""),
+            SAFE_COMPARE.replace(' <a href="#c">List</a>', ""),
+        ):
+            with tempfile.TemporaryDirectory() as folder:
+                status, output = self.sketch_run(folder, extra={"sketches/compare.html": bad}).check("--sketches")
+                self.assertEqual(status, 1)
+                self.assertIn("compare.html", output)
+                self.assertIn("c", output.split("compare.html", 1)[1])
+
+    def test_a_comparison_page_with_a_stray_link(self):
+        for bad, needle in (
+            (SAFE_COMPARE.replace('<span class="link">Top</span>', '<a href="#">Top</a>'), "'#'"),
+            (SAFE_COMPARE.replace('<span class="link">Top</span>', '<a href="#shows">Top</a>'), "'#shows'"),
+            (SAFE_COMPARE.replace('<p class="bill">', '<p class="bill" id="shows">'), "'shows'"),
+            (SAFE_COMPARE.replace("<p>B</p>", '<p id="b">B</p>'), "id b"),
+        ):
+            with tempfile.TemporaryDirectory() as folder:
+                status, output = self.sketch_run(folder, extra={"sketches/compare.html": bad}).check("--sketches")
+                self.assertEqual(status, 1, needle)
+                self.assertIn("compare.html", output, needle)
+                self.assertIn(needle, output, needle)
+
+    def test_a_comparison_page_that_passes(self):
+        with tempfile.TemporaryDirectory() as folder:
+            status, output = self.sketch_run(folder).check("--sketches")
             self.assertEqual(status, 0, output)
 
     def test_a_sketch_lost_in_revise(self):

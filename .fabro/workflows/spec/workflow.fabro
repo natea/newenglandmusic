@@ -6,12 +6,13 @@ digraph Spec {
     start [shape=Mdiamond, label="Start"]
     exit  [shape=Msquare, label="Exit"]
 
-    // Claude Code, its ACP adapter and openspec at pinned versions; Impeccable
-    // from its tagged release; and the changes that existed before the agent ran
+    // Claude Code, its ACP adapter and openspec at pinned versions; effective-html's
+    // html-wireframe skill at a pinned commit, copied into the user's skills (its
+    // plugin entry isn't pinned); and the changes that existed before the agent ran
     install [
         label="Install the tools",
         shape=parallelogram,
-        script="python3 --version && npm install -g --prefix /usr/local @anthropic-ai/claude-code@2.1.316 @agentclientprotocol/claude-agent-acp@0.99.1 @fission-ai/openspec@1.16.0 && git clone --quiet --depth 1 --branch skill-v4.8.0 https://github.com/pbakaus/impeccable /tmp/impeccable && claude plugin marketplace add /tmp/impeccable && claude plugin install impeccable@impeccable && python3 bin/check-intentable-reviews --record-existing"
+        script="python3 --version && npm install -g --prefix /usr/local @anthropic-ai/claude-code@2.1.316 @agentclientprotocol/claude-agent-acp@0.99.1 @fission-ai/openspec@1.16.0 && git init --quiet /tmp/effective-html && git -C /tmp/effective-html fetch --quiet --depth 1 https://github.com/plannotator/effective-html 5ce160a3e76dc1c0f9301f8a1903704ec607636a && git -C /tmp/effective-html checkout --quiet FETCH_HEAD && mkdir -p ~/.claude/skills && cp -R /tmp/effective-html/skills/html-wireframe ~/.claude/skills/ && python3 bin/check-intentable-reviews --record-existing"
     ]
 
     propose [
@@ -28,7 +29,7 @@ digraph Spec {
     route [label="Route", shape=parallelogram, output_schema="routing", script="python3 bin/check-intentable-reviews --route"]
 
     sketch [
-        label="Sketch (Claude Code, ACP, Impeccable)",
+        label="Sketch (Claude Code, ACP, html-wireframe)",
         type="agent",
         backend="acp",
         acp.command="claude-agent-acp",

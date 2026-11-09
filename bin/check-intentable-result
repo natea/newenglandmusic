@@ -124,6 +124,7 @@ MAX_FILE_LINES = 20000
 SKIPPED = {".git", "node_modules", "target", "dist", ".venv", "venv", ".cache", ".pnpm-store", ".npm", ".next",
            "__pycache__", ".tox", ".pytest_cache"}
 SKETCHES = ("a.html", "b.html", "c.html")
+COMPARE = "compare.html"
 ARCHIVE_DATE = re.compile(r"\d{4}-\d{2}-\d{2}-")
 
 
@@ -362,16 +363,50 @@ def check_options(path):
                 raise Refused(f"sketches/options.json has no {field} for {name}")
 
 
+class TargetCollector(HTMLParser):
+    """every id and every link on a page, in order"""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.ids, self.links = [], []
+
+    def handle_starttag(self, tag, attrs):
+        for name, value in attrs:
+            if name == "id":
+                self.ids.append(value or "")
+            elif name == "href":
+                self.links.append(value or "")
+
+
+def check_compare(path):
+    """the comparison page: a panel and a link for each option, and nothing else to target"""
+    collector = TargetCollector()
+    collector.feed(path.read_text())
+    collector.close()
+    panels = [name[0] for name in SKETCHES]
+    for link in collector.links:
+        if link not in {f"#{panel}" for panel in panels}:
+            raise Refused(f"sketches/{COMPARE} has the link {link!r}, which breaks its switching; only #a, #b and #c may link")
+    for name in collector.ids:
+        if name not in panels:
+            raise Refused(f"sketches/{COMPARE} has the id {name!r}; its only ids are a, b and c")
+    for panel in panels:
+        if collector.ids.count(panel) != 1:
+            raise Refused(f"sketches/{COMPARE} needs exactly one panel with the id {panel}")
+        if f"#{panel}" not in collector.links:
+            raise Refused(f"sketches/{COMPARE} has no link to #{panel}")
+
+
 def check_sketches(change, required):
-    """the sketches' safety; with required, also that all three and options.json are there and linked"""
+    """the sketches' safety; with required, also that all of them and options.json are there and linked"""
     folder = CHANGES / change / "sketches"
     if required:
-        for name in SKETCHES + ("options.json",):
+        for name in SKETCHES + (COMPARE, "options.json"):
             if not (folder / name).is_file():
                 raise Refused(f"the sketch sketches/{name} is missing")
         check_options(folder / "options.json")
         design = (CHANGES / change / "design.md").read_text() if (CHANGES / change / "design.md").is_file() else ""
-        for name in SKETCHES:
+        for name in SKETCHES + (COMPARE,):
             if f"sketches/{name}" not in design:
                 raise Refused(f"design.md doesn't link sketches/{name}")
     if folder.is_dir():
@@ -379,6 +414,8 @@ def check_sketches(change, required):
             problem = sketch_problem(sketch.read_text())
             if problem:
                 raise Refused(f"sketches/{sketch.name} isn't safe to publish: {problem}")
+    if required:
+        check_compare(folder / COMPARE)
 
 
 def spec(mode):

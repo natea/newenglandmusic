@@ -56,7 +56,7 @@ mkdir -p ~/.claude/skills
 cp -R /tmp/effective-html/skills/html-wireframe ~/.claude/skills/
 ```
 
-`<commit>` is a full 40-character SHA, picked when this change is applied and recorded in the design then (the clone read for this proposal was at `5ce160a3e76dc1c0f9301f8a1903704ec607636a`, 31 October 2026). The current spec has the sketch skill pinned, and installing the plugin wouldn't be: the repository's `marketplace.json` gives the plugin's source as the GitHub URL itself with no ref, so Claude Code would fetch the default branch whatever was cloned. A user skill also keeps the skill out of the checkout, so it is never among the files the run changed (the bridge commits only the change's folder, but a stray skill folder would still be noise in Fabro's record).
+`<commit>` is `5ce160a3e76dc1c0f9301f8a1903704ec607636a` (31 October 2026), still the head of effective-html's default branch when this change was applied on 9 November 2026, and the commit the proposal's reading of `SKILL.md` was based on. The current spec has the sketch skill pinned, and installing the plugin wouldn't be: the repository's `marketplace.json` gives the plugin's source as the GitHub URL itself with no ref, so Claude Code would fetch the default branch whatever was cloned. A user skill also keeps the skill out of the checkout, so it is never among the files the run changed (the bridge commits only the change's folder, but a stray skill folder would still be noise in Fabro's record).
 - Alternative: vendor the skill into this repository. Rejected: it's a third-party file to keep in step by hand.
 - Taken without Nate, about four in five likely to be his choice: copying the skill rather than installing the plugin follows from keeping it pinned.
 
