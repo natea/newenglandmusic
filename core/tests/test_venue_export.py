@@ -1,8 +1,10 @@
 import csv
 import io
 
+from core.admin_group import GROUP_NAME, sync_admin_group
 from core.models import Venue, VenueEventSource
 from core.venue_export import HEADER, NOT_EXPORTED, VENUE_COLUMNS, venue_row
+from django.contrib.auth.models import Group, User
 from django.test import TestCase
 from django.utils import timezone
 
@@ -84,3 +86,77 @@ class FieldCoverageTestCase(TestCase):
         undecided = fields - set(VENUE_COLUMNS) - NOT_EXPORTED
         self.assertEqual(undecided, set(), "export these Venue fields or name them in NOT_EXPORTED")
         self.assertEqual(set(VENUE_COLUMNS) - fields, set())
+
+
+class ExportViewTestCase(TestCase):
+    url = "/admin/core/venue/export-csv/"
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser("admin", "a@example.com", "pw")
+        self.client.force_login(self.admin)
+
+    def rows(self, response):
+        body = b"".join(response.streaming_content).decode("utf-8-sig")
+        return list(csv.reader(io.StringIO(body)))
+
+    def test_export_everything(self):
+        for name in ("A", "B", "C"):
+            Venue.objects.create(name=name)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/csv", response["Content-Type"])
+        self.assertRegex(response["Content-Disposition"], r'attachment; filename="venues-\d{4}-\d\d-\d\d\.csv"')
+        rows = self.rows(response)
+        self.assertEqual(rows[0], HEADER)
+        self.assertEqual([r[HEADER.index("name")] for r in rows[1:]], ["A", "B", "C"])
+
+    def test_export_a_filtered_list(self):
+        Venue.objects.create(name="A", is_active=True, state="MA")
+        Venue.objects.create(name="B", is_active=True, state="MA")
+        Venue.objects.create(name="C", is_active=False, state="MA")
+        rows = self.rows(self.client.get(self.url, {"is_active__exact": "1"}))
+        self.assertEqual(len(rows), 3)
+        self.assertEqual({r[1] for r in rows[1:]}, {"A", "B"})
+
+    def test_export_a_searched_list(self):
+        Venue.objects.create(name="Paradise Rock Club")
+        Venue.objects.create(name="Sinclair")
+        rows = self.rows(self.client.get(self.url, {"q": "paradise"}))
+        self.assertEqual([r[1] for r in rows[1:]], ["Paradise Rock Club"])
+
+    def test_more_venues_than_a_page(self):
+        Venue.objects.bulk_create(Venue(name=f"Venue {i:03}") for i in range(250))
+        self.assertEqual(len(self.rows(self.client.get(self.url))), 251)
+
+    def test_opens_in_excel(self):
+        Venue.objects.create(name="Café Lena")
+        response = self.client.get(self.url)
+        body = b"".join(response.streaming_content)
+        self.assertTrue(body.startswith(b"\xef\xbb\xbf"))
+        self.assertIn("Café Lena".encode("utf-8"), body)
+
+    def test_signed_out_visitor_goes_to_login(self):
+        Venue.objects.create(name="Secret Venue")
+        self.client.logout()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/admin/login/", response["Location"])
+        self.assertNotIn(b"Secret Venue", response.content)
+
+    def test_staff_without_permission_is_refused(self):
+        Venue.objects.create(name="Secret Venue")
+        staff = User.objects.create_user("staff", "s@example.com", "pw", is_staff=True)
+        self.client.force_login(staff)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 403)
+        self.assertNotIn(b"Secret Venue", response.content)
+
+    def test_member_of_the_admin_group_can_download(self):
+        sync_admin_group()
+        Venue.objects.create(name="A")
+        staff = User.objects.create_user("editor", "e@example.com", "pw", is_staff=True)
+        staff.groups.add(Group.objects.get(name=GROUP_NAME))
+        self.client.force_login(staff)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(self.rows(response)), 2)

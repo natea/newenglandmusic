@@ -1,3 +1,4 @@
+import csv
 import os
 import re
 from urllib.parse import unquote
@@ -9,7 +10,8 @@ from django import forms
 from django.contrib import messages
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q, URLField
-from django.http import Http404, HttpResponse
+from django.contrib.admin.options import IncorrectLookupParameters
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.urls import path, reverse
 from django.utils import timezone
@@ -21,6 +23,7 @@ from tinymce.widgets import TinyMCE
 
 from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filter
 from . import act_sources, apple_music, youtube
+from .venue_export import HEADER, venue_row
 from .places import PlacesClient, PlacesError
 from .spotify import parse_artist_id
 from .wikipedia import LICENSE_URL, commons_file_page, commons_thumbnail
@@ -665,10 +668,37 @@ class VenueAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         name = f"{self.model._meta.app_label}_{self.model._meta.model_name}_google_name"
+        export_name = f"{self.model._meta.app_label}_{self.model._meta.model_name}_export_csv"
         return [
             path("<int:pk>/google-name/", self.admin_site.admin_view(self.google_name_view), name=name),
+            path("export-csv/", self.admin_site.admin_view(self.export_csv_view), name=export_name),
             *super().get_urls(),
         ]
+
+    def export_csv_view(self, request):
+        """the venues the list is showing (its search, filters and order, every page) as a csv file"""
+        if not self.has_view_permission(request):
+            return HttpResponse(status=403)
+        try:
+            venues = self.get_changelist_instance(request).get_queryset(request)
+        except IncorrectLookupParameters:
+            return HttpResponseBadRequest("the list's filters aren't valid")
+
+        class Echo:
+            def write(self, value):
+                return value
+
+        writer = csv.writer(Echo())
+
+        def lines():
+            # excel needs the byte order mark to read accents
+            yield "\ufeff" + writer.writerow(HEADER)
+            for venue in venues.select_related("event_source").iterator():
+                yield writer.writerow(venue_row(venue))
+
+        response = StreamingHttpResponse(lines(), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="venues-{timezone.localdate():%Y-%m-%d}.csv"'
+        return response
 
     def google_name_view(self, request, pk):
         """a review venue's place name on google, asked for when an admin clicks for it"""

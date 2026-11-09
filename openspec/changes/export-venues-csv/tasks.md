@@ -9,7 +9,7 @@ Issue: [#14 Create an Export to CSV/Excel option for the venue database](https:/
 
 ## 2. Export view
 
-- [ ] 2.1 Add the `export-csv/` route to `VenueAdmin`, wrapped in `admin_view`, that rebuilds the list's own queryset (search, filters, ordering, no pagination), checks `has_view_permission` (403 otherwise) and returns a UTF-8 CSV with a byte order mark and a dated filename. Verify: tests for the "Export everything", "Export a filtered list", "Export a searched list", "More venues than a page", "Opens in Excel", "Signed-out visitor", "Staff without permission" and "Member of the admin group" scenarios.
+- [x] 2.1 Add the `export-csv/` route to `VenueAdmin`, wrapped in `admin_view`, that rebuilds the list's own queryset (search, filters, ordering, no pagination), checks `has_view_permission` (403 otherwise) and returns a UTF-8 CSV with a byte order mark and a dated filename. Verify: tests for the "Export everything", "Export a filtered list", "Export a searched list", "More venues than a page", "Opens in Excel", "Signed-out visitor", "Staff without permission" and "Member of the admin group" scenarios.
 
 ## 3. Button
 
