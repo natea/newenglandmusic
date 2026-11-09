@@ -140,3 +140,112 @@ class BuildCommandsTestCase(SimpleTestCase):
         nodes = parse_nodes('a [shape=parallelogram, script="\nX = [1]\nprint(X)\n"]\nb [label="B"]\n')
         self.assertEqual(nodes["a"]["script"], "\nX = [1]\nprint(X)\n")
         self.assertEqual(nodes["b"], {"label": "B"})
+
+
+def prompt(name):
+    return (BUILD / f"{name}.md").read_text()
+
+
+AGENTS = ("apply", "refactor")
+FORBIDDEN = (
+    "merge commit",
+    "push",
+    "closing keyword",
+    "`.github/`",
+    "`.fabro/`",
+    "`bin/publish-spek-page`",
+    "`@`",
+    "subagents or background tasks",
+)
+
+
+class BuildAgentsTestCase(SimpleTestCase):
+    """issue-builds: the apply and refactor agents"""
+
+    def test_the_prompts_name_the_change_not_the_thread(self):
+        for name in AGENTS:
+            text = prompt(name)
+            self.assertIn("{{ inputs.change_name }}", text, name)
+            used = set(re.findall(r"\{\{ inputs\.(\w+) \}\}", text))
+            self.assertLessEqual(used, {"change_name", "issue_number", "issue_title"}, name)
+
+    def test_acp_agents_only(self):
+        agents = {name for name, attrs in steps().items() if attrs.get("type") == "agent"}
+        self.assertEqual(agents, set(AGENTS))
+        for name in AGENTS:
+            self.assertEqual(steps()[name]["backend"], "acp", name)
+            self.assertEqual(steps()[name]["acp.command"], "claude-agent-acp", name)
+            self.assertEqual(steps()[name]["prompt"], f"@{name}.md", name)
+        for name, attrs in steps().items():
+            if name not in AGENTS:
+                self.assertNotIn("prompt", attrs, f"{name} is a prompt stage")
+        # every agent sees the goal; one worded like an instruction steers them
+        goal = parse_nodes(graph_text())["graph"]["goal"]
+        self.assertNotRegex(goal.lower(), r"\b(build|apply|refactor|commit) (the|a|each|every)\b")
+
+    def test_the_apply_prompt_states_the_commit_rule(self):
+        text = prompt("apply")
+        for needed in (
+            "one `## N.` group at a time",
+            "Tick the box of each task you did",
+            "commit the group's work and its ticks together, as one commit",
+            "Never commit on a failing suite",
+            "The subject says what the group did",
+            ".intentable/test.env",
+        ):
+            self.assertIn(needed, text, needed)
+
+    def test_the_apply_prompt_says_what_to_leave(self):
+        text = prompt("apply")
+        for needed in (
+            "is left unticked",
+            "a check by hand in a browser, or a live check against an outside system",
+            "Nothing else counts",
+            "`left_for_people`",
+        ):
+            self.assertIn(needed, text, needed)
+
+    def test_the_apply_prompt_says_when_to_stop(self):
+        text = prompt("apply")
+        for needed in ("If a group can't be made to pass, stop", "Commit nothing for that group", "discard its changes", "`stopped`"):
+            self.assertIn(needed, text, needed)
+
+    def test_no_question_asked(self):
+        self.assertNotIn("human", graph_text().lower())
+        for name in AGENTS:
+            self.assertIn("never ask and wait for an answer", prompt(name).lower(), name)
+        self.assertIn("put the question in your message", prompt("apply"))
+        self.assertIn("The answer will come through the change's own artifacts", prompt("apply"))
+        self.assertIn('leave it out, and note it under "For Nate"', prompt("refactor"))
+
+    def test_the_forbidden_list(self):
+        for name in AGENTS:
+            never = prompt(name).split("## Never", 1)[1].split("\n## ", 1)[0]
+            for needed in FORBIDDEN:
+                self.assertIn(needed, never, f"{name}: {needed}")
+
+    def test_the_prompts_say_to_leave_a_clean_tree(self):
+        for name in AGENTS:
+            text = prompt(name)
+            self.assertIn("clean working tree", text, name)
+            self.assertIn("git restore --staged --worktree .", text, name)
+
+    def test_the_refactor_prompt_states_the_rules(self):
+        text = prompt("refactor")
+        for needed in (
+            "at most one commit",
+            "only when the suite passes",
+            "No change in behaviour",
+            "no test that passed before fails",
+            "Renames go through the whole project",
+            "Break up a long function",
+            "Extract logic expressed more than once",
+            "Correct the comments",
+            "Names say what the thing is",
+            "never act on them",
+            "a circular dependency or a layering violation",
+            "code that looks dead",
+            "a new module or grouping, or moving code across a module or layer boundary",
+        ):
+            self.assertIn(needed, text, needed)
+        self.assertNotIn("_workflows/", text)

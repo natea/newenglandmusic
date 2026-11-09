@@ -1,5 +1,5 @@
 digraph Build {
-    graph [goal="Build a confirmed change to the New England Music Project site on its draft branch, one task group at a time, and leave a result for the intentable bridge"]
+    graph [goal="The build stage of the intentable loop for one change Nate confirmed on the New England Music Project site"]
     rankdir=LR
     on_failure="exit"
 
@@ -51,5 +51,23 @@ if git status --porcelain | grep -q .; then echo 'setup changed tracked files:';
 "
     ]
 
-    start -> setup -> exit
+    // applies the change's task groups, one green commit each (apply.md)
+    apply [
+        label="Apply the change (Claude Code, ACP)",
+        type="agent",
+        backend="acp",
+        acp.command="claude-agent-acp",
+        prompt="@apply.md"
+    ]
+
+    // the refactoring pass, at most one commit (refactor.md)
+    refactor [
+        label="Refactor (Claude Code, ACP)",
+        type="agent",
+        backend="acp",
+        acp.command="claude-agent-acp",
+        prompt="@refactor.md"
+    ]
+
+    start -> setup -> apply -> refactor -> exit
 }

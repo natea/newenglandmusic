@@ -135,12 +135,12 @@ If a group can't be made to pass, the apply agent SHALL commit nothing for that 
 
 ### Requirement: The build never waits for a person
 
-No step of the `build` workflow SHALL wait for an answer. When an agent needs a decision the proposal doesn't settle, it SHALL record `stopped` with the question in its message, so it reaches the issue as the bridge reports a stopped build. Since the agents never read the issue's thread, the answer SHALL reach a retried build only through the change's own artifacts: it is written into them on the draft branch before the retry.
+No step of the `build` workflow SHALL wait for an answer. When the apply agent needs a decision the proposal doesn't settle, it SHALL record `stopped` with the question in its message, which the bridge posts on the issue. The answer SHALL reach a retried build only through the change's own artifacts, written into them on the draft branch before the retry. The refactor agent SHALL instead leave out a change it is unsure of and note it for Nate.
 
 #### Scenario: No question asked
 
 - **WHEN** the configuration tests read the build graph and its prompts
-- **THEN** there is no human-gate step, and both prompts say never to ask and wait, but to stop with the question in the message and say that the answer will come through the change's artifacts
+- **THEN** there is no human-gate step, both prompts say never to ask and wait, the apply prompt says to stop with the question in the message and that the answer will come through the change's artifacts, and the refactor prompt says to leave the change out and note it for Nate
 
 ### Requirement: The build agents keep to what the bridge accepts
 

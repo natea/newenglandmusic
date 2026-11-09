@@ -18,7 +18,7 @@
 
 ## 2. The agents
 
-- [ ] 2.1 Write `apply.md`:
+- [x] 2.1 Write `apply.md`:
   - `{{ inputs.change_name }}`, the issue's number and title, and no body or thread;
   - reading the change's artifacts;
   - one group at a time, ticks in the same commit, never on red, with the suite run through `.intentable/test.env`, and a subject in the repository's style;
@@ -28,13 +28,13 @@
   - the forbidden list, the clean tree, and code names in backticks;
   - the record `.intentable/build.json` (`change`, `outcome`, `message`, `left_for_people`) and the summary `.intentable/summary.md`;
   - finishing its own work, with no subagents.
-- [ ] 2.2 Write `refactor.md`:
+- [x] 2.2 Write `refactor.md`:
   - `{{ inputs.change_name }}`;
   - the condensed rules R1–R5, R7 and R11;
   - R6, R9 and R10 findings reported in the summary, never acted on;
   - at most one commit, "Refactor <change>", only on green;
   - the same forbidden list, the clean tree, and never asking and waiting.
-- [ ] 2.3 Add the apply and refactor nodes to the graph as ACP agents (`claude-agent-acp`). Verify with tests for:
+- [x] 2.3 Add the apply and refactor nodes to the graph as ACP agents (`claude-agent-acp`). Verify with tests for:
   - "The prompts name the change, not the thread", "ACP agents only", "The apply prompt states the commit rule", "The apply prompt says what to leave" and "The apply prompt says when to stop";
   - "No question asked", "The forbidden list", "The prompts say to leave a clean tree" and "The refactor prompt states the rules".
 
