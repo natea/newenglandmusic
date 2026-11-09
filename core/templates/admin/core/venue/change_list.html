@@ -1,0 +1,10 @@
+{% extends "admin/core/change_list.html" %}
+
+{% block object-tools-items %}
+  {% if can_export %}
+    <li>
+      <a href="{% url 'admin:core_venue_export_csv' %}{{ cl.get_query_string }}" class="export-csv">Export to CSV</a>
+    </li>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}

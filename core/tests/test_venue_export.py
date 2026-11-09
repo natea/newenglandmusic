@@ -1,5 +1,6 @@
 import csv
 import io
+import re
 
 from core.admin_group import GROUP_NAME, sync_admin_group
 from core.models import Venue, VenueEventSource
@@ -160,3 +161,30 @@ class ExportViewTestCase(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(self.rows(response)), 2)
+
+
+class ExportButtonTestCase(TestCase):
+    list_url = "/admin/core/venue/"
+
+    def test_button_keeps_the_filter_query_string(self):
+        Venue.objects.create(name="A", is_active=True)
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+        html = self.client.get(self.list_url, {"is_active__exact": "1", "q": "A"}).content.decode()
+        self.assertIn("Export to CSV", html)
+        match = re.search(r'<a href="([^"]*)" class="export-csv"', html)
+        self.assertTrue(match.group(1).startswith("/admin/core/venue/export-csv/?"))
+        self.assertIn("is_active__exact=1", match.group(1))
+        self.assertIn("q=A", match.group(1))
+
+    def test_button_on_the_unfiltered_list(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+        html = self.client.get(self.list_url).content.decode()
+        self.assertIn('href="/admin/core/venue/export-csv/', html)
+
+    def test_no_button_without_view_permission(self):
+        # such a user can't reach the list at all, so nothing shows the button
+        staff = User.objects.create_user("staff", "s@example.com", "pw", is_staff=True)
+        self.client.force_login(staff)
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, 403)
+        self.assertNotContains(response, "Export to CSV", status_code=403)

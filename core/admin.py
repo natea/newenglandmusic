@@ -675,6 +675,11 @@ class VenueAdmin(admin.ModelAdmin):
             *super().get_urls(),
         ]
 
+    def changelist_view(self, request, extra_context=None):
+        # the list's template shows the export button only to those who may view venues
+        context = {"can_export": self.has_view_permission(request), **(extra_context or {})}
+        return super().changelist_view(request, context)
+
     def export_csv_view(self, request):
         """the venues the list is showing (its search, filters and order, every page) as a csv file"""
         if not self.has_view_permission(request):
