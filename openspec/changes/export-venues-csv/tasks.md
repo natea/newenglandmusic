@@ -4,8 +4,8 @@ Issue: [#14 Create an Export to CSV/Excel option for the venue database](https:/
 
 ## 1. Row building
 
-- [ ] 1.1 Add `core/venue_export.py` with the explicit column list, the header, a row for one venue (yes/no/blank flags, `; `-joined genres, event-source columns from `VenueEventSource`), the formula guard, and no Google coordinate, distance or fetch time. Verify: unit tests for the "Sheet fields in the row", "Unknown flag", "Event source included", "Confident match", "Formula-like note" and "Commas and line breaks" scenarios.
-- [ ] 1.2 Add a test that fails when a `Venue` field is neither exported nor on a named exclusion list, so new fields need a decision. Verify: the test passes now, and fails when a field is temporarily added.
+- [x] 1.1 Add `core/venue_export.py` with the explicit column list, the header, a row for one venue (yes/no/blank flags, `; `-joined genres, event-source columns from `VenueEventSource`), the formula guard, and no Google coordinate, distance or fetch time. Verify: unit tests for the "Sheet fields in the row", "Unknown flag", "Event source included", "Confident match", "Formula-like note" and "Commas and line breaks" scenarios.
+- [x] 1.2 Add a test that fails when a `Venue` field is neither exported nor on a named exclusion list, so new fields need a decision. Verify: the test passes now, and fails when a field is temporarily added.
 
 ## 2. Export view
 
