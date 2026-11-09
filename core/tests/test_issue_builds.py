@@ -569,3 +569,31 @@ class BuildGuideTestCase(SimpleTestCase):
         for line in (l for l in section.splitlines() if l.lstrip().startswith("fabro run")):
             self.assertIn("natea/newenglandmusic", line)
             self.assertIn("--environment daytona", line)
+
+
+class BuildAgentSettingsTestCase(SimpleTestCase):
+    """issue-builds: The agents' own settings never reach a commit"""
+
+    def test_setup_excludes_the_agents_settings(self):
+        self.assertIn("echo .claude/settings.local.json >> $(git rev-parse --git-path info/exclude)", script("setup"))
+
+    def test_the_prompts_forbid_committing_it(self):
+        for name in AGENTS:
+            never = prompt(name).split("## Never", 1)[1]
+            self.assertIn("`.claude/settings.local.json`", never, name)
+            self.assertIn("stage files by name", never, name)
+
+    def test_the_agents_settings_committed(self):
+        repo = Repo()
+        self.addCleanup(repo.cleanup)
+        repo.tick("1.1", "1.2")
+        repo.commit("Add the venue export", {"core/export.py": "X = 1\n", ".claude/settings.local.json": "{}\n"})
+        sha = repo.git("rev-parse", "HEAD").strip()
+        repo.record(outcome="stopped", message="Stopped at group 2.")
+        result = repo.run("finish")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn(sha[:7], result.stdout)
+        self.assertIn(".claude/settings.local.json", result.stdout)
+
+    def test_the_summary_leaves_the_tasks_to_finish(self):
+        self.assertIn("Leave out the tasks left for a person: a later step adds them", prompt("apply"))

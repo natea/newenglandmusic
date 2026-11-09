@@ -36,6 +36,7 @@ Make at most one commit, "Refactor {{ inputs.change_name }}", and only when the 
 - change anything under `.github/` or `.fabro/`, or `bin/publish-spek-page`;
 - put an `@` in anything for the issue, except inside backticks for code;
 - start subagents or background tasks;
+- commit `.claude/settings.local.json`, your session's own settings: stage files by name;
 - leave anything uncommitted: if a refactoring doesn't pass, discard it (`git restore --staged --worktree .` and `git clean -fd`), and end with a clean working tree.
 
 Never ask and wait for an answer: nobody is waiting on this run. If you're unsure whether a change is behaviour-preserving, leave it out, and note it under "For Nate".

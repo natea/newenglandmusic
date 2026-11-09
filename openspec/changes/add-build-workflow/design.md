@@ -142,3 +142,25 @@ What the rules leave to the owner is reported, not done, in the summary for Nate
 4. Merge to `main` at Nate's G4, then remove the bridge's test setting.
 
 Rollback: removing `.fabro/workflows/build/` from the branch the bridge reads makes build starts fail, which the bridge reports; nothing else depends on it.
+
+## Live check (9 November 2026)
+
+Nate commented `/approve` on issue #14, with the bridge deployed from intentable's `change/add-build-runs` and reading workflows from `change/add-build-workflow`. Run `01M7158HF3VCMA82D8XCMZYQAP` took about 15 minutes from G2 to pull request #16:
+
+| Step | Time | What it showed |
+|---|---|---|
+| Setup | about 3 minutes | root, Ubuntu 24.04, Postgres 16.15, Python 3.11.14 through `uv`. npm skipped Claude Code's postinstall script, as it does for `spec`, with no effect |
+| Apply | about 8 minutes | four task-group commits with plain subjects. Task 3.1, which ends with a by-hand browser check, left unticked and listed for Nate |
+| Route | | sent the complete build to refactor |
+| Refactor | about 2 minutes | one commit, an import moved. It reported a module move for Nate instead of making it, and noticed the stray settings file below |
+| Finish | about 1.5 minutes | the inline script ran as written, and the suite passed |
+
+What the run settled:
+- **Checkpoint commits.** Fabro adds a checkpoint commit after every step, empty or not (`fabro(<run-id>): <node> (success)`). There were eight, all empty, so passing empty checkpoints was right. They stay in the pull request's history.
+- **Agent timeouts.** None applied.
+- **The bridge's part.** It fast-forwarded `change/export-venues-csv` to the run branch, opened #16 (not a draft, with no closing keyword), and posted the agent's message with the link.
+
+What it got wrong, fixed by task 5.4:
+- **The agent's settings.** The first group's commit carried `.claude/settings.local.json`, the permissions the agent's Claude Code session saved, because the draft branch doesn't ignore it. It was removed from #16 by hand.
+- **The tasks left for a person** appeared twice in #16's body, once from the agent's summary and once from finish.
+

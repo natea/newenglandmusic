@@ -77,13 +77,15 @@
 
 - [x] 5.1 After Nate's G2 and once groups 1–4 are green, push `change/add-build-workflow` to the fork. Verify with `gh api 'repos/natea/newenglandmusic/contents/.fabro/workflows/build?ref=change/add-build-workflow'` that every file of the folder is there.
   - 9 November 2026: pushed at 1665f43; the fork lists `apply.md`, `refactor.md`, `workflow.fabro` and `workflow.toml`.
-- [ ] 5.2 With Nate's go-ahead and intentable's task 8.3 done, deploy the bridge with `FABRO_WORKFLOW_REF=change/add-build-workflow`. Nate comments `/approve` on issue #14.
-- [ ] 5.3 From the run, record in `design.md`, and fix the design and code if the run contradicts them:
+- [x] 5.2 With Nate's go-ahead and intentable's task 8.3 done, deploy the bridge with `FABRO_WORKFLOW_REF=change/add-build-workflow`. Nate comments `/approve` on issue #14.
+- [x] 5.3 From the run, record in `design.md`, and fix the design and code if the run contradicts them:
   - root or `sudo`;
   - the setup, suite and agent times, and any agent timeout that applied;
   - whether checkpoint commits appeared, and whether they were empty;
   - whether the inline scripts ran as written. Before the live run, show it once with a test branch whose commit has "Fixes #1" and see finish refuse it;
   - the run branch's commits, the tasks left for people, and the result and summary.
+
+- [x] 5.4 Fix what the live run showed. Its first group's commit carried `.claude/settings.local.json`, the permissions the agent's session saved, because the draft branch doesn't ignore it. Setup now excludes it locally, the prompts say to stage files by name, and finish refuses a commit that carries it. The summary repeated the tasks left for a person, so the apply prompt now leaves them to finish. Verify with tests for "Setup excludes the agent's settings" and "The agent's settings committed", and the prompt tests.
 
 ## Workflow follow-up
 

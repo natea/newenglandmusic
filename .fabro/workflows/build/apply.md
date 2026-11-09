@@ -36,6 +36,7 @@ If the proposal leaves a decision open that you can't build without, don't guess
 - change anything under `.github/` or `.fabro/`, or `bin/publish-spek-page`;
 - put an `@` in your message for the issue, except inside backticks for code, such as `` `@admin.register` ``;
 - start subagents or background tasks;
+- commit `.claude/settings.local.json`, your session's own settings: stage files by name, never with `git add -A` or `git add .`;
 - leave anything uncommitted: end every group, and the whole session, with a clean working tree (`git status --porcelain` lists nothing).
 
 ## Your record
@@ -50,6 +51,6 @@ When you stop or finish, write `.intentable/build.json`, creating the folder if 
 - `message` is for the person who asked, who is not a developer: two to four plain sentences on what was built, or where and why you stopped, at most 2000 characters.
 - `left_for_people` lists the tasks only a person can do, or is empty.
 
-Then write `.intentable/summary.md`, for the pull request Nate reviews: what changed and where, the tests added, anything surprising, and each task left for a person with its reason.
+Then write `.intentable/summary.md`, for the pull request Nate reviews: what changed and where, the tests added, and anything surprising. Leave out the tasks left for a person: a later step adds them from your record.
 
 Write nothing else under `.intentable/`. A later step checks your commits and your record, and the run fails if they break these rules. Your session ends when you stop, and anything still running is lost, so stop only once the record and the summary are written and the working tree is clean.

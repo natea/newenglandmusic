@@ -47,6 +47,7 @@ EOT
 set -a; . ./.intentable/test.env; set +a
 venv/bin/python manage.py compilescss
 git rev-parse HEAD > .intentable/start
+echo .claude/settings.local.json >> $(git rev-parse --git-path info/exclude)
 if git status --porcelain | grep -q .; then echo 'setup changed tracked files:'; git status --porcelain; exit 1; fi
 "
     ]
@@ -132,6 +133,10 @@ def protected(path):
     return path.startswith('.github/') or path.startswith('.fabro/') or path == 'bin/publish-spek-page'
 
 
+# the permissions an agent's Claude Code session saves; setup excludes it, and no commit may carry it
+AGENT_SETTINGS = '.claude/settings.local.json'
+
+
 # the agent's record
 record_path = Path('.intentable/build.json')
 if not record_path.exists():
@@ -188,6 +193,8 @@ for line in git('rev-list', '--reverse', '--parents', start + '..HEAD').splitlin
         for path in row[1:]:
             if protected(path):
                 fail('commit ' + short + ' touches ' + path + ', which a build may not change')
+            if path == AGENT_SETTINGS:
+                fail('commit ' + short + ' carries ' + AGENT_SETTINGS + ', the agent session' + chr(39) + 's own settings')
 
 if outcome == 'complete':
     if work == 0:

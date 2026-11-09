@@ -165,6 +165,20 @@ The apply and refactor agents SHALL end with a clean working tree: every change 
 - **WHEN** the configuration tests read the setup and finish steps
 - **THEN** each ends by failing when `git status --porcelain` lists anything
 
+### Requirement: The agents' own settings never reach a commit
+
+A Claude Code session saves its permissions in `.claude/settings.local.json`, which the draft branch's `.gitignore` may not ignore. Setup SHALL add that file to the checkout's local exclude list, the prompts SHALL say to stage files by name and never commit it, and the finish step SHALL fail the run, naming the commit, when a commit carries it.
+
+#### Scenario: Setup excludes the agent's settings
+
+- **WHEN** the configuration tests read the setup step
+- **THEN** it adds `.claude/settings.local.json` to the file `git rev-parse --git-path info/exclude` names
+
+#### Scenario: The agent's settings committed
+
+- **WHEN** one of the run's commits adds `.claude/settings.local.json`
+- **THEN** the finish step fails the run and names the commit
+
 ### Requirement: A stopped build skips the refactoring pass
 
 The route step SHALL send a build whose apply outcome is `stopped` straight to the final check, and a `complete` one to refactor.
