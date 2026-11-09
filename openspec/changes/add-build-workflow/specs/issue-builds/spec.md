@@ -57,7 +57,7 @@ No command step of the `build` workflow SHALL run a script from the repository's
 #### Scenario: No script from the checkout
 
 - **WHEN** the configuration tests read every command step of the build graph
-- **THEN** none refers to a path that starts with `bin/`
+- **THEN** none runs a path that starts with `bin/`, as a command or through an interpreter
 
 #### Scenario: Inline scripts without escapes
 

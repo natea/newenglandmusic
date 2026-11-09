@@ -40,8 +40,8 @@
 
 ## 3. Route and finish
 
-- [ ] 3.1 Add the route node: inline Python, with no double quotes, backslashes or `{{`. It reads `.intentable/build.json` and prints the routing update: `refactor` for `complete`, `finish` otherwise. Add the edges route → refactor → finish and route → finish.
-- [ ] 3.2 Add the finish node: inline Python, with no double quotes, backslashes or `{{`, and a 60-minute `timeout`. It:
+- [x] 3.1 Add the route node: inline Python, with no double quotes, backslashes or `{{`. It reads `.intentable/build.json` and prints the routing update: `refactor` for `complete`, `finish` otherwise. Add the edges route → refactor → finish and route → finish.
+- [x] 3.2 Add the finish node: inline Python, with no double quotes, backslashes or `{{`, and a 60-minute `timeout`. It:
   - reads the record, and checks the outcome, the change's folder, the message rules (with a comment naming `bin/check-intentable-result` as their source; mentions inside backticks allowed) and `left_for_people`;
   - checks the commits from `.intentable/start` to `HEAD`: merges, checkpoint commits that change a file, closing keywords (with a comment naming the bridge's copy), and protected files, renames included;
   - for a complete build, checks there is at least one commit besides empty checkpoints, and that `tasks.md` has no unticked box outside `left_for_people`;
@@ -50,13 +50,14 @@
   - ends by failing if `git status --porcelain` lists anything.
 
   Each failure gets one plain reason, naming the commit, path or task.
-- [ ] 3.3 In the tests, extract the route and finish scripts from `workflow.fabro` and run them in temporary git repositories, with the suite command set to `true` or `false`. Verify with tests for:
+- [x] 3.3 In the tests, extract the route and finish scripts from `workflow.fabro` and run them in temporary git repositories, with the suite command set to `true` or `false`. Verify with tests for:
   - "Routing on the outcome", "The build graph", "Inline scripts without escapes" and "Setup and finish check the tree";
   - "A clean complete build" (with empty checkpoint commits), "A merge commit", "Work left uncommitted", "A closing keyword" (with the colon, cross-repository, address and several-reference forms) and "A protected file";
   - "An unticked box", "Nothing built", "A task left for a person", "A listed task that isn't left", "A stopped build with an unfinished group" and "A failing suite";
   - "A malformed record", "No record", "A message that breaks the rules" and "Code in the message";
   - "The written result" and "No summary".
-- [ ] 3.4 Add a test for "The graph is valid" that runs `fabro validate` on the build graph, skipped when `fabro` isn't installed (as in CI). Run it locally, and record that it passed in this task's note, for the archive check.
+- [x] 3.4 Add a test for "The graph is valid" that runs `fabro validate` on the build graph, skipped when `fabro` isn't installed (as in CI). Run it locally, and record that it passed in this task's note, for the archive check.
+  - 9 November 2026: passed locally with fabro 0.400.0-nightly.0 (`manage.py test core.tests.test_issue_builds.BuildGraphTestCase.test_the_graph_is_valid`).
 
 ## 4. Guide
 
