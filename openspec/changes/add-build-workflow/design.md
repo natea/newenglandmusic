@@ -9,9 +9,10 @@ intentable's `add-build-runs` (built, confirmed by Nate on 9 November 2026) chan
 
 Its design's "contract with nycnoise's `add-build-workflow`" is the brief for this change.
 
-Two Fabro facts shape the design:
+Three facts shape the design:
 - **The workflow's folder may not be in the sandbox.** A run's checkout is the target branch. Fabro resolves prompt files when it reads the workflow, but doesn't document putting the workflow's own folder into the sandbox, so a command can't rely on a script beside the graph.
-- **Fabro commits after each step.** After every node that changed files, Fabro stages the changes and adds a checkpoint commit, `fabro(<run-id>): <node> (<status>)`, to the run branch, and pushes it.
+- **Fabro commits after each step.** After every node, Fabro stages any changes and adds a checkpoint commit, `fabro(<run-id>): <node> (<status>)`, to the run branch, and pushes it. Its binary commits with `--allow-empty`, so steps that changed nothing very likely leave empty checkpoint commits too.
+- **`.gitignore` ignores `build/` at any depth** (line 11, a Python packaging entry), which would silently keep `.fabro/workflows/build/` out of every commit.
 
 ## Goals / Non-Goals
 
@@ -27,71 +28,117 @@ Two Fabro facts shape the design:
 
 ## Decisions
 
+**Keep the folder out of `.gitignore`.** A line `!/.fabro/workflows/build/` goes right after `build/`. A test asks `git check-ignore` about every file in the folder. Without it, the branch would be pushed without the workflow, and the bridge's first start would fail and use up #14's only build attempt. Anchoring the packaging line as `/build/` would also work, but would change what it ignores elsewhere.
+
 **Graph: setup → apply → route → refactor → finish, or route → finish.** Apply is one agent for all groups, not one node per group. A change's group count isn't known when the graph is written, and Fabro's graphs are static. A single agent session also keeps what it learned in group 1 for group 2. Route is an inline command that reads apply's record and sends a `stopped` build straight to finish, so no refactoring pass runs on unfinished work.
 
 Alternative: a looping node per group, with a counter in the context. That's more moving parts, and Fabro's loop limits (`max_visits`) would need a bound the change doesn't know.
 
-**Checks inline in the graph.** The draft branch for #14 was cut before this change, so `bin/` on it has no build checker. The route and finish steps are command nodes with `language="python"` and the script written in `workflow.fabro`. `fabro validate` accepts a multi-line script; the live check confirms Fabro runs it as written. The tests extract that script text from the graph and run it in temporary git repositories, so they exercise the real check (rule E1), not a copy.
+**Checks inline in the graph.** The draft branch for #14 was cut before this change, so `bin/` on it has no build checker. The route and finish steps are command nodes with `language="python"` and the script written in `workflow.fabro`. `fabro validate` accepts a multi-line script. The scripts:
+- use no double quotes and no backslashes, so nothing depends on how Fabro decodes the graph's strings. Patterns use character classes such as `[0-9]` and `[ ]`, with a literal tab where one is needed, and lookarounds instead of word-boundary escapes;
+- contain no `{{`, since scripts are templated.
+
+The tests extract the script text from the graph and run it in temporary git repositories, so they exercise the real check (rule E1), not a copy. Their step parser follows a quoted attribute to its closing quote, unlike the one in `test_fabro_config.py`, which a `]` inside a script would cut short. The live check also records a known-bad commit being refused, to show the scripts run as written.
 
 Alternatives:
 - `git show origin/main:bin/check-intentable-build`: it fails for the test branch until merged, and ties a run to whatever `main` is at that moment.
 - A server variable naming the ref: one more setting to keep right.
 
 **Agents write a record; finish writes the result.** As with `spec`'s `draft.json`:
-- **the apply agent** writes `.intentable/build.json`, with `change`, `outcome` and `message`, and `.intentable/pull-request.md`;
-- **the refactor agent** may add a line to the summary;
-- **finish, and only finish,** writes `.intentable/result.json`.
+- **the apply agent** writes `.intentable/build.json`, with `change`, `outcome`, `message` and `left_for_people` (each task it left for a person, with the reason, also named in its message). It also writes the summary, `.intentable/summary.md`;
+- **the refactor agent** may add its findings to the summary;
+- **finish, and only finish,** writes `.intentable/result.json`, and copies the summary to `.intentable/pull-request.md`, adding the tasks left for people.
 
-So a run that fails a check leaves no result the bridge could read as a build. `.intentable/` is git-ignored, so none of these reach a commit.
+So both files the bridge reads come from the last stage, as it expects. A run that fails a check leaves no result the bridge could read as a build. `pull-request.md` is written whenever there is a summary or a task left for a person, and left out otherwise, since the bridge opens the pull request without one. `.intentable/` is git-ignored.
 
-**The change's name reaches the agents only through their prompts.** The bridge's workflow contract keeps inputs out of commands. `change_name` is checked by the bridge, but a command still never sees it. Finish takes the change from the agent's record and checks that its folder exists; the bridge compares it with the G2.
+**The agents see the change, not the thread.** The bridge sends all six inputs, and the workflow declares them. But the prompts use only `change_name`, `issue_number` and `issue_title`. The confirmed proposal is the instruction. The body and thread are text nobody reviewed, and the apply agent holds a token that can push. Commands get no input at all, per the bridge's workflow contract. Finish takes the change from the agent's record and checks that its folder exists; the bridge compares it with the G2.
 
-**Setup, as CI does, in one command.**
+**Setup, as CI does, in one command with a 30-minute timeout.** Fabro's default is ten minutes per command.
 - **Tools:** Claude Code, the ACP adapter and `openspec` pinned with `npm -g --prefix /usr/local`, as `spec` does.
 - **Python:** `uv` installs Python 3.11 and creates `venv/`. `uv pip install -r requirements-dev.txt`, per `AGENTS.md`.
-- **Postgres:** the distribution's Postgres package, started locally, with a `djtesting` database. Root or `sudo` is used as available.
+- **Postgres:** the distribution's Postgres package, started locally, with a `djtesting` database. Root or `sudo` is used as available. Setup then checks `server_version_num` is at least 140000, since Django 5.2 needs PostgreSQL 14 (CI uses 17).
 - **Browser:** `playwright install --with-deps chromium`.
 - **CSS:** `compilescss`.
 - **Test settings:** CI's environment goes in `.intentable/test.env`: `DATABASE_URL`, `DJANGO_SETTINGS_MODULE=nycnoise.settings.test`, the dummy secret and the switches. Every test run sources it.
-- **The start commit:** `git rev-parse HEAD` goes in `.intentable/start`, the base of finish's commit checks. This is the commit the run targeted: the G2 commit, or the head a retry chose.
-- **A clean tree:** setup ends by failing if `git status --porcelain` lists anything, so its own checkpoint is empty. `venv/`, the compiled CSS and `.intentable/` are already ignored.
+- **The target commit:** `git rev-parse HEAD` goes in `.intentable/start`, the base of finish's commit checks. This is the commit the run targeted: the G2 commit, or the head a retry chose.
+- **A clean tree:** setup ends by failing if `git status --porcelain` lists anything. `venv/`, the compiled CSS and `.intentable/` are already ignored.
 
 **The commit rules, in the prompts and in finish.** Apply works group by group:
 1. read the proposal, design, specs and the group's tasks;
 2. change the code and tests;
-3. tick the group's boxes;
+3. tick the boxes of the tasks it did;
 4. run the suite;
-5. commit only if it passes, with a message saying what the group did.
+5. commit only if it passes. The subject says what the group did, and the body says why if it isn't obvious (G6).
 
-If a group can't pass, the agent stops, discards that group's changes (`git restore`, `git clean` of untracked files outside ignored paths), records `stopped` and says why in plain words. Both prompts forbid:
+**When apply stops, or leaves a task.**
+- **A task only a person can do** is left unticked and listed in `left_for_people` with the reason. Only two kinds qualify: a check by hand in a local browser, or a live check against an outside system. Nate sees each one in the pull request and in the message for the issue. #14's tasks have one, a by-hand check that the export button downloads a file.
+
+  This departs from G3's "every checkbox in the group is ticked" and from the contract's "one per task group, with its boxes ticked", and so from intentable's `complete` ("every task group … committed"). It is the author's decision, for Nate at G2. The reason is G3's own clause for a group whose check can't run where it is applied: "the gate is that group's own verifiable outcome instead". The group is committed once its automated tests pass, and the box stays honest, unticked for the person who will do it. The alternatives, ticking a box for work not done, or stopping every change that has a by-hand check, are worse. A Workflow follow-up rewords intentable's `outcome` to match.
+- **A group that can't pass:** the agent stops, discards that group's changes (`git restore` and `git clean` of untracked files outside ignored paths), records `stopped` and says why in plain words.
+- **A decision the proposal doesn't settle** gets the same treatment: the agent records `stopped`, with the question in its message.
+
+**No build waits for a person.** This follows Nate's rule for this repository's runs: "Runs end with their result; no human gates. Nobody's answer is waited for" (2 November 2026, `add-triage-clarify`). intentable's bridge would relay a build's question to the issue. But a sandbox idles out after about 90 minutes waiting, and loses unpushed work, so a stopped build with the question in its message is the safer form.
+
+**How the answer reaches a retry.** The agents never read the thread, so an answer posted on the issue would never reach a retried build. Instead, once Mark or Sooz answers on the issue, Nate writes the answer into the change's design (or proposal) on `change/<name>`, as a commit after G2, or has an agent do it. Then he runs `retry-build.ts`. The bridge's retry builds from the branch's head, as long as it holds the G2 commit, and checks every commit after G2. So the retried agent reads the answer as part of the proposal it applies. The apply prompt tells the agent that a question's answer will arrive that way, and the guide tells Nate.
+
+This edits a confirmed proposal after G2, without a second `/approve`. That is Nate's own act, as the bridge's design treats any push he makes after G2. If an agent writes the commit for him, he reads it before retrying. The retry works only while no build's work is on the branch, which holds after a stopped build, since a stopped build is never published.
+
+**What both prompts forbid:**
 - merges and pushes;
 - closing keywords in messages;
-- `.github/`, `.fabro/` and `bin/publish-spek-page`;
+- the protected files (`.github/`, `.fabro/`, `bin/publish-spek-page`);
+- an `@` in the message for the issue. Code names go in backticks;
 - subagents and background tasks;
 - leaving anything uncommitted.
 
-Finish then checks the commits between `.intentable/start` and `HEAD`. Each check reads git directly: `git rev-list --parents` for merges, and `git diff-tree -r -M --name-status` for files, renames included. A checkpoint subject `fabro(` means an agent left work behind, so the run fails. The closing-keyword pattern matches the bridge's: any case, an optional colon, `#N`, `owner/repo#N`, an issue address, and several references after one keyword. A comment beside it says the bridge's copy, in intentable's `bridge/src/builds.ts`, must change with it.
+**Finish's checks** run, with a 60-minute timeout, on the commits from `.intentable/start` to `HEAD`. Each check reads git directly: `git rev-list --parents` for merges, and `git diff-tree -r -M --name-status` for files, renames included. A Fabro checkpoint commit (subject starting `fabro(`) fails the run only if it changes a file. An empty one passes, and doesn't count as the build's work for the "at least one commit" rule.
 
-**Refactoring rules travel in the prompt.** The fork has no `_workflows/`, and the draft branch couldn't be relied on to have it anyway. So `refactor.md` states the rules it applies, condensed from intentable's `_workflows/refactoring.md`: smaller units with clear names, no duplicated logic, the project's vocabulary, no change to specified behaviour, the suite green before and after. It makes at most one commit, "Refactor <change>", or none.
+The closing-keyword pattern matches the bridge's: any case, an optional colon, `#N`, `owner/repo#N`, an issue address, and several references after one keyword. A comment beside it says the bridge's copy, in intentable's `bridge/src/builds.ts`, must change with it.
 
-**Finish runs the suite once more,** with the same environment. A build that is green at each group but red at the end, after the refactor, fails the run instead of being published. The command finish runs is `venv/bin/python manage.py test`, which the tests replace through one environment variable, so they never run the suite recursively.
+The message rules are those of `bin/check-intentable-result` (not empty, at most 2000 characters, no `@` mention), plus one relaxation: a mention inside backticks is allowed, since GitHub notifies no one from code, so `` `@admin.register` `` passes. A comment names the source. The bridge posts the message as it is.
+
+With no backslashes, line breaks and tabs come from `chr(10)` and `chr(9)`. The closing-keyword whitespace class is built from them at runtime, so "Fixes" followed by a line break and "#3" is caught, as the bridge's `\s` catches it. Git output is split with `splitlines()`.
+
+Finish then runs the suite once more, with the same environment, and ends by failing if `git status --porcelain` lists anything, so its own checkpoint is empty. A build that is green at each group but red at the end, after the refactor, fails the run instead of being published. The suite command is `venv/bin/python manage.py test`, which the tests replace through one environment variable, so they never run the suite recursively.
+
+**Refactoring rules travel in the prompt.** The fork has no `_workflows/`, and the draft branch couldn't be relied on to have it anyway. `refactor.md` carries intentable's `_workflows/refactoring.md`, condensed to what an unattended agent may act on:
+- R1: no change in behaviour;
+- R2: the suite passes afterwards, and the failure set doesn't grow;
+- R3: renames go through the whole project;
+- R4: break up long functions;
+- R5: extract logic expressed more than once;
+- R7: correct comments;
+- R11: names say what things are.
+
+What the rules leave to the owner is reported, not done, in the summary for Nate at G4:
+- R6: circular dependencies and layering violations;
+- R9: dead code, which needs the owner's confirmation;
+- R10: a new grouping, or a move across a module or layer boundary.
+
+**Refactor may make no commit.** It makes at most one commit, "Refactor <change>", or none when nothing is worth changing, as `dev-finish-change`'s refactoring step allows ("one commit, or none"). This narrows the wording of the contract Nate confirmed ("a refactoring pass as its own commit") and of intentable's `outcome` ("the refactoring pass were committed"). A `complete` build means the pass was made, with its commit optional. The bridge checks for no refactoring commit, so nothing breaks. Its live check 8.5 and its dictionary entry should say "the refactoring pass, with any commit it made". That is a wording fix for `add-build-runs` (Workflow follow-up).
 
 **Mocks in tests.** The configuration tests read files only. The finish and route tests build small git repositories in temporary folders, with the suite command replaced by `true` or `false`. No Fabro, GitHub, Anthropic or Daytona is reached, and no outside service is called. That follows the repository's rule that tests never touch the network.
 
 ## Risks / Trade-offs
 
 - **[Root in the sandbox]** Installing Postgres and Chromium's system libraries needs root or `sudo`. → `spec`'s install writing to `/usr/local` suggests one of them works. Setup uses whichever is there, and fails clearly otherwise. The live check confirms it.
-- **[Long setup]** Python, the requirements, Postgres and Chromium add minutes to every build. → Accepted for now. A prebuilt Daytona image (the plan's step 2) would remove most of it.
-- **[The suite per group]** Running the whole suite after every group is slow on a large change. → It is what G3 asks. The 360-minute lifetime and a test-per-group budget in the prompt bound it.
+- **[Long setup]** Python, the requirements, Postgres and Chromium add minutes to every build, on a 2-CPU sandbox. → Setup's timeout is 30 minutes. A prebuilt Daytona image (the plan's step 2) would remove most of it. The live check records the time.
+- **[The suite per group]** Running the whole suite after every group is slow on a large change (about 1,500 tests today). → It is what G3 asks. The 360-minute lifetime bounds it, and the live check records the time. Fabro documents no default timeout for agent steps, and the live check notes whether one applied.
+- **[A red suite before any group]** If the suite already fails on the draft branch, apply stops at group 1, and finish fails the run on the red suite. The issue then gets the bridge's failed-run comment, not the agent's reason. → Rare, since `main` is green in CI. Nate sees the agent's reason in the run.
 - **[A checkpoint commit with work in it]** If an agent ignores the clean-tree rule, Fabro still commits and pushes that work to the run branch before finish can refuse it. → Finish fails the run, so the bridge never publishes it. The run branch keeps it for Nate to look at.
 - **[The two closing-keyword patterns]** The one in finish and the bridge's can drift. → A comment in each names the other. The bridge's check is the one that guards publishing.
-- **[Inline scripts are harder to read]** Python inside a DOT attribute uses single quotes only and can't import a local module. → Each script stays short, and the tests run it as written.
+- **[The sandbox's token acts as Nate]** The run branch is pushed with the vault token, which can push any branch, `main` included. → `main` is protected against force-push and deletion before the live check. Blocking direct pushes waits for the Intentable GitHub App, which gives Fabro an identity of its own (Nate's decision, 9 November 2026).
+- **[Inline scripts are harder to read]** Python inside a DOT attribute uses single quotes only, no backslashes, and can't import a local module. → Each script stays short, and the tests run it as written.
 
 ## Migration Plan
 
-1. Push `change/add-build-workflow` with the draft, for its Spek page, before G2.
-2. After G2 and apply, test it from the branch: deploy the bridge with `FABRO_WORKFLOW_REF=change/add-build-workflow`. The branch carries `main`'s other workflows, since it is cut from `main`. Nate then comments `/approve` on issue #14, as intentable's `add-build-runs` task 8.4 describes.
-3. Record what the live run showed: root or `sudo`, setup time, whether checkpoint commits appeared, and whether the inline scripts ran as written. Fix the design if they contradict it.
+1. Push `change/add-build-workflow` with the draft, for its Spek page, before G2. Done.
+2. After G2 and apply, push it again. Check the fork has `.fabro/workflows/build/` on the branch. Test it from the branch: deploy the bridge with `FABRO_WORKFLOW_REF=change/add-build-workflow`. The branch carries `main`'s other workflows, since it is cut from `main`. Nate then comments `/approve` on issue #14, as intentable's `add-build-runs` task 8.4 describes.
+3. Record what the live run showed, and fix the design if it contradicts it:
+   - root or `sudo`;
+   - the setup, suite and agent times;
+   - whether checkpoint commits appeared, and whether they were empty;
+   - whether the inline scripts ran as written.
 4. Merge to `main` at Nate's G4, then remove the bridge's test setting.
 
 Rollback: removing `.fabro/workflows/build/` from the branch the bridge reads makes build starts fail, which the bridge reports; nothing else depends on it.
