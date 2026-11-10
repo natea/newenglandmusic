@@ -109,6 +109,12 @@ class ActIndexTestCase(TestCase):
         # and on to the index, from /artists
         self.assertRedirects(self.client.get("/bands/", follow=True), "/bands", status_code=301)
 
+    def test_the_singular_address(self):
+        for typed, page in (("/band", "/bands"), ("/band/", "/bands"), ("/artist/", "/artists"),
+                            ("/band/belly", "/bands/belly"), ("/artist/anjimile/", "/artists/anjimile")):
+            response = self.client.get(typed)
+            self.assertEqual((response.status_code, response["Location"]), (301, page), typed)
+
     def test_the_rail_links_only_letters_with_acts(self):
         response = self.page()
         self.assertContains(response, '<a href="#letter-A">A</a>', html=True)
