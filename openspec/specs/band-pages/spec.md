@@ -1,7 +1,7 @@
 # band-pages Specification
 
 ## Purpose
-TBD - created by archiving change add-band-pages. Update Purpose after archive.
+Give every artist and band a public page that leads with their next show and adds their members, links, credited photos and bio, so fans can find out who is playing. Events link to these pages, and search engines can find them.
 
 ## Requirements
 

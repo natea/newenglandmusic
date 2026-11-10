@@ -1,7 +1,7 @@
 # artist-records Specification
 
 ## Purpose
-TBD - created by archiving change add-artists-and-bands. Update Purpose after archive.
+Keep a record of every artist and band the site lists: their members, where they came from (an imported list, Sooz's curated lists or an event's artist names), and what MusicBrainz, Wikipedia, Wikidata and Commons add to them. Admins can check and correct the records, and acts held for review stay off the site until someone looks at them.
 
 ## Requirements
 
