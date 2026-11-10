@@ -15,5 +15,5 @@ Issue: [#28 Add CSV export button to the artists and bands roster/listing](https
 
 ## 3. Finish
 
-- [ ] 3.1 Run the whole suite with the network blocked and verify it passes, with every scenario in `specs/act-export/spec.md` covered.
-- [ ] 3.2 Mention the new buttons in `PRODUCTION.md` if it describes the venue export, and verify it matches the shipped behaviour.
+- [x] 3.1 Run the whole suite with the network blocked and verify it passes, with every scenario in `specs/act-export/spec.md` covered.
+- [x] 3.2 Mention the new buttons in `PRODUCTION.md` if it describes the venue export, and verify it matches the shipped behaviour.
