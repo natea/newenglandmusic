@@ -274,6 +274,12 @@ class ProposePromptTestCase(SimpleTestCase):
         ):
             self.assertIn(needed, text, needed)
 
+    def test_sketch_prompt_names_the_checkers_elements(self):
+        # issue #26's sketch used <kbd>, which the prompt didn't say was refused
+        named = set(re.findall(r"`(\w+)`", re.search(r"Use only these elements: ([^.]*)\.", prompt("sketch")).group(1)))
+        listed = re.search(r"SAFE_ELEMENTS = \{(.*?)\}", RESULT_CHECKER.read_text(), re.S).group(1)
+        self.assertEqual(named, set(re.findall(r'"(\w+)"', listed)))
+
 
 # the checkers, run as the workflow runs them, in a fresh folder with a fake openspec
 
@@ -603,6 +609,14 @@ class SketchTestCase(SimpleTestCase):
             status, output = self.sketch_run(folder, extra={"sketches/b.html": sketch}).check("--draft")
             self.assertEqual(status, 1)
             self.assertIn("behavior", output)
+
+    def test_a_sketch_with_text_elements(self):
+        # issue #26's sketch was refused for <kbd>
+        text = "<p>Press <kbd>/</kbd>, <q>quoted</q> <cite>a</cite> <var>n</var> <samp>out</samp> <dfn>term</dfn> <del>old</del> <ins>new</ins>long<wbr>word</p><address>Boston</address>"
+        with tempfile.TemporaryDirectory() as folder:
+            sketch = SAFE_SKETCH.replace("</main>", text + "</main>")
+            status, output = self.sketch_run(folder, extra={"sketches/b.html": sketch}).check("--sketches")
+            self.assertEqual(status, 0, output)
 
     def test_a_sketch_browsers_read_differently(self):
         refresh = '<meta http-equiv=refresh content="0;url=https://evil.example/">'
