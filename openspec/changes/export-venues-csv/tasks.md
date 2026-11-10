@@ -13,7 +13,8 @@ Issue: [#14 Create an Export to CSV/Excel option for the venue database](https:/
 
 ## 3. Button
 
-- [ ] 3.1 Add `admin/core/venue/change_list.html`, extending the core change list, with an "Export to CSV" button that keeps the current query string and shows only when the user has view permission. Verify: a test that the button is on the list for an admin and keeps a filter's query string, and that the list of a user without permission, if they can reach it, has no button. Check at localhost:8001/admin/core/venue/ that the button sits in the toolbar and downloads a file that opens in a spreadsheet.
+- [x] 3.1 Add `admin/core/venue/change_list.html`, extending the core change list, with an "Export to CSV" button that keeps the current query string and shows only when the user has view permission. Verify: a test that the button is on the list for an admin and keeps a filter's query string, and that the list of a user without permission, if they can reach it, has no button. Check at localhost:8001/admin/core/venue/ that the button sits in the toolbar and downloads a file that opens in a spreadsheet.
+  - 9 November 2026: Nate checked it at localhost:8002 on this branch: the Export to CSV button sits in the toolbar beside Add venue, and the file opens in Numbers with every column and value.
 
 ## 4. Docs
 
