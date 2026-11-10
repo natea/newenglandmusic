@@ -37,3 +37,8 @@
 - [x] 5.1 With Nate's go-ahead, run `spec` from this branch for issue #9, already in `spec-review` (Nate's choice, 2 November 2026); check the run's artifacts, `review.md`, the agent count, the elapsed time against the sandbox lifetime, and, if it needs design, whether Impeccable's decision step runs unattended without a browser
 - [x] 5.2 Check that the bridge's draft branch builds its Spek page; that page is kept, like every page
 - [ ] 5.3 On the next spec run with sketches, check that the `thumbnails` job's PNGs reach the page, and how long it takes
+  - 9 November 2026: still not done when the change was archived, at Nate's request; no spec run with sketches has happened since. It is a follow-up below.
+
+## Workflow follow-up
+
+- Archived on 9 November 2026 with 5.3 open. On the next spec run with sketches, check that the `thumbnails` job's images reach the proposal page, and how long it takes.
