@@ -1,9 +1,14 @@
 import csv
 import io
+import re
 
 from core.act_export import ACT_COLUMNS, ARTIST_HEADER, BAND_HEADER, NOT_EXPORTED, act_row, header, prefetch
+from core.admin_group import GROUP_NAME, sync_admin_group
 from core.models import Artist, Band, BandMembership
+from django.contrib.auth.models import Group, Permission, User
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 
 
 def row_dict(act):
@@ -93,3 +98,132 @@ class FieldCoverageTestCase(TestCase):
             undecided = fields - set(ACT_COLUMNS) - NOT_EXPORTED
             self.assertEqual(undecided, set(), f"export these {model.__name__} fields or name them in NOT_EXPORTED")
             self.assertEqual(set(ACT_COLUMNS) - fields, set())
+
+
+class ExportViewTestCase(TestCase):
+    """the admin's two lists, one test class for both kinds"""
+
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+
+    def rows(self, response):
+        body = b"".join(response.streaming_content).decode("utf-8-sig")
+        return list(csv.reader(io.StringIO(body)))
+
+    def names(self, rows):
+        return [r[1] for r in rows[1:]]
+
+    def test_export_every_artist(self):
+        for name in ("A", "B", "C"):
+            Artist.objects.create(name=name)
+        response = self.client.get("/admin/core/artist/export-csv/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/csv", response["Content-Type"])
+        self.assertRegex(response["Content-Disposition"], r'attachment; filename="artists-\d{4}-\d\d-\d\d\.csv"')
+        rows = self.rows(response)
+        self.assertEqual(rows[0], ARTIST_HEADER)
+        self.assertEqual(self.names(rows), ["A", "B", "C"])
+
+    def test_band_filename_and_header(self):
+        Band.objects.create(name="A")
+        response = self.client.get("/admin/core/band/export-csv/")
+        self.assertRegex(response["Content-Disposition"], r'attachment; filename="bands-\d{4}-\d\d-\d\d\.csv"')
+        self.assertEqual(self.rows(response)[0], BAND_HEADER)
+
+    def test_export_a_filtered_band_list(self):
+        Band.objects.create(name="A", state="MA")
+        Band.objects.create(name="B", state="MA")
+        Band.objects.create(name="C", state="NY")
+        rows = self.rows(self.client.get("/admin/core/band/export-csv/", {"state": "MA"}))
+        self.assertEqual(self.names(rows), ["A", "B"])
+
+    def test_export_a_searched_list(self):
+        Artist.objects.create(name="Kim Gordon")
+        Artist.objects.create(name="Sinéad")
+        rows = self.rows(self.client.get("/admin/core/artist/export-csv/", {"q": "kim"}))
+        self.assertEqual(self.names(rows), ["Kim Gordon"])
+
+    def test_more_bands_than_a_page(self):
+        Band.objects.bulk_create(Band(name=f"Band {i:03}", slug=f"band-{i:03}") for i in range(250))
+        self.assertEqual(len(self.rows(self.client.get("/admin/core/band/export-csv/"))), 251)
+
+    def test_held_acts_are_included(self):
+        Band.objects.create(name="Live")
+        Band.objects.create(name="Held", needs_review=True, review_reasons=["not_found"])
+        rows = self.rows(self.client.get("/admin/core/band/export-csv/"))
+        held = [r for r in rows[1:] if r[1] == "Held"][0]
+        self.assertEqual(held[BAND_HEADER.index("needs_review")], "yes")
+        self.assertEqual(len(rows), 3)
+
+    def test_opens_in_excel(self):
+        Artist.objects.create(name="Sinéad")
+        body = b"".join(self.client.get("/admin/core/artist/export-csv/").streaming_content)
+        self.assertTrue(body.startswith(b"\xef\xbb\xbf"))
+        self.assertIn("Sinéad".encode("utf-8"), body)
+
+    def test_members_are_read_without_a_query_per_band(self):
+        artist = Artist.objects.create(name="M")
+
+        def queries(bands):
+            for i in range(bands):
+                BandMembership.objects.create(band=Band.objects.create(name=f"B{i}-{Band.objects.count()}"), artist=artist, role="bass")
+            with CaptureQueriesContext(connection) as captured:
+                body = b"".join(self.client.get("/admin/core/band/export-csv/").streaming_content)
+            self.assertIn(b"M (bass)", body)
+            return len(captured)
+
+        self.assertEqual(queries(1), queries(5))
+
+    def test_signed_out_visitor_goes_to_login(self):
+        Artist.objects.create(name="Secret Artist")
+        self.client.logout()
+        response = self.client.get("/admin/core/artist/export-csv/")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/admin/login/", response["Location"])
+        self.assertNotIn(b"Secret Artist", response.content)
+
+    def test_view_permission_is_per_kind(self):
+        Artist.objects.create(name="Secret Artist")
+        Band.objects.create(name="Open Band")
+        staff = User.objects.create_user("staff", "s@example.com", "pw", is_staff=True)
+        staff.user_permissions.add(Permission.objects.get(codename="view_band"))
+        self.client.force_login(staff)
+        response = self.client.get("/admin/core/artist/export-csv/")
+        self.assertEqual(response.status_code, 403)
+        self.assertNotIn(b"Secret Artist", response.content)
+        self.assertNotContains(self.client.get("/admin/core/band/"), "Secret Artist")
+        self.assertEqual(self.client.get("/admin/core/band/export-csv/").status_code, 200)
+
+    def test_member_of_the_admin_group_can_download(self):
+        sync_admin_group()
+        Band.objects.create(name="A")
+        staff = User.objects.create_user("editor", "e@example.com", "pw", is_staff=True)
+        staff.groups.add(Group.objects.get(name=GROUP_NAME))
+        self.client.force_login(staff)
+        response = self.client.get("/admin/core/band/export-csv/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(self.rows(response)), 2)
+
+
+class ExportButtonTestCase(TestCase):
+    def test_button_keeps_the_filter_query_string(self):
+        Band.objects.create(name="A", state="MA")
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+        html = self.client.get("/admin/core/band/", {"state": "MA", "q": "A"}).content.decode()
+        match = re.search(r'<a href="([^"]*)" class="export-csv"', html)
+        self.assertTrue(match.group(1).startswith("/admin/core/band/export-csv/?"))
+        self.assertIn("state=MA", match.group(1))
+        self.assertIn("q=A", match.group(1))
+
+    def test_each_list_links_to_its_own_export(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+        self.assertContains(self.client.get("/admin/core/artist/"), 'href="/admin/core/artist/export-csv/')
+        self.assertContains(self.client.get("/admin/core/band/"), 'href="/admin/core/band/export-csv/')
+
+    def test_no_button_without_view_permission(self):
+        staff = User.objects.create_user("staff", "s@example.com", "pw", is_staff=True)
+        staff.user_permissions.add(Permission.objects.get(codename="view_band"))
+        self.client.force_login(staff)
+        self.assertEqual(self.client.get("/admin/core/artist/").status_code, 403)
+        self.assertNotContains(self.client.get("/admin/core/artist/"), "Export to CSV", status_code=403)
+        self.assertContains(self.client.get("/admin/core/band/"), "Export to CSV")

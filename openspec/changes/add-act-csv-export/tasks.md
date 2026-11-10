@@ -8,10 +8,10 @@ Issue: [#28 Add CSV export button to the artists and bands roster/listing](https
 
 ## 2. The button and download
 
-- [ ] 2.1 Add the export route, view and `can_export` context to `MusicActAdmin`, sharing the streaming code with `VenueAdmin` without changing its behaviour; verify the existing venue export tests still pass.
-- [ ] 2.2 Add the Artist and Band change-list templates showing the button only when `can_export`; verify the button is present for permitted staff and absent otherwise.
-- [ ] 2.3 Write the automated tests for every scenario of "Staff can download the artist and band lists as CSV": everything, filtered, searched, more than a page, held acts, the byte order mark and filenames.
-- [ ] 2.4 Write the automated tests for "Only staff who may view that kind of act can export": signed out, staff without permission (artists versus bands), and the admin group.
+- [x] 2.1 Add the export route, view and `can_export` context to `MusicActAdmin`, sharing the streaming code with `VenueAdmin` without changing its behaviour; verify the existing venue export tests still pass.
+- [x] 2.2 Add the Artist and Band change-list templates showing the button only when `can_export`; verify the button is present for permitted staff and absent otherwise.
+- [x] 2.3 Write the automated tests for every scenario of "Staff can download the artist and band lists as CSV": everything, filtered, searched, more than a page, held acts, the byte order mark and filenames.
+- [x] 2.4 Write the automated tests for "Only staff who may view that kind of act can export": signed out, staff without permission (artists versus bands), and the admin group.
 
 ## 3. Finish
 
