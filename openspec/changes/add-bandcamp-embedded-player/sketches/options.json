@@ -1,0 +1,20 @@
+[
+  {
+    "file": "a.html",
+    "label": "Slim strip under the row",
+    "thesis": "Keep the listing dense: a 42px player, no artwork, opens below the row, and a one-line Listen row on act pages.",
+    "risk": "Without artwork a visitor can't tell what is playing, and Bandcamp's slim player is its most cramped one."
+  },
+  {
+    "file": "b.html",
+    "label": "Full player with artwork",
+    "thesis": "Bandcamp's large player is the draw for small acts: artwork and track list open under the row, and a Listen section with a plum rule on act pages.",
+    "risk": "A 300px player under a row breaks the dense list's rhythm, and opening several events makes the page very long."
+  },
+  {
+    "file": "c.html",
+    "label": "Side panel, one player",
+    "thesis": "The listing never grows: the Bandcamp button fills one sticky panel beside the column, and act pages put play in the lavender strip at the top of the card.",
+    "risk": "Breaks the one-column rule, needs script to fill the panel, and has no room at narrow widths, where it must become the inline strip anyway."
+  }
+]
