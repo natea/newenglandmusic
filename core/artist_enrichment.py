@@ -141,8 +141,9 @@ def links(details):
         kind, url = relation.get("type"), ((relation.get("url") or {}).get("resource")) or ""
         if relation.get("target-type") != "url" or relation.get("ended"):
             continue
-        if clean_hub_url(url):
-            found.setdefault("link_hub_url", clean_hub_url(url))
+        hub_address = clean_hub_url(url)
+        if hub_address:
+            found.setdefault("link_hub_url", hub_address)
         if kind not in URL_TYPES:
             continue
         if kind == "official homepage":
