@@ -7,11 +7,13 @@ digraph Spec {
     exit  [shape=Msquare, label="Exit"]
 
     // Claude Code, its ACP adapter and openspec at pinned versions; Impeccable
-    // from its tagged release; and the changes that existed before the agent ran
+    // from its tagged release; the default branch's checkers and sketch rules,
+    // since a revision's checkout is its draft branch, which can predate them;
+    // and the changes and commit that existed before the agent ran
     install [
         label="Install the tools",
         shape=parallelogram,
-        script="python3 --version && npm install -g --prefix /usr/local @anthropic-ai/claude-code@2.1.316 @agentclientprotocol/claude-agent-acp@0.99.1 @fission-ai/openspec@1.16.0 && git clone --quiet --depth 1 --branch skill-v4.8.0 https://github.com/pbakaus/impeccable /tmp/impeccable && claude plugin marketplace add /tmp/impeccable && claude plugin install impeccable@impeccable && python3 bin/check-intentable-reviews --record-existing"
+        script="python3 --version && npm install -g --prefix /usr/local @anthropic-ai/claude-code@2.1.316 @agentclientprotocol/claude-agent-acp@0.99.1 @fission-ai/openspec@1.16.0 && git clone --quiet --depth 1 --branch skill-v4.8.0 https://github.com/pbakaus/impeccable /tmp/impeccable && claude plugin marketplace add /tmp/impeccable && claude plugin install impeccable@impeccable && mkdir -p .intentable/main && git fetch --quiet origin HEAD && git show FETCH_HEAD:bin/check-intentable-result > .intentable/main/check-intentable-result && git show FETCH_HEAD:bin/check-intentable-reviews > .intentable/main/check-intentable-reviews && git show FETCH_HEAD:.fabro/workflows/spec/sketch.md > .intentable/main/sketch.md && python3 .intentable/main/check-intentable-reviews --record-existing"
     ]
 
     propose [
@@ -22,10 +24,11 @@ digraph Spec {
         prompt="@propose.md"
     ]
 
-    check_draft [label="Check the draft", shape=parallelogram, script="python3 bin/check-intentable-result spec --draft"]
+    check_draft [label="Check the draft", shape=parallelogram, script="python3 .intentable/main/check-intentable-result spec --draft"]
 
-    // prints {"context_updates": {"route": "sketch" | "back" | "review"}} and records the labels
-    route [label="Route", shape=parallelogram, output_schema="routing", script="python3 bin/check-intentable-reviews --route"]
+    // prints {"context_updates": {"route": "sketch" | "back" | "revised" | "review"}} and records the
+    // labels; "revised" and "review" both take the unconditional edge to the fan-out
+    route [label="Route", shape=parallelogram, output_schema="routing", script="python3 .intentable/main/check-intentable-reviews --route"]
 
     sketch [
         label="Sketch (Claude Code, ACP, Impeccable)",
@@ -35,7 +38,7 @@ digraph Spec {
         prompt="@sketch.md"
     ]
 
-    check_sketches [label="Check the sketches", shape=parallelogram, script="python3 bin/check-intentable-result spec --sketches"]
+    check_sketches [label="Check the sketches", shape=parallelogram, script="python3 .intentable/main/check-intentable-result spec --sketches"]
 
     fork  [label="Review", shape=component]
 
@@ -67,7 +70,7 @@ digraph Spec {
 
     // prints {"context_updates": {"review_done": "true"}} when the loop ends (all satisfied,
     // or the fifth round), "false" for another round; a crash fails the run
-    check_reviews [label="Read the reviews", shape=parallelogram, output_schema="routing", script="python3 bin/check-intentable-reviews"]
+    check_reviews [label="Read the reviews", shape=parallelogram, output_schema="routing", script="python3 .intentable/main/check-intentable-reviews"]
 
     // at most four revisions: the fifth round's check always ends the loop
     revise [
@@ -79,9 +82,9 @@ digraph Spec {
         prompt="@revise.md"
     ]
 
-    recheck [label="Check the revised draft", shape=parallelogram, script="python3 bin/check-intentable-result spec --draft"]
+    recheck [label="Check the revised draft", shape=parallelogram, script="python3 .intentable/main/check-intentable-result spec --draft"]
 
-    finish [label="Write the result", shape=parallelogram, script="python3 bin/check-intentable-result spec"]
+    finish [label="Write the result", shape=parallelogram, script="python3 .intentable/main/check-intentable-result spec"]
 
     start -> install -> propose -> check_draft -> route
     route -> sketch [condition="context.route=sketch"]
