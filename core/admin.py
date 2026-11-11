@@ -1009,25 +1009,26 @@ class JobRunAdmin(admin.ModelAdmin):
     def problems_table(self, run):
         if not run.problems:
             return "no problems"
+        # a venue links to its page; an act (artist and band records have no venue) is plain text
         rows = format_html_join(
             "",
-            '<tr><td style="white-space: nowrap; vertical-align: top">'
-            '<a href="{}">{} {}</a></td><td><ul style="margin: 0">{}</ul></td></tr>',
+            '<tr><td style="white-space: nowrap; vertical-align: top">{}</td><td><ul style="margin: 0">{}</ul></td></tr>',
             (
                 (
-                    reverse("admin:core_venue_change", args=[item["venue_id"]]),
-                    item["sheet_id"],
-                    item["name"],
+                    format_html('<a href="{}">{} {}</a>', reverse("admin:core_venue_change", args=[item["venue_id"]]), item["sheet_id"], item["name"])
+                    if item.get("venue_id") else item["name"],
                     format_html_join("", "<li>{}</li>", ((linked(p),) for p in item["problems"])),
                 )
                 for item in run.problems
             ),
         )
+        what = "records" if any(not item.get("venue_id") for item in run.problems) else "venues"
         return format_html(
             '<div style="border-left: 4px solid #cf222e; padding-left: 8px">'
-            '<strong style="color: #cf222e">{} venues with problems</strong>'
+            '<strong style="color: #cf222e">{} {} with problems</strong>'
             "<table>{}</table></div>",
             len(run.problems),
+            what,
             rows,
         )
 

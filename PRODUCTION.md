@@ -173,6 +173,7 @@ These run in this order. Each one depends on the one before it:
 | `match_eventbrite_organizers` | weekly, after the source check | free (Eventbrite allows 2,000 requests an hour). It fetches the pages of venues that link Eventbrite, politely, and links only new venues unless given `--recheck` |
 | `match_seatgeek_venues` | weekly, after the Eventbrite matching | free (SeatGeek publishes no limit; the client waits half a second between requests). About 80 venues take two minutes. It links only new venues unless given `--recheck` |
 | `lookup_venue_neighborhoods` | weekly, after the SeatGeek matching | free. It finds venues on OpenStreetMap (Nominatim, one request a second) by their own name and town, and reads their neighborhood, with Overpass for New York and DC. Only venues never looked up, or looked up a year ago; up to 300 a run |
+| `read_artist_link_hubs` | weekly, last | free. It reads each artist's and band's link-hub page (Linktree and its rivals), one request each, a second apart, only those never read or read over seven days ago, up to 100 a run. See "Link hubs" |
 | `match_spotify_artists --limit 500` | daily, after `fetch_events` | free, but rate limited. It searches Spotify for artist names it hasn't seen, and for automatic matches more than 30 days old, half a second apart, taking about 4 minutes. Spotify doesn't publish its limits, but the number of searches is what counts, not their pace: about 650 half a second apart (2026-10-27) and about 680 two seconds apart (2026-10-28) each got the app blocked for about a day. The block applies to the whole developer account, so a dev app's runs use up production's allowance too. 500 a morning stays under it, and clears a first run's backlog of about 2,700 names in about six days. When blocked, a run stops at once and keeps what it found, and the next morning's carries on. After the backlog, each morning searches only new names |
 | `match_apple_music_artists --limit 1000` | daily, after the Spotify matching | free with the Developer Program membership. Like the Spotify matching, but also looks up each matched artist's top song. Requests go half a second apart, and a long rate-limit block stops the run the same way. It does nothing until the MusicKit key is set |
 | `resolve_artists_with_lastfm --limit 300` | daily, after the Apple Music matching | free. For names several Spotify or Apple Music artists share, it reads Last.fm (half a second apart) and MusicBrainz (a second apart), taking up to about 8 minutes. It does nothing until `LASTFM_API_KEY` is set |
@@ -186,7 +187,7 @@ These run in this order. Each one depends on the one before it:
 | Job | Schedule (UTC) | Script | Runs |
 |---|---|---|---|
 | `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | sheet sync, Places lookup, coordinate refresh, `fetch_events --all`, Spotify and Apple Music matching |
-| `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster, Eventbrite and SeatGeek matching, neighborhoods |
+| `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster, Eventbrite and SeatGeek matching, neighborhoods, link hubs |
 
 - **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed sheet sync leaves the venues as they were, and they can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.
 - **Builds:** the jobs build with `bin/build-job.sh`, which only installs the requirements. Only the web service migrates. Like the web service, they deploy a commit only once CI passes.
@@ -445,6 +446,16 @@ Each name is searched on MusicBrainz as a person and as a group; one that's exac
 - **Last.fm:** nothing. Its answer only helps choose between MusicBrainz artists, as its terms require.
 - **Wikimedia Commons photos:** only a freely licensed file's name and credit; the image stays on Commons and is credited wherever it's shown.
 - **Bandcamp:** only a link. It has no public API (only labels and merch partners get one), and its acceptable use policy forbids scraping, so nothing is ever requested from it, through a scraping service or otherwise.
+
+### Link hubs
+
+Small acts often keep all their links on one Linktree-style page. `read_artist_link_hubs` reads those pages and fills the links an artist's or band's record lacks.
+
+- **Where the address comes from:** a hub address in the record's website (the command copies it to the record's link-hub address, leaving the website alone), a link on a hub in MusicBrainz's URL relations (taken by enrichment), or an editor in the admin's "Link hub" section. Nothing searches for or guesses a hub page.
+- **Which hubs:** the `HUBS` list in `core/link_hubs.py`: Linktree, Beacons, Bio.link, Lnk.Bio, Linkin.bio, Solo.to, Hoo.be, AllMyLinks, Campsite and Taplink. A hub whose links are built by JavaScript is marked address-only: its address is kept and its page is never requested, and the record's status says "unreadable".
+- **What it takes:** a Bandcamp, Instagram or YouTube link recognised by its address, and a website only from a link the hub labels "website", "site", "homepage" or "official". A link for an empty field fills it, marked "link hub"; one that differs from the record's is saved as a finding, which an editor accepts or dismisses with the admin actions "Accept link-hub findings" and "Dismiss link-hub findings". The value an editor, the import, MusicBrainz or Wikidata set is never overwritten. A value the hub filled is replaced by a later read, by MusicBrainz or Wikidata, or by an import row or curated list.
+- **Politeness:** robots.txt is obeyed (and asked for once per hub a run), the request carries the user agent `venue-db-event-check/1.0`, there is at most one request a second, no JavaScript runs, and a redirect off the hub's host isn't followed. The links found are never requested, so nothing is requested from Bandcamp.
+- **Problems:** a blocked, gone or failed page is listed by act on the run's page at `/admin/core/jobrun/`.
 
 ## Calendar feeds
 

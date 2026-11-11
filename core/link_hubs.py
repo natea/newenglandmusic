@@ -13,15 +13,20 @@ an editor, and nothing an editor, the import, musicbrainz or wikidata set is ove
 
 import json
 import re
+import time
 from collections import namedtuple
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
+import requests
 from bs4 import BeautifulSoup
 
 from core.artists import is_bandcamp_url
 from core.models import Band
 
 LINK_HUB = "link hub"
+TIMEOUT_SECONDS = 15
+SECONDS_BETWEEN_REQUESTS = 1
+MAX_REDIRECTS = 3
 # readable: the page carries its links without javascript. a hub that turned out not to is
 # kept as an address only
 Hub = namedtuple("Hub", "name hosts readable")
@@ -237,3 +242,68 @@ def apply(record, links, now):
             finding["options"] = options
         findings.append(finding)
     return changes, findings
+
+
+class PoliteSession:
+    """
+    a requests session for hub pages: the honest user agent, one request a second, and each
+    hub's robots.txt asked for once however many of its pages are read. no javascript runs
+    """
+
+    def __init__(self, user_agent, sleep=None, clock=None):
+        self.session = requests.Session()
+        self.session.headers["User-Agent"] = user_agent
+        self.session.headers["Accept"] = "text/html,application/xhtml+xml,*/*;q=0.8"
+        self.sleep = sleep or time.sleep
+        self.clock = clock or time.monotonic
+        self.last_request = None
+        self.robots = {}
+
+    def get(self, url, **kwargs):
+        is_robots = path_of(url) == "/robots.txt"
+        if is_robots and url in self.robots:
+            answer = self.robots[url]
+            if isinstance(answer, Exception):
+                raise answer
+            return answer
+        if self.last_request is not None:
+            wait = SECONDS_BETWEEN_REQUESTS - (self.clock() - self.last_request)
+            if wait > 0:
+                self.sleep(wait)
+        try:
+            answer = self.session.get(url, **kwargs)
+        except requests.RequestException as e:
+            answer = e
+        self.last_request = self.clock()
+        if is_robots:
+            self.robots[url] = answer
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+
+def fetch(session, url):
+    """
+    (problem, html): the page's html, or the status that says why not: "blocked" (403, 406
+    or 429), "gone" (404 or 410) or "failed" (anything else, and a redirect off the hub's
+    host, which is never followed). the page is the only thing requested
+    """
+    origin = host_of(url)
+    for _ in range(MAX_REDIRECTS + 1):
+        try:
+            r = session.get(url, timeout=TIMEOUT_SECONDS, allow_redirects=False)
+        except requests.RequestException:
+            return "failed", ""
+        if r.status_code in (301, 302, 303, 307, 308):
+            url = urljoin(url, r.headers.get("Location") or "")
+            if host_of(url) != origin:
+                return "failed", ""
+            continue
+        if r.status_code in (403, 406, 429):
+            return "blocked", ""
+        if r.status_code in (404, 410):
+            return "gone", ""
+        if r.status_code != 200:
+            return "failed", ""
+        return "", r.text
+    return "failed", ""
