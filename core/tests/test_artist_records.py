@@ -76,3 +76,16 @@ class SlugTestCase(TestCase):
         band.name = "Krill (band)"
         band.save()
         self.assertEqual(Band.objects.get(pk=band.pk).slug, "krill")
+
+
+class LinkHubFieldsTestCase(TestCase):
+    def test_both_kinds_start_with_no_hub(self):
+        for model in (Artist, Band):
+            record = model.objects.create(name="Krill")
+            self.assertEqual((record.link_hub_url, record.link_hub_status, record.link_hub_findings), ("", "", []))
+            self.assertIsNone(record.link_hub_checked_at)
+
+    def test_a_hub_address_and_findings_are_kept(self):
+        band = Band.objects.create(name="Krill", link_hub_url="https://linktr.ee/krill", link_hub_status="read", link_hub_findings=[{"field": "website"}])
+        band.refresh_from_db()
+        self.assertEqual((band.link_hub_url, band.link_hub_status, band.link_hub_findings), ("https://linktr.ee/krill", "read", [{"field": "website"}]))

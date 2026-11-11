@@ -909,6 +909,22 @@ class MusicAct(models.Model):
     photo_license = models.CharField(max_length=64, blank=True, default="")
     photo_license_url = models.URLField(max_length=300, blank=True, default="")
 
+    class LinkHubStatus(models.TextChoices):
+        READ = "read", "Read"
+        EMPTY = "empty", "No usable links"
+        UNREADABLE = "unreadable", "Links not readable without JavaScript"
+        BLOCKED = "blocked", "Blocked"
+        GONE = "gone", "Page gone"
+        FAILED = "failed", "Failed"
+
+    # the act's page on a link hub (linktr.ee and its rivals), from its website, musicbrainz
+    # or an editor (field_sources["link_hub_url"]); read_artist_link_hubs reads it. findings
+    # are a json list, [{"field", "current", "hub", "seen_at", "dismissed"}] (core/link_hubs.py)
+    link_hub_url = models.URLField(max_length=300, blank=True, default="")
+    link_hub_status = models.CharField(max_length=16, choices=LinkHubStatus.choices, blank=True, default="")
+    link_hub_checked_at = models.DateTimeField(null=True, blank=True)
+    link_hub_findings = models.JSONField(blank=True, default=list)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
