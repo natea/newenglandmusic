@@ -121,6 +121,12 @@ class WorkflowShapeTestCase(SimpleTestCase):
         self.assertEqual({a for a, b, c in edges if b == "sketch"}, {"route"})
         self.assertEqual({c for a, b, c in edges if b == "sketch"}, {"context.route=sketch"})
 
+    def test_reviewers_retry_a_sandbox_hiccup(self):
+        # issue #29's spec_fit failed once on a Daytona 500 and wasn't tried again
+        text, steps, edges = graph()
+        for reviewer in ("risk", "spec_fit", "fidelity"):
+            self.assertEqual(attribute(steps[reviewer], "max_retries"), "2", reviewer)
+
     def test_sketch_step_only_for_needs_design(self):
         text, steps, edges = graph()
         self.assertEqual(attribute(steps["route"], "output_schema"), "routing")

@@ -47,7 +47,8 @@ digraph Spec {
         type="agent",
         backend="acp",
         acp.command="claude-agent-acp",
-        prompt="@risk.md"
+        prompt="@risk.md",
+        max_retries="2"
     ]
 
     spec_fit [
@@ -55,7 +56,8 @@ digraph Spec {
         type="agent",
         backend="acp",
         acp.command="claude-agent-acp",
-        prompt="@spec_fit.md"
+        prompt="@spec_fit.md",
+        max_retries="2"
     ]
 
     fidelity [
@@ -63,7 +65,8 @@ digraph Spec {
         type="agent",
         backend="acp",
         acp.command="claude-agent-acp",
-        prompt="@fidelity.md"
+        prompt="@fidelity.md",
+        max_retries="2"
     ]
 
     merge [label="Reviews in", shape=tripleoctagon]

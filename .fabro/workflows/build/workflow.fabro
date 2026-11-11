@@ -24,6 +24,10 @@ export PATH=$HOME/.local/bin:$PATH
 uv python install 3.11
 uv venv --python 3.11 venv
 uv pip install --python venv/bin/python -r requirements-dev.txt
+# the sandbox image pins apt to snapshot.ubuntu.com, which was down on 11 November 2026; use the archive
+for f in $(grep -rlE 'snapshot.ubuntu.com|^Snapshot:' /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null || true); do
+  $SUDO sed -i -e '/^Snapshot:/d' -e 's#https*://snapshot.ubuntu.com/ubuntu/[0-9TZ]*#http://archive.ubuntu.com/ubuntu#g' $f
+done
 $SUDO apt-get update -qq
 $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq postgresql
 $SUDO service postgresql start
