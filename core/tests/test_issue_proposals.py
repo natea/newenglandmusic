@@ -1049,5 +1049,9 @@ class GuideTestCase(SimpleTestCase):
             "risk, spec fit, fidelity",
             "five-round limit",
             "the bridge commits the draft",
+            "##### revisions",
+            "`revision_scope`",
+            "one sketch is allowed only in a revision",
+            "`.intentable/main/`",
         ):
             self.assertIn(needed, section, needed)

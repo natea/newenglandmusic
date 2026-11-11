@@ -26,7 +26,7 @@
 
 ## 3. Guide
 
-- [ ] 3.1 Describe the revision mode, the one-sketch rule and `picked_design` in `docs/FABRO.md`, and check that the configuration test for the guide still passes.
+- [x] 3.1 Describe the revision mode, the one-sketch rule and `picked_design` in `docs/FABRO.md`, and check that the configuration test for the guide still passes.
 
 ## 4. Live check (with Nate's go-ahead, together with intentable's)
 
