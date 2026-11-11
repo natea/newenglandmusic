@@ -8,7 +8,7 @@ Issue: [#25 Look up new artists and bands on MusicBrainz every day](https://gith
 
 ## 2. Enrichment behaviour under a daily limit
 
-- [ ] 2.1 Add tests, using the MusicBrainz fixtures and no network, for: 130 unlooked records with `--limit 100` look up 100, bands before artists, leaving 30 ("More records than the limit"). Verify: the tests pass.
-- [ ] 2.2 Add tests for: a band's members are added unlooked and looked up by a later run ("A band's members"); a record left ambiguous is not retried ("Unmatched records are not retried"); records looked up before, whether matched, ambiguous or not found, cause no MusicBrainz request ("Already looked up"). Verify: the tests pass.
-- [ ] 2.3 Add a test that `MusicBrainzBusy` partway through stops the run, keeps earlier records, and the next run looks up only the remaining ones ("MusicBrainz asks to wait"), and that a record held for review is looked up but stays hidden. Verify: the tests pass.
-- [ ] 2.4 Run `venv/bin/python manage.py test` with the network blocked. Verify: the whole suite passes.
+- [x] 2.1 Add tests, using the MusicBrainz fixtures and no network, for: 130 unlooked records with `--limit 100` look up 100, bands before artists, leaving 30 ("More records than the limit"). Verify: the tests pass.
+- [x] 2.2 Add tests for: a band's members are added unlooked and looked up by a later run ("A band's members"); a record left ambiguous is not retried ("Unmatched records are not retried"); records looked up before, whether matched, ambiguous or not found, cause no MusicBrainz request ("Already looked up"). Verify: the tests pass.
+- [x] 2.3 Add a test that `MusicBrainzBusy` partway through stops the run, keeps earlier records, and the next run looks up only the remaining ones ("MusicBrainz asks to wait"), and that a record held for review is looked up but stays hidden. Verify: the tests pass.
+- [x] 2.4 Run `venv/bin/python manage.py test` with the network blocked. Verify: the whole suite passes.
