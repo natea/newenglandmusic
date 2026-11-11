@@ -6,12 +6,13 @@ Issue 26 asks for a Tinder-style band discovery tool modeled on the New Orleans 
 
 ## What Changes
 
-- **A discovery page** at `/discover`: a deck of cards, one card per band or artist, swiped or tapped through one at a time. A card shows the act's name, kind, home town, photo when it has one, its next show, and the play buttons the listings already have.
+- **A discovery page** at `/discover`: a deck of cards, one card per band or artist, swiped or tapped through one at a time. A card shows the act's name, kind, home town, its next show, and the play buttons the listings already have, each with its service's icon. The top card plays the act's YouTube video, else its Spotify or Apple Music player, in place of a photo (the photo shows only when there is no match). A swaying hint with "Skip" and "Add" labels teaches the swipe.
 - **Who is in the deck:** live acts (not held for review) with at least one upcoming approved show that is not cancelled. Acts with none are left out, and cancelled shows are left out of the card and the picker.
-- **Swipe left** (or the pass button, or the left arrow key) skips the act and shows the next card.
-- **Swipe right** (or the keep button, or the right arrow key) opens a picker of that act's upcoming shows, with date, time, venue and town. Shows already saved are ticked when it opens. The visitor ticks one or more and confirms; the picker's ticks become that act's saved shows (newly ticked shows are added, unticked saved shows are removed). Closing the picker without confirming changes nothing and returns to the card.
+- **Swipe left** (or the skip button, or the left arrow key) skips the act and shows the next card.
+- **Swipe right** (or the add button, or the right arrow key) opens a picker, only then (never alongside the card), of that act's upcoming shows, with date, time, venue and town. Shows already saved are ticked when it opens. Tapping anywhere in a show's row ticks it, and a Save button ("Save 2 shows") confirms; the picker's ticks become that act's saved shows (newly ticked shows are added, unticked saved shows are removed). Closing the picker without confirming changes nothing and returns to the card.
 - **Reuses saved shows:** the same `saved_shows` cookie, the same 300-show limit, the same header count and the same `/saved` page. Nothing new is stored about the visitor, and no account is needed.
 - **Without JavaScript** the deck is a plain list of the same cards, each listing its shows with the existing save bookmark, so the page still works.
+- **The site's own header:** the page uses the same masthead, search and menus as every other page, with no header of its own.
 - **A menu link** to the page, as a menu item added by a data migration (in the header and footer, editable in the admin), like the "Bands & artists" link.
 
 ## Capabilities
@@ -25,6 +26,6 @@ Issue 26 asks for a Tinder-style band discovery tool modeled on the New Orleans 
 ## Impact
 
 - **Code:** a new view and template for `/discover`, a script for swiping and the picker, styles, a URL, and a data migration adding the menu item. A small change to `saved_shows.js` to expose its cookie code to the new script, which also loads on every page. A function that builds an act's play buttons from its name, reusing the stored Spotify, Apple Music and YouTube links the listings use.
-- **No model or schema change (the one migration only adds a menu row), no new cookie, no new external API or paid call.** Previews read links already stored; nothing is fetched from Spotify, Apple Music or YouTube when the page loads.
+- **No model or schema change (the one migration only adds a menu row), no new cookie, no new external API or paid call.** Previews read links already stored; the page calls no Spotify, Apple Music or YouTube API, though the top card's embedded player loads from that service.
 - **Screens:** the deck, the card, and the show picker are new screens, so this change needs a design round (`needs-design`).
-- **Open questions** (see `design.md`): what the reference site does that should be copied, whether the deck follows the visitor's area filter, and whether passes are remembered.
+- **Open questions** (see `design.md`): what the reference site does that should be copied, whether the deck follows the visitor's area filter, and whether passes are remembered, and how sound starts. A site-wide header or icons on the listings' play buttons are outside this change.

@@ -1,29 +1,36 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Discover sketch</title><style>
 *{box-sizing:border-box}body{margin:0;width:1440px;height:900px;overflow:hidden;background:#d4d0c7;color:#000;font-family:system-ui,sans-serif;font-size:16px}
-a{color:#000080}.bar{background:#8b5b8b;color:#fff;padding:6px 24px;display:flex;gap:24px;font-weight:700}.bar span.c{margin-left:auto}
-.tab{display:inline-block;background:#8b5b8b;color:#fff;font:800 52px/1.02 Helvetica,Arial,sans-serif;letter-spacing:-.015em;padding:.18em .45em .12em}
+a{color:#000080}
+.mast{width:672px;margin:0 auto;padding:15px 8px 0}.mast .row{display:flex;align-items:center;gap:16px}.mast h1{margin:0;font-size:2em;color:#000}.mast .r{margin-left:auto;font-size:15px}
+.search{display:flex;gap:6px;margin:10px 0}.search .in{flex:1;border:1px solid #777;background:#fff;padding:6px 8px;color:#555;font-size:14px}.search .go{border:1px solid #777;background:#eee;padding:6px 10px;font-size:14px}
 .card{background:#f6f4ee;color:#1a1a1a;border:1px solid #b9b4a8}.q{color:#4f4b44;font-size:14px}
+.tab{display:inline-block;background:#8b5b8b;color:#fff;font:800 34px/1.02 Helvetica,Arial,sans-serif;letter-spacing:-.015em;padding:.18em .45em .12em}
 .btn{display:inline-block;padding:10px 22px;border:2px solid #000;background:#fff;font-weight:700;border-radius:4px}.keep{background:#8b5b8b;color:#fff;border-color:#8b5b8b}
-.play{display:inline-block;padding:4px 12px;border:1px solid #000;border-radius:12px;background:#fff;margin-right:6px;font-size:14px}
-.box{display:inline-block;width:20px;height:20px;border:2px solid #000;background:#fff;vertical-align:middle;margin-right:10px;text-align:center;line-height:16px;font-weight:800}.on{background:#000080;border-color:#000080;color:#fff}
-.photo{background:#c9d3e6;display:block}.row{padding:12px 0;border-top:1px solid #b9b4a8}
+.svc{display:inline-block;padding:3px 12px 3px 4px;border:1px solid #000;border-radius:14px;background:#fff;margin-right:6px;font-size:14px}
+.ic{display:inline-block;width:20px;height:20px;border-radius:50%;color:#fff;text-align:center;line-height:20px;font-size:12px;font-weight:800;margin-right:6px;vertical-align:middle}
+.yt{background:#c4302b}.sp{background:#1a7f3c}.am{background:#c2185b}
+.box{display:inline-block;width:28px;height:28px;border:2px solid #000;background:#fff;vertical-align:middle;margin-right:12px;text-align:center;line-height:24px;font-weight:800}.on{background:#000080;border-color:#000080;color:#fff}
+.hint{position:absolute;top:250px;font-weight:800;font-size:20px;padding:8px 14px;border:3px solid}
 </style></head><body>
-<header class="bar"><span>New England Music</span><span>Calendar</span><span>Venues</span><span>Discover</span><span class="c">Saved (3)</span></header>
-<main style="position:relative;height:840px">
-<div style="position:absolute;left:520px;top:50px;width:400px;height:560px;transform:rotate(-4deg);background:#f6f4ee;border:1px solid #b9b4a8"></div>
-<div style="position:absolute;left:510px;top:44px;width:400px;height:560px;transform:rotate(3deg);background:#eeeeff;border:1px solid #b9b4a8"></div>
-<article class="card" style="position:absolute;left:520px;top:30px;width:400px;height:580px;padding:0 0 20px;overflow:hidden">
-<span class="photo" style="height:330px"></span>
-<div style="padding:0 20px"><div class="tab" style="font-size:36px;margin-top:-22px">Pale Harbor</div>
-<p style="margin:10px 0 4px"><strong>Band</strong> · Portland, ME</p><p class="q" style="margin:0 0 12px">Next: Fri Nov 21 · Space Gallery · +2</p>
-<span class="play">Spotify</span><span class="play">Apple</span><span class="play">YouTube</span></div></article>
-<p style="position:absolute;left:520px;top:630px;width:400px;text-align:center;margin:0"><span class="btn">✕ Pass</span> <span class="btn keep">♥ Keep</span></p>
-<p class="q" style="position:absolute;left:520px;top:690px;width:400px;text-align:center">Keys: ← pass, → keep</p>
-<div style="position:absolute;left:0;right:0;bottom:0;height:330px;background:#f6f4ee;border-top:3px solid #8b5b8b;padding:20px 140px;box-shadow:0 -8px 0 rgba(0,0,0,.15)">
-<h2 style="margin:0 0 10px">Pale Harbor · choose shows <span class="btn keep" style="float:right;font-size:15px">Save 2</span></h2>
-<div style="display:flex;gap:18px">
-<div class="card" style="flex:1;padding:14px"><span class="box on">✓</span><strong>Fri Nov 21</strong><br>8 pm · Space Gallery<br><span class="q">Portland, ME</span></div>
-<div class="card" style="flex:1;padding:14px"><span class="box"></span><strong>Sat Dec 6</strong><br>9 pm · Great Scott<br><span class="q">Allston, MA</span></div>
-<div class="card" style="flex:1;padding:14px"><span class="box on">✓</span><strong>Thu Dec 18</strong><br>7:30 pm · Club Passim<br><span class="q">Cambridge, MA</span></div></div>
-<p class="q">Bottom sheet over a dimmed deck; end of deck would show "You have seen every band" with a link to Saved.</p></div>
+<header class="mast"><div class="row"><span>☰</span><a href="#" style="text-decoration:none"><h1>New England Music</h1></a><span class="r"><a href="#">Saved shows (3)</a> | <a href="#">Bands &amp; artists</a> | <a href="#">Discover bands</a> | <a href="#">About</a></span></div>
+<div class="search"><span class="in">Search bands, artists, venues and shows</span><span class="go">search</span></div></header>
+<main style="position:relative;height:760px">
+<div style="position:absolute;left:520px;top:30px;width:400px;height:540px;transform:rotate(-4deg);background:#f6f4ee;border:1px solid #b9b4a8"></div>
+<div style="position:absolute;left:510px;top:24px;width:400px;height:540px;transform:rotate(3deg);background:#eeeeff;border:1px solid #b9b4a8"></div>
+<article class="card" style="position:absolute;left:520px;top:10px;width:400px;height:560px;overflow:hidden">
+<div style="height:225px;background:#222;color:#fff;text-align:center;padding-top:90px;font-weight:700">▶ Video playing, Pale Harbor<br><span style="font-weight:400;font-size:13px">YouTube first; else Spotify, else Apple Music; photo only if none</span></div>
+<div style="padding:0 20px"><div class="tab" style="margin-top:-18px">Pale Harbor</div>
+<p style="margin:10px 0 4px"><strong>Band</strong> · Portland, ME</p><p class="q" style="margin:0 0 12px">Next: Fri Nov 21 · Space Gallery · +2 more shows</p>
+<span class="svc"><span class="ic yt">▶</span>YouTube</span><span class="svc"><span class="ic sp">S</span>Spotify</span><span class="svc"><span class="ic am">♪</span>Apple Music</span></div></article>
+<span class="hint" style="left:420px;border-color:#555;color:#555;background:#f6f4ee">← Skip</span>
+<span class="hint" style="left:940px;border-color:#8b5b8b;color:#8b5b8b;background:#f6f4ee">Add →</span>
+<p class="q" style="position:absolute;left:520px;top:300px;width:400px;text-align:center;margin:0;color:#fff;font-weight:700">(hint: the card sways left and right, then stops)</p>
+<p style="position:absolute;left:520px;top:590px;width:400px;text-align:center;margin:0"><span class="btn">✕ Skip</span> <span class="btn keep">♥ Add</span></p>
+<p class="q" style="position:absolute;left:520px;top:650px;width:400px;text-align:center">Swipe or use the keys: ← skip, → add. The show list opens after Add only.</p>
+<div style="position:absolute;left:0;right:0;bottom:0;height:380px;background:#f6f4ee;border-top:3px solid #8b5b8b;padding:16px 300px;box-shadow:0 -8px 0 rgba(0,0,0,.15)">
+<h2 style="margin:0 0 4px">Pale Harbor: choose shows</h2><p class="q" style="margin:0 0 10px">Tap a row to tick it. Nothing is saved until you press Save.</p>
+<div class="card" style="padding:12px 14px;margin-bottom:8px"><span class="box on">✓</span><strong>Fri Nov 21</strong> · 8 pm · Space Gallery, Portland, ME</div>
+<div class="card" style="padding:12px 14px;margin-bottom:8px"><span class="box"></span><strong>Sat Dec 6</strong> · 9 pm · Great Scott, Allston, MA</div>
+<div class="card" style="padding:12px 14px;margin-bottom:12px"><span class="box on">✓</span><strong>Thu Dec 18</strong> · 7:30 pm · Club Passim, Cambridge, MA</div>
+<span class="btn keep">Save 2 shows</span> <span class="btn">Cancel</span></div>
 </main></body></html>
