@@ -1,3 +1,3 @@
 [
-{"file":"c.html","label":"Video card stack with bottom sheet","thesis":"A card stack with peeking cards feels like a swipe game: the card plays the act's video, or its Spotify or Apple Music player, an animated hint teaches the swipe, and a bottom sheet with whole-row tick targets and a Save button holds the picker.","risk":"Players need a tap or a muted start to play, browsers decide whether sound starts on its own, and the embedded player leaves little room on a phone."}
+{"file":"c.html","label":"Video card stack with bottom sheet","thesis":"A card stack with peeking cards feels like a swipe game: the card plays the act's video, or its Apple Music player, an animated hint teaches the swipe, and a bottom sheet with whole-row tick targets and a Save button holds the picker.","risk":"Players need a tap or a muted start to play, browsers decide whether sound starts on its own, and the embedded player leaves little room on a phone."}
 ]

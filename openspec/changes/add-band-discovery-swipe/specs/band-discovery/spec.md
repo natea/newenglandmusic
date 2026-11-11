@@ -41,22 +41,30 @@ A card SHALL show the act's name, whether it is a band or an artist, its home to
 - **THEN** its card shows the name, "band", "Providence, RI", the photo with its credit, and "Nov 14", the time and "Lupo's", and links to `/bands/belly`
 
 ### Requirement: A card plays a taste of the act
-A card SHALL show the act's play buttons, as the listings show them, for each of Spotify, Apple Music and YouTube where the act is matched, and none where it isn't. Each button SHALL show its service's icon beside its name.
+A card SHALL show the act's play buttons, as the listings show them, for each of Apple Music and YouTube where the act is matched, and none where it isn't. The card SHALL NOT show a Spotify button or load a Spotify player, even for an act matched on Spotify. Each button SHALL show its service's icon beside its name.
 
 #### Scenario: Play buttons with icons
-- **WHEN** Belly is matched on Spotify and not on Apple Music or YouTube
-- **THEN** its card has a Spotify button with the Spotify icon, and no other
+- **WHEN** Belly is matched on Apple Music and not on YouTube
+- **THEN** its card has an Apple Music button with the Apple Music icon, and no other
+
+#### Scenario: Spotify is not used
+- **WHEN** Belly is matched on Spotify and Apple Music
+- **THEN** its card has an Apple Music button and no Spotify button, and nothing is requested from Spotify
 
 ### Requirement: The top card plays the act's music in place of its photo
-The card on top SHALL show the act's YouTube video player if it is matched, else its Spotify player, else its Apple Music player, in place of the photo, ready for the visitor to press its own play control; the page SHALL NOT start the sound by itself. An act with no match SHALL show its photo when it has one. Only the card on top SHALL load a player, and passing or adding the card SHALL stop and remove it. Nothing SHALL load from those services for cards that are not on top.
+The card on top SHALL show the act's YouTube video player if it is matched, else its Apple Music player, in place of the photo, ready for the visitor to press its own play control; the page SHALL NOT start the sound by itself. An act with no match SHALL show its photo when it has one. Only the card on top SHALL load a player, and passing or adding the card SHALL stop and remove it. Nothing SHALL load from those services for cards that are not on top.
 
 #### Scenario: Video first
-- **WHEN** Belly is matched on YouTube and Spotify and its card comes to the top
-- **THEN** the YouTube player is loaded in the card, not yet playing, and the Spotify button stays available
+- **WHEN** Belly is matched on YouTube and Apple Music and its card comes to the top
+- **THEN** the YouTube player is loaded in the card, not yet playing, and the Apple Music button stays available
 
-#### Scenario: Spotify or Apple Music when there is no video
-- **WHEN** an act is matched on Spotify only, or on Apple Music only, and its card comes to the top
-- **THEN** that service's player is loaded in the card, not yet playing
+#### Scenario: Apple Music when there is no video
+- **WHEN** an act is matched on Apple Music only and its card comes to the top
+- **THEN** the Apple Music player is loaded in the card, not yet playing
+
+#### Scenario: Spotify only
+- **WHEN** an act is matched on Spotify only and its card comes to the top
+- **THEN** its card has no play button and no player, and shows its photo if it has one
 
 #### Scenario: No match
 - **WHEN** an act has no streaming match
