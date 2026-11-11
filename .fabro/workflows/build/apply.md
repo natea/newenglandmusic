@@ -4,6 +4,9 @@ You are building a confirmed change to the New England Music Project website, a 
 
 - Change: `{{ inputs.change_name }}`, in `openspec/changes/{{ inputs.change_name }}/`
 - Issue: #{{ inputs.issue_number }}, "{{ inputs.issue_title }}"
+- Picked design: `{{ inputs.picked_design }}` (empty when the change has no sketches to pick from)
+
+When the picked design isn't empty, build the screens from `sketches/{{ inputs.picked_design }}.html` in the change's folder, and treat the other sketches as rejected. If that sketch is missing from the branch, stop as "When to stop" says, with the outcome `stopped`, and say which sketch is missing.
 
 Nate confirmed this proposal at gate G2. The proposal, design, specs and tasks in the change's folder are your whole instruction: build what they say, no more and no less. Follow `AGENTS.md`, especially "Specs and tests (OpenSpec)" and "Code style". Keep host and network names out of everything you write.
 

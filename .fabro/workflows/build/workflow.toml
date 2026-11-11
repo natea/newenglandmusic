@@ -5,7 +5,7 @@ graph = "workflow.fabro"
 
 # Started by the intentable bridge once Nate confirms a proposal at gate G2
 # (his /approve on the issue), in the server's daytona environment. The bridge
-# passes all six inputs as text; the empty defaults only let a run started by
+# passes all seven inputs as text; the empty defaults only let a run started by
 # hand be created. The run targets the change's draft branch, change/<name>.
 [run.inputs]
 issue_number = ""
@@ -14,6 +14,8 @@ issue_body = ""
 issue_author = ""
 issue_thread = ""
 change_name = ""
+# the letter of the sketch picked for a needs-design change, empty otherwise
+picked_design = ""
 
 # Unlike the other workflows, the build pushes its run branch, fabro/run/<id>:
 # that is its work. It opens no pull request: the bridge checks the run branch,
