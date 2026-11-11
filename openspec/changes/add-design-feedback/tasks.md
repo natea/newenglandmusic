@@ -20,6 +20,8 @@
   Keep "Workflow shape" (as updated in 1.1a), "Sketch step only for needs-design" and "Revise prompt" passing.
 - [x] 1.4 (Not needed: this change merges first, so `use-html-wireframes` rebases onto it.) If `use-html-wireframes` was merged first, rebase this change onto it. Restate the sketch requirement's delta on the merged text, and require `compare.html` only with three sketches, and make sure "Sketches are low-fidelity wireframes" and "Revise keeps sketches plain" also bind sketches the propose agent edits in a revision. Rerun the workflow tests.
 
+- [x] 1.5 Found in the live check (issue #26, 11 November 2026): the first revision chained its draft after an `openspec validate --strict` that failed on long-requirement warnings, so no draft was written, and the prompt's closing rules sat in the part a revision skips. `propose.md` now says warnings fail `--strict`, to write the draft as its own step at the root, and gives a revision the closing rules with a check that the file exists. Verified with "The prompt gives a revision's exceptions".
+
 ## 2. The build's pick
 
 - [x] 2.1 Declare `picked_design` in `.fabro/workflows/build/workflow.toml`, and add the picked-sketch paragraph to `apply.md`. Verify with "Declared inputs", "The prompts name the change, not the thread" and "The apply prompt names the pick", keeping "Commands without inputs" passing.

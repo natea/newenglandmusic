@@ -316,6 +316,11 @@ class ProposePromptTestCase(SimpleTestCase):
     def test_the_prompt_gives_a_revisions_exceptions(self):
         text = self.revision_section()
         self.assertIn("Keep the change's name", text)
+        # issue #26's first revision chained its draft after a validate that failed on warnings
+        self.assertIn("With `--strict` a warning fails it too", text)
+        self.assertIn("as a step of its own and not chained after another command", text)
+        self.assertIn("run `cat .intentable/draft.json` from the repository's root", text)
+        self.assertIn("Stop only once `.intentable/draft.json` is written", text)
         self.assertIn("don't send the issue back", text)
         self.assertIn("six plain sentences", text)
 
