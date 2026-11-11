@@ -177,6 +177,7 @@ These run in this order. Each one depends on the one before it:
 | `match_apple_music_artists --limit 1000` | daily, after the Spotify matching | free with the Developer Program membership. Like the Spotify matching, but also looks up each matched artist's top song. Requests go half a second apart, and a long rate-limit block stops the run the same way. It does nothing until the MusicKit key is set |
 | `resolve_artists_with_lastfm --limit 300` | daily, after the Apple Music matching | free. For names several Spotify or Apple Music artists share, it reads Last.fm (half a second apart) and MusicBrainz (a second apart), taking up to about 8 minutes. It does nothing until `LASTFM_API_KEY` is set |
 | `match_youtube_artists --limit 90` | daily, after the Last.fm resolving | free within YouTube Data API v3's 10,000 units a day. It matches only artists already matched on Spotify or Apple Music: first through Wikidata and MusicBrainz, then at most 90 searches for their Last.fm top track (101 units each). It does nothing until `YOUTUBE_API_KEY` is set |
+| `enrich_artists_from_musicbrainz --limit 100` | daily, last, after the YouTube matching | free. Looks up the bands, then the artists, not yet looked up on MusicBrainz (a second apart; about 2 to 4 seconds a record), so up to about 7 minutes. It never refreshes records looked up before, so a backlog clears over several mornings, and a band's new members are looked up the morning after. A MusicBrainz rate limit stops the run, which keeps what it found |
 | `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster and Eventbrite: a few hundred requests each; SeatGeek: one per linked venue |
 
 ### How they run on Render
@@ -185,7 +186,7 @@ These run in this order. Each one depends on the one before it:
 
 | Job | Schedule (UTC) | Script | Runs |
 |---|---|---|---|
-| `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | sheet sync, Places lookup, coordinate refresh, `fetch_events --all`, Spotify and Apple Music matching |
+| `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | sheet sync, Places lookup, coordinate refresh, `fetch_events --all`, Spotify, Apple Music, Last.fm and YouTube matching, MusicBrainz enrichment |
 | `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster, Eventbrite and SeatGeek matching, neighborhoods |
 
 - **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed sheet sync leaves the venues as they were, and they can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.

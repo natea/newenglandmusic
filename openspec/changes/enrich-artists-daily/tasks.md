@@ -2,9 +2,9 @@ Issue: [#25 Look up new artists and bands on MusicBrainz every day](https://gith
 
 ## 1. Daily step
 
-- [ ] 1.1 Add `step python manage.py enrich_artists_from_musicbrainz --limit 100` after the YouTube matching in `bin/daily.sh`, with a comment saying why it runs last and is capped, and update the script's header comment. Verify: `core/tests/test_scheduled_jobs.py` `DAILY` lists the nine commands in order and `test_daily_run` passes.
-- [ ] 1.2 Add a test that a failing `enrich_artists_from_musicbrainz` step fails the daily run, naming the step, after the earlier steps ran (scenario "Enrichment fails"). Verify: the test passes.
-- [ ] 1.3 Add the step to PRODUCTION.md's schedule table (daily, after the YouTube matching; free; about 2 to 4 seconds a record, up to about 7 minutes; clears a backlog over several mornings; never refreshes). Verify: the table row reads correctly and the first `scheduled-jobs` requirement matches it.
+- [x] 1.1 Add `step python manage.py enrich_artists_from_musicbrainz --limit 100` after the YouTube matching in `bin/daily.sh`, with a comment saying why it runs last and is capped, and update the script's header comment. Verify: `core/tests/test_scheduled_jobs.py` `DAILY` lists the nine commands in order and `test_daily_run` passes.
+- [x] 1.2 Add a test that a failing `enrich_artists_from_musicbrainz` step fails the daily run, naming the step, after the earlier steps ran (scenario "Enrichment fails"). Verify: the test passes.
+- [x] 1.3 Add the step to PRODUCTION.md's schedule table (daily, after the YouTube matching; free; about 2 to 4 seconds a record, up to about 7 minutes; clears a backlog over several mornings; never refreshes). Verify: the table row reads correctly and the first `scheduled-jobs` requirement matches it.
 
 ## 2. Enrichment behaviour under a daily limit
 
