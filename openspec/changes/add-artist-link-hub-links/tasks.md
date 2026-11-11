@@ -19,7 +19,7 @@ Issue: [#29 When adding pages for new artists, or when augmenting pages for exis
 
 ## 4. Admin
 
-- [ ] 4.1 Add the "Link hub" fieldset, address validation, findings display, list column and filter, and the accept and dismiss actions to `MusicActAdmin`; check the read-only status, time and findings fields never appear in the form's `changed_data`, so `save_model` doesn't mark them "editor". Write the automated tests for "Not a page on a hub" (in the admin), "Accepting a finding", "Records with findings" and the dismiss action, for an artist and a band; the admin actions write with `update()`. "Not a page on a hub" in the artist-link-hubs spec is tested here, at the admin, and at the unit level in 1.3.
+- [x] 4.1 Add the "Link hub" fieldset, address validation, findings display, list column and filter, and the accept and dismiss actions to `MusicActAdmin`; check the read-only status, time and findings fields never appear in the form's `changed_data`, so `save_model` doesn't mark them "editor". Write the automated tests for "Not a page on a hub" (in the admin), "Accepting a finding", "Records with findings" and the dismiss action, for an artist and a band; the admin actions write with `update()`. "Not a page on a hub" in the artist-link-hubs spec is tested here, at the admin, and at the unit level in 1.3.
 
 ## 5. Finish
 

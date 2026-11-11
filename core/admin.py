@@ -5,6 +5,7 @@ from urllib.parse import unquote
 from datetime import date
 
 from dateutil import relativedelta
+from core import link_hubs
 from django.contrib import admin
 from django import forms
 from django.contrib import messages
@@ -1405,12 +1406,43 @@ class ActSourceFilter(SimpleListFilter):
         return queryset
 
 
+def open_findings(act):
+    return [f for f in act.link_hub_findings if not f.get("dismissed")]
+
+
+class LinkHubFindingsFilter(SimpleListFilter):
+    title = "link-hub findings"
+    parameter_name = "link_hub_findings"
+
+    def lookups(self, request, model_admin):
+        return [("1", "has link-hub findings")]
+
+    def queryset(self, request, queryset):
+        if self.value() != "1":
+            return queryset
+        with_findings = queryset.exclude(link_hub_findings=[])
+        return queryset.filter(pk__in=[a.pk for a in with_findings if open_findings(a)])
+
+
+class MusicActForm(forms.ModelForm):
+    def clean_link_hub_url(self):
+        url = self.cleaned_data["link_hub_url"]
+        if not url:
+            return ""
+        address = link_hubs.clean_hub_url(url)
+        if not address:
+            raise forms.ValidationError("a page on a supported link hub, like https://linktr.ee/name (not the hub's home page)")
+        return address
+
+
 class MusicActAdmin(admin.ModelAdmin):
-    list_display = ("name", "city_town", "state", "musicbrainz_status", "musicbrainz_page", "source_labels", "review", "act_id")
-    list_filter = ("needs_review", "state", "musicbrainz_status", ActSourceFilter)
+    form = MusicActForm
+    list_display = ("name", "city_town", "state", "musicbrainz_status", "musicbrainz_page", "source_labels", "review", "link_hub_findings_count", "act_id")
+    list_filter = ("needs_review", "state", "musicbrainz_status", ActSourceFilter, LinkHubFindingsFilter)
     search_fields = ("name", "act_id", "musicbrainz_id")
-    actions = ["clear_musicbrainz_match", "mark_ready"]
+    actions = ["clear_musicbrainz_match", "mark_ready", "accept_link_hub_findings", "dismiss_link_hub_findings"]
     readonly_fields = (
+        "link_hub_status", "link_hub_checked_at", "link_hub_findings_table",
         "musicbrainz_status", "musicbrainz_checked_at", "musicbrainz_page", "genres_from_musicbrainz",
         *[f for f in MUSICBRAINZ_FIELDS if f != "genres"], "field_sources", "introduction_from_wikipedia",
         "photo_preview", "source_labels", "review",
@@ -1418,6 +1450,13 @@ class MusicActAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {"fields": ("name", "slug", "act_id", "source_labels", "review", "city_town", "state", "notes")}),
         ("Links", {"fields": ("website", "bandcamp_url", "instagram_url", "youtube_url")}),
+        (
+            "Link hub",
+            {
+                "description": "the act's Linktree-style page, read weekly: it fills empty links, and links that differ are listed here to accept or dismiss with the list's actions",
+                "fields": ("link_hub_url", "link_hub_status", "link_hub_checked_at", "link_hub_findings_table"),
+            },
+        ),
         (
             "Photo (Wikimedia Commons, free licence only)",
             {
@@ -1439,6 +1478,60 @@ class MusicActAdmin(admin.ModelAdmin):
         ("Introduction", {"fields": ("introduction_from_wikipedia",)}),
         ("Who set what", {"fields": ("field_sources",), "classes": ("collapse",)}),
     )
+
+    @admin.display(description="Link-hub findings")
+    def link_hub_findings_count(self, act):
+        return len(open_findings(act)) or ""
+
+    @admin.display(description="findings")
+    def link_hub_findings_table(self, act):
+        found = open_findings(act)
+        if not found:
+            return "-"
+        return format_html(
+            "<table>{}</table>",
+            format_html_join(
+                "", "<tr><td>{}</td><td>{}</td><td>{}</td></tr>",
+                (
+                    (f["field"], f"now: {f['current'] or 'empty'}", f"hub: {', '.join(f.get('options') or [f['hub']])}")
+                    for f in found
+                ),
+            ),
+        )
+
+    @admin.action(description="Accept link-hub findings (set the links to the hub's)")
+    def accept_link_hub_findings(self, request, queryset):
+        accepted = skipped = 0
+        for act in queryset:
+            fields, sources, kept = {}, dict(act.field_sources), []
+            for finding in act.link_hub_findings:
+                if finding.get("dismissed"):
+                    kept.append(finding)
+                elif finding.get("options"):
+                    # which of several is the act's own is for the editor to set by hand
+                    kept.append(finding)
+                    skipped += 1
+                else:
+                    fields[finding["field"]] = finding["hub"]
+                    sources[finding["field"]] = "editor"
+                    accepted += 1
+            if fields:
+                type(act).objects.filter(pk=act.pk).update(**fields, field_sources=sources, link_hub_findings=kept)
+        message = f"{accepted} findings accepted."
+        if skipped:
+            message += f" {skipped} with several candidates left open: set the link by hand, then dismiss them."
+        self.message_user(request, message)
+
+    @admin.action(description="Dismiss link-hub findings (they stay dismissed)")
+    def dismiss_link_hub_findings(self, request, queryset):
+        dismissed = 0
+        for act in queryset:
+            found = open_findings(act)
+            if found:
+                kept = [{**f, "dismissed": True} for f in act.link_hub_findings]
+                type(act).objects.filter(pk=act.pk).update(link_hub_findings=kept)
+                dismissed += len(found)
+        self.message_user(request, f"{dismissed} findings dismissed.")
 
     @admin.display(description="Review")
     def review(self, act):
@@ -1505,6 +1598,9 @@ class MusicActAdmin(admin.ModelAdmin):
         set is looked up by the next enrichment and never replaced"""
         for name in form.changed_data:
             act.field_sources[name] = "editor"
+        if "link_hub_url" in form.changed_data:
+            # a new address is read by the next run
+            act.link_hub_status, act.link_hub_checked_at = "", None
         if "musicbrainz_id" in form.changed_data:
             if act.musicbrainz_id:
                 act.musicbrainz_status = MusicAct.MusicBrainzStatus.EDITOR

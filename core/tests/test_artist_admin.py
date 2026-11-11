@@ -180,3 +180,112 @@ class ClearingAMatchKeepsHubDataTestCase(TestCase):
         self.assertEqual(band.instagram_url, "https://www.instagram.com/hubfill/")
         self.assertEqual((band.link_hub_url, band.link_hub_findings), ("https://linktr.ee/krill", [finding]))
         self.assertEqual(band.field_sources, {"instagram_url": "link hub", "link_hub_url": "musicbrainz"})
+
+
+def finding(field, current, hub, **extra):
+    return {"field": field, "current": current, "hub": hub, "seen_at": "2026-11-01T00:00:00+00:00", "dismissed": False, **extra}
+
+
+class LinkHubAdminTestCase(TestCase):
+    YOUTUBE = finding("youtube_url", "https://www.youtube.com/@krill", "https://www.youtube.com/channel/UC123")
+
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+
+    def records(self):
+        """one of each kind, with an open youtube finding"""
+        return [
+            model.objects.create(
+                name="Krill", link_hub_url="https://linktr.ee/krill", youtube_url="https://www.youtube.com/@krill",
+                link_hub_findings=[self.YOUTUBE], link_hub_status="read",
+            )
+            for model in (Band, Artist)
+        ]
+
+    def action(self, record, name):
+        url = reverse(f"admin:core_{record._meta.model_name}_changelist")
+        return self.client.post(url, {"action": name, "_selected_action": [record.pk]}, follow=True)
+
+    def test_the_change_page_shows_the_hub_status_and_findings(self):
+        for record in self.records():
+            html = self.client.get(reverse(f"admin:core_{record._meta.model_name}_change", args=[record.pk])).content.decode()
+            self.assertIn("Link hub", html)
+            self.assertIn("https://linktr.ee/krill", html)
+            self.assertIn("hub: https://www.youtube.com/channel/UC123", html)
+            self.assertIn("now: https://www.youtube.com/@krill", html)
+
+    def test_not_a_page_on_a_hub(self):
+        for record in self.records():
+            for address in ("https://linktr.ee/", "https://example.com/links"):
+                data = form_data(record, link_hub_url=address)
+                response = self.client.post(reverse(f"admin:core_{record._meta.model_name}_change", args=[record.pk]), data)
+                self.assertContains(response, "a page on a supported link hub")
+                record.refresh_from_db()
+                self.assertEqual(record.link_hub_url, "https://linktr.ee/krill")
+
+    def test_an_editors_address_is_theirs_and_is_read_next(self):
+        for record in self.records():
+            data = form_data(record, link_hub_url="http://beacons.ai/krillband?x=1", website="")
+            response = self.client.post(reverse(f"admin:core_{record._meta.model_name}_change", args=[record.pk]), data)
+            self.assertEqual(response.status_code, 302)
+            record.refresh_from_db()
+            self.assertEqual((record.link_hub_url, record.field_sources["link_hub_url"]), ("https://beacons.ai/krillband", "editor"))
+            self.assertEqual((record.link_hub_status, record.link_hub_checked_at), ("", None))
+
+    def test_the_address_can_be_cleared(self):
+        for record in self.records():
+            response = self.client.post(reverse(f"admin:core_{record._meta.model_name}_change", args=[record.pk]), form_data(record, link_hub_url=""))
+            self.assertEqual(response.status_code, 302)
+            record.refresh_from_db()
+            self.assertEqual(record.link_hub_url, "")
+
+    def test_the_read_only_fields_are_not_marked_as_the_editors(self):
+        for record in self.records():
+            data = form_data(record, link_hub_url=record.link_hub_url, instagram_url="", youtube_url=record.youtube_url)
+            self.client.post(reverse(f"admin:core_{record._meta.model_name}_change", args=[record.pk]), data)
+            record.refresh_from_db()
+            for name in ("link_hub_status", "link_hub_checked_at", "link_hub_findings"):
+                self.assertNotIn(name, record.field_sources)
+            self.assertEqual((record.link_hub_status, record.link_hub_findings), ("read", [self.YOUTUBE]))
+
+    def test_accepting_a_finding(self):
+        for record in self.records():
+            response = self.action(record, "accept_link_hub_findings")
+            self.assertContains(response, "1 findings accepted.")
+            record.refresh_from_db()
+            self.assertEqual(record.youtube_url, "https://www.youtube.com/channel/UC123")
+            self.assertEqual(record.field_sources["youtube_url"], "editor")
+            self.assertEqual(record.link_hub_findings, [])
+
+    def test_a_finding_with_several_candidates_is_left_for_the_editor(self):
+        several = finding("instagram_url", "", "https://www.instagram.com/a/", options=["https://www.instagram.com/a/", "https://www.instagram.com/b/"])
+        band = Band.objects.create(name="Krill", link_hub_findings=[several, self.YOUTUBE])
+        response = self.action(band, "accept_link_hub_findings")
+        self.assertContains(response, "1 with several candidates left open")
+        band.refresh_from_db()
+        self.assertEqual((band.instagram_url, band.youtube_url), ("", "https://www.youtube.com/channel/UC123"))
+        self.assertEqual(band.link_hub_findings, [several])
+
+    def test_dismissing_a_finding(self):
+        for record in self.records():
+            response = self.action(record, "dismiss_link_hub_findings")
+            self.assertContains(response, "1 findings dismissed.")
+            record.refresh_from_db()
+            self.assertEqual(record.youtube_url, "https://www.youtube.com/@krill")
+            self.assertEqual([f["dismissed"] for f in record.link_hub_findings], [True])
+
+    def test_records_with_findings(self):
+        for model in (Band, Artist):
+            with_finding = model.objects.create(name="Krill", link_hub_findings=[self.YOUTUBE])
+            model.objects.create(name="Horse", link_hub_findings=[{**self.YOUTUBE, "dismissed": True}])
+            model.objects.create(name="Pile")
+            url = reverse(f"admin:core_{model._meta.model_name}_changelist")
+            listed = self.client.get(url, {"link_hub_findings": "1"}).context["cl"].result_list
+            self.assertEqual([a.pk for a in listed], [with_finding.pk])
+            everyone = self.client.get(url).context["cl"].result_list
+            self.assertEqual(len(everyone), 3)
+
+    def test_the_list_counts_open_findings(self):
+        Band.objects.create(name="Krill", link_hub_findings=[self.YOUTUBE, finding("website", "", "https://krill.example.com")])
+        html = self.client.get(reverse("admin:core_band_changelist")).content.decode()
+        self.assertIn('<td class="field-link_hub_findings_count">2</td>', html)
