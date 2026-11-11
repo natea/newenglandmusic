@@ -33,26 +33,26 @@ Lets a visitor flip through the site's bands and artists one card at a time, hea
 - **WHEN** a visitor's remembered filter is Vermont and Belly's only show is in Rhode Island
 - **THEN** Belly is in the deck, and the remembered filter is still Vermont
 
-### Requirement: A card shows the act and a taste of its music
-A card SHALL show the act's name, whether it is a band or an artist, its home town and state when known, its photo when it has one (credited as on the act's own page), and its next upcoming show: date, time, venue and town (the show's own venue and time overrides apply, and a show with no venue still shows). The card SHALL link to the act's own page.
+### Requirement: A card shows the act
+A card SHALL show the act's name, whether it is a band or an artist, its home town and state when known, its photo when it has no player (credited as on the act's own page), and its next upcoming show: date, time, venue and town (the show's own venue and time overrides apply, and a show with no venue still shows). The card SHALL link to the act's own page.
 
 #### Scenario: Card contents
-- **WHEN** Belly of Providence, RI has a photo and a show on Nov 14 at Lupo's
+- **WHEN** Belly of Providence, RI has no streaming match, has a photo and a show on Nov 14 at Lupo's
 - **THEN** its card shows the name, "band", "Providence, RI", the photo with its credit, and "Nov 14", the time and "Lupo's", and links to `/bands/belly`
 
 ### Requirement: A card plays a taste of the act
-A card SHALL show the act's play buttons, as the listings show them, for each of Apple Music and YouTube where the act is matched, and none where it isn't. The card SHALL NOT show a Spotify button or load a Spotify player, even for an act matched on Spotify. Each button SHALL show its service's icon beside its name.
+A card SHALL show the act's play buttons, as the listings show them, for each of YouTube, Apple Music and Spotify where the act is matched, and none where it isn't, always in that order, so Spotify is last. Each button SHALL show its service's icon beside its name.
 
 #### Scenario: Play buttons with icons
 - **WHEN** Belly is matched on Apple Music and not on YouTube
 - **THEN** its card has an Apple Music button with the Apple Music icon, and no other
 
-#### Scenario: Spotify is not used
-- **WHEN** Belly is matched on Spotify and Apple Music
-- **THEN** its card has an Apple Music button and no Spotify button, and nothing is requested from Spotify
+#### Scenario: Spotify is the last button
+- **WHEN** Belly is matched on Spotify, Apple Music and YouTube
+- **THEN** its card has three buttons in the order YouTube, Apple Music, Spotify, each with its icon
 
 ### Requirement: The top card plays the act's music in place of its photo
-The card on top SHALL show the act's YouTube video player if it is matched, else its Apple Music player, in place of the photo, ready for the visitor to press its own play control; the page SHALL NOT start the sound by itself. An act with no match SHALL show its photo when it has one. Only the card on top SHALL load a player, and passing or adding the card SHALL stop and remove it. Nothing SHALL load from those services for cards that are not on top.
+The card on top SHALL show the act's YouTube video player if it is matched, else its Apple Music player, else its Spotify player, in place of the photo, ready for the visitor to press its own play control; the page SHALL NOT start the sound by itself. An act with no match SHALL show its photo when it has one. Only the card on top SHALL load a player, and passing or adding the card SHALL stop and remove it. Nothing SHALL load from those services for cards that are not on top.
 
 #### Scenario: Video first
 - **WHEN** Belly is matched on YouTube and Apple Music and its card comes to the top
@@ -62,9 +62,13 @@ The card on top SHALL show the act's YouTube video player if it is matched, else
 - **WHEN** an act is matched on Apple Music only and its card comes to the top
 - **THEN** the Apple Music player is loaded in the card, not yet playing
 
+#### Scenario: Spotify last
+- **WHEN** an act is matched on Spotify and Apple Music and its card comes to the top
+- **THEN** the Apple Music player is loaded, and the Spotify button stays available but no Spotify player is requested
+
 #### Scenario: Spotify only
 - **WHEN** an act is matched on Spotify only and its card comes to the top
-- **THEN** its card has no play button and no player, and shows its photo if it has one
+- **THEN** the Spotify player is loaded in the card, not yet playing
 
 #### Scenario: No match
 - **WHEN** an act has no streaming match
