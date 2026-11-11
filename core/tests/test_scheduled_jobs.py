@@ -39,6 +39,7 @@ WEEKLY = [
     "manage.py match_eventbrite_organizers",
     "manage.py match_seatgeek_venues",
     "manage.py lookup_venue_neighborhoods",
+    "manage.py read_artist_link_hubs",
 ]
 
 

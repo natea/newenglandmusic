@@ -13,7 +13,7 @@ from .venue_export import cell
 # MusicAct fields, in column order; "slug" becomes the public page's address (PAGE_HEADER)
 ACT_COLUMNS = [
     "act_id", "name", "city_town", "state",
-    "website", "bandcamp_url", "instagram_url", "youtube_url", "discogs_url",
+    "website", "bandcamp_url", "instagram_url", "youtube_url", "discogs_url", "link_hub_url", "link_hub_status",
     "notes", "slug", "needs_review", "review_reasons",
     "musicbrainz_id", "musicbrainz_status", "mb_type", "country", "area", "begin_date", "end_date",
     "disambiguation", "wikidata_id", "sources",
@@ -30,6 +30,9 @@ NOT_EXPORTED = {
     "created_at",
     "updated_at",
     "musicbrainz_checked_at",
+    "link_hub_checked_at",
+    # the link-hub check's open suggestions, which an editor accepts or dismisses in the admin
+    "link_hub_findings",
     # cc by-sa 4.0, which must be credited wherever the text is shown
     "wikipedia_extract",
     "wikipedia_url",

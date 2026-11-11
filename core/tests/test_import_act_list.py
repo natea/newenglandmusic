@@ -76,6 +76,16 @@ class ImportActListTestCase(TestCase):
             call_command("import_act_list", *args, stdout=out)
         return out.getvalue()
 
+    def test_a_list_replaces_a_hub_fill(self):
+        Band.objects.create(
+            name="28 Degrees Taurus", bandcamp_url="https://hubfill.bandcamp.com", musicbrainz_id=TAURUS,
+            field_sources={"bandcamp_url": "link hub"},
+        )
+        self.run_command(self.tab("rotation", row("28 Degrees Taurus", "Boston", "MA", bandcamp="https://taurus.bandcamp.com")))
+        band = Band.objects.get(name="28 Degrees Taurus")
+        self.assertEqual(band.bandcamp_url, "https://taurus.bandcamp.com")
+        self.assertEqual(band.field_sources["bandcamp_url"], "ohb")
+
     def test_a_row_with_a_musicbrainz_id(self):
         self.run_command(self.tab("rotation", row("'Til Tuesday", "Boston", "Massachusetts", kind="Band", mbid=TIL_TUESDAY)))
         band = Band.objects.get(name="'Til Tuesday")
