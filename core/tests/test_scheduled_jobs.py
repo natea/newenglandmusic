@@ -31,6 +31,7 @@ DAILY = [
     "manage.py match_apple_music_artists --limit 1000",
     "manage.py resolve_artists_with_lastfm --limit 300",
     "manage.py match_youtube_artists --limit 90",
+    "manage.py enrich_artists_from_musicbrainz --limit 100",
 ]
 WEEKLY = [
     "manage.py check_event_sources --workers 8",
@@ -68,6 +69,13 @@ class JobScriptsTestCase(SimpleTestCase):
         self.assertEqual(calls, DAILY)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("=== every step succeeded", result.stdout)
+
+    def test_enrichment_fails(self):
+        result, calls = self.run_job("daily.sh", fail_step=DAILY[-1])
+        # it runs last, so every step before it has already run
+        self.assertEqual(calls, DAILY)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("=== 1 step(s) failed:\n  python manage.py enrich_artists_from_musicbrainz --limit 100", result.stdout)
 
     def test_memory_pools_are_capped(self):
         # threads on linux otherwise run the jobs out of memory

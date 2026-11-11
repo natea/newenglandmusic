@@ -15,6 +15,10 @@ ROOT = Path(__file__).resolve().parents[2]
 SPEC = FABRO / "workflows" / "spec"
 AGENTS = ("propose", "sketch", "risk", "spec_fit", "fidelity", "revise")
 REVIEWERS = {"risk": "risk", "spec_fit": "spec fit", "fidelity": "fidelity"}
+# the issue inputs, and the three a revision run adds
+SPEC_INPUTS = INPUTS + ["change_name", "feedback", "revision_scope"]
+# every check step runs the default branch's copy, which install puts here
+MAIN = ".intentable/main"
 
 
 def graph():
@@ -68,7 +72,7 @@ class WorkflowShapeTestCase(SimpleTestCase):
         self.assertEqual(next_steps(edges, "propose"), {("check_draft", None)})
         self.assertEqual(
             attribute(steps["check_draft"], "script"),
-            "python3 bin/check-intentable-result spec --draft",
+            "python3 .intentable/main/check-intentable-result spec --draft",
         )
         self.assertEqual(next_steps(edges, "check_draft"), {("route", None)})
         self.assertRegex(steps["fork"], r"\bshape=component\b")
@@ -86,15 +90,42 @@ class WorkflowShapeTestCase(SimpleTestCase):
         self.assertEqual(next_steps(edges, "revise"), {("recheck", None)})
         self.assertEqual(
             attribute(steps["recheck"], "script"),
-            "python3 bin/check-intentable-result spec --draft",
+            "python3 .intentable/main/check-intentable-result spec --draft",
         )
         self.assertEqual(next_steps(edges, "recheck"), {("fork", None)})
         self.assertEqual(
             attribute(steps["finish"], "script"),
-            "python3 bin/check-intentable-result spec",
+            "python3 .intentable/main/check-intentable-result spec",
         )
         self.assertEqual(next_steps(edges, "finish"), {("exit", None)})
         self.assertEqual(settings()["workflow"]["graph"], "workflow.fabro")
+
+    def test_check_steps_run_the_copies(self):
+        text, steps, edges = graph()
+        install = attribute(steps["install"], "script")
+        self.assertIn("git fetch --quiet origin HEAD", install)
+        for source in ("bin/check-intentable-result", "bin/check-intentable-reviews", ".fabro/workflows/spec/sketch.md"):
+            name = source.rsplit("/", 1)[1]
+            self.assertIn(f"git show FETCH_HEAD:{source} > {MAIN}/{name}", install)
+        self.assertTrue(install.endswith(f"python3 {MAIN}/check-intentable-reviews --record-existing"))
+        for name, attrs in steps.items():
+            script = attribute(attrs, "script")
+            if script is None or name == "install":
+                continue
+            self.assertRegex(script, rf"^python3 {re.escape(MAIN)}/check-intentable-(result|reviews)\b", name)
+
+    def test_a_revision_skips_the_sketch_step(self):
+        text, steps, edges = graph()
+        # a revision's route, "revised", takes the unconditional edge; only "sketch" reaches the sketch agent
+        self.assertIn(("fork", None), next_steps(edges, "route"))
+        self.assertEqual({a for a, b, c in edges if b == "sketch"}, {"route"})
+        self.assertEqual({c for a, b, c in edges if b == "sketch"}, {"context.route=sketch"})
+
+    def test_reviewers_retry_a_sandbox_hiccup(self):
+        # issue #29's spec_fit failed once on a Daytona 500 and wasn't tried again
+        text, steps, edges = graph()
+        for reviewer in ("risk", "spec_fit", "fidelity"):
+            self.assertEqual(attribute(steps[reviewer], "max_retries"), "2", reviewer)
 
     def test_sketch_step_only_for_needs_design(self):
         text, steps, edges = graph()
@@ -111,7 +142,7 @@ class WorkflowShapeTestCase(SimpleTestCase):
         self.assertEqual(next_steps(edges, "sketch"), {("check_sketches", None)})
         self.assertEqual(
             attribute(steps["check_sketches"], "script"),
-            "python3 bin/check-intentable-result spec --sketches",
+            "python3 .intentable/main/check-intentable-result spec --sketches",
         )
         self.assertEqual(next_steps(edges, "check_sketches"), {("fork", None)})
         # the revise loop never reaches the sketch step
@@ -137,8 +168,8 @@ class WorkflowContractTestCase(SimpleTestCase):
     """the spec workflow follows the workflow contract"""
 
     def test_inputs_used_commands_without_inputs(self):
-        self.assertEqual(sorted(settings()["run"]["inputs"]), sorted(INPUTS))
-        for key in INPUTS:
+        self.assertEqual(settings()["run"]["inputs"], {name: "" for name in SPEC_INPUTS})
+        for key in SPEC_INPUTS:
             self.assertIn(f"{{{{ inputs.{key} }}}}", prompt("propose"), key)
         for name, attrs in graph()[1].items():
             script = attribute(attrs, "script")
@@ -204,6 +235,12 @@ class ReviewerPromptsTestCase(SimpleTestCase):
             self.assertIn("<!-- intentable-bridge -->", prompt(name), name)
             self.assertIn("not the owner speaking", prompt(name), name)
 
+    def test_fidelity_checks_each_point_of_the_feedback(self):
+        text = prompt("fidelity")
+        self.assertIn('`"revision": true`', text)
+        self.assertIn("Check each point of it in the change's files, and each question it asks in the draft's `message`", text)
+        self.assertIn("is blocking unless the message gives the reason", text)
+
     def test_reviewer_prompts(self):
         for reviewer in REVIEWERS:
             text = prompt(reviewer)
@@ -251,6 +288,49 @@ class ProposePromptTestCase(SimpleTestCase):
         ):
             self.assertIn(needed, text, needed)
 
+    def revision_section(self):
+        return prompt("propose").split("## Feedback on a draft", 1)[1].split("## What to do", 1)[0]
+
+    def test_the_propose_prompt_has_the_revision_section(self):
+        text = self.revision_section()
+        for needed in (
+            "{{ inputs.feedback }}",
+            "{{ inputs.change_name }}",
+            "Don't write a new change",
+            '`"revision": true`',
+        ):
+            self.assertIn(needed, text, needed)
+
+    def test_the_prompt_asks_for_answers(self):
+        text = self.revision_section()
+        self.assertIn("answer each question the feedback asks", text)
+        self.assertIn("name any request outside the issue's scope as one to file as its own issue", text)
+
+    def test_the_prompt_limits_a_revision_after_g2(self):
+        text = self.revision_section()
+        self.assertIn("{{ inputs.revision_scope }}", text)
+        self.assertIn("If what you may change is `sketches`", text)
+        self.assertIn("change only files under `sketches/` and the design's \"Sketches\" section", text)
+        self.assertIn("name in your message each request that would need the proposal itself changed", text)
+
+    def test_the_prompt_gives_a_revisions_exceptions(self):
+        text = self.revision_section()
+        self.assertIn("Keep the change's name", text)
+        # issue #26's first revision chained its draft after a validate that failed on warnings
+        self.assertIn("With `--strict` a warning fails it too", text)
+        self.assertIn("as a step of its own and not chained after another command", text)
+        self.assertIn("run `cat .intentable/draft.json` from the repository's root", text)
+        self.assertIn("Stop only once `.intentable/draft.json` is written", text)
+        self.assertIn("don't send the issue back", text)
+        self.assertIn("six plain sentences", text)
+
+    def test_prompts_keep_one_sketch(self):
+        text = self.revision_section()
+        self.assertIn("delete the other sketches and their entries in `sketches/options.json`", text)
+        self.assertIn("Don't add new variations", text)
+        self.assertIn("`.intentable/main/sketch.md`", text)
+        self.assertIn("keep it at one: don't add sketches back", prompt("revise"))
+
     def test_the_propose_agent_finishes_its_own_work(self):
         text = prompt("propose")
         for needed in (
@@ -273,6 +353,12 @@ class ProposePromptTestCase(SimpleTestCase):
             "Do not generate images",
         ):
             self.assertIn(needed, text, needed)
+
+    def test_sketch_prompt_names_the_checkers_elements(self):
+        # issue #26's sketch used <kbd>, which the prompt didn't say was refused
+        named = set(re.findall(r"`(\w+)`", re.search(r"Use only these elements: ([^.]*)\.", prompt("sketch")).group(1)))
+        listed = re.search(r"SAFE_ELEMENTS = \{(.*?)\}", RESULT_CHECKER.read_text(), re.S).group(1)
+        self.assertEqual(named, set(re.findall(r'"(\w+)"', listed)))
 
 
 # the checkers, run as the workflow runs them, in a fresh folder with a fake openspec
@@ -360,6 +446,22 @@ class Run:
         path = self.folder / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
+
+    def git(self, *args):
+        done = subprocess.run(["git", *args], cwd=self.folder, capture_output=True, text=True, timeout=60)
+        assert done.returncode == 0, done.stderr
+        return done.stdout.strip()
+
+    def commit_all(self, message):
+        """a commit of everything but .intentable/, as the sandbox's checkout and Fabro's checkpoints are"""
+        self.write(".gitignore", ".intentable/\nfake-bin/\n")
+        if not self.path(".git").exists():
+            self.git("init", "--quiet")
+            self.git("config", "user.email", "test@example.com")
+            self.git("config", "user.name", "test")
+        self.git("add", "-A")
+        self.git("commit", "--quiet", "--allow-empty", "-m", message)
+        return self.git("rev-parse", "HEAD")
 
     def passed_review(self):
         self.write(".intentable/reviews/outcome", "passed\n")
@@ -604,6 +706,14 @@ class SketchTestCase(SimpleTestCase):
             self.assertEqual(status, 1)
             self.assertIn("behavior", output)
 
+    def test_a_sketch_with_text_elements(self):
+        # issue #26's sketch was refused for <kbd>
+        text = "<p>Press <kbd>/</kbd>, <q>quoted</q> <cite>a</cite> <var>n</var> <samp>out</samp> <dfn>term</dfn> <del>old</del> <ins>new</ins>long<wbr>word</p><address>Boston</address>"
+        with tempfile.TemporaryDirectory() as folder:
+            sketch = SAFE_SKETCH.replace("</main>", text + "</main>")
+            status, output = self.sketch_run(folder, extra={"sketches/b.html": sketch}).check("--sketches")
+            self.assertEqual(status, 0, output)
+
     def test_a_sketch_browsers_read_differently(self):
         refresh = '<meta http-equiv=refresh content="0;url=https://evil.example/">'
         for bad in (
@@ -774,10 +884,169 @@ class ReviewLoopTestCase(SimpleTestCase):
         with tempfile.TemporaryDirectory() as folder:
             run = Run(folder, files=CHANGE_FILES)
             (run.path("openspec/changes/archive/2026-11-02-add-spek-pages")).mkdir(parents=True)
+            head = run.commit_all("checkout")
             self.assertEqual(run.reviews("--record-existing")[0], 0)
             self.assertEqual(
                 run.path(".intentable/existing-changes.txt").read_text(), "2026-11-02-add-spek-pages\nadd-venue-hours\n"
             )
+            # the base a sketches-only revision is compared with
+            self.assertEqual(run.path(".intentable/base").read_text().strip(), head)
+
+
+REVISION = {**DRAFT, "labels": ["needs-design"], "revision": True}
+DESIGN_WITH_SKETCHES = "## Context\n\nThe venue page.\n\n## Sketches\n\n- sketches/a.html\n- sketches/b.html\n- sketches/c.html\n\n## Risks\n\nNone.\n"
+ONE_SKETCH = {
+    "sketches/c.html": SAFE_SKETCH,
+    "sketches/options.json": json.dumps([{"file": "c.html", "label": "Option c", "thesis": "Why.", "risk": "Risk."}]),
+}
+
+
+class RevisionTestCase(SimpleTestCase):
+    """a revision answers the feedback: checked like a new draft, on its own change, narrowed to one sketch"""
+
+    def revision_run(self, folder, draft=REVISION, sketches=SKETCH_FILES, design=DESIGN_WITH_SKETCHES, **kwargs):
+        files = {**CHANGE_FILES, **sketches, "design.md": design}
+        return Run(folder, draft=draft, files=files, existing=("add-venue-hours",), **kwargs)
+
+    def test_a_revision_of_an_existing_change(self):
+        with tempfile.TemporaryDirectory() as folder:
+            status, output = self.revision_run(folder).check("--draft")
+            self.assertEqual(status, 0, output)
+
+    def test_a_revision_that_makes_a_new_change(self):
+        with tempfile.TemporaryDirectory() as folder:
+            run = self.revision_run(folder)
+            run.write("openspec/changes/add-swipe-deck/proposal.md", "x\n")
+            status, output = run.check("--draft")
+            self.assertEqual(status, 1)
+            self.assertIn("add-swipe-deck is new", output)
+        with tempfile.TemporaryDirectory() as folder:
+            # a revision of a change that wasn't there before the run
+            run = Run(folder, draft=REVISION, files={**CHANGE_FILES, **SKETCH_FILES, "design.md": DESIGN_WITH_SKETCHES})
+            status, output = run.check("--draft")
+            self.assertEqual(status, 1)
+            self.assertIn("didn't exist before the run", output)
+
+    def test_a_revision_that_asks_a_question_back(self):
+        draft = {**REVISION, "state": "needs-info", "labels": ["clarity:3"], "message": "Which video?"}
+        with tempfile.TemporaryDirectory() as folder:
+            status, output = self.revision_run(folder, draft=draft).check("--draft")
+            self.assertEqual(status, 1)
+            self.assertIn("a revision can't send the issue back", output)
+
+    def test_an_unsafe_sketch_in_a_revision(self):
+        unsafe = SAFE_SKETCH.replace("</body>", "<script>alert(1)</script></body>")
+        with tempfile.TemporaryDirectory() as folder:
+            status, output = self.revision_run(folder, sketches={**ONE_SKETCH, "sketches/c.html": unsafe}).check("--draft")
+            self.assertEqual(status, 1)
+            self.assertIn("sketches/c.html", output)
+
+    def test_one_sketch_after_a_pick(self):
+        design = DESIGN_WITH_SKETCHES.replace("- sketches/a.html\n- sketches/b.html\n", "")
+        with tempfile.TemporaryDirectory() as folder:
+            run = self.revision_run(folder, sketches=ONE_SKETCH, design=design, route=["needs-design"])
+            run.passed_review()
+            status, output = run.check()
+            self.assertEqual(status, 0, output)
+
+    def test_two_sketches(self):
+        two = {k: v for k, v in SKETCH_FILES.items() if k != "sketches/b.html"}
+        with tempfile.TemporaryDirectory() as folder:
+            run = self.revision_run(folder, sketches=two, route=["needs-design"])
+            run.passed_review()
+            status, output = run.check()
+            self.assertEqual(status, 1)
+            self.assertIn("a new draft has three options and a narrowed revision one", output)
+        with tempfile.TemporaryDirectory() as folder:
+            # one sketch is for a narrowed revision only
+            run = Run(folder, draft={**DRAFT, "labels": ["needs-design"]}, route=["needs-design"],
+                      files={**CHANGE_FILES, **ONE_SKETCH, "design.md": "sketches/c.html"})
+            run.passed_review()
+            status, output = run.check()
+            self.assertEqual(status, 1)
+            self.assertIn("a new draft has three options and a narrowed revision one", output)
+
+    def test_two_sketches_at_the_first_check(self):
+        two = {k: v for k, v in SKETCH_FILES.items() if k != "sketches/b.html"}
+        with tempfile.TemporaryDirectory() as folder:
+            status, output = self.revision_run(folder, sketches=two).check("--draft")
+            self.assertEqual(status, 1)
+            self.assertIn("sketches/b.html is missing", output)
+
+    def test_a_revisions_result(self):
+        with tempfile.TemporaryDirectory() as folder:
+            run = self.revision_run(folder, route=["needs-design"])
+            run.passed_review()
+            status, output = run.check()
+            self.assertEqual(status, 0, output)
+            result = json.loads(run.path(".intentable/result.json").read_text())
+            self.assertIs(result["revision"], True)
+            self.assertEqual(result["change"], "add-venue-hours")
+            self.assertEqual(result["reviewed"], "passed")
+            self.assertIn("sketches/c.html", result["files"])
+
+    def test_a_revision_goes_straight_to_review(self):
+        with tempfile.TemporaryDirectory() as folder:
+            run = self.revision_run(folder)
+            status, output = run.reviews("--route")
+            self.assertEqual(status, 0, output)
+            self.assertEqual(json.loads(output.strip().splitlines()[-1]), {"context_updates": {"route": "revised"}})
+            self.assertEqual(
+                json.loads(run.path(".intentable/route.json").read_text()),
+                {"labels": ["needs-design"], "change": "add-venue-hours"},
+            )
+
+    def scoped_run(self, folder):
+        """a sketches-only revision: base recorded at checkout, then the agent's edits in a checkpoint commit"""
+        run = self.revision_run(folder, draft={**REVISION, "scope": "sketches"})
+        run.commit_all("draft branch")
+        self.assertEqual(run.reviews("--record-existing")[0], 0)
+        return run
+
+    def test_a_sketch_only_revision_that_changes_the_spec(self):
+        with tempfile.TemporaryDirectory() as folder:
+            run = self.scoped_run(folder)
+            run.write("openspec/changes/add-venue-hours/specs/venues/spec.md", "## ADDED Requirements\n\nMore.\n")
+            run.commit_all("checkpoint after propose")
+            status, output = run.check("--draft")
+            self.assertEqual(status, 1)
+            self.assertIn("changed specs/venues/spec.md", output)
+        with tempfile.TemporaryDirectory() as folder:
+            run = self.scoped_run(folder)
+            design = DESIGN_WITH_SKETCHES.replace("The venue page.", "The venue page, with video.")
+            run.write("openspec/changes/add-venue-hours/design.md", design)
+            status, output = run.check("--draft")
+            self.assertEqual(status, 1)
+            self.assertIn("outside its \"Sketches\" section", output)
+
+    def test_a_sketch_only_revision_that_changes_a_sketch(self):
+        with tempfile.TemporaryDirectory() as folder:
+            run = self.scoped_run(folder)
+            run.write("openspec/changes/add-venue-hours/sketches/c.html", SAFE_SKETCH.replace("Venue hours", "Venue video"))
+            run.write(
+                "openspec/changes/add-venue-hours/design.md",
+                DESIGN_WITH_SKETCHES.replace("- sketches/c.html\n", "- sketches/c.html, now with video\n"),
+            )
+            run.commit_all("checkpoint after propose")
+            status, output = run.check("--draft")
+            self.assertEqual(status, 0, output)
+
+    def test_a_revision_on_a_branch_cut_before_this_change(self):
+        # the draft branch's own bin/ predates the revision rules; the run checks with main's copy
+        old = subprocess.run(
+            ["git", "show", "5aff796:bin/check-intentable-result"], cwd=ROOT, capture_output=True, text=True
+        )
+        if old.returncode != 0:
+            self.skipTest("the fork's history isn't in this checkout")
+        with tempfile.TemporaryDirectory() as folder:
+            run = self.revision_run(folder)
+            run.write("bin/check-intentable-result", old.stdout)
+            status, output = run.run(run.path("bin/check-intentable-result"), "spec", "--draft")
+            self.assertEqual(status, 1)
+            self.assertIn("already exists", output)
+            run.write(f"{MAIN}/check-intentable-result", RESULT_CHECKER.read_text())
+            status, output = run.run(run.path(f"{MAIN}/check-intentable-result"), "spec", "--draft")
+            self.assertEqual(status, 0, output)
 
 
 class GuideTestCase(SimpleTestCase):
@@ -791,5 +1060,9 @@ class GuideTestCase(SimpleTestCase):
             "risk, spec fit, fidelity",
             "five-round limit",
             "the bridge commits the draft",
+            "##### revisions",
+            "`revision_scope`",
+            "one sketch is allowed only in a revision",
+            "`.intentable/main/`",
         ):
             self.assertIn(needed, section, needed)

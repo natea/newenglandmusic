@@ -290,6 +290,94 @@ class EnrichCommandTestCase(TestCase):
         self.assertEqual(Band.objects.get(name="Speedy Ortiz").musicbrainz_id, SPEEDY_ORTIZ)
 
 
+class DailyEnrichmentTestCase(TestCase):
+    """the daily job's step: enrich_artists_from_musicbrainz --limit 100, never --refresh"""
+
+    run_command = EnrichCommandTestCase.run_command
+
+    def daily(self, **kwargs):
+        return self.run_command("--limit", "100", **kwargs)
+
+    def test_more_records_than_the_limit(self):
+        for i in range(40):
+            Band.objects.create(name=f"Band {i:02d}")
+        for i in range(90):
+            Artist.objects.create(name=f"Artist {i:02d}")
+        _, mb = self.daily()
+        looked_up = [call[1] for call in mb.calls if call[0] == "search"]
+        self.assertEqual(len(looked_up), 100)
+        # bands before artists
+        self.assertEqual(looked_up[:40], [f"Band {i:02d}" for i in range(40)])
+        self.assertEqual(Band.objects.filter(musicbrainz_checked_at=None).count(), 0)
+        self.assertEqual(Artist.objects.filter(musicbrainz_checked_at=None).count(), 30)
+        # the next day's run takes the 30 left
+        _, mb = self.daily()
+        self.assertEqual(len([c for c in mb.calls if c[0] == "search"]), 30)
+
+    def test_a_bands_members_are_looked_up_by_a_later_run(self):
+        Band.objects.create(name="Speedy Ortiz")
+        self.daily()
+        members = Artist.objects.filter(memberships__band__name="Speedy Ortiz")
+        self.assertEqual(members.count(), 6)
+        self.assertEqual(members.filter(musicbrainz_checked_at=None).count(), 6)
+        _, mb = self.daily()
+        self.assertEqual(Artist.objects.filter(musicbrainz_checked_at=None).count(), 0)
+        # members come with their musicbrainz ids, so they're looked up, not searched
+        self.assertEqual(len([c for c in mb.calls if c[0] == "lookup"]), 6)
+
+    def test_an_ambiguous_record_is_not_retried(self):
+        mb = FakeMusicBrainz(searches={"Horse": [candidate(HORSE_A, "Horse"), candidate(HORSE_B, "Horse")]})
+        Band.objects.create(name="Horse")
+        self.daily(mb=mb)
+        self.assertEqual(Band.objects.get().musicbrainz_status, Status.AMBIGUOUS)
+        _, mb = self.daily()
+        self.assertEqual(mb.calls, [])
+        self.assertEqual(Band.objects.get().musicbrainz_status, Status.AMBIGUOUS)
+
+    def test_records_looked_up_before_cause_no_request(self):
+        Band.objects.create(name="Speedy Ortiz")
+        Band.objects.create(name="Nobody At All")
+        mb = FakeMusicBrainz(searches={"Horse": [candidate(HORSE_A, "Horse", kind="Person"), candidate(HORSE_B, "Horse", kind="Person")]})
+        Artist.objects.create(name="Horse")
+        self.daily(mb=mb)
+        # the band's members, added by that run, are looked up by the next
+        self.daily(mb=mb)
+        statuses = {r.musicbrainz_status for r in list(Band.objects.all()) + list(Artist.objects.all())}
+        self.assertTrue({Status.MATCHED, Status.AMBIGUOUS, Status.NOT_FOUND} <= statuses)
+        _, mb = self.daily()
+        self.assertEqual(mb.calls, [])
+
+    def test_musicbrainz_busy_keeps_earlier_records_and_the_next_run_does_the_rest(self):
+        from core.music_ids import MusicBrainzBusy
+
+        for name in ("Aaa", "Bbb", "Ccc", "Ddd"):
+            Band.objects.create(name=name)
+        mb = FakeMusicBrainz()
+        original = mb.search_artists
+
+        def search(name, kind):
+            if name == "Ccc":
+                raise MusicBrainzBusy("musicbrainz: HTTP 503 after 4 tries")
+            return original(name, kind)
+
+        mb.search_artists = search
+        output, _ = self.daily(mb=mb)
+        self.assertIn("stopping this run", output)
+        done = set(Band.objects.filter(musicbrainz_checked_at__isnull=False).values_list("name", flat=True))
+        self.assertEqual(done, {"Aaa", "Bbb"})
+        _, mb = self.daily()
+        self.assertEqual([c[1] for c in mb.calls if c[0] == "search"], ["Ccc", "Ddd"])
+
+    def test_a_record_held_for_review_is_looked_up_and_stays_hidden(self):
+        band = Band.objects.create(name="Speedy Ortiz", needs_review=True, review_reasons=["several"])
+        self.assertEqual(self.client.get(f"/bands/{band.slug}").status_code, 404)
+        self.daily()
+        band.refresh_from_db()
+        self.assertEqual(band.musicbrainz_id, SPEEDY_ORTIZ)
+        self.assertTrue(band.needs_review)
+        self.assertEqual(self.client.get(f"/bands/{band.slug}").status_code, 404)
+
+
 class WikipediaClientTestCase(SimpleTestCase):
     def test_requests_user_agent_and_pace(self):
         wikipedia, session = fake_wikipedia()
