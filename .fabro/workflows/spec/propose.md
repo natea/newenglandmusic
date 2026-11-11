@@ -22,6 +22,34 @@ Comments so far, oldest first, as JSON (`[{author, body}]`):
 
 A comment that ends with `<!-- intentable-bridge -->` was posted by the intentable bridge under the `natea` account: an earlier question or summary from this process, or a status note. It is not the owner speaking. The thread is the record of what the person who asked has decided.
 
+## Feedback on a draft
+
+Feedback to answer, as JSON (`[{author, body}]`), oldest first; empty for a new proposal:
+
+```
+{{ inputs.feedback }}
+```
+
+The change it is about: `{{ inputs.change_name }}`. What you may change: `{{ inputs.revision_scope }}`.
+
+**If the feedback above is empty**, skip this section and go on to "What to do".
+
+**If it isn't**, this is a revision: people have read the draft of `openspec/changes/{{ inputs.change_name }}/`, which is already checked out, and replied. Don't write a new change and don't send the issue back. Instead:
+
+1. Act on each point of the feedback. Change the proposal, design, specs and their scenarios, tasks and sketches wherever a point changes what the change does, and record what the feedback leaves undecided as an open question in the design. Keep the change's name.
+2. If the feedback picks one of the sketches and asks for changes to it ("C, but…"), revise that sketch under its own letter, delete the other sketches and their entries in `sketches/options.json`, and leave the design's "Sketches" section with that one option. Don't add new variations. If it picks none, revise the sketches it is about.
+3. Follow the sketch rules in `.intentable/main/sketch.md` for every sketch you edit: the same elements, attributes and styling rules, checked the same way.
+4. If what you may change is `sketches`, Nate has already confirmed the proposal: change only files under `sketches/` and the design's "Sketches" section, nothing else, and name in your message each request that would need the proposal itself changed.
+5. Run `openspec validate {{ inputs.change_name }} --strict` until it passes.
+
+Then write `.intentable/draft.json` with the change's own name and labels, unchanged, and `"revision": true`, plus `"scope": "sketches"` when that is what you may change:
+
+```json
+{"change": "add-venue-hours", "labels": ["needs-design"], "revision": true, "message": "Option C now plays the band's video instead of the photo, and the whole row ticks the box. The show picker appears only after a right swipe. A site-wide header is bigger than this page, so it should be its own issue."}
+```
+
+The message follows the rules below, except that it may run to six plain sentences: say what changed, answer each question the feedback asks, and name any request outside the issue's scope as one to file as its own issue. Then stop: the rest of this prompt is for a new proposal.
+
 ## What to do
 
 First decide whether the issue is clear enough to write up.
