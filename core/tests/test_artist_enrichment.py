@@ -508,3 +508,84 @@ class PhotoAndSocialEnrichmentTestCase(TestCase):
         stored = json.dumps(Band.objects.filter(pk=band.pk).values().get(), default=str)
         self.assertNotIn("upload.wikimedia.org", stored)
         self.assertNotIn("http", band.photo_file)
+
+
+class LinkHubEnrichmentTestCase(TestCase):
+    """the link-hub address and the links a hub filled, through enrichment"""
+
+    def enrich(self, band, relations, **wikipedia):
+        return PhotoAndSocialEnrichmentTestCase.enrich(self, band, relations, **wikipedia)
+
+    def test_a_hub_address_from_musicbrainz(self):
+        band = self.enrich(Band.objects.create(name="Krill"), [url_rel("free streaming", "https://beacons.ai/krillband")])
+        self.assertEqual(band.link_hub_url, "https://beacons.ai/krillband")
+        self.assertEqual(band.field_sources["link_hub_url"], "musicbrainz")
+
+    def test_a_hub_link_among_several_links(self):
+        band = self.enrich(Band.objects.create(name="Krill"), [
+            url_rel("social network", "https://www.facebook.com/krill"),
+            url_rel("social network", "https://linktr.ee/krill"),
+        ])
+        self.assertEqual(band.link_hub_url, "https://linktr.ee/krill")
+        self.assertEqual(band.instagram_url, "")
+
+    def test_links_reads_a_hub_of_any_relation_type(self):
+        found = links({"relations": [url_rel("free streaming", "https://linktr.ee/krill"), url_rel("other databases", "https://example.com/x")]})
+        self.assertEqual(found, {"link_hub_url": "https://linktr.ee/krill"})
+
+    def test_a_page_that_is_not_a_hub_page_is_not_kept(self):
+        self.assertEqual(links({"relations": [url_rel("social network", "https://linktr.ee/")]}), {})
+
+    def test_an_editors_address_is_kept(self):
+        band = Band.objects.create(name="Krill", link_hub_url="https://linktr.ee/editors", field_sources={"link_hub_url": "editor"})
+        band = self.enrich(band, [url_rel("social network", "https://beacons.ai/krillband")])
+        self.assertEqual((band.link_hub_url, band.field_sources["link_hub_url"]), ("https://linktr.ee/editors", "editor"))
+
+    def test_a_copy_of_the_website_is_kept(self):
+        band = Band.objects.create(name="Krill", link_hub_url="https://linktr.ee/krill", field_sources={"link_hub_url": "import"})
+        band = self.enrich(band, [url_rel("social network", "https://beacons.ai/krillband")])
+        self.assertEqual(band.link_hub_url, "https://linktr.ee/krill")
+
+    def test_musicbrainzs_own_address_is_replaced_and_dropped_with_its_link(self):
+        band = self.enrich(Band.objects.create(name="Krill"), [url_rel("social network", "https://linktr.ee/old")])
+        band.musicbrainz_checked_at = None
+        band = self.enrich(band, [url_rel("social network", "https://linktr.ee/new")])
+        self.assertEqual(band.link_hub_url, "https://linktr.ee/new")
+        band = self.enrich(band, [])
+        self.assertEqual((band.link_hub_url, "link_hub_url" in band.field_sources), ("", False))
+
+    def hub_filled(self, **fields):
+        urls = {
+            "instagram_url": "https://www.instagram.com/hubfill/", "youtube_url": "https://www.youtube.com/@hubfill",
+            "website": "https://hubfill.example.com", "bandcamp_url": "https://hubfill.bandcamp.com",
+        }
+        return Band.objects.create(name="Anamanaguchi", **urls, field_sources={name: "link hub" for name in urls}, **fields)
+
+    def test_enrichment_keeps_a_hub_fill(self):
+        band = self.enrich(self.hub_filled(), [url_rel("wikidata", "https://www.wikidata.org/wiki/Q892329")])
+        self.assertEqual(
+            (band.instagram_url, band.youtube_url, band.website, band.bandcamp_url),
+            ("https://www.instagram.com/hubfill/", "https://www.youtube.com/@hubfill", "https://hubfill.example.com", "https://hubfill.bandcamp.com"),
+        )
+        self.assertEqual({band.field_sources[n] for n in ("instagram_url", "youtube_url", "website", "bandcamp_url")}, {"link hub"})
+
+    def test_a_hub_fill_is_replaced_by_musicbrainz(self):
+        band = self.enrich(self.hub_filled(), [
+            url_rel("social network", "https://www.instagram.com/from_musicbrainz/"),
+            url_rel("youtube", "https://www.youtube.com/channel/UCmusicbrainz"),
+            url_rel("official homepage", "https://musicbrainz.example.com/"),
+            url_rel("bandcamp", "https://musicbrainz.bandcamp.com/"),
+        ])
+        self.assertEqual(
+            (band.instagram_url, band.youtube_url, band.website, band.bandcamp_url),
+            ("https://www.instagram.com/from_musicbrainz/", "https://www.youtube.com/channel/UCmusicbrainz", "https://musicbrainz.example.com/", "https://musicbrainz.bandcamp.com/"),
+        )
+        self.assertEqual({band.field_sources[n] for n in ("instagram_url", "youtube_url", "website", "bandcamp_url")}, {"musicbrainz"})
+
+    def test_a_hub_fill_is_replaced_by_wikidata(self):
+        band = self.enrich(self.hub_filled(), [url_rel("wikidata", "https://www.wikidata.org/wiki/Q485416")])
+        self.assertEqual(band.instagram_url, "https://www.instagram.com/anamanaguchi_official/")
+        self.assertEqual(band.youtube_url, "https://www.youtube.com/channel/UCtdPSQIDsZyhq3L7kITrKoA")
+        self.assertEqual((band.field_sources["instagram_url"], band.field_sources["youtube_url"]), ("wikidata", "wikidata"))
+        # the website and bandcamp link are musicbrainz's to give, not wikidata's
+        self.assertEqual(band.field_sources["website"], "link hub")

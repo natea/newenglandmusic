@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from core.artist_enrichment import BOTH_KINDS, NOT_ON_MUSICBRAINZ, SEVERAL, choose_kind
 from core.artist_import import FIELD_COLUMNS, clean_values
 from core.artist_matching import normalize
+from core.link_hubs import LINK_HUB
 from core.models import Artist, Band
 
 # the list's own headers, compared lowercased, for each field
@@ -217,7 +218,7 @@ def fill(record, values, source):
             continue
         owner = record.field_sources.get(name)
         current = getattr(record, name)
-        if owner == source or (owner is None and not current):
+        if owner in (source, LINK_HUB) or (owner is None and not current):
             if current != value:
                 setattr(record, name, value)
                 changed = True

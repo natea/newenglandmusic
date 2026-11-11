@@ -1545,8 +1545,10 @@ def clear_musicbrainz(act):
     if act.field_sources.get("photo_file") != "editor":
         for name in ("photo_file", "photo_author", "photo_license", "photo_license_url"):
             setattr(act, name, "")
+    # the hub address stays marked as musicbrainz's: it outlives the match (add-artist-link-hub-links)
     act.field_sources = {
-        k: v for k, v in act.field_sources.items() if v not in ("musicbrainz", "wikidata") and k != "musicbrainz_id"
+        k: v for k, v in act.field_sources.items()
+        if (v not in ("musicbrainz", "wikidata") and k != "musicbrainz_id") or k == "link_hub_url"
     }
 
 

@@ -164,3 +164,19 @@ class PhotoAndLinksAdminTestCase(TestCase):
         band.refresh_from_db()
         self.assertEqual((band.photo_file, band.photo_license, band.instagram_url), ("", "", ""))
         self.assertEqual(band.youtube_url, "https://www.youtube.com/channel/UCxxxxxxxxxxxxxxxxxxxxxx")
+
+
+class ClearingAMatchKeepsHubDataTestCase(TestCase):
+    def test_clearing_a_match(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
+        finding = {"field": "website", "current": "", "hub": "https://krill.example.com", "seen_at": "2026-11-01T00:00:00+00:00", "dismissed": False}
+        band = Band.objects.create(
+            name="Krill", musicbrainz_id=OTHER, instagram_url="https://www.instagram.com/hubfill/",
+            link_hub_url="https://linktr.ee/krill", link_hub_findings=[finding],
+            field_sources={"instagram_url": "link hub", "link_hub_url": "musicbrainz", "musicbrainz_id": "musicbrainz"},
+        )
+        self.client.post(reverse("admin:core_band_changelist"), {"action": "clear_musicbrainz_match", "_selected_action": [band.pk]})
+        band.refresh_from_db()
+        self.assertEqual(band.instagram_url, "https://www.instagram.com/hubfill/")
+        self.assertEqual((band.link_hub_url, band.link_hub_findings), ("https://linktr.ee/krill", [finding]))
+        self.assertEqual(band.field_sources, {"instagram_url": "link hub", "link_hub_url": "musicbrainz"})
