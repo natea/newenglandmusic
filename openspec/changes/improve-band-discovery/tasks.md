@@ -1,0 +1,36 @@
+Issue: [#63 some improvements to the tinder-style band discovery tool](https://github.com/natea/newenglandmusic/issues/63)
+
+Archive `add-band-discovery-swipe` before this change, since this modifies its spec. That change's task 4.1 (the design review) is still open; the owner closes it, and this change is not applied or archived until then.
+
+Issue: [#63 some improvements to the tinder-style band discovery feature](https://github.com/natea/newenglandmusic/issues/63)
+
+## 1. Only acts with media
+
+- [ ] 1.1 In `core/views/discover.py`, drop cards whose `act_previews` entry is empty, remove the photo (the `photo_of` import in `discover.py` only, since the act page still uses it, `Card.photo`, `PHOTO_WIDTH`, the template's figure and its styles), and keep the query count flat. Verify with view tests for an act with no media, one service only (each of the three), an Apple match with no top song, switches and credentials off, the no-JavaScript list, and an `assertNumQueries` bound that does not grow with the acts. Update the existing photo tests (`test_the_photo_is_left_for_the_player_when_matched`, `test_no_match_and_no_photo`, `test_card_contents`) to the new rule, and the top-card tests whose wording said "not yet playing".
+- [ ] 1.2 Fix the existing tests this breaks: `discover_fixture.show()` makes acts with no media link, so give it a default link (or add a helper that does) in `core/tests/discover_fixture.py`, with a media-less variant for the tests that want one. Verify the 34 view tests in `test_discover.py` and the 39 browser tests in `test_discover_browser.py` pass with media-bearing acts, and press Start in each browser test that expects a ready player on load.
+
+## 2. Area filters
+
+- [ ] 2.1 In the view, resolve the filter with `geo_filter_for_request`, redirect and set or clear the cookie with `apply_cookie_action` as `core/views/index.py` does, and narrow the performance query with `geo_filter.q(prefix="event__venue__")`, so each card lists only shows in the area. Replace the old "area filter ignored and kept" test with one for the "Area filter ignored" scenario's new body (Belly not in a Vermont-filtered deck, cookie still Vermont). Extract the filter context the listing builds inline (`region_options`, `state_options`, `metro_groups`, `metro_towns`, `town_neighborhoods`) into one helper used by both views, with the listing's existing tests as the guard. Note that filtering uses the linked venue, so a show whose card displays a `venue_override` can sit under the filter of its linked venue, as on the listing. Verify with view tests for the no-filter deck ("No filter chosen": Belly's only show in Rhode Island is in the deck), filter by state, region, metro (and a town), cards and pickers listing only the area's shows (including the "Picker under a filter" scenario, and the unfiltered picker still listing all shows), an act with no show in the area left out, a show with no venue matching no filter, an unknown value returning 200 with the unfiltered deck, region and state together, and metro options narrowed by the chosen state.
+- [ ] 2.2 Show the shared `geo_filter_form.html` on the deck with the shared helper's context (its auto-submit script is inline in the partial, so including it is enough), and add an empty state for "no bands match the filters" with a link to the unfiltered deck. Verify with view tests for the form's options and selected values, and the empty state with and without a filter, plus a no-JavaScript test that the form is a GET form to `/discover`.
+- [ ] 2.3 Remembered filter: the deck shares the `geo_filter` cookie with the listing. Make the no-JavaScript bookmark return to `request.get_full_path()` so the query string survives with cookies off. Verify with tests for a filter set on the deck redirecting `/`, a cookie redirecting a bare `/discover`, clearing, a stale cookie deleted without a redirect, a URL winning over the cookie, the redirect chain and `never_cache` header for the menu's bare `/discover` and `/discover/`, the bookmark returning to the filtered URL, and the listing's own cookie tests still passing.
+
+## 3. Autoplay
+
+- [ ] 3.0 Before building 3.1: the design records YouTube's current terms on autoplay of embedded players (see design, Decision 2). If they forbid it, stop and take the fallback in open question 3. Verify by the recorded result in the design.
+
+- [ ] 3.1 Add the Start control to the deck and load no player until it is pressed; give `youtubePlayer` an option for `autoplay=1&playsinline=1` and an `allow` with `autoplay`, used only by the deck, leaving the listings' players as they are (the `youtube-artist-preview` delta). Verify with browser tests for the hint and controls appearing after Start, the hint not running before it, and for (embed addresses routed to a stub) for no player before Start, the first card's YouTube iframe with `autoplay=1` after Start, and the listings' YouTube iframe without it. Also verify "Start again" at the end of the deck shows the first card's player asking to start, without the Start control.
+- [ ] 3.2 Load each later top card's player in the handler of the swipe, button or key that brought it up, with autoplay requested for the services that allow it, and the player's sound stopping when it is removed. Verify with browser tests for skip by swipe, button and key, after Save, a Start gate on an Apple Music or Spotify first card, the passed card's player being gone, and the Apple Music and Spotify cards loading ready without autoplay unless open questions 1 and 5 decide otherwise.
+- [ ] 3.3 Update `discover.scss` (remove the `.discover-photo` rules; add the Start control and filter strip). Check nothing is over the player after the Start control and the filter form are added, at phone width. Verify with the existing browser test for the player's size and overlap, at 390 px wide, with the Start control shown and hidden.
+- [ ] 3.4 Try autoplay by hand on a phone and a desktop browser (Chrome and Safari) with real YouTube, Apple Music and Spotify matches, and record the results here and in the design's risks.
+
+## 4. Swipe directions
+
+- [ ] 4.1 Add browser tests that drive touch gestures on a phone-sized screen: a drag to the right opens the picker without passing the act, a drag to the left passes it and saves nothing. If either fails, find the cause, fix it and note it in the design. Verify the existing mouse, button and key tests still pass.
+- [ ] 4.2 Apply the label wording decided in open question 2, if it changes. Verify with the hint and button tests.
+
+## 5. Finish
+
+- [ ] 5.1 Check the deck at phone and desktop widths with the filter form, the Start control and each empty state; run the design review against the chosen sketch.
+- [ ] 5.2 Run the whole suite with the network blocked and verify it passes, with every scenario in `specs/band-discovery/spec.md` covered by a test.
+- [ ] 5.3 Update the docs that describe the deck (the `discover.py` module docstring, the `discover.js` header, `PRODUCTION.md`'s deck notes) to say it holds only acts with media, follows the area filter, and autoplays after Start.
