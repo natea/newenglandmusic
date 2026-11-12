@@ -1,3 +1,7 @@
+## 0. The database, now (Nate, before the review finishes)
+
+- [ ] 0.1 Upgrade the production database to a paid plan in the dashboard, `0.1c-256mb` unless Nate picks another. Dump it with `PRODUCTION.md`'s backup command (`pg_dump` 17+), and check the dump restores into a local scratch database, never the External Database URL (design decision 7, step 0).
+
 ## 1. The name and tagline
 
 - [ ] 1.1 In `nycnoise/settings/base.py`:
@@ -18,6 +22,7 @@
 - [ ] 2.2 Add `/health` (200, body "ok", no database) and set `render.yaml`'s `healthCheckPath` to it. Test "The health check".
 - [ ] 2.3 Add the redirect middleware after `SecurityMiddleware`, acting only when `CANONICAL_HOST` is set. For any other host except `/health`, redirect to `SITE_URL` with the same path and query: 301 for GET and HEAD, 308 otherwise, with the target built from settings only. Tests for "The old address", "The www address", "A calendar feed on the old address", "A form posted to the old address" and "No canonical host".
 - [ ] 2.4 In the same middleware, redirect the landing page's paths on the site's own host to the same path at https://info.stagehopper.app: top-level `.html`, `.json` and `.geojson`; `og.png`, `og_boston.png` and `og_nyc.png`; anything under `/boston/` and `/nyc/`. Tests for "The landing page's privacy policy", "A landing map" and "The site's own privacy page".
+- [ ] 2.5 Set `render.yaml`'s database `plan` to the paid plan's exact Blueprint name, as the dashboard shows it after 0.1, so a blueprint sync doesn't move it back to free.
 
 ## 3. Terms and privacy
 
@@ -30,7 +35,7 @@
 
 - [ ] 4.1 Update:
   - `PRODUCT.md`: name, address, tagline;
-  - `PRODUCTION.md`: custom domains, the switch's steps, `/health`, the redirects;
+  - `PRODUCTION.md`: custom domains (noting that `prod.py` already allows stagehopper.app and www), the switch's steps, `/health`, the redirects, the database's paid plan and backup;
   - `.env.example`: `SITE_NAME`, `SITE_TAGLINE`, `UID_DOMAIN`, `CANONICAL_HOST`, and the install-banner comment;
   - `DESIGN.md`: the masthead's name and tagline;
   - the comments on `SITE_NAME` and `UID_DOMAIN` in `base.py`.
@@ -39,9 +44,9 @@
   - `test_event_calendar_links.py`, `test_opengraph.py`, `test_band_pages.py`, `test_index_page.py`;
   - `test_site_record.py`, `test_site_settings.py`, `test_prod_settings.py`, `test_youtube_client.py`.
 
-## 5. The switch (Nate, in the dashboards, after the merge)
+## 5. The switch (Nate, in the dashboards, around the merge)
 
-- [ ] 5.1 Do the steps in `design.md` decision 7, in order: deploy and resave; add Render's custom domain; verify the domain with GitHub, add `info`, and allow it for Mapbox, PostHog and Datadog; move the landing page; point the apex's A records and www at Render; set `CANONICAL_HOST` and `SITE_URL`.
+- [ ] 5.1 Do the steps in `design.md` decision 7, in order: set `SITE_URL` to the onrender address before the merge; deploy, check the blueprint sync, resave and check no static page at `/boston/` or `/nyc/`; add Render's custom domain; verify the domain with GitHub, add `info`, and allow it for Mapbox, PostHog and Datadog; move the landing page; point the apex's A records and www at Render; set `CANONICAL_HOST` and `SITE_URL`, then press Manual Sync for the jobs.
 - [ ] 5.2 Live check:
   - https://stagehopper.app shows "Stagehopper" with the tagline;
   - www and the onrender address redirect;
@@ -49,5 +54,6 @@
   - `stagehopper.app/privacy.html` reaches StageHopper's policy at info.stagehopper.app;
   - info.stagehopper.app shows the landing page with its city links, and its Boston map loads;
   - nola., nolajazzfest. and worldcup.stagehopper.app still load;
-  - admin login works at the new address.
+  - admin login works at the new address;
+  - a scheduled job's user agent names https://stagehopper.app (from its next run's log, or a one-off run).
 - [ ] 5.3 Add `https://stagehopper.app/…` to Spotify's redirect URIs alongside the existing ones, and update the unmerged `add-spotify-followed-artists` change to use `SITE_URL`.

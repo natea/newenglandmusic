@@ -77,8 +77,8 @@ A redirect from another host of a request that isn't GET or HEAD SHALL be a 308 
 
 #### Scenario: A form posted to the old address
 
-- **WHEN** a form is posted to `https://newenglandmusic.onrender.com/submit` with `CANONICAL_HOST` stagehopper.app
-- **THEN** it gets a 308 to `https://stagehopper.app/submit`
+- **WHEN** a form is posted to `https://newenglandmusic.onrender.com/submit-event` with `CANONICAL_HOST` stagehopper.app
+- **THEN** it gets a 308 to `https://stagehopper.app/submit-event`
 
 ### Requirement: The health check answers at its own path
 
@@ -95,17 +95,17 @@ When `CANONICAL_HOST` is set, the paths StageHopper's landing page served at sta
 
 #### Scenario: The landing page's privacy policy
 
-- **WHEN** a visitor, or an app's privacy link, opens `https://stagehopper.app/privacy.html`
+- **WHEN** a visitor, or an app's privacy link, opens `https://stagehopper.app/privacy.html` with `CANONICAL_HOST` stagehopper.app
 - **THEN** they get a 301 to `https://info.stagehopper.app/privacy.html`
 
 #### Scenario: A landing map
 
-- **WHEN** a visitor opens `https://stagehopper.app/events_map_boston.html`
+- **WHEN** a visitor opens `https://stagehopper.app/events_map_boston.html` with `CANONICAL_HOST` stagehopper.app
 - **THEN** they get a 301 to `https://info.stagehopper.app/events_map_boston.html`
 
 #### Scenario: The site's own privacy page
 
-- **WHEN** a visitor opens `https://stagehopper.app/privacy`
+- **WHEN** a visitor opens `https://stagehopper.app/privacy` with `CANONICAL_HOST` stagehopper.app
 - **THEN** they get the site's privacy page, not a redirect
 
 ### Requirement: The site has a terms page and says how it handles email addresses

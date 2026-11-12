@@ -16,7 +16,7 @@ Nate also asked that the site have terms and privacy pages, since it collects em
   The masthead gains a tagline under the name, set by `SITE_TAGLINE`, with the default "Live music across New England" (wording to confirm).
 - **Its address is https://stagehopper.app.** Production sets `SITE_URL` to it, and accepts stagehopper.app, www.stagehopper.app and the onrender.com address as hosts. The contact address the site's API clients send (MusicBrainz, Wikidata, Last.fm and others) comes from `SITE_URL` instead of the hard-coded onrender address.
 - **Other addresses redirect to it.** A new setting, `CANONICAL_HOST`, set only in production, switches the redirects on, so tests and development never redirect. With it set, a request to www.stagehopper.app or to the onrender.com address is redirected permanently to the same path and query at https://stagehopper.app (301, or 308 for a form submission, so it isn't lost). Only the health check is served at any address. It moves from `/` to its own `/health`, since `/` on the old address now redirects.
-- **Calendar UIDs and names change too.** `UID_DOMAIN` defaults to "stagehopper". Nate said on 11 November 2026 that nobody has subscribed to the feeds, so there are no subscribers whose calendars would show events twice, and feeds need no exception from the redirect.
+- **Calendar UIDs and names change too.** `UID_DOMAIN` defaults to "stagehopper". Nate said on 11 November 2026 that he doesn't think anyone has subscribed to the feeds, so no subscriber's calendar would show events twice, and feeds need no exception from the redirect.
 - **Saved shows on the old address are left behind.** They live in a cookie that belongs to the old host. Nate said few people have saved shows (11 November 2026).
 - **The landing page's old addresses go to its new home.** stagehopper.app served the landing page's own files: its privacy policy and terms, the Boston and New York maps and galleries, and their data and images. Those paths redirect permanently to the same path at https://info.stagehopper.app. Links in the wild, including the iOS app's privacy policy link, keep reaching StageHopper's own policy.
 - **A terms page and an updated privacy page for the site.**
@@ -29,6 +29,7 @@ Nate also asked that the site have terms and privacy pages, since it collects em
   - Cloudflare's DNS points those names at Render and info.stagehopper.app at GitHub Pages, as DNS-only records, as today.
   - The landing page's Pages site (`natea/twag`, `docs/`) changes its custom domain to info.stagehopper.app, and its canonical links and `og:url`s (`index.html`, `privacy.html`, `terms.html`) move with it.
   - nola., nolajazzfest. and worldcup.stagehopper.app stay as they are.
+- **A backup first.** Right away, ahead of this change's merge, the production database moves off Render's free plan (no backups, deleted after 30 days) to a paid one, and is dumped. The dump is checked by restoring it into a local scratch database. `render.yaml`'s database plan changes to match (Nate, 11 November 2026).
 - **After the switch**, `resave_all_events` re-renders every event, since each event stores its page's HTML with the old name in it.
 - **Docs:** `PRODUCT.md` (name, address), `PRODUCTION.md` (custom domains, the redirect, the switch), `.env.example` (`SITE_NAME`, `SITE_TAGLINE`, `UID_DOMAIN`), and `DESIGN.md`'s masthead.
 
@@ -55,7 +56,7 @@ Each of the first three can follow as its own change if Nate wants it (see the d
 ## Impact
 
 - `nycnoise/settings/base.py` and `prod.py`: `SITE_NAME`, `SITE_TAGLINE`, `UID_DOMAIN`, `CANONICAL_HOST`, the hosts.
-- `render.yaml`: `healthCheckPath`, and `SITE_URL` passed from the web service to both scheduled jobs. `SITE_URL` and `CANONICAL_HOST` are dashboard settings (`sync: false`).
+- `render.yaml`: `healthCheckPath`, the database's paid `plan`, and `SITE_URL` passed from the web service to both scheduled jobs. `SITE_URL` and `CANONICAL_HOST` are dashboard settings (`sync: false`).
 - `core/static/core/images/share-preview.png` (a Stagehopper version) and the web manifest's name.
 - New middleware for the redirects.
 - `core/templates/core/base.html`: the masthead and its tagline, and the footer's terms link.

@@ -10,7 +10,7 @@ See `proposal.md` for why. Today:
   - each event's calendar entry (`Event.calendar_name`), which also becomes the feed's `SUMMARY` and the Google Calendar link's text.
 - **The onrender URL** is hard-coded in `core/user_agent.py`, as the contact address the site's API clients send. Those clients run mostly in the scheduled jobs, which get no `SITE_URL` from Render: only web services get `RENDER_EXTERNAL_URL`, and `SITE_URL` otherwise falls back to localhost.
 - **The share preview image** (`core/static/core/images/share-preview.png`, used for every page's Open Graph image) reads "NEW ENGLAND MUSIC". The web manifest's `name` and `short_name` are empty.
-- **Calendar UIDs** end in `@` plus `UID_DOMAIN` (default "newenglandmusic"). Nobody has subscribed to the feeds (Nate, 11 November 2026).
+- **Calendar UIDs** end in `@` plus `UID_DOMAIN` (default "newenglandmusic"). Nate believes nobody has subscribed to the feeds (11 November 2026).
 - **Saved shows** live in the first-party `saved_shows` cookie, which belongs to the host it was set on.
 - **stagehopper.app** is in Cloudflare:
   - the apex's four A records (DNS only) point at GitHub Pages, serving `natea/twag`'s `docs/` (CNAME `stagehopper.app`, a legacy build from `main:/docs`, its domain not verified with GitHub);
@@ -58,9 +58,9 @@ When it acts, it reads the host with `request.get_host()` and does two things:
 
 GET and HEAD get a 301. Other methods get a 308, so a stale form posted to the old address keeps its method and body. The target comes from settings only, never from the Host header.
 
-The rule lives in code, not in Cloudflare or Render, because neither can redirect the onrender.com address: Render serves it directly. Calendar feeds get no exception, since nobody subscribes to them (Nate, 11 November 2026).
+The rule lives in code, not in Cloudflare or Render, because neither can redirect the onrender.com address: Render serves it directly. Calendar feeds get no exception, since Nate believes nobody subscribes to them (11 November 2026).
 
-`core/user_agent.py` builds its contact address from `SITE_URL`. `render.yaml` gives both scheduled jobs `SITE_URL` from the web service (`fromService`), so they send https://stagehopper.app, not localhost. `prod.py` adds stagehopper.app and www.stagehopper.app to the allowed hosts in code, so they're accepted from the first deploy, before DNS moves.
+`core/user_agent.py` builds its contact address from `SITE_URL`. `render.yaml` gives both scheduled jobs `SITE_URL` from the web service (`fromService`), so they send https://stagehopper.app, not localhost. That needs the web service to have `SITE_URL` set before the merge, and a blueprint sync after it changes (decision 7, steps 1 and 6). `prod.py` adds stagehopper.app and www.stagehopper.app to the allowed hosts in code, so they're accepted from the first deploy, before DNS moves.
 
 ### 3. A dedicated health check
 
@@ -68,7 +68,7 @@ The rule lives in code, not in Cloudflare or Render, because neither can redirec
 
 ### 4. Calendar UIDs and names change
 
-`UID_DOMAIN`'s default becomes "stagehopper", so feeds and downloads say Stagehopper throughout. With no subscribers, no calendar would show an event twice (Nate, 11 November 2026).
+`UID_DOMAIN`'s default becomes "stagehopper", so feeds and downloads say Stagehopper throughout. Nate believes nobody has subscribed, so no calendar would show an event twice (11 November 2026).
 
 ### 5. The landing page's old paths go to info.stagehopper.app
 
@@ -99,9 +99,15 @@ Both are plain-language drafts, not reviewed by a lawyer. Nate approves the word
 
 ### 7. The switch, in order
 
-Done by Nate in the dashboards, with Claude watching each step. Steps 1–3 are safe ahead of time; steps 4–6 are done together.
+Done by Nate in the dashboards, with Claude watching each step. Steps 0–3 are safe ahead of time; steps 4–6 are done together.
 
-1. **Merge and deploy.** The name changes at once at the onrender address (masthead, feeds, admin, Sites record), but no redirect runs, since `CANONICAL_HOST` isn't set. First check in the Render dashboard that `SITE_NAME` isn't already set there; if it is, clear it or set it to "Stagehopper". Then run `python manage.py resave_all_events` in the Shell tab, so stored event pages and their calendar links carry the new name.
+0. **Upgrade and back up the database, now** (Nate, 11 November 2026). The production database is on Render's free plan, which has no backups and is deleted after 30 days (`PRODUCTION.md`). This doesn't wait for the rename's review or merge:
+   - **Upgrade it** in the dashboard, to `PRODUCTION.md`'s suggested `0.1c-256mb` ($10.50 a month) unless Nate picks another. Upgrading keeps the data, and paid plans add point-in-time recovery for a limited window.
+   - **Dump it** with the backup command in `PRODUCTION.md`'s "Keeping the data" note: `pg_dump --format=custom "<External Database URL>" > prod-YYYY-MM-DD.dump`, run from Nate's machine. Use a `pg_dump` of version 17 or newer, since the database is Postgres 17, and allow the machine's IP under the database's Access Control if it's restricted. Don't follow the "Loading the local database" section, which ends by restoring a local database over Render's.
+   - **Check the dump restores**, only ever into a local scratch database: `createdb nem_scratch && pg_restore --no-owner --dbname nem_scratch prod-YYYY-MM-DD.dump`. Never point `pg_restore` at the External Database URL. Keep the dump out of the repository, since it holds admin password hashes.
+
+   This change alters no data beyond re-rendering stored event pages (`resave_all_events`) and the deploy's migrations, but the switch is where a mistake would be hardest to undo.
+1. **Merge and deploy.** Before merging, set `SITE_URL=https://newenglandmusic.onrender.com` on the web service if it's blank: `render.yaml` now passes `SITE_URL` to the jobs with `fromService`, and `PRODUCTION.md` records that a blueprint sync fails at once when the web service lacks a variable a job takes from it. After merging, check that the blueprint sync succeeded, which also applies the database plan. The name changes at once at the onrender address (masthead, feeds, admin, Sites record), but no redirect runs, since `CANONICAL_HOST` isn't set. First check in the Render dashboard that `SITE_NAME` isn't already set there; if it is, clear it or set it to "Stagehopper". Then run `python manage.py resave_all_events` in the Shell tab, so stored event pages and their calendar links carry the new name. Also check in the admin that no static page lives at `/boston/` or `/nyc/`, the landing page's folders, which the redirect will send away.
 2. **Add Render's custom domain**, stagehopper.app, under the web service's Settings > Custom Domains. Render adds www itself, and redirects www to the apex at its edge. Render waits for DNS before it verifies, and adding it first shortens the gap in step 5.
 3. **Prepare the landing page's new home:**
    - verify stagehopper.app under the GitHub account's Pages settings (a TXT record in Cloudflare), so no one else can claim it while it's unclaimed in steps 4–5;
@@ -112,7 +118,7 @@ Done by Nate in the dashboards, with Claude watching each step. Steps 1–3 are 
    - move the canonical links and `og:url`s in `index.html`, `privacy.html` and `terms.html` to info.stagehopper.app;
    - wait for GitHub's certificate. `.app` is HSTS-preloaded, so browsers can't open it without one.
 5. **Point DNS at Render.** Replace only the apex's four GitHub A records with Render's (its A record, or a CNAME to `newenglandmusic.onrender.com` that Cloudflare flattens), leaving the MX and SPF records alone. Repoint www to `newenglandmusic.onrender.com`. Both stay DNS only. From step 4 until Render's certificate, stagehopper.app shows an error, usually for minutes.
-6. **Turn on the redirects.** Set `CANONICAL_HOST=stagehopper.app` and `SITE_URL=https://stagehopper.app` on the web service, which redeploys and passes `SITE_URL` to the jobs on their next blueprint sync.
+6. **Turn on the redirects.** Set `CANONICAL_HOST=stagehopper.app` and `SITE_URL=https://stagehopper.app` on the web service, which redeploys it. Then press **Manual Sync** on the blueprint, so the jobs get the new `SITE_URL`. Until then they would still send the onrender address.
 7. **Check** (task 5.2), and add the new address to Spotify's redirect URIs for the unmerged `add-spotify-followed-artists` change.
 
 nola. and nolajazzfest. stay behind Cloudflare's proxy, and worldcup. stays on its own Render service, all untouched. The apex and www stay DNS only.
@@ -127,14 +133,14 @@ DNS, Render's custom domains and GitHub Pages are checked by hand in the live ch
 
 ## Risks / Trade-offs
 
-- **A gap during the switch.** From moving the landing page until Render's certificate, stagehopper.app shows an error. Adding the domains first and doing steps 3–5 together, outside busy hours, keeps it short.
+- **A gap during the switch.** From moving the landing page until Render's certificate, stagehopper.app shows an error. Adding the domain first and doing steps 4–6 together, outside busy hours, keeps it short. Until step 6's redeploy finishes, the landing page's old paths, `/privacy.html` among them, also 404 at stagehopper.app, since the redirect isn't on yet. Turning it on earlier would send the onrender address into DNS that isn't ready.
 - **Search engines see a 301 from the old address.** That's the intended signal, and the sitemap is built from `SITE_URL`.
 - **Admin sessions and saved shows** on the old address don't carry over. Editors log in again; visitors' saved shows start empty (accepted by Nate).
 - **The landing page grows new paths** after this list is fixed. Those would 404 at stagehopper.app instead of redirecting. That's harmless, since only links made before the move point there.
 
 ## Migration Plan
 
-The steps above. Rollback before step 6 means undoing the DNS changes and the twag custom domain. After step 6, clearing `CANONICAL_HOST` turns the redirects off at once; then set `SITE_URL` back to the onrender address and restore the DNS.
+The steps above. Rollback before step 6 means undoing the DNS changes and the twag custom domain. After step 6, clearing `CANONICAL_HOST` turns the redirects off with one redeploy, a few minutes; then set `SITE_URL` back to the onrender address and restore the DNS.
 
 ## Open Questions
 
