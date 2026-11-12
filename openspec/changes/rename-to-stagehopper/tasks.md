@@ -4,17 +4,17 @@
 
 ## 1. The name and tagline
 
-- [ ] 1.1 In `nycnoise/settings/base.py`:
+- [x] 1.1 In `nycnoise/settings/base.py`:
   - default `SITE_NAME` to "StageHopper";
   - add `SITE_TAGLINE`, defaulting to "Live music across New England";
   - default `UID_DOMAIN` to "stagehopper";
   - add `CANONICAL_HOST`, empty by default.
 
   Expose the tagline to templates through the existing `site` context processor.
-- [ ] 1.2 Read `SITE_NAME` in the masthead (`base.html`, with the tagline under it), the admin's title and header, `opengraph.DEFAULT_TITLE` and `Event.calendar_name`. Keep the masthead's layout at phone width.
-- [ ] 1.3 Tests for "The masthead and title", "A name from the setting", "An event's calendar entry", "The default tagline" and "No tagline".
-- [ ] 1.4 Tests for "Calendar name" and "Default names", against the real defaults rather than an override. Keep "Names from the settings", "Stable identifiers", "Cancelled event", "Window" and "Unapproved event left out" passing.
-- [ ] 1.5 Make a StageHopper share preview image in the old one's layout, and set the web manifest's `name` and `short_name`. Check the Open Graph tags point at the new image.
+- [x] 1.2 Read `SITE_NAME` in the masthead (`base.html`, with the tagline under it), the admin's title and header, `opengraph.DEFAULT_TITLE` and `Event.calendar_name`. Keep the masthead's layout at phone width.
+- [x] 1.3 Tests for "The masthead and title", "A name from the setting", "An event's calendar entry", "The default tagline" and "No tagline".
+- [x] 1.4 Tests for "Calendar name" and "Default names", against the real defaults rather than an override. Keep "Names from the settings", "Stable identifiers", "Cancelled event", "Window" and "Unapproved event left out" passing.
+- [x] 1.5 Make a StageHopper share preview image in the old one's layout, and set the web manifest's `name` and `short_name`. Check the Open Graph tags point at the new image.
 
 ## 2. The address and redirects
 

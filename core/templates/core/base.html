@@ -150,7 +150,8 @@
                       <a href="javascript:;" onclick="toggleBurgerMenuContents()">☰</a>
                   </div>
                   <div class='leftColumn'>
-                      <a href="/"><h1>New England Music</h1></a>
+                      <a href="/"><h1>{{ site_name }}</h1></a>
+                      {% if site_tagline %}<p class="tagline">{{ site_tagline }}</p>{% endif %}
                   </div>
                   <div class='rightColumn'>
                       <div>

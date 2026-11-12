@@ -3,6 +3,7 @@ import os
 from unittest import mock
 
 from core.models import Artist, Band, BandMembership, Event, EventPerformer, Venue
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -151,7 +152,7 @@ class BandPageTestCase(TestCase):
 
     def test_title_and_image_text(self):
         html = self.page(self.full_band()).content.decode()
-        self.assertIn("<title>Built To Spill | New England Music</title>", html)
+        self.assertIn(f"<title>Built To Spill | {settings.SITE_NAME}</title>", html)
         self.assertIn('alt="Built To Spill"', html)
 
 

@@ -5,12 +5,14 @@ from datetime import date
 
 from dateutil import relativedelta
 from core import link_hubs
+from django.conf import settings
 from django.contrib import admin
 from django import forms
 from django.contrib import messages
 from django.contrib.admin import SimpleListFilter
 from django.contrib.admin.options import IncorrectLookupParameters
 from django.db.models import Q, URLField
+from django.utils.functional import lazy
 from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.urls import path, reverse
@@ -58,8 +60,9 @@ from .utils_datemath import (
     get_previous_current_next_month_start,
 )
 
-admin.site.site_title = "New England Music"
-admin.site.site_header = "New England Music"
+# read when the admin renders, so SITE_NAME (and a test's override) is the name it shows
+admin.site.site_title = lazy(lambda: settings.SITE_NAME, str)()
+admin.site.site_header = lazy(lambda: settings.SITE_NAME, str)()
 
 admin.site.register(IndexPageMessages, SingletonModelAdmin)
 

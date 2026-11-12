@@ -34,6 +34,13 @@ div.header {
     text-decoration: none;
   }
 
+  // the tagline under the masthead's name (SITE_TAGLINE), in DESIGN.md's small text
+  .leftColumn .tagline {
+    margin: -0.4em 0 0;
+    font-size: 0.85rem;
+    color: #555;
+  }
+
   .rightColumn {
     text-align: right;
 
