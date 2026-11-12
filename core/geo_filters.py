@@ -235,3 +235,21 @@ def metro_groups(state=None):
     return [
         (state_labels.get(home_state, home_state), metros) for home_state, metros in groups.items()
     ]
+
+
+def geo_filter_context(geo_filter):
+    """
+    what core/geo_filter_form.html needs, for the listing and the discovery deck alike: the
+    region and state options, the metros of the chosen state, and the chosen metro's towns
+    and the chosen towns' neighborhoods
+    """
+    return {
+        "geo_filter": geo_filter,
+        "region_options": offered_areas(GeoArea.Kind.REGION),
+        "state_options": offered_areas(GeoArea.Kind.STATE),
+        "metro_groups": metro_groups(geo_filter.state),
+        "metro_towns": [town_label(town, state) for town, state in metro_towns(geo_filter.metro)]
+        if geo_filter.metro
+        else [],
+        "town_neighborhoods": [neighborhood_label(*triple) for triple in town_neighborhoods(geo_filter.towns)],
+    }

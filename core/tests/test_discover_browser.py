@@ -28,7 +28,8 @@ class DiscoverBrowserTestCase(BrowserTestCase):
         key = name.lower()
         for service in services:
             {"youtube": youtube, "apple": apple, "spotify": spotify}[service](key)
-        events = [show(band, days(3 + n), self.lupo) for n in range(shows)]
+        # the deck holds acts with something to play: with no service named, show() links Spotify
+        events = [show(band, days(3 + n), self.lupo, media=not services) for n in range(shows)]
         return band, events
 
     def requests_to(self, *hosts):
@@ -63,11 +64,16 @@ class DeckBrowserTestCase(DiscoverBrowserTestCase):
             if not Band.objects.filter(name=name).exists():
                 self.make_act(name, services=services if name == "Belly" else (), shows=3 if name == "Belly" else 1)
 
-    def open_deck(self, services=("youtube", "apple", "spotify"), cookie=None, width=None, reduced_motion=False):
+    def open_deck(
+        self, services=("youtube", "apple", "spotify"), cookie=None, width=None, reduced_motion=False, start=True,
+        touch=False,
+    ):
+        """the deck, opened and (unless start=False) with the Start control pressed"""
         self.make_deck(services)
         context = self.browser.new_context(
             viewport={"width": width or 1000, "height": 900},
             reduced_motion="reduce" if reduced_motion else "no-preference",
+            has_touch=touch,
         )
         self.addCleanup(context.close)
         context.route("**/*", self.only_the_test_server)
@@ -75,6 +81,8 @@ class DeckBrowserTestCase(DiscoverBrowserTestCase):
             context.add_cookies([{"name": "saved_shows", "value": cookie, "url": self.live_server_url}])
         _, page = self.open_page("/discover", context=context)
         self.context = context
+        if start:
+            page.click(".deck-start")
         return page
 
     def shown(self, page):
@@ -322,17 +330,22 @@ class PlayerTestCase(DeckBrowserTestCase):
 
     def test_video_first(self):
         page = self.only_belly(("youtube", "apple", "spotify"))
-        self.assertEqual(self.frames(page), ["https://www.youtube-nocookie.com/embed/vid123"])
+        self.assertEqual(
+            self.frames(page), ["https://www.youtube-nocookie.com/embed/vid123?autoplay=1&playsinline=1"]
+        )
         self.assertEqual(page.locator(".discover-card:not([hidden]) a.apple-play").count(), 1)
-        self.assertEqual(self.requests_to("apple.com", "spotify.com"), [])
-        # not started by the page
-        self.assertNotIn("autoplay=1", self.frames(page)[0])
+        # Anjimile, passed, has a Spotify player of its own; Belly's ids are sp123 and 200
+        self.assertEqual(self.requests_to("apple.com", "artist/sp123"), [])
+        # after Start and a skip, the deck asks YouTube to start it
+        self.assertEqual(
+            self.frames(page), ["https://www.youtube-nocookie.com/embed/vid123?autoplay=1&playsinline=1"]
+        )
 
     def test_apple_music_before_spotify(self):
         page = self.only_belly(("apple", "spotify"))
         self.assertEqual(self.frames(page), ["https://embed.music.apple.com/us/album/300?i=200"])
         self.assertEqual(page.locator(".discover-card:not([hidden]) a.spotify-play").count(), 1)
-        self.assertEqual(self.requests_to("spotify.com"), [])
+        self.assertEqual(self.requests_to("artist/sp123"), [])
 
     def test_spotify_only_loads_its_player(self):
         page = self.only_belly(("spotify",))
@@ -343,23 +356,26 @@ class PlayerTestCase(DeckBrowserTestCase):
         page = self.only_belly(("apple",))
         self.assertEqual(self.frames(page), ["https://embed.music.apple.com/us/album/300?i=200"])
 
-    def test_no_match_has_no_player(self):
-        page = self.only_belly(())
-        self.assertEqual(self.frames(page), [])
-        self.assertEqual(page.locator(".discover-card:not([hidden]) a.youtube-play").count(), 0)
-        self.assertEqual(self.requests_to("youtube", "apple.com", "spotify.com"), [])
+    def test_an_act_with_no_match_is_not_in_the_deck(self):
+        self.make_deck()
+        quiet = Band.objects.create(name="Aardvark", city_town="Providence", state="RI")
+        show(quiet, days(1), self.lupo, media=False)
+        page = self.open_deck()
+        self.assertEqual(page.locator('.discover-card[data-act="Aardvark"]').count(), 0)
+        self.assertEqual(self.shown(page), "Anjimile")
 
     def test_only_the_top_card_has_a_player_and_a_passed_one_loses_it(self):
         self.make_deck(("youtube",))
         page = self.open_deck(("youtube",))
-        # Anjimile is on top and has no match: nothing yet, though Belly's is on the page
-        self.assertEqual(page.locator("iframe").count(), 0)
+        # Anjimile is on top with a Spotify player only: Belly's video is on the page, not loaded
+        self.assertEqual(page.locator("iframe").count(), 1)
         self.assertEqual(self.requests_to("youtube"), [])
         self.skip_to_belly(page)
         self.assertEqual(page.locator("iframe").count(), 1)
+        self.assertEqual(page.locator("iframe[src*=youtube]").count(), 1)
         page.click(".deck-skip")
         page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Cheap Trick'")
-        self.assertEqual(page.locator("iframe").count(), 0)
+        self.assertEqual(page.locator("iframe[src*=youtube]").count(), 0)
 
     def test_pressing_the_cards_own_button_replaces_its_player(self):
         page = self.only_belly(("youtube", "apple", "spotify"))
@@ -449,6 +465,17 @@ class PlayerTestCase(DeckBrowserTestCase):
             }"""
         )
         self.assertEqual(sizes, ["152", "175", None])
+        # and the listing's youtube player is press-to-play: no autoplay in its address or allow
+        youtube_frame = page.evaluate(
+            """() => {
+              const button = document.createElement('a');
+              button.dataset.youtubeVideo = 'v'; button.dataset.artistName = 'n'; button.href = '#';
+              const frame = ArtistPreview.youtubePlayer(button).querySelector('iframe');
+              return [frame.src, frame.allow];
+            }"""
+        )
+        self.assertEqual(youtube_frame[0], "https://www.youtube-nocookie.com/embed/v")
+        self.assertNotIn("autoplay", youtube_frame[1])
 
 
 class HintTestCase(DeckBrowserTestCase):
@@ -476,6 +503,7 @@ class HintTestCase(DeckBrowserTestCase):
         page = self.open_deck()
         page.click(".deck-skip")
         page.reload()
+        page.click(".deck-start")
         self.assertTrue(page.locator(".hint-skip").is_visible())
         self.assertEqual(page.evaluate("() => localStorage.length + sessionStorage.length"), 0)
         self.assertNotIn("hint", page.evaluate("() => document.cookie"))
@@ -522,3 +550,207 @@ class AccessTestCase(DeckBrowserTestCase):
         self.assertIn("Anjimile", page.inner_text(".deck-live"))
         page.click(".deck-skip")
         page.wait_for_function("() => document.querySelector('.deck-live').textContent.includes('Belly')")
+
+
+class StartTestCase(DeckBrowserTestCase):
+    """the Start control, the first card's placeholder, and each later card's autoplay"""
+
+    def video_deck(self, first="youtube", second="youtube"):
+        # Aardvark and Anjimile come first, in name order, ahead of Belly and Cheap Trick
+        Band.objects.filter(name="Anjimile").delete()
+        for name, service in (("Aardvark", first), ("Anjimile", second)):
+            band = Band.objects.create(name=name, city_town="Providence", state="RI")
+            {"youtube": youtube, "apple": apple, "spotify": spotify}[service](name.lower())
+            show(band, days(3), self.lupo, media=False)
+
+    def clear_acts(self):
+        from core.models import AppleMusicArtistLink, Event, SpotifyArtistLink, YouTubeArtistLink
+
+        for model in (Event, Band, AppleMusicArtistLink, SpotifyArtistLink, YouTubeArtistLink):
+            model.all_objects.all().delete() if model is Event else model.objects.all().delete()
+
+    def frames(self, page):
+        return page.eval_on_selector_all(".discover-card:not([hidden]) iframe", "frames => frames.map(f => f.src)")
+
+    def allows(self, page):
+        return page.eval_on_selector_all(".discover-card:not([hidden]) iframe", "frames => frames.map(f => f.allow)")
+
+    def test_nothing_plays_before_start(self):
+        self.video_deck()
+        page = self.open_deck(start=False)
+        self.assertTrue(page.locator(".deck-start").is_visible())
+        self.assertEqual(page.locator("iframe").count(), 0)
+        self.assertEqual(self.requests_to("youtube.com", "youtube-nocookie", "apple.com", "spotify.com"), [])
+        # the hint and the controls wait for Start, and nothing sways
+        self.assertFalse(page.locator(".deck-hint").is_visible())
+        self.assertFalse(page.locator(".deck-controls").is_visible())
+        self.assertEqual(page.eval_on_selector(".discover-card:not([hidden])", "c => getComputedStyle(c).animationName"), "none")
+
+    def test_start_sits_over_the_video_thumbnail_of_the_top_card_only(self):
+        self.video_deck()
+        from core.models import YouTubeArtistLink
+
+        YouTubeArtistLink.objects.filter(name_key="aardvark").update(video_id="aard1")
+        page = self.open_deck(start=False)
+        thumbnails = self.requests_to("ytimg.com")
+        self.assertEqual(len(thumbnails), 1)
+        self.assertIn("/vi/aard1/", thumbnails[0])
+        self.assertEqual(page.locator(".discover-start img").count(), 1)
+        self.assertTrue(page.locator(".deck-start").is_visible())
+        page.click(".deck-start")
+        # both are gone, and the player is loaded asking to start
+        self.assertEqual(page.locator(".discover-start").count(), 0)
+        self.assertEqual(page.locator(".deck-start").count(), 0)
+        self.assertEqual(
+            self.frames(page), ["https://www.youtube-nocookie.com/embed/aard1?autoplay=1&playsinline=1"]
+        )
+        self.assertIn("autoplay", self.allows(page)[0])
+        self.assertTrue(page.locator(".deck-hint").is_visible())
+        self.assertTrue(page.locator(".deck-controls").is_visible())
+        self.assertNotEqual(page.eval_on_selector(".discover-card:not([hidden])", "c => getComputedStyle(c).animationName"), "none")
+
+    def test_no_thumbnail_for_apple_music_spotify_or_a_channel_only_first_card(self):
+        for first in ("apple", "spotify", "channel"):
+            with self.subTest(first=first):
+                self.blocked.clear()
+                self.clear_acts()
+                if first == "channel":
+                    self.video_deck("youtube")
+                    from core.models import YouTubeArtistLink
+
+                    YouTubeArtistLink.objects.filter(name_key="aardvark").update(video_id="")
+                else:
+                    self.video_deck(first)
+                page = self.open_deck(start=False)
+                self.assertTrue(page.locator(".deck-start").is_visible())
+                self.assertEqual(page.locator(".discover-start img").count(), 0)
+                self.assertEqual(self.requests_to("ytimg.com"), [])
+
+    def test_apple_music_and_spotify_cards_load_ready_without_autoplay(self):
+        for first in ("apple", "spotify"):
+            with self.subTest(first=first):
+                self.clear_acts()
+                self.video_deck(first, "youtube")
+                page = self.open_deck()
+                frame = self.frames(page)[0]
+                self.assertNotIn("autoplay=", frame)
+                self.assertIn("apple.com" if first == "apple" else "spotify.com", frame)
+        self.assertEqual(self.requests_to("iframe-api", "spotify.com/embed/iframe"), [])
+
+    def test_the_next_youtube_card_autoplays_after_a_skip_button_key_swipe_and_save(self):
+        self.video_deck()
+        autoplay = "https://www.youtube-nocookie.com/embed/vid123?autoplay=1&playsinline=1"
+        page = self.open_deck()
+        self.assertEqual(self.frames(page), [autoplay])
+        page.click(".deck-skip")
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Anjimile'")
+        self.assertEqual(self.frames(page), [autoplay])
+        self.assertEqual(page.locator("iframe").count(), 1)
+        # the key: Belly has a YouTube match too, with a Spotify one behind
+        page.keyboard.press("ArrowLeft")
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Belly'")
+        self.assertEqual(self.frames(page), [autoplay])
+        self.assertEqual(page.locator("iframe").count(), 1)
+        # a swipe
+        box = page.locator(".discover-card:not([hidden]) .discover-name").bounding_box()
+        x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+        page.mouse.move(x, y)
+        page.mouse.down()
+        page.mouse.move(x - 100, y, steps=4)
+        page.mouse.move(x - 200, y, steps=4)
+        page.mouse.up()
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Cheap Trick'")
+        # Cheap Trick has Spotify only: ready, not asked to start
+        self.assertEqual(page.locator("iframe[src*=youtube]").count(), 0)
+        self.assertNotIn("autoplay=", self.frames(page)[0])
+
+    def test_after_saving_the_next_card_autoplays(self):
+        self.video_deck()
+        page = self.open_deck()
+        page.click(".deck-add")
+        page.locator(".picker input").first.check()
+        page.click(".picker-save")
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Anjimile'")
+        self.assertEqual(
+            self.frames(page), ["https://www.youtube-nocookie.com/embed/vid123?autoplay=1&playsinline=1"]
+        )
+        self.assertEqual(page.locator("iframe").count(), 1)
+
+    def test_start_again_asks_to_start_without_the_start_control(self):
+        self.video_deck()
+        page = self.open_deck()
+        for _ in range(4):
+            page.keyboard.press("ArrowLeft")
+            page.wait_for_timeout(250)
+        page.click(".deck-again")
+        self.assertEqual(self.shown(page), "Aardvark")
+        self.assertEqual(
+            self.frames(page), ["https://www.youtube-nocookie.com/embed/vid123?autoplay=1&playsinline=1"]
+        )
+        self.assertEqual(page.locator(".deck-start").count(), 0)
+
+    def test_reduced_motion_has_no_sway_before_or_after_start(self):
+        self.video_deck()
+        page = self.open_deck(reduced_motion=True, start=False)
+        animation = "c => getComputedStyle(c).animationName"
+        self.assertEqual(page.eval_on_selector(".discover-card:not([hidden])", animation), "none")
+        page.click(".deck-start")
+        self.assertEqual(page.eval_on_selector(".discover-card:not([hidden])", animation), "none")
+        self.assertTrue(page.locator(".hint-skip").is_visible())
+
+    def test_nothing_is_over_the_player_or_its_placeholder_on_a_phone(self):
+        self.video_deck()
+        page = self.open_deck(width=390, start=False)
+        for stage in ("with Start", "after Start"):
+            box = page.locator(".discover-card:not([hidden]) .discover-player-box").bounding_box()
+            self.assertGreaterEqual(box["width"], 200, stage)
+            self.assertGreaterEqual(box["height"], 200, stage)
+            overlapping = page.evaluate(
+                """() => {
+                  const box = document.querySelector('.discover-card:not([hidden]) .discover-player-box');
+                  const r = box.getBoundingClientRect();
+                  return Array.from(document.querySelectorAll('.discover *')).filter(el => {
+                    if (el.contains(box) || box.contains(el)) return false;
+                    const e = el.getBoundingClientRect();
+                    if (e.width <= 1 || e.height <= 1 || getComputedStyle(el).display === 'none') return false;
+                    return e.left < r.right && e.right > r.left && e.top < r.bottom && e.bottom > r.top;
+                  }).map(el => el.className);
+                }"""
+            )
+            self.assertEqual(overlapping, [], stage)
+            if stage == "with Start":
+                page.click(".deck-start")
+                page.wait_for_selector(".discover-card:not([hidden]) iframe")
+
+
+
+class TouchTestCase(DeckBrowserTestCase):
+    """finger drags on a phone-sized screen: right adds, left skips"""
+
+    def drag(self, page, dx):
+        box = page.locator(".discover-card:not([hidden]) .discover-name").bounding_box()
+        x, y = box["x"] + 20, box["y"] + box["height"] / 2
+        cdp = self.context.new_cdp_session(page)
+
+        def touch(kind, px):
+            points = [] if kind == "touchEnd" else [{"x": px, "y": y}]
+            cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": points})
+
+        touch("touchStart", x)
+        for step in range(1, 7):
+            touch("touchMove", x + dx * step / 6)
+        touch("touchEnd", x + dx)
+
+    def test_a_drag_to_the_right_opens_the_picker_and_passes_nothing(self):
+        page = self.open_deck(width=390, touch=True)
+        self.drag(page, 150)
+        page.wait_for_selector(".picker")
+        self.assertEqual(self.shown(page), "Anjimile")
+        self.assertEqual(self.cookie(), "")
+
+    def test_a_drag_to_the_left_passes_the_act_and_saves_nothing(self):
+        page = self.open_deck(width=390, touch=True)
+        self.drag(page, -150)
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Belly'")
+        self.assertEqual(page.locator(".picker").count(), 0)
+        self.assertEqual(self.cookie(), "")

@@ -1,16 +1,22 @@
 """
 the band discovery deck at /discover (add-band-discovery-swipe): one card for each live band
-or artist with an upcoming approved show, in a random order for each visit, which core/static/
-core/js/discover.js swipes through. every card is rendered into the page, with its shows, so
-the picker needs no request and the page works without javascript as a list of cards.
+or artist with an upcoming approved show and something to play (a YouTube, Apple Music or
+Spotify match), ordered by each act's next show, soonest first, with a random order only among
+acts playing the same New York day. core/static/core/js/discover.js swipes through it. every
+card is rendered into the page, with its shows, so the picker needs no request and the page
+works without javascript as a list of cards.
 
-the deck ignores the remembered area filter, as /saved does, and never changes it.
+the deck takes the listing's region, state and metro filters (core/geo_filters.py) and its
+remembered-filter cookie: it holds acts with an upcoming show at a venue in the chosen areas,
+and a card and its picker list only those shows.
 """
 
 import random
 from dataclasses import dataclass, field
+from itertools import groupby
 
 from django.conf import settings
+from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.utils.html import strip_tags
 from django.views.decorators.cache import never_cache
@@ -18,14 +24,12 @@ from django.views.decorators.cache import never_cache
 from core.artist_matching import normalize
 from core.artist_previews import act_previews
 from core.event_actions import actions_html
+from core.geo_filters import CookieAction, apply_cookie_action, geo_filter_context, geo_filter_for_request
 from core.location import location_from_request
 from core.models import Band, Event, EventPerformer
 from core.opengraph import get_meta
 from core.saved_shows import COOKIE_NAME, parse_saved
-from core.utils_datemath import beginning_of_day, get_current_new_york_datetime
-from core.views.act_page import photo_of
-
-PHOTO_WIDTH = 480
+from core.utils_datemath import NYCTZ, beginning_of_day, get_current_new_york_datetime
 
 
 @dataclass
@@ -34,7 +38,6 @@ class Card:
     kind: str
     shows: list = field(default_factory=list)
     previews: dict | None = None
-    photo: object = None
 
     @property
     def anchor(self):
@@ -54,22 +57,18 @@ class Card:
     def more_shows(self):
         return len(self.shows) - 1
 
-    @property
-    def has_player(self):
-        return bool(self.previews)
 
-
-def upcoming_performances():
+def upcoming_performances(geo_filter):
     """
     every performance of an approved, uncancelled show from the start of today (the band
-    page's bound), with its act and show, in one query. the shows come through Event.objects
-    (approved only), not the acts' own related manager
+    page's bound) at a venue in the filter's areas, with its act and show, in one query. the
+    shows come through Event.objects (approved only), not the acts' own related manager
     """
     upcoming = Event.objects.filter(
         starttime__gte=beginning_of_day(get_current_new_york_datetime()), is_cancelled=False
     )
     return (
-        EventPerformer.objects.filter(event__in=upcoming)
+        EventPerformer.objects.filter(geo_filter.q(prefix="event__venue__"), event__in=upcoming)
         .select_related("artist", "band", "event__venue")
         .order_by("event__starttime", "event__same_time_order_override", "event_id")
     )
@@ -83,12 +82,12 @@ def name_venue(event):
     event.town = venue.location if venue else ""
 
 
-def deck_cards(request):
-    """a card for each live act with an upcoming show, its shows soonest first"""
+def deck_cards(request, geo_filter):
+    """a card for each live act with an upcoming show and something to play, its shows soonest first"""
     saved = set(parse_saved(request.COOKIES.get(COOKIE_NAME)))
     location = location_from_request(request)
     cards = {}
-    for performance in upcoming_performances():
+    for performance in upcoming_performances(geo_filter):
         act = performance.act
         if act.needs_review:
             continue
@@ -99,29 +98,49 @@ def deck_cards(request):
         # no javascript: the bookmark posts to the server and comes back to this card's copy
         # of the show, so a show on two cards has two anchors
         event.anchor = f"{card.anchor}-event-{event.pk}"
-        event.actions = actions_html(event, saved, request.path, location, event.anchor)
+        event.actions = actions_html(event, saved, request.get_full_path(), location, event.anchor)
         card.shows.append(event)
     cards = list(cards.values())
     previews = act_previews(card.act.name for card in cards)
     for card in cards:
         card.previews = previews.get(normalize(card.act.name))
-        # a photo only stands in when there is no player
-        card.photo = None if card.previews else photo_of(card.act, PHOTO_WIDTH)
-    return cards
+    # an act with nothing to play is left out, in the deck and the list alike
+    return [card for card in cards if card.previews]
+
+
+def order_deck(cards):
+    """
+    soonest next show first. cards whose next show falls on the same new york calendar day are
+    shuffled among themselves, for variety; the day is the new york one, so a late show doesn't
+    land on the next utc day. each card's first show is its next, as the shows come in order
+    """
+    cards = sorted(cards, key=lambda card: card.next_show.starttime)
+    ordered = []
+    for _, same_day in groupby(cards, key=lambda card: card.next_show.starttime.astimezone(NYCTZ).date()):
+        same_day = list(same_day)
+        random.shuffle(same_day)
+        ordered.extend(same_day)
+    return ordered
 
 
 @never_cache
 def discover(request):
-    cards = deck_cards(request)
-    random.shuffle(cards)
-    return render(
+    # the filter first, so a request that redirects never builds the deck
+    geo_filter, cookie_action = geo_filter_for_request(request)
+    if cookie_action == CookieAction.REDIRECT:
+        # the redirect target has the filter in its url, so it can't redirect again
+        return HttpResponseRedirect(f"{request.path}?{geo_filter.query_string}")
+    cards = order_deck(deck_cards(request, geo_filter))
+    response = render(
         request,
         "core/discover.html",
         {
             "cards": cards,
+            **geo_filter_context(geo_filter),
             "meta": get_meta(
                 url=request.path, title=f"Discover bands | {settings.SITE_NAME}",
                 description="Flip through the Northeast's bands and artists, hear a taste, and save their shows.",
             ),
         },
     )
+    return apply_cookie_action(request, response, geo_filter, cookie_action)

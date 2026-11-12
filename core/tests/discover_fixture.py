@@ -8,6 +8,7 @@ import datetime
 from core.models import (
     AppleMusicArtistLink, Artist, Band, Event, EventPerformer, SpotifyArtistLink, Venue, YouTubeArtistLink,
 )
+from core.artist_matching import normalize
 from django.utils import timezone
 
 
@@ -15,7 +16,11 @@ def days(n):
     return timezone.now() + datetime.timedelta(days=n)
 
 
-def show(act, when, venue=None, approved=True, cancelled=False, **fields):
+def show(act, when, venue=None, approved=True, cancelled=False, media=True, **fields):
+    """a show of an act. the deck holds only acts with something to play, so by default the act
+    gets a Spotify link (pass media=False for an act with nothing to play)"""
+    if media:
+        spotify(normalize(act.name), f"sp-{act.pk}")
     event = Event.all_objects.create(
         title="show", starttime=when, venue=venue, is_approved=approved, is_cancelled=cancelled, **fields
     )
@@ -29,10 +34,13 @@ def venue(name="Lupo's", town="Providence", state="RI", sheet_id="V1"):
 
 def spotify(name_key, artist_id="sp123"):
     now = timezone.now()
-    return SpotifyArtistLink.objects.create(
-        name_key=name_key, status=SpotifyArtistLink.Status.MATCHED, spotify_artist_id=artist_id,
-        checked_at=now, last_seen_at=now,
+    link, _ = SpotifyArtistLink.objects.update_or_create(
+        name_key=name_key,
+        defaults=dict(
+            status=SpotifyArtistLink.Status.MATCHED, spotify_artist_id=artist_id, checked_at=now, last_seen_at=now
+        ),
     )
+    return link
 
 
 def apple(name_key, artist_id="100", song_id="200", album_id="300"):
