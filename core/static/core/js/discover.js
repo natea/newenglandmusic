@@ -94,13 +94,83 @@
     }
   }
 
-  // the top card's YouTube player, listened to and asked to play. {card, frame, origin, ready}
+  // the top card's YouTube player, listened to and asked to play: {card, frame, origin, ready,
+  // playing, retried, timers, line}. YouTube's own embed says "onReady", "onStateChange" (info 1
+  // is playing) and "onError" (100 not found or removed, 101 and 150 embedding not allowed)
   const YOUTUBE_ORIGINS = ["https://www.youtube-nocookie.com", "https://www.youtube.com"];
+  const UNPLAYABLE = [100, 101, 150];
+  // seconds, a first guess checked by hand: ready to a second playVideo, then to the line; and
+  // from the frame loading to the line when the player never says anything
+  const RETRY_AFTER = 4000;
+  const LINE_AFTER_RETRY = 3000;
+  const SILENT_AFTER = 7000;
   let watch = null;
 
   function post(message) {
     // to the embed's own origin, never "*"
     watch.frame.contentWindow.postMessage(JSON.stringify(message), watch.origin);
+  }
+
+  function later(current, wait, then) {
+    current.timers.push(setTimeout(function () {
+      if (watch === current) {
+        then();
+      }
+    }, wait));
+  }
+
+  function clearTimers(current) {
+    current.timers.forEach(clearTimeout);
+    current.timers = [];
+  }
+
+  // one polite line below the player (never over it, which youtube's rules forbid), telling the
+  // visitor to start it themselves
+  function setLine(current, text) {
+    current.line.textContent = text;
+  }
+
+  function markPlaying() {
+    watch.playing = true;
+    clearTimers(watch);
+    setLine(watch, "");
+  }
+
+  function markReady() {
+    const current = watch;
+    current.ready = true;
+    clearTimers(current);
+    post({ event: "command", func: "playVideo", args: [] });
+    later(current, RETRY_AFTER, function () {
+      if (!current.playing) {
+        current.retried = true;
+        post({ event: "command", func: "playVideo", args: [] });
+        later(current, LINE_AFTER_RETRY, function () {
+          setLine(current, "Press play in the player to start the music.");
+        });
+      }
+    });
+  }
+
+  // the player can't be embedded: a message and a link to the video (or channel) on YouTube in
+  // its place, and the card's name, shows and controls stay
+  function showUnplayable(card) {
+    const button = card.querySelector("a.youtube-play");
+    const video = button && button.dataset.youtubeVideo;
+    const box = card.querySelector(".discover-player-box");
+    stopWatching();
+    const message = element("div", "discover-unplayable");
+    const link = element("a", "", video ? "Watch it on YouTube" : "See the channel on YouTube");
+    link.href = video
+      ? "https://www.youtube.com/watch?v=" + encodeURIComponent(video)
+      : "https://www.youtube.com/channel/" + encodeURIComponent(button.dataset.youtubeChannel);
+    link.target = "_blank";
+    link.rel = "noopener";
+    message.append(
+      element("p", "", video ? "This video can't be played here." : "This channel's videos can't be played here."),
+      link,
+    );
+    box.replaceChildren(message);
   }
 
   function onPlayerMessage(e) {
@@ -113,9 +183,17 @@
     } catch (error) {
       return;
     }
-    if (message && message.event === "onReady") {
-      watch.ready = true;
-      post({ event: "command", func: "playVideo", args: [] });
+    if (!message) {
+      return;
+    }
+    if (message.event === "onReady" && !watch.ready) {
+      markReady();
+    } else if (message.event === "onStateChange" && message.info === 1) {
+      markPlaying();
+    } else if (message.event === "infoDelivery" && message.info && message.info.playerState === 1) {
+      markPlaying();
+    } else if (message.event === "onError" && UNPLAYABLE.indexOf(message.info) !== -1) {
+      showUnplayable(watch.card);
     }
   }
 
@@ -125,12 +203,24 @@
       return;
     }
     stopWatching();
-    watch = { card: card, frame: frame, origin: new URL(frame.src).origin, ready: false };
+    const line = element("p", "deck-play-line");
+    line.setAttribute("role", "status");
+    line.setAttribute("aria-live", "polite");
+    card.querySelector(".discover-player-box").after(line);
+    const current = { card: card, frame: frame, origin: new URL(frame.src).origin, ready: false, playing: false,
+      retried: false, timers: [], line: line };
+    watch = current;
     window.addEventListener("message", onPlayerMessage);
     // the player sends nothing until told we are listening, which it can hear once it has loaded
     frame.addEventListener("load", function () {
-      if (watch && watch.frame === frame) {
+      if (watch === current) {
         post({ event: "listening", id: 1, channel: "widget" });
+        // a player that never reports ready can't be told to play
+        later(current, SILENT_AFTER, function () {
+          if (!current.ready && !current.playing) {
+            setLine(current, "Press play in the player to start the music.");
+          }
+        });
       }
     });
   }
@@ -138,6 +228,8 @@
   function stopWatching() {
     if (watch) {
       window.removeEventListener("message", onPlayerMessage);
+      clearTimers(watch);
+      watch.line.remove();
       watch = null;
     }
   }

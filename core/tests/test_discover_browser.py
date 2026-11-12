@@ -95,6 +95,12 @@ class DeckBrowserTestCase(DiscoverBrowserTestCase):
             {"youtube": youtube, "apple": apple, "spotify": spotify}[service](name.lower())
             show(band, days(3), self.lupo, media=False)
 
+    def clear_acts(self):
+        from core.models import AppleMusicArtistLink, Event, SpotifyArtistLink, YouTubeArtistLink
+
+        for model in (Event, Band, AppleMusicArtistLink, SpotifyArtistLink, YouTubeArtistLink):
+            model.all_objects.all().delete() if model is Event else model.objects.all().delete()
+
     def make_deck(self, services=("youtube", "apple", "spotify")):
         for name in ("Anjimile", "Belly", "Cheap Trick"):
             if not Band.objects.filter(name=name).exists():
@@ -102,7 +108,7 @@ class DeckBrowserTestCase(DiscoverBrowserTestCase):
 
     def open_deck(
         self, services=("youtube", "apple", "spotify"), cookie=None, width=None, reduced_motion=False, start=True,
-        touch=False,
+        touch=False, clock=False,
     ):
         """the deck, opened and (unless start=False) with the Start control pressed"""
         self.make_deck(services)
@@ -119,6 +125,9 @@ class DeckBrowserTestCase(DiscoverBrowserTestCase):
             context.add_cookies([{"name": "saved_shows", "value": cookie, "url": self.live_server_url}])
         _, page = self.open_page("/discover", context=context)
         self.context = context
+        if clock:
+            # a fake clock, run by the test with page.clock.run_for(ms)
+            page.clock.install()
         if start:
             page.click(".deck-start")
         return page
@@ -592,12 +601,6 @@ class AccessTestCase(DeckBrowserTestCase):
 
 class StartTestCase(DeckBrowserTestCase):
     """the Start control, the first card's placeholder, and each later card's autoplay"""
-
-    def clear_acts(self):
-        from core.models import AppleMusicArtistLink, Event, SpotifyArtistLink, YouTubeArtistLink
-
-        for model in (Event, Band, AppleMusicArtistLink, SpotifyArtistLink, YouTubeArtistLink):
-            model.all_objects.all().delete() if model is Event else model.objects.all().delete()
 
     def frames(self, page):
         return page.eval_on_selector_all(".discover-card:not([hidden]) iframe", "frames => frames.map(f => f.src)")

@@ -108,3 +108,143 @@ class PlayCommandTestCase(YouTubePlayerTestCase):
         )
         page.wait_for_timeout(300)
         self.assertEqual(self.commands(frame), [])
+
+
+class DidItStartTestCase(YouTubePlayerTestCase):
+    LINE = ".discover-card:not([hidden]) .deck-play-line"
+
+    def open_clocked(self, width=None):
+        self.video_deck()
+        page = self.open_deck(clock=True, width=width)
+        frame = self.embed(page)
+        # the clock runs by itself until paused, so the waits below are exact
+        page.wait_for_timeout(100)
+        page.clock.pause_at(page.evaluate("Date.now()") / 1000 + 0.05)
+        return page, frame
+
+    def ready(self, frame):
+        self.say(frame, {"event": "onReady"})
+        frame.wait_for_function("() => window.commands.length > 0")
+
+    def line(self, page):
+        return page.locator(self.LINE).inner_text()
+
+    def test_retry_once(self):
+        page, frame = self.open_clocked()
+        self.ready(frame)
+        page.clock.run_for(3900)
+        self.assertEqual(self.commands(frame), ["playVideo"])
+        page.clock.run_for(200)
+        frame.wait_for_function("() => window.commands.length === 2")
+        page.clock.run_for(30000)
+        page.wait_for_timeout(200)
+        self.assertEqual(self.commands(frame), ["playVideo", "playVideo"])
+
+    def test_the_line_appears_below_the_player(self):
+        page, frame = self.open_clocked(width=390)
+        self.ready(frame)
+        page.clock.run_for(4000)
+        page.clock.run_for(2900)
+        self.assertEqual(self.line(page), "")
+        page.clock.run_for(200)
+        self.assertIn("Press play", self.line(page))
+        self.assertEqual(page.locator(self.LINE).get_attribute("aria-live"), "polite")
+        self.assertEqual(page.locator(self.LINE).get_attribute("role"), "status")
+        # below the player's box, and nothing is drawn over the player
+        box = page.locator(".discover-card:not([hidden]) .discover-player-box").bounding_box()
+        line = page.locator(self.LINE).bounding_box()
+        self.assertGreaterEqual(line["y"], box["y"] + box["height"] - 1)
+        frame_box = page.locator(".discover-card:not([hidden]) iframe").bounding_box()
+        self.assertGreaterEqual(frame_box["width"], 200)
+        covered = page.evaluate(
+            """b => {
+              for (const fx of [0.1, 0.5, 0.9]) {
+                for (const fy of [0.1, 0.5, 0.9]) {
+                  const hit = document.elementFromPoint(b.x + b.width * fx, b.y + b.height * fy);
+                  if (!hit || hit.tagName !== 'IFRAME') { return hit ? hit.className || hit.tagName : 'nothing'; }
+                }
+              }
+              return null;
+            }""",
+            frame_box,
+        )
+        self.assertIsNone(covered)
+
+    def test_the_line_goes_when_playing_starts(self):
+        page, frame = self.open_clocked()
+        self.ready(frame)
+        page.clock.run_for(7100)
+        self.assertIn("Press play", self.line(page))
+        self.say(frame, {"event": "onStateChange", "info": 1})
+        page.wait_for_function("sel => !document.querySelector(sel).textContent", arg=self.LINE)
+
+    def test_a_player_that_never_reports_ready(self):
+        page, frame = self.open_clocked()
+        # the 7 seconds run from the frame's load, a little before the clock was paused
+        page.clock.run_for(6500)
+        self.assertEqual(self.line(page), "")
+        page.clock.run_for(1000)
+        self.assertIn("Press play", self.line(page))
+        self.assertEqual(self.commands(frame), [])
+        self.say(frame, {"event": "infoDelivery", "info": {"playerState": 1}})
+        page.wait_for_function("sel => !document.querySelector(sel).textContent", arg=self.LINE)
+
+    def test_no_line_when_it_plays(self):
+        page, frame = self.open_clocked()
+        self.ready(frame)
+        self.say(frame, {"event": "onStateChange", "info": 1})
+        page.wait_for_timeout(200)
+        page.clock.run_for(30000)
+        page.wait_for_timeout(200)
+        self.assertEqual(self.commands(frame), ["playVideo"])
+        self.assertEqual(self.line(page), "")
+
+    def test_the_line_goes_when_the_card_leaves_the_top(self):
+        page, frame = self.open_clocked()
+        self.ready(frame)
+        page.clock.run_for(7100)
+        page.click(".deck-skip")
+        page.clock.run_for(500)
+        self.wait_for_card(page, "Anjimile")
+        self.assertEqual(page.locator(".deck-play-line:not(:empty)").count(), 0)
+
+
+class UnplayableTestCase(YouTubePlayerTestCase):
+    def test_embedding_not_allowed_and_not_found(self):
+        for code in (101, 150, 100):
+            with self.subTest(code=code):
+                self.clear_acts()
+                self.video_deck()
+                page = self.open_deck()
+                frame = self.embed(page)
+                self.say(frame, {"event": "onError", "info": code})
+                page.wait_for_selector(".discover-unplayable")
+                self.assertEqual(page.locator(".discover-card:not([hidden]) iframe").count(), 0)
+                link = page.locator(".discover-unplayable a")
+                self.assertEqual(link.get_attribute("href"), "https://www.youtube.com/watch?v=vid123")
+                self.assertEqual(link.get_attribute("target"), "_blank")
+                # the card still works
+                page.click(".deck-add")
+                self.assertEqual(page.locator(".picker").count(), 1)
+                page.click(".picker-close")
+                page.click(".deck-skip")
+                self.wait_for_card(page, "Anjimile")
+
+    def test_a_channel_match_links_the_channel(self):
+        from core.models import YouTubeArtistLink
+
+        self.video_deck()
+        YouTubeArtistLink.objects.filter(name_key="aardvark").update(video_id="")
+        page = self.open_deck()
+        self.say(self.embed(page), {"event": "onError", "info": 101})
+        page.wait_for_selector(".discover-unplayable")
+        link = page.locator(".discover-unplayable a")
+        self.assertEqual(link.get_attribute("href"), "https://www.youtube.com/channel/UCchannel")
+
+    def test_other_errors_leave_the_player(self):
+        self.video_deck()
+        page = self.open_deck()
+        self.say(self.embed(page), {"event": "onError", "info": 2})
+        page.wait_for_timeout(300)
+        self.assertEqual(page.locator(".discover-unplayable").count(), 0)
+        self.assertEqual(page.locator(".discover-card:not([hidden]) iframe").count(), 1)

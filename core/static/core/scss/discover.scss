@@ -139,6 +139,36 @@ $quiet: #4f4b44;
       font-size: 0.85rem;
       padding: 2px 16px;
     }
+
+    // a video youtube won't embed: this stands in the player's place, with its link
+    .discover-unplayable {
+      min-height: 200px;
+      padding: 16px;
+      box-sizing: border-box;
+      background: #222;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+
+      a {
+        color: #fff;
+        text-decoration: underline;
+      }
+    }
+  }
+
+  // below the player box, in the card's flow: it never covers the player
+  .deck-play-line {
+    margin: 8px 0 0;
+    font-size: 0.9rem;
+
+    // a live region stays displayed when empty, so its text is announced when it comes
+    &:empty {
+      margin: 0;
+    }
   }
 
   // the first card's Start control, over our own placeholder (the video's thumbnail, or a
