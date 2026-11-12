@@ -722,3 +722,35 @@ class StartTestCase(DeckBrowserTestCase):
                 page.click(".deck-start")
                 page.wait_for_selector(".discover-card:not([hidden]) iframe")
 
+
+
+class TouchTestCase(DeckBrowserTestCase):
+    """finger drags on a phone-sized screen: right adds, left skips"""
+
+    def drag(self, page, dx):
+        box = page.locator(".discover-card:not([hidden]) .discover-name").bounding_box()
+        x, y = box["x"] + 20, box["y"] + box["height"] / 2
+        cdp = self.context.new_cdp_session(page)
+
+        def touch(kind, px):
+            points = [] if kind == "touchEnd" else [{"x": px, "y": y}]
+            cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": points})
+
+        touch("touchStart", x)
+        for step in range(1, 7):
+            touch("touchMove", x + dx * step / 6)
+        touch("touchEnd", x + dx)
+
+    def test_a_drag_to_the_right_opens_the_picker_and_passes_nothing(self):
+        page = self.open_deck(width=390, touch=True)
+        self.drag(page, 150)
+        page.wait_for_selector(".picker")
+        self.assertEqual(self.shown(page), "Anjimile")
+        self.assertEqual(self.cookie(), "")
+
+    def test_a_drag_to_the_left_passes_the_act_and_saves_nothing(self):
+        page = self.open_deck(width=390, touch=True)
+        self.drag(page, -150)
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Belly'")
+        self.assertEqual(page.locator(".picker").count(), 0)
+        self.assertEqual(self.cookie(), "")

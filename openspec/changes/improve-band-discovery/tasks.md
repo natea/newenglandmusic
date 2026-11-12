@@ -28,8 +28,8 @@ Archive `add-band-discovery-swipe` before this change, since this modifies its s
 
 ## 4. Swipe directions
 
-- [ ] 4.1 Add browser tests that drive touch gestures on a phone-sized screen: a drag to the right opens the picker without passing the act, a drag to the left passes it and saves nothing. If either fails, find the cause, fix it and note it in the design. Verify the existing mouse, button and key tests still pass.
-- [ ] 4.2 Apply the label wording decided in open question 2, if it changes. Verify with the hint and button tests.
+- [x] 4.1 Add browser tests that drive touch gestures on a phone-sized screen: a drag to the right opens the picker without passing the act, a drag to the left passes it and saves nothing. If either fails, find the cause, fix it and note it in the design. Verify the existing mouse, button and key tests still pass.
+- [x] 4.2 Apply the label wording decided in open question 2, if it changes. Verify with the hint and button tests.
 
 ## 5. Finish
 
