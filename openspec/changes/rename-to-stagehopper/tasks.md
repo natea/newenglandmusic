@@ -46,7 +46,7 @@
 
 ## 5. The switch (Nate, in the dashboards, around the merge)
 
-- [ ] 5.1 Do the steps in `design.md` decision 7, in order: set `SITE_URL` to the onrender address before the merge; deploy, check the blueprint sync, resave and check no static page at `/boston/` or `/nyc/`; add Render's custom domain; verify the domain with GitHub, add `info`, and allow it for Mapbox, PostHog and Datadog; move the landing page; point the apex's A records and www at Render; set `CANONICAL_HOST` and `SITE_URL`, then press Manual Sync for the jobs.
+- [ ] 5.1 Do the steps in `design.md` decision 7, in order: check `SITE_NAME` isn't set and set `SITE_URL` to the onrender address before the merge; deploy, check the blueprint sync, resave and check no static page at `/boston/` or `/nyc/`; add Render's custom domain; verify the domain with GitHub, add `info`, and allow it for Mapbox, PostHog and Datadog; move the landing page; point the apex's A records and www at Render; set `CANONICAL_HOST` and `SITE_URL`, then press Manual Sync for the jobs.
 - [ ] 5.2 Live check:
   - https://stagehopper.app shows "Stagehopper" with the tagline;
   - www and the onrender address redirect;
