@@ -1,0 +1,135 @@
+// the band discovery deck (core/templates/core/discover.html): index cards on the site's
+// grey ground, each act's name on its purple tab, as on the band page. the sketch is
+// openspec/changes/add-band-discovery-swipe/sketches/c.html
+
+$card: #f6f4ee;
+$hairline: #b9b4a8;
+$tab: #8b5d8b;
+$ink: #1a1a1a;
+$quiet: #4f4b44;
+
+.discover {
+  margin: 22px 0 8px;
+
+  .discover-title {
+    margin: 0 0 12px;
+  }
+
+  p {
+    display: block;
+  }
+
+  .discover-card {
+    background: $card;
+    color: $ink;
+    border: 1px solid $hairline;
+    padding: 0 16px 14px;
+    margin-bottom: 16px;
+  }
+
+  .discover-photo {
+    margin: 0 -16px;
+
+    img {
+      display: block;
+      width: 100%;
+      max-height: 280px;
+      object-fit: cover;
+    }
+
+    figcaption {
+      font-size: 0.75rem;
+      color: $quiet;
+      padding: 2px 16px;
+    }
+  }
+
+  .discover-name {
+    display: inline-block;
+    background: $tab;
+    margin: 12px 0 0;
+    padding: 0.18em 0.45em 0.12em;
+    font-size: 1.6rem;
+    line-height: 1.05;
+
+    a {
+      color: #fff;
+      text-decoration: none;
+    }
+  }
+
+  .discover-meta,
+  .discover-next {
+    margin: 6px 0;
+  }
+
+  .discover-kind {
+    font-weight: 700;
+    text-transform: capitalize;
+  }
+
+  .discover-next {
+    color: $quiet;
+    font-size: 0.9rem;
+  }
+
+  // the listings' play buttons, a size up, each with its service's mark beside its name
+  .artist-previews {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0;
+  }
+
+  .spotify-play,
+  .apple-play,
+  .youtube-play {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: black;
+    text-decoration: none;
+    border: 1px solid #000;
+    border-radius: 14px;
+    background: #fff;
+    padding: 3px 12px 3px 6px;
+  }
+
+  .service-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .youtube-mark {
+    fill: #ff0000;
+  }
+
+  .apple-mark {
+    fill: #fa243c;
+  }
+
+  .spotify-mark {
+    fill: #1db954;
+  }
+
+  .discover-shows {
+    margin: 8px 0 0;
+    padding-left: 0;
+    list-style: none;
+
+    li {
+      padding: 4px 0;
+      border-top: 1px solid $hairline;
+    }
+
+    time {
+      font-weight: 700;
+      margin-right: 6px;
+    }
+  }
+
+  .discover-empty {
+    margin: 12px 0;
+  }
+}
