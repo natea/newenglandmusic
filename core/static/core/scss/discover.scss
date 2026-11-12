@@ -27,23 +27,6 @@ $quiet: #4f4b44;
     margin-bottom: 16px;
   }
 
-  .discover-photo {
-    margin: 0 -16px;
-
-    img {
-      display: block;
-      width: 100%;
-      max-height: 280px;
-      object-fit: cover;
-    }
-
-    figcaption {
-      font-size: 0.75rem;
-      color: $quiet;
-      padding: 2px 16px;
-    }
-  }
-
   .discover-name {
     display: inline-block;
     background: $tab;

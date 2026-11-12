@@ -28,7 +28,8 @@ class DiscoverBrowserTestCase(BrowserTestCase):
         key = name.lower()
         for service in services:
             {"youtube": youtube, "apple": apple, "spotify": spotify}[service](key)
-        events = [show(band, days(3 + n), self.lupo) for n in range(shows)]
+        # the deck holds acts with something to play: with no service named, show() links Spotify
+        events = [show(band, days(3 + n), self.lupo, media=not services) for n in range(shows)]
         return band, events
 
     def requests_to(self, *hosts):
@@ -324,7 +325,8 @@ class PlayerTestCase(DeckBrowserTestCase):
         page = self.only_belly(("youtube", "apple", "spotify"))
         self.assertEqual(self.frames(page), ["https://www.youtube-nocookie.com/embed/vid123"])
         self.assertEqual(page.locator(".discover-card:not([hidden]) a.apple-play").count(), 1)
-        self.assertEqual(self.requests_to("apple.com", "spotify.com"), [])
+        # Anjimile, passed, has a Spotify player of its own; Belly's ids are sp123 and 200
+        self.assertEqual(self.requests_to("apple.com", "artist/sp123"), [])
         # not started by the page
         self.assertNotIn("autoplay=1", self.frames(page)[0])
 
@@ -332,7 +334,7 @@ class PlayerTestCase(DeckBrowserTestCase):
         page = self.only_belly(("apple", "spotify"))
         self.assertEqual(self.frames(page), ["https://embed.music.apple.com/us/album/300?i=200"])
         self.assertEqual(page.locator(".discover-card:not([hidden]) a.spotify-play").count(), 1)
-        self.assertEqual(self.requests_to("spotify.com"), [])
+        self.assertEqual(self.requests_to("artist/sp123"), [])
 
     def test_spotify_only_loads_its_player(self):
         page = self.only_belly(("spotify",))
@@ -343,23 +345,26 @@ class PlayerTestCase(DeckBrowserTestCase):
         page = self.only_belly(("apple",))
         self.assertEqual(self.frames(page), ["https://embed.music.apple.com/us/album/300?i=200"])
 
-    def test_no_match_has_no_player(self):
-        page = self.only_belly(())
-        self.assertEqual(self.frames(page), [])
-        self.assertEqual(page.locator(".discover-card:not([hidden]) a.youtube-play").count(), 0)
-        self.assertEqual(self.requests_to("youtube", "apple.com", "spotify.com"), [])
+    def test_an_act_with_no_match_is_not_in_the_deck(self):
+        self.make_deck()
+        quiet = Band.objects.create(name="Aardvark", city_town="Providence", state="RI")
+        show(quiet, days(1), self.lupo, media=False)
+        page = self.open_deck()
+        self.assertEqual(page.locator('.discover-card[data-act="Aardvark"]').count(), 0)
+        self.assertEqual(self.shown(page), "Anjimile")
 
     def test_only_the_top_card_has_a_player_and_a_passed_one_loses_it(self):
         self.make_deck(("youtube",))
         page = self.open_deck(("youtube",))
-        # Anjimile is on top and has no match: nothing yet, though Belly's is on the page
-        self.assertEqual(page.locator("iframe").count(), 0)
+        # Anjimile is on top with a Spotify player only: Belly's video is on the page, not loaded
+        self.assertEqual(page.locator("iframe").count(), 1)
         self.assertEqual(self.requests_to("youtube"), [])
         self.skip_to_belly(page)
         self.assertEqual(page.locator("iframe").count(), 1)
+        self.assertEqual(page.locator("iframe[src*=youtube]").count(), 1)
         page.click(".deck-skip")
         page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Cheap Trick'")
-        self.assertEqual(page.locator("iframe").count(), 0)
+        self.assertEqual(page.locator("iframe[src*=youtube]").count(), 0)
 
     def test_pressing_the_cards_own_button_replaces_its_player(self):
         page = self.only_belly(("youtube", "apple", "spotify"))

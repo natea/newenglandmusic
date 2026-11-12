@@ -18,6 +18,8 @@ from django.test.utils import CaptureQueriesContext
 
 class DiscoverTestCase(TestCase):
     def setUp(self):
+        # the deck holds acts with something to play: acts made by show() have a Spotify link
+        self.enterContext(mock.patch.dict(os.environ, SPOTIFY_ON))
         self.lupo = venue()
         self.belly = Band.objects.create(name="Belly", city_town="Providence", state="RI")
         self.anjimile = Artist.objects.create(name="Anjimile", city_town="Boston", state="MA")
@@ -67,6 +69,48 @@ class DeckTestCase(DiscoverTestCase):
 
         show(self.belly, beginning_of_day(get_current_new_york_datetime()), self.lupo)
         self.assertEqual(self.names(self.page()), ["Belly"])
+
+    def test_an_act_with_no_media_is_left_out_whatever_its_shows_and_photo(self):
+        self.anjimile.photo_file = "Anjimile.jpg"
+        self.anjimile.save()
+        show(self.anjimile, days(3), self.lupo, media=False)
+        show(self.belly, days(4), self.lupo)
+        response = self.page()
+        self.assertEqual(self.names(response), ["Belly"])
+        self.assertNotContains(response, "Anjimile")
+
+    def test_one_service_is_enough_for_each_of_the_three(self):
+        for name, services, switches in (
+            ("Belly", (spotify,), SPOTIFY_ON), ("Anjimile", (apple,), APPLE_ON), ("Frankie Cosmos", (youtube,), YOUTUBE_ON),
+        ):
+            act = Band.objects.create(name=name)
+            show(act, days(3), self.lupo, media=False)
+            for service in services:
+                service(name.lower())
+            with mock.patch.dict(os.environ, switches):
+                self.assertIn(name, self.names(self.page()))
+
+    def test_an_apple_match_without_a_top_song_does_not_count(self):
+        show(self.belly, days(3), self.lupo, media=False)
+        apple("belly", song_id="")
+        with mock.patch.dict(os.environ, APPLE_ON):
+            self.assertEqual(self.names(self.page()), [])
+
+    def test_switches_and_credentials_off_leave_an_empty_deck(self):
+        show(self.belly, days(3), self.lupo, media=False)
+        youtube("belly")
+        apple("belly")
+        spotify("belly")
+        with mock.patch.dict(os.environ, {}):
+            for key in (*SPOTIFY_ON, *APPLE_ON, *YOUTUBE_ON):
+                os.environ.pop(key, None)
+            response = self.page()
+        self.assertEqual(self.names(response), [])
+        self.assertContains(response, "There are no bands to discover yet")
+
+    def test_the_empty_page_when_no_act_has_something_to_play(self):
+        show(self.anjimile, days(3), self.lupo, media=False)
+        self.assertContains(self.page(), "There are no bands to discover yet")
 
     def test_the_empty_page(self):
         response = self.page()
@@ -195,8 +239,6 @@ class CardTestCase(DiscoverTestCase):
     def test_card_contents(self):
         self.belly.photo_file = "Belly 2018.jpg"
         self.belly.photo_author = "A. Photographer"
-        self.belly.photo_license = "CC BY-SA 3.0"
-        self.belly.photo_license_url = "https://creativecommons.org/licenses/by-sa/3.0/"
         self.belly.save()
         show(self.belly, days(3), self.lupo, starttime_override="doors 7pm")
         html = self.page().content.decode()
@@ -204,27 +246,20 @@ class CardTestCase(DiscoverTestCase):
         self.assertIn('<span class="discover-kind">band</span> · Providence, RI', html)
         self.assertIn("Lupo&#x27;s", html)
         self.assertIn("doors 7pm", html)
-        self.assertIn("Special:FilePath/Belly_2018.jpg?width=480", html)
-        self.assertIn("Photo: A. Photographer", html)
-        self.assertNotIn("artist-previews", html)
+        # every card has a player, so none shows a photo
+        self.assertNotIn("Special:FilePath", html)
+        self.assertNotIn("Photo: A. Photographer", html)
+        self.assertNotIn("<figure", html)
+        self.assertIn("artist-previews", html)
 
-    def test_the_photo_is_left_for_the_player_when_matched(self):
+    def test_a_card_has_no_photo_when_matched(self):
         self.belly.photo_file = "Belly 2018.jpg"
         self.belly.photo_author = "A. Photographer"
         self.belly.save()
         show(self.belly, days(3), self.lupo)
-        spotify("belly")
-        with mock.patch.dict(os.environ, SPOTIFY_ON):
-            html = self.page().content.decode()
+        html = self.page().content.decode()
         self.assertNotIn("discover-photo", html)
         self.assertIn("spotify-play", html)
-
-    def test_no_match_and_no_photo(self):
-        show(self.anjimile, days(3), self.lupo)
-        html = self.page().content.decode()
-        self.assertIn('<span class="discover-kind">artist</span> · Boston, MA', html)
-        self.assertNotIn("artist-previews", html)
-        self.assertNotIn("<figure", html)
 
     def test_a_show_with_no_venue_and_an_act_with_no_town(self):
         nowhere = Band.objects.create(name="Nowhere Men")
@@ -257,6 +292,7 @@ class WithoutJavaScriptTestCase(DiscoverTestCase):
     def test_a_show_on_two_cards_has_two_anchors(self):
         artist = Artist.objects.create(name="Belly Solo")
         event = show(self.belly, days(3), self.lupo)
+        spotify("belly solo", "sp-solo")
         EventPerformer.objects.create(event=event, artist=artist)
         html = self.page().content.decode()
         nexts = [value for action, value in self.forms_of(html) if action == f"/saved/toggle/{event.pk}"]
@@ -319,7 +355,7 @@ class SiteHeaderTestCase(TestCase):
 
 class CardButtonsTestCase(DiscoverTestCase):
     def test_apple_music_only_has_its_button_with_its_icon_and_no_other(self):
-        show(self.belly, days(3), self.lupo)
+        show(self.belly, days(3), self.lupo, media=False)
         apple("belly")
         with mock.patch.dict(os.environ, {**SPOTIFY_ON, **APPLE_ON, **YOUTUBE_ON}):
             html = self.page().content.decode()

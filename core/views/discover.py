@@ -1,6 +1,7 @@
 """
 the band discovery deck at /discover (add-band-discovery-swipe): one card for each live band
-or artist with an upcoming approved show, in a random order for each visit, which core/static/
+or artist with an upcoming approved show and something to play (a YouTube, Apple Music or
+Spotify match), in a random order for each visit, which core/static/
 core/js/discover.js swipes through. every card is rendered into the page, with its shows, so
 the picker needs no request and the page works without javascript as a list of cards.
 
@@ -23,9 +24,6 @@ from core.models import Band, Event, EventPerformer
 from core.opengraph import get_meta
 from core.saved_shows import COOKIE_NAME, parse_saved
 from core.utils_datemath import beginning_of_day, get_current_new_york_datetime
-from core.views.act_page import photo_of
-
-PHOTO_WIDTH = 480
 
 
 @dataclass
@@ -34,7 +32,6 @@ class Card:
     kind: str
     shows: list = field(default_factory=list)
     previews: dict | None = None
-    photo: object = None
 
     @property
     def anchor(self):
@@ -53,10 +50,6 @@ class Card:
     @property
     def more_shows(self):
         return len(self.shows) - 1
-
-    @property
-    def has_player(self):
-        return bool(self.previews)
 
 
 def upcoming_performances():
@@ -84,7 +77,7 @@ def name_venue(event):
 
 
 def deck_cards(request):
-    """a card for each live act with an upcoming show, its shows soonest first"""
+    """a card for each live act with an upcoming show and something to play, its shows soonest first"""
     saved = set(parse_saved(request.COOKIES.get(COOKIE_NAME)))
     location = location_from_request(request)
     cards = {}
@@ -105,9 +98,8 @@ def deck_cards(request):
     previews = act_previews(card.act.name for card in cards)
     for card in cards:
         card.previews = previews.get(normalize(card.act.name))
-        # a photo only stands in when there is no player
-        card.photo = None if card.previews else photo_of(card.act, PHOTO_WIDTH)
-    return cards
+    # an act with nothing to play is left out, in the deck and the list alike
+    return [card for card in cards if card.previews]
 
 
 @never_cache

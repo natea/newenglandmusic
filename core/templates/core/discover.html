@@ -22,12 +22,6 @@
     <div class="deck">
       {% for card in cards %}
         <article class="discover-card" id="{{ card.anchor }}" aria-label="{{ card.act.name }}" data-act="{{ card.act.name }}">
-          {% if card.photo %}
-            <figure class="discover-photo">
-              <img src="{{ card.photo.src }}" alt="{{ card.act.name }}">
-              <figcaption>Photo: {{ card.photo.author }}, {% if card.photo.license_url %}<a href="{{ card.photo.license_url }}" rel="noopener license" target="_blank">{{ card.photo.license }}</a>{% else %}{{ card.photo.license }}{% endif %}, via <a href="{{ card.photo.page }}" rel="noopener" target="_blank">Wikimedia Commons</a></figcaption>
-            </figure>
-          {% endif %}
           <div class="discover-player-box"></div>
           <h3 class="discover-name"><a href="{{ card.act.get_absolute_url }}">{{ card.act.name }}</a></h3>
           <p class="discover-meta"><span class="discover-kind">{{ card.kind }}</span>{% if card.place %} · {{ card.place }}{% endif %}</p>
