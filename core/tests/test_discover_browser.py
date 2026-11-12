@@ -139,9 +139,11 @@ class DeckBrowserTestCase(DiscoverBrowserTestCase):
         found = [c["value"] for c in self.context.cookies() if c["name"] == "saved_shows"]
         return found[0].replace("%2C", ",") if found else ""
 
+    # the passed card slides off as a copy (.deck-ghost) while the next card is already the top
+    # one, with its player; a test that goes on to press something waits for the copy to go
     def skip_to_belly(self, page):
         page.click(".deck-skip")
-        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Belly'")
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Belly' && !document.querySelector('.deck-ghost')")
 
     def belly_events(self):
         from core.models import Event
@@ -160,7 +162,7 @@ class SwipingTestCase(DeckBrowserTestCase):
         page.mouse.up()
 
     def wait_for(self, page, act):
-        page.wait_for_function("name => document.querySelector('.discover-card:not([hidden])')?.dataset.act === name", arg=act)
+        page.wait_for_function("name => document.querySelector('.discover-card:not([hidden])')?.dataset.act === name && !document.querySelector('.deck-ghost')", arg=act)
 
     def test_one_card_at_a_time(self):
         page = self.open_deck()
@@ -421,7 +423,7 @@ class PlayerTestCase(DeckBrowserTestCase):
         self.assertEqual(page.locator("iframe").count(), 1)
         self.assertEqual(page.locator("iframe[src*=youtube]").count(), 1)
         page.click(".deck-skip")
-        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Cheap Trick'")
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Cheap Trick' && !document.querySelector('.deck-ghost')")
         self.assertEqual(page.locator("iframe[src*=youtube]").count(), 0)
 
     def test_pressing_the_cards_own_button_replaces_its_player(self):
@@ -566,7 +568,7 @@ class AccessTestCase(DeckBrowserTestCase):
     def test_keyboard_only(self):
         page = self.open_deck()
         page.keyboard.press("ArrowLeft")
-        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Belly'")
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Belly' && !document.querySelector('.deck-ghost')")
         page.keyboard.press("ArrowRight")
         page.wait_for_selector(".picker")
         # focus is in the picker: space ticks the first row, the button is reached by tab
@@ -676,12 +678,12 @@ class StartTestCase(DeckBrowserTestCase):
         page = self.open_deck()
         self.assertEqual(self.frames(page), [autoplay])
         page.click(".deck-skip")
-        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Anjimile'")
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Anjimile' && !document.querySelector('.deck-ghost')")
         self.assertEqual(self.frames(page), [autoplay])
         self.assertEqual(page.locator("iframe").count(), 1)
         # the key: Belly has a YouTube match too, with a Spotify one behind
         page.keyboard.press("ArrowLeft")
-        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Belly'")
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Belly' && !document.querySelector('.deck-ghost')")
         self.assertEqual(self.frames(page), [autoplay])
         self.assertEqual(page.locator("iframe").count(), 1)
         # a swipe
@@ -692,7 +694,7 @@ class StartTestCase(DeckBrowserTestCase):
         page.mouse.move(x - 100, y, steps=4)
         page.mouse.move(x - 200, y, steps=4)
         page.mouse.up()
-        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Cheap Trick'")
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Cheap Trick' && !document.querySelector('.deck-ghost')")
         # Cheap Trick has Spotify only: ready, not asked to start
         self.assertEqual(page.locator("iframe[src*=youtube]").count(), 0)
         self.assertNotIn("autoplay=", self.frames(page)[0])
@@ -703,7 +705,7 @@ class StartTestCase(DeckBrowserTestCase):
         page.click(".deck-add")
         page.locator(".picker input").first.check()
         page.click(".picker-save")
-        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Anjimile'")
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Anjimile' && !document.querySelector('.deck-ghost')")
         self.assertEqual(
             self.frames(page), [self.autoplay_src("vid123")]
         )
@@ -784,6 +786,6 @@ class TouchTestCase(DeckBrowserTestCase):
     def test_a_drag_to_the_left_passes_the_act_and_saves_nothing(self):
         page = self.open_deck(width=390, touch=True)
         self.drag(page, -150)
-        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Belly'")
+        page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Belly' && !document.querySelector('.deck-ghost')")
         self.assertEqual(page.locator(".picker").count(), 0)
         self.assertEqual(self.cookie(), "")

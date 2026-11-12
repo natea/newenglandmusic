@@ -22,11 +22,23 @@ class YouTubePlayerTestCase(base.DeckBrowserTestCase):
         frames[0].wait_for_load_state()
         return frames[0]
 
+    def frames(self, page):
+        return page.eval_on_selector_all(".discover-card:not([hidden]) iframe", "frames => frames.map(f => f.src)")
+
     def say(self, frame, message):
         frame.evaluate("message => window.say(message)", message)
 
     def commands(self, frame):
         return frame.evaluate("() => window.commands")
+
+    def open_clocked(self, width=None):
+        self.video_deck()
+        page = self.open_deck(clock=True, width=width)
+        frame = self.embed(page)
+        # the clock runs by itself until paused, so the waits below are exact
+        page.wait_for_timeout(100)
+        page.clock.pause_at(page.evaluate("Date.now()") / 1000 + 0.05)
+        return page, frame
 
     def wait_for_card(self, page, act):
         page.wait_for_function(
@@ -112,15 +124,6 @@ class PlayCommandTestCase(YouTubePlayerTestCase):
 
 class DidItStartTestCase(YouTubePlayerTestCase):
     LINE = ".discover-card:not([hidden]) .deck-play-line"
-
-    def open_clocked(self, width=None):
-        self.video_deck()
-        page = self.open_deck(clock=True, width=width)
-        frame = self.embed(page)
-        # the clock runs by itself until paused, so the waits below are exact
-        page.wait_for_timeout(100)
-        page.clock.pause_at(page.evaluate("Date.now()") / 1000 + 0.05)
-        return page, frame
 
     def ready(self, frame):
         self.say(frame, {"event": "onReady"})
@@ -248,3 +251,74 @@ class UnplayableTestCase(YouTubePlayerTestCase):
         page.wait_for_timeout(300)
         self.assertEqual(page.locator(".discover-unplayable").count(), 0)
         self.assertEqual(page.locator(".discover-card:not([hidden]) iframe").count(), 1)
+
+
+class InsideTheVisitorsActionTestCase(YouTubePlayerTestCase):
+    """the clock is paused, so the slide-off never ends unless a test runs it"""
+
+    def test_the_next_player_exists_before_the_animation_ends(self):
+        page, old = self.open_clocked()
+        page.click(".deck-skip")
+        self.assertEqual(self.shown(page), "Anjimile")
+        self.assertEqual(page.locator(".deck-ghost").count(), 1)
+        self.assertEqual(page.locator(".deck-ghost iframe").count(), 0)
+        self.assertEqual(page.locator("iframe").count(), 1)
+        self.assertEqual(self.frames(page), [self.autoplay_src("vid123")])
+        self.assertTrue(old.is_detached())
+        page.clock.run_for(300)
+        self.assertEqual(page.locator(".deck-ghost").count(), 0)
+        self.assertEqual(page.locator("iframe").count(), 1)
+
+    def test_the_swipe_and_the_key_do_the_same(self):
+        for how in ("key", "swipe"):
+            with self.subTest(how=how):
+                self.clear_acts()
+                page, old = self.open_clocked()
+                if how == "key":
+                    page.keyboard.press("ArrowLeft")
+                else:
+                    box = page.locator(".discover-card:not([hidden]) .discover-name").bounding_box()
+                    x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+                    page.mouse.move(x, y)
+                    page.mouse.down()
+                    page.mouse.move(x - 100, y, steps=4)
+                    page.mouse.move(x - 200, y, steps=4)
+                    page.mouse.up()
+                self.assertEqual(self.shown(page), "Anjimile")
+                self.assertEqual(self.frames(page), [self.autoplay_src("vid123")])
+                self.assertEqual(page.locator(".deck-ghost").count(), 1)
+
+    def test_only_the_new_top_card_is_listened_to(self):
+        page, old = self.open_clocked()
+        page.click(".deck-skip")
+        new = self.embed(page)
+        self.assertNotEqual(new, old)
+        self.say(new, {"event": "onReady"})
+        new.wait_for_function("() => window.commands.length > 0")
+        self.assertEqual(self.commands(new), ["playVideo"])
+        self.assertTrue(old.is_detached())
+
+    def test_a_double_press_or_held_key_moves_once(self):
+        page, _ = self.open_clocked()
+        page.click(".deck-skip")
+        page.click(".deck-skip", force=True)
+        for _ in range(3):
+            page.keyboard.press("ArrowLeft")
+        self.assertEqual(self.shown(page), "Anjimile")
+        self.assertEqual(page.locator("iframe").count(), 1)
+        page.clock.run_for(300)
+        self.assertEqual(self.shown(page), "Anjimile")
+        # and the deck moves again once the slide-off has ended
+        page.keyboard.press("ArrowLeft")
+        self.assertEqual(self.shown(page), "Belly")
+
+    def test_reduced_motion(self):
+        self.video_deck()
+        page = self.open_deck(reduced_motion=True)
+        page.click(".deck-skip")
+        self.assertEqual(self.shown(page), "Anjimile")
+        self.assertEqual(page.locator(".deck-ghost").count(), 0)
+        self.assertEqual(self.frames(page), [self.autoplay_src("vid123")])
+        self.assertEqual(page.locator("iframe").count(), 1)
+        page.keyboard.press("ArrowLeft")
+        self.assertEqual(self.shown(page), "Belly")

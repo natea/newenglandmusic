@@ -309,23 +309,60 @@
     show();
   }
 
-  function moveOff(direction, then) {
-    const card = top();
-    if (reduceMotion.matches) {
-      then();
-      return;
-    }
-    card.style.transition = "transform 160ms ease-out";
-    card.style.transform = "translateX(" + direction * 120 + "%)";
-    setTimeout(then, 170);
+  // true from a swipe, Skip or arrow key until the passed card has slid off: more of them are
+  // ignored meanwhile, so a double press or a held key moves one card
+  let moving = false;
+
+  // the passed card as the animation shows it: a copy of its text and image under no player,
+  // so no second iframe exists and the card itself can already be the next one
+  function ghostOf(card) {
+    const ghost = card.cloneNode(true);
+    ghost.classList.remove("discover-card");
+    ghost.classList.add("deck-ghost");
+    ghost.removeAttribute("id");
+    ghost.removeAttribute("data-act");
+    ghost.setAttribute("aria-hidden", "true");
+    ghost.inert = true;
+    ghost.querySelector(".discover-player-box").replaceChildren();
+    ghost.querySelectorAll(".deck-play-line").forEach(function (line) { line.remove(); });
+    return ghost;
   }
 
+  // the card is passed in the visitor's own action, in this order: the passed card's player,
+  // listener and timers go, the next card is the top and its player is created (show), and only
+  // then does the passed card slide off. browsers count a start made in the visitor's action,
+  // safari only one made straight from it, so none of this waits for the animation
   function skip() {
+    if (moving || finished()) {
+      return;
+    }
     stopHint();
-    moveOff(-1, advance);
+    moving = true;
+    const ghost = reduceMotion.matches ? null : ghostOf(top());
+    if (ghost) {
+      // the stage keeps the passed card's height while it slides off
+      stage.style.minHeight = stage.offsetHeight + "px";
+      stage.appendChild(ghost);
+    }
+    advance();
+    if (!ghost) {
+      moving = false;
+      return;
+    }
+    ghost.offsetWidth;
+    ghost.style.transition = "transform 160ms ease-out";
+    ghost.style.transform = "translateX(-120%)";
+    setTimeout(function () {
+      ghost.remove();
+      stage.style.minHeight = "";
+      moving = false;
+    }, 170);
   }
 
   function add() {
+    if (moving) {
+      return;
+    }
     stopHint();
     openPicker();
   }
@@ -454,7 +491,7 @@
   let dragged = false;
   stage.addEventListener("pointerdown", function (e) {
     const card = top();
-    if (!started || !card || !card.contains(e.target) || e.target.closest(".discover-player-box") || (e.pointerType === "mouse" && e.button !== 0)) {
+    if (!started || moving || !card || !card.contains(e.target) || e.target.closest(".discover-player-box") || (e.pointerType === "mouse" && e.button !== 0)) {
       return;
     }
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 };

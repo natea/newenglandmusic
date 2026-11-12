@@ -19,7 +19,8 @@ $quiet: #4f4b44;
     display: block;
   }
 
-  .discover-card {
+  .discover-card,
+  .deck-ghost {
     background: $card;
     color: $ink;
     border: 1px solid $hairline;
@@ -226,7 +227,8 @@ $quiet: #4f4b44;
 
   // with javascript: one card at a time, swiped (see core/js/discover.js)
   &.is-deck {
-    .discover-card {
+    .discover-card,
+    .deck-ghost {
       touch-action: pan-y;
       user-select: none;
       margin-bottom: 0;
@@ -266,6 +268,16 @@ $quiet: #4f4b44;
       .discover-card {
         position: relative;
         z-index: 1;
+      }
+
+      // the passed card sliding off, over the next one and without a player
+      .deck-ghost {
+        position: absolute;
+        top: 0;
+        left: 10px;
+        right: 10px;
+        z-index: 2;
+        pointer-events: none;
       }
     }
   }
