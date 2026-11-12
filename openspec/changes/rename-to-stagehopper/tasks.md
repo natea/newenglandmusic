@@ -26,9 +26,9 @@
 
 ## 3. Terms and privacy
 
-- [ ] 3.1 Add `/terms` on the static-page layout, and link "Terms" beside "Privacy" in the footer. Tests for "The footer" and "The terms page".
-- [ ] 3.2 Add the "Your email address" section to the privacy page. Test "Email addresses on the privacy page".
-- [ ] 3.3 Name the site from `SITE_NAME` on both pages. Test "Both pages follow the setting".
+- [x] 3.1 Add `/terms` on the static-page layout, and link "Terms" beside "Privacy" in the footer. Tests for "The footer" and "The terms page".
+- [x] 3.2 Add the "Your email address" section to the privacy page. Test "Email addresses on the privacy page".
+- [x] 3.3 Name the site from `SITE_NAME` on both pages. Test "Both pages follow the setting".
 - [ ] 3.4 Show Nate both texts as rendered, naming Jazkarta, Inc. d/b/a StageHopper as the operator, and get his approval of the wording before the merge.
 
 ## 4. Docs and the suite

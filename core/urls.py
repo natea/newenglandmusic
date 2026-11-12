@@ -39,6 +39,7 @@ urlpatterns = [
     path("location", set_location, name="set_location"),
     path("location/suggest", suggest_locations, name="suggest_locations"),
     path("privacy", TemplateView.as_view(template_name="core/privacy.html"), name="privacy"),
+    path("terms", TemplateView.as_view(template_name="core/terms.html"), name="terms"),
     path("health", health, name="health"),
     path("saved", saved_shows, name="saved_shows"),
     path("bands", act_index, name="act_index"),

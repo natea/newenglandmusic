@@ -11,7 +11,15 @@
     <h1>Privacy</h1>
 
     <h2>What we keep</h2>
-    <p>{{ site_name }} has no accounts. The only thing it keeps about you is the shows you save, in a cookie in your own browser (<code>saved_shows</code>). Clear it, or unsave the shows, to remove it.</p>
+    <p>{{ site_name }} has no accounts. It keeps the shows you save in a cookie in your own browser (<code>saved_shows</code>); clear it, or unsave the shows, to remove it. It keeps an email address only if you give it one, as below.</p>
+
+    <h2>Your email address</h2>
+    <p>The site keeps an email address in two cases, and uses it only for that purpose:</p>
+    <ul>
+      <li><strong>If you submit an event</strong>, we keep your email with the submission, to ask about it if something's unclear. It isn't shown on the site.</li>
+      <li><strong>If you sign up for email</strong>, we keep your email to send you what you signed up for. Each email has a link to unsubscribe.</li>
+    </ul>
+    <p>Only the site's editors can see these addresses. We don't sell them or share them with anyone else. To have yours removed, {% if contact_email %}write to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% else %}write to us{% endif %} and we'll delete it.</p>
 
     <h2>Your location</h2>
     <p>If you give a ZIP code or town, or press "Use my location", the site shows how far each show is from there. Your location is kept in a cookie in your browser (<code>near</code>), rounded to about 100 metres, with the name you gave. It's sent to our server only so the page can show the distances, and the server doesn't store it. "Use my location" asks your browser for your position only when you press it. Follow "clear" next to the location to remove the cookie.</p>

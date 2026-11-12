@@ -185,3 +185,32 @@ class TheLandingPagesOldPathsTestCase(TestCase):
 
     def test_the_sites_own_privacy_page(self):
         self.assertEqual(self.client.get("/privacy", HTTP_HOST="stagehopper.app").status_code, 200)
+
+
+@override_settings(SITE_NAME="StageHopper", CONTACT_EMAIL="hello@example.org")
+class TermsAndPrivacyTestCase(TestCase):
+    """The site has a terms page; the privacy page says how email addresses are handled"""
+
+    def test_the_footer(self):
+        self.assertContains(self.client.get("/"), '<a href="/privacy">Privacy</a> | <a href="/terms">Terms</a>')
+
+    def test_the_terms_page(self):
+        response = self.client.get("/terms")
+        self.assertContains(response, "StageHopper is a free calendar")
+        self.assertContains(response, "Jazkarta, Inc. d/b/a StageHopper")
+        self.assertContains(response, 'href="mailto:hello@example.org"')
+
+    def test_email_addresses_on_the_privacy_page(self):
+        response = self.client.get("/privacy")
+        self.assertContains(response, "<h2>Your email address</h2>")
+        self.assertContains(response, "If you submit an event")
+        self.assertContains(response, "If you sign up for email")
+        self.assertContains(response, "To have yours removed")
+
+    @override_settings(SITE_NAME="Boston Shows")
+    def test_both_pages_follow_the_setting(self):
+        for path in ("/terms", "/privacy"):
+            page = self.client.get(path).content.decode()
+            self.assertIn("Boston Shows", page, path)
+            # the operator's name stays; the site's own name follows the setting
+            self.assertNotIn("<p>StageHopper ", page, path)
