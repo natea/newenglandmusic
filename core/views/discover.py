@@ -21,8 +21,8 @@ from core.event_actions import actions_html
 from core.location import location_from_request
 from core.models import Band, Event, EventPerformer
 from core.opengraph import get_meta
-from core.utils_datemath import beginning_of_day, get_current_new_york_datetime
 from core.saved_shows import COOKIE_NAME, parse_saved
+from core.utils_datemath import beginning_of_day, get_current_new_york_datetime
 from core.views.act_page import photo_of
 
 PHOTO_WIDTH = 480
@@ -75,6 +75,14 @@ def upcoming_performances():
     )
 
 
+def name_venue(event):
+    """sets the venue name and town the card shows for a show"""
+    venue = None if event.venue_override else event.venue
+    # the show's own venue text wins, and a show with no venue still shows
+    event.venue_name = strip_tags(event.venue_override) if event.venue_override else (venue.name if venue else "Venue to be announced")
+    event.town = venue.location if venue else ""
+
+
 def deck_cards(request):
     """a card for each live act with an upcoming show, its shows soonest first"""
     saved = set(parse_saved(request.COOKIES.get(COOKIE_NAME)))
@@ -86,10 +94,7 @@ def deck_cards(request):
             continue
         kind = "band" if isinstance(act, Band) else "artist"
         event = performance.event
-        venue = None if event.venue_override else event.venue
-        # the show's own venue text wins, and a show with no venue still shows
-        event.venue_name = strip_tags(event.venue_override) if event.venue_override else (venue.name if venue else "Venue to be announced")
-        event.town = venue.location if venue else ""
+        name_venue(event)
         card = cards.setdefault((kind, act.pk), Card(act, kind))
         # no javascript: the bookmark posts to the server and comes back to this card's copy
         # of the show, so a show on two cards has two anchors
