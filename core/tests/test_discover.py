@@ -7,6 +7,7 @@ from core.artist_previews import act_previews
 from core.models import Artist, Band, EventPerformer, MenuItem
 from core.saved_shows import COOKIE_NAME, format_saved
 from core.tests.apple_music_fixture import SWITCHED_ON as APPLE_ON
+from core.tests.geo_fixture import load_geo_fixture
 from core.tests.discover_fixture import apple, days, show, spotify, venue, youtube
 from core.tests.spotify_fixture import CREDENTIALS as SPOTIFY_ON
 from core.tests.youtube_fixture import SWITCHED_ON as YOUTUBE_ON
@@ -117,12 +118,19 @@ class DeckTestCase(DiscoverTestCase):
         self.assertContains(response, "There are no bands to discover yet")
         self.assertContains(response, '<a href="/">listings</a>', html=False)
 
-    def test_the_area_filter_is_ignored_and_kept(self):
+    def test_the_remembered_filter_applies_and_is_kept(self):
+        load_geo_fixture()
         show(self.belly, days(3), self.lupo)
-        self.client.cookies["geo_filter"] = "vt"
-        self.client.get("/discover")
+        self.client.cookies["geo_filter"] = "state=vermont"
+        response = self.client.get("/discover")
+        self.assertRedirects(response, "/discover?state=vermont", fetch_redirect_response=False)
+        response = self.client.get("/discover?state=vermont")
+        self.assertEqual(self.names(response), [])
+        self.assertEqual(self.client.cookies["geo_filter"].value, "state=vermont")
+
+    def test_no_filter_chosen_includes_every_area(self):
+        show(self.belly, days(3), self.lupo)
         self.assertEqual(self.names(self.page()), ["Belly"])
-        self.assertEqual(self.client.cookies["geo_filter"].value, "vt")
 
     def order(self):
         return [card.act.name for card in self.page().context["cards"]]

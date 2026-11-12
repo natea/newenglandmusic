@@ -9,15 +9,10 @@ from ..calendar_feeds import subscribe_links
 from ..geo_filters import (
     CookieAction,
     apply_cookie_action,
+    geo_filter_context,
     geo_filter_for_request,
-    metro_groups,
-    metro_towns,
-    neighborhood_label,
-    offered_areas,
-    town_label,
-    town_neighborhoods,
 )
-from ..models import DateMessage, Event, GeoArea, IndexPageMessages, StaticPage
+from ..models import DateMessage, Event, IndexPageMessages, StaticPage
 from ..opengraph import get_meta
 from ..utils_datemath import (
     NYCTZ,
@@ -190,15 +185,8 @@ def _get_events_page_for_month(
         "core/index.html",
         {
             "is_index": is_index,
-            "geo_filter": geo_filter,
+            **geo_filter_context(geo_filter),
             "geo_query": geo_query,
-            "region_options": offered_areas(GeoArea.Kind.REGION),
-            "state_options": offered_areas(GeoArea.Kind.STATE),
-            "metro_groups": metro_groups(geo_filter.state),
-            "metro_towns": [town_label(town, state) for town, state in metro_towns(geo_filter.metro)]
-            if geo_filter.metro
-            else [],
-            "town_neighborhoods": [neighborhood_label(*triple) for triple in town_neighborhoods(geo_filter.towns)],
             "calendar_links": subscribe_links(geo_filter),
             "no_matching_events": bool(geo_filter)
             and not any(day["events"] for day in grouped_events_as_list),
