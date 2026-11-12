@@ -985,7 +985,8 @@ class EventPerformer(models.Model):
     """
     an artist or band on an event's bill, in billing order (add-artists-from-events).
     links from the event's Artists text are rebuilt when it changes (see
-    core/event_performers.py); an editor's stay. nothing visitors see reads these yet
+    core/event_performers.py); an editor's stay. visitors see them as the performer links in
+    the listings, an act's upcoming shows on its page, and the discovery deck's cards
     """
 
     class Source(models.TextChoices):

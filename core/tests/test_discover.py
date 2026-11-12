@@ -315,3 +315,15 @@ class SiteHeaderTestCase(TestCase):
         self.assertEqual(home, discover)
         # and the page has no header of its own
         self.assertEqual(self.client.get("/discover").content.decode().count("<header"), 0)
+
+
+class CardButtonsTestCase(DiscoverTestCase):
+    def test_apple_music_only_has_its_button_with_its_icon_and_no_other(self):
+        show(self.belly, days(3), self.lupo)
+        apple("belly")
+        with mock.patch.dict(os.environ, {**SPOTIFY_ON, **APPLE_ON, **YOUTUBE_ON}):
+            html = self.page().content.decode()
+        self.assertIn('class="apple-play"', html)
+        self.assertIn('href="#icon-apple-music"', html)
+        self.assertNotIn('class="youtube-play"', html)
+        self.assertNotIn('class="spotify-play"', html)

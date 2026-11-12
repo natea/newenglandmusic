@@ -28,5 +28,5 @@ Issue: [#26 build a tinder-style band discovery tool on the site](https://github
 ## 4. Finish
 
 - [ ] 4.1 Check the deck at phone and desktop widths, with an act that has many shows, one with no photo, and one with both play buttons; run the design review against the chosen sketch.
-- [ ] 4.2 Run the whole suite with the network blocked and verify it passes, with every scenario in `specs/band-discovery/spec.md` covered by a test.
-- [ ] 4.3 Update `PRODUCTION.md` with a deploy note that the migration adds the menu item, update the stale "nothing visitors see reads these yet" docstring on `EventPerformer`, and note the page in the docs that list the site's pages.
+- [x] 4.2 Run the whole suite with the network blocked and verify it passes, with every scenario in `specs/band-discovery/spec.md` covered by a test.
+- [x] 4.3 Update `PRODUCTION.md` with a deploy note that the migration adds the menu item, update the stale "nothing visitors see reads these yet" docstring on `EventPerformer`, and note the page in the docs that list the site's pages.
