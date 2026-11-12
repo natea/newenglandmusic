@@ -15,5 +15,5 @@ Issue: [#52 Show an act's Linktree link hub prominently on its artist or band pa
 
 ## 3. Finish
 
-- [ ] 3.1 Run the whole suite with the network blocked and verify it passes, with every scenario in `specs/band-pages/spec.md` covered.
+- [x] 3.1 Run the whole suite with the network blocked and verify it passes, with every scenario in `specs/band-pages/spec.md` covered.
 - [ ] 3.2 Check the page on a phone-width screen and verify the link is reachable without scrolling past the members.
