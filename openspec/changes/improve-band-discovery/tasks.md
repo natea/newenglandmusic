@@ -34,5 +34,5 @@ Archive `add-band-discovery-swipe` before this change, since this modifies its s
 ## 5. Finish
 
 - [ ] 5.1 Check the deck at phone and desktop widths with the filter form, the Start control and each empty state; run the design review against the chosen sketch.
-- [ ] 5.2 Run the whole suite with the network blocked and verify it passes, with every scenario in `specs/band-discovery/spec.md` covered by a test.
-- [ ] 5.3 Update the docs that describe the deck (the `discover.py` module docstring, the `discover.js` header, `PRODUCTION.md`'s deck notes) to say it holds only acts with media, follows the area filter, is ordered soonest first, and autoplays after Start (replacing the "random order", "from every area, whatever filter a visitor has set" and "ready but never started" wording in `PRODUCTION.md`).
+- [x] 5.2 Run the whole suite with the network blocked and verify it passes, with every scenario in `specs/band-discovery/spec.md` covered by a test.
+- [x] 5.3 Update the docs that describe the deck (the `discover.py` module docstring, the `discover.js` header, `PRODUCTION.md`'s deck notes) to say it holds only acts with media, follows the area filter, is ordered soonest first, and autoplays after Start (replacing the "random order", "from every area, whatever filter a visitor has set" and "ready but never started" wording in `PRODUCTION.md`).
