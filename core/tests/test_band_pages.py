@@ -364,3 +364,37 @@ class LinkHubTestCase(BandPageTestCase):
     def test_a_hub_alone_does_not_open_the_fields_list(self):
         html = self.page(self.band(link_hub_url="https://linktr.ee/bonerama")).content.decode()
         self.assertNotIn("act-fields", html)
+
+
+class LinkHubInvitationTestCase(BandPageTestCase):
+    def complete(self, **fields):
+        return self.band(
+            wikipedia_extract="A band.", photo_file="x.jpg", photo_author="a", photo_license="CC BY-SA 3.0", **fields,
+        )
+
+    def test_only_a_link_hub_needs_no_invitation(self):
+        html = self.page(self.complete(link_hub_url="https://linktr.ee/bonerama")).content.decode()
+        self.assertIn("All links on Linktree", html)
+        self.assertNotIn("Is this you?", html)
+
+    def test_a_hub_and_a_missing_photo(self):
+        band = self.band(wikipedia_extract="A band.", link_hub_url="https://linktr.ee/bonerama")
+        html = self.page(band).content.decode()
+        self.assertIn("Send us a photo</a>", html)
+        self.assertNotIn("links</a>", html)
+        mailto = html[html.index("mailto:"):html.index('"', html.index("mailto:"))]
+        self.assertIn("Photo%20%28and%20who%20took%20it%29%3A", mailto)
+        self.assertNotIn("links", mailto)
+
+    def test_a_hub_with_other_links_and_a_missing_photo(self):
+        band = self.band(wikipedia_extract="A band.", website="https://bonerama.com/", link_hub_url="https://linktr.ee/bonerama")
+        plain = self.band(name="Plain", wikipedia_extract="A band.", website="https://plain.com/")
+        html = self.page(band).content.decode()
+        self.assertIn("Send us a photo, bio or links</a>", html)
+        mail = lambda h: h[h.index("mailto:"):h.index('"', h.index("mailto:"))].split("%0A%0A")[1]
+        self.assertEqual(mail(html), mail(self.page(plain).content.decode()))
+        self.assertIn("links", mail(html))
+
+    def test_the_default_invitation_wording(self):
+        html = self.page(self.band(name="Krill")).content.decode()
+        self.assertIn("Send us a photo, bio or links</a>", html)

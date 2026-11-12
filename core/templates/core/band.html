@@ -112,7 +112,7 @@
 
     {% if invitation or act.genres %}
       <footer class="act-foot">
-        {% if invitation %}<p>Is this you? <a href="{{ invitation }}">Send us a photo, bio or links</a>.</p>{% endif %}
+        {% if invitation %}<p>Is this you? <a href="{{ invitation }}">Send us a {{ invitation_asks }}</a>.</p>{% endif %}
         {% if act.genres %}<p>Genres from <a href="https://musicbrainz.org/artist/{{ act.musicbrainz_id }}" rel="noopener" target="_blank">MusicBrainz</a> (<a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="noopener license" target="_blank">CC BY-NC-SA</a>).</p>{% endif %}
       </footer>
     {% endif %}

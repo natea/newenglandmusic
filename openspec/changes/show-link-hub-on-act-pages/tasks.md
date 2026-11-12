@@ -10,8 +10,8 @@ Issue: [#52 Show an act's Linktree link hub prominently on its artist or band pa
 
 ## 2. Counting a hub as links
 
-- [ ] 2.1 Change `invitation()` so a hub address counts as links, and, only when the hub is the act's sole links, both the visible line in `band.html` and the mail body in `invitation()` drop "links"; leave the wording unchanged otherwise; verify with tests.
-- [ ] 2.2 Write the automated tests for the scenarios of the changed "Inviting the band to add more": the invitation (visible wording "photo, bio and links" kept), only a link hub, a hub and a missing photo, a hub with other links and a missing photo.
+- [x] 2.1 Change `invitation()` so a hub address counts as links, and, only when the hub is the act's sole links, both the visible line in `band.html` and the mail body in `invitation()` drop "links"; leave the wording unchanged otherwise; verify with tests.
+- [x] 2.2 Write the automated tests for the scenarios of the changed "Inviting the band to add more": the invitation (visible wording "photo, bio and links" kept), only a link hub, a hub and a missing photo, a hub with other links and a missing photo.
 
 ## 3. Finish
 

@@ -119,11 +119,19 @@ def origin_of(act):
 def invitation(request, act):
     """an email to the site's contact address, for a page missing its photo, bio or links"""
     email = os.environ.get("API_CONTACT_EMAIL", "").strip()
-    if not email or (act.photo_file and (act.wikipedia_extract or act.disambiguation) and links_of(act)):
+    has_bio = bool(act.wikipedia_extract or act.disambiguation)
+    has_links = bool(links_of(act) or link_hub_of(act))
+    if not email or (act.photo_file and has_bio and has_links):
         return None
     subject = f"{act.name} on {settings.SITE_NAME}"
     body = f"About {request.build_absolute_uri()}\n\nPhoto (and who took it), bio, and links:\n"
-    return f"mailto:{email}?subject={quote(subject)}&body={quote(body)}"
+    visible = "photo, bio or links"
+    if link_hub_of(act) and not links_of(act):
+        # the hub is the act's only links, so ask only for what is missing
+        asked = [("photo", "Photo (and who took it)")] * (not act.photo_file) + [("bio", "bio")] * (not has_bio)
+        body = f"About {request.build_absolute_uri()}\n\n{', '.join(b for _, b in asked)}:\n"
+        visible = " or ".join(v for v, _ in asked)
+    return f"mailto:{email}?subject={quote(subject)}&body={quote(body)}", visible
 
 
 def wikipedia_title(act):
@@ -149,6 +157,7 @@ def act_page(request, act):
     description = act.disambiguation or f"{act.name}: upcoming shows in the Northeast, members and links."
     if act.wikipedia_extract:
         description = act.wikipedia_extract.split(". ")[0][:200]
+    invite = invitation(request, act)
     return render(
         request,
         "core/band.html",
@@ -168,7 +177,8 @@ def act_page(request, act):
             "link_hub": link_hub_of(act),
             "photo": photo_of(act, PHOTO_WIDTH),
             "wikipedia_title": wikipedia_title(act) if act.wikipedia_url else "",
-            "invitation": invitation(request, act),
+            "invitation": invite[0] if invite else None,
+            "invitation_asks": invite[1] if invite else "",
             "meta": get_meta(url=request.path.rstrip("/"), title=f"{act.name} | {settings.SITE_NAME}", description=description),
         },
     )
