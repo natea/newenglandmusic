@@ -1,7 +1,7 @@
 # site-identity Specification
 
 ## Purpose
-TBD - created by archiving change rename-to-stagehopper. Update Purpose after archive.
+What the site calls itself and where it lives: its name and tagline, its one public address and the redirects that send every other address there, the health check that stays outside those redirects, and the terms and privacy pages that say who runs it and how it handles email addresses.
 
 ## Requirements
 
