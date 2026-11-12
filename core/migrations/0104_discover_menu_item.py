@@ -24,5 +24,5 @@ def remove_menu_item(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("core", "0102_bands_menu_item")]
+    dependencies = [("core", "0103_act_link_hubs")]
     operations = [migrations.RunPython(add_menu_item, remove_menu_item)]

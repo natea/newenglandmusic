@@ -291,7 +291,7 @@ class MenuTestCase(TestCase):
         self.assertTrue(item.show_in_header and item.show_in_footer)
 
     def test_the_migration_adds_one_item_however_often_it_runs(self):
-        migration = import_module("core.migrations.0103_discover_menu_item")
+        migration = import_module("core.migrations.0104_discover_menu_item")
         MenuItem.objects.filter(url="/discover").delete()
         migration.add_menu_item(django_apps, None)
         migration.add_menu_item(django_apps, None)
