@@ -120,15 +120,20 @@ def invitation(request, act):
     """an email to the site's contact address, for a page missing its photo, bio or links"""
     email = os.environ.get("API_CONTACT_EMAIL", "").strip()
     has_bio = bool(act.wikipedia_extract or act.disambiguation)
-    has_links = bool(links_of(act) or link_hub_of(act))
-    if not email or (act.photo_file and has_bio and has_links):
+    has_links = bool(links_of(act))
+    has_hub = link_hub_of(act) is not None
+    if not email or (act.photo_file and has_bio and (has_links or has_hub)):
         return None
     subject = f"{act.name} on {settings.SITE_NAME}"
     body = f"About {request.build_absolute_uri()}\n\nPhoto (and who took it), bio, and links:\n"
     visible = "photo, bio or links"
-    if link_hub_of(act) and not links_of(act):
+    if has_hub and not has_links:
         # the hub is the act's only links, so ask only for what is missing
-        asked = [("photo", "Photo (and who took it)")] * (not act.photo_file) + [("bio", "bio")] * (not has_bio)
+        asked = []
+        if not act.photo_file:
+            asked.append(("photo", "Photo (and who took it)"))
+        if not has_bio:
+            asked.append(("bio", "bio"))
         body = f"About {request.build_absolute_uri()}\n\n{', '.join(b for _, b in asked)}:\n"
         visible = " or ".join(v for v, _ in asked)
     return f"mailto:{email}?subject={quote(subject)}&body={quote(body)}", visible
