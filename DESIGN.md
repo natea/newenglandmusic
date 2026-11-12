@@ -1,5 +1,5 @@
 ---
-name: New England Music
+name: StageHopper
 description: A dense, text-first calendar of Northeast US live music, on warm grey paper, with each act filed as an index card.
 colors:
   ground: "#d4d0c7"
@@ -156,13 +156,13 @@ components:
     size: "48px"
 ---
 
-# Design System: New England Music
+# Design System: StageHopper
 
 ## Overview
 
 **Creative North Star: "The Record-Store Bin"**
 
-New England Music is a long, honest list on warm grey paper: the calendar is the stock, sorted by month and day, and each act is a filed index card with its name printed on a plum divider tab. The look came with the nyc noise fork and is kept on purpose. It is dense, text-first and close to the browser's own defaults: bold sans names, navy underlined links, thin rules between rows, and a few flat colour bands (lavender for the strips you act on, plum for the dividers you navigate by). Nothing is decorative. Every colour band means something, and a sparse local act's card and a famous band's card use the same fields, so both read as the same kind of record.
+StageHopper (until November 2026, New England Music) is a long, honest list on warm grey paper: the calendar is the stock, sorted by month and day, and each act is a filed index card with its name printed on a plum divider tab. The look came with the nyc noise fork and is kept on purpose. It is dense, text-first and close to the browser's own defaults: bold sans names, navy underlined links, thin rules between rows, and a few flat colour bands (lavender for the strips you act on, plum for the dividers you navigate by). Nothing is decorative. Every colour band means something, and a sparse local act's card and a famous band's card use the same fields, so both read as the same kind of record.
 
 Density is the point. A listing row is a time column, bold performer and venue names, a small grey description, and a row of 18px line icons, with no cards, thumbnails or spacing to soften it. The band page adds the system's one container, an off-white card on the grey ground, and keeps the same single 42em column, the same navy links, the same lavender strip and the same icon row as the calendar, so moving from a listing to an act feels like pulling one card out of the bin.
 
@@ -216,7 +216,7 @@ A warm grey paper palette with two flat accent bands (plum and lavender) and the
 
 ### Hierarchy
 - **Display** (800, clamp(2rem, 7vw, 3.4rem), 1.02, -0.015em): the act's name on the plum tab, and nowhere else.
-- **Headline** (700, 2em): the masthead "New England Music" and the sticky, centred day header ("oct 29 (thurs)"), which is a black underlined link.
+- **Headline** (700, 2em): the masthead "StageHopper" (`SITE_NAME`), with its tagline under it in the small style, grey ("Live music across New England", `SITE_TAGLINE`), and the sticky, centred day header ("oct 29 (thurs)"), which is a black underlined link.
 - **Calendar Date** (700, 1.6rem): the day numbers in the month grid, navy and underlined, lowercase where they are words.
 - **Title** (700, 1.25rem): the act card's section headings ("Upcoming shows").
 - **Body** (400, 1rem): listing rows and card text. Performers, event titles, venues and dates are bold within it.

@@ -29,7 +29,7 @@ A Northeast US music venue database and event calendar. Venues come from a Googl
 ## Operating Context
 
 - Started as a fork of [nyc noise](https://nyc-noise.com/), an NYC music calendar; the schema and scope have diverged on purpose.
-- Live at newenglandmusic.onrender.com (Render), deployed from `main`. Not yet shared publicly: it stays unshared until the Google Places map-display terms are settled.
+- Live at https://stagehopper.app (Render; newenglandmusic.onrender.com redirects there), deployed from `main`. Not yet shared publicly: it stays unshared until the Google Places map-display terms are settled.
 - Data pipeline runs as scheduled jobs (`bin/daily.sh`, `bin/weekly.sh`); editors work in the Django admin (event approval, venue fixes, Places review, artist and band records).
 - Artist and band records (admin-only for now) are imported from a sheet or CSV, or made from events' artist names, and enriched from MusicBrainz and Wikipedia.
 
@@ -49,7 +49,7 @@ A Northeast US music venue database and event calendar. Venues come from a Googl
 
 ## Brand Commitments
 
-- **Name:** "New England Music", set by the `SITE_NAME` setting. It isn't final: the site covers the wider Northeast, beyond New England.
+- **Name:** "StageHopper", set by the `SITE_NAME` setting, with the tagline "Live music across New England" (`SITE_TAGLINE`) under the masthead (Nate, 11–12 November 2026). It was "New England Music" until then. The site is run by Jazkarta, Inc. d/b/a StageHopper, as the terms page says.
 - **Non-commercial:** a community resource, with no ads or paid placement. This is also what several data licences require (MusicBrainz's supplementary data, Last.fm's terms).
 
 ## Evidence on Hand

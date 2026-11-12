@@ -33,13 +33,13 @@
 
 ## 4. Docs and the suite
 
-- [ ] 4.1 Update:
+- [x] 4.1 Update:
   - `PRODUCT.md`: name, address, tagline;
   - `PRODUCTION.md`: custom domains (noting that `prod.py` already allows stagehopper.app and www), the switch's steps, `/health`, the redirects, the database's paid plan and backup;
   - `.env.example`: `SITE_NAME`, `SITE_TAGLINE`, `UID_DOMAIN`, `CANONICAL_HOST`, and the install-banner comment;
   - `DESIGN.md`: the masthead's name and tagline;
   - the comments on `SITE_NAME` and `UID_DOMAIN` in `base.py`.
-- [ ] 4.2 Run the whole suite and update the tests this change breaks. Known ones, which assert "New England Music", the old UID domain or the onrender address:
+- [x] 4.2 Run the whole suite and update the tests this change breaks. Known ones, which assert "New England Music", the old UID domain or the onrender address:
   - `test_calendar_feeds.py`, whose `DEFAULTS` override pins the old name;
   - `test_event_calendar_links.py`, `test_opengraph.py`, `test_band_pages.py`, `test_index_page.py`;
   - `test_site_record.py`, `test_site_settings.py`, `test_prod_settings.py`, `test_youtube_client.py`.
