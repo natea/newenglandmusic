@@ -1,0 +1,75 @@
+{% extends 'core/base.html' %}
+{% load sass_tags %}
+{% load static %}
+
+{% comment %}
+  the band discovery deck (core/views/discover.py): every card is here, with its shows, so
+  the page works without javascript as a list. core/js/discover.js turns it into a deck.
+  the play buttons use the classes and data- attributes core/js/artist_preview.js expects,
+  in the order YouTube, Apple Music, Spotify. nothing loads from those services until the
+  script puts a player on the top card or a button is pressed.
+{% endcomment %}
+
+{% block head %}
+  <link href="{% sass_src 'scss/discover.scss' %}" rel="stylesheet" type="text/css" />
+  <script src="{% static 'core/js/discover.js' %}" defer></script>
+{% endblock head %}
+
+{% block content %}
+<section class="discover" aria-labelledby="discover-title">
+  <h2 id="discover-title" class="discover-title">Discover bands</h2>
+  {% if cards %}
+    <div class="deck">
+      {% for card in cards %}
+        <article class="discover-card" id="{{ card.anchor }}" aria-label="{{ card.act.name }}" data-act="{{ card.act.name }}">
+          {% if card.photo %}
+            <figure class="discover-photo">
+              <img src="{{ card.photo.src }}" alt="{{ card.act.name }}">
+              <figcaption>Photo: {{ card.photo.author }}, {% if card.photo.license_url %}<a href="{{ card.photo.license_url }}" rel="noopener license" target="_blank">{{ card.photo.license }}</a>{% else %}{{ card.photo.license }}{% endif %}, via <a href="{{ card.photo.page }}" rel="noopener" target="_blank">Wikimedia Commons</a></figcaption>
+            </figure>
+          {% endif %}
+          <div class="discover-player-box"></div>
+          <h3 class="discover-name"><a href="{{ card.act.get_absolute_url }}">{{ card.act.name }}</a></h3>
+          <p class="discover-meta"><span class="discover-kind">{{ card.kind }}</span>{% if card.place %} · {{ card.place }}{% endif %}</p>
+          <p class="discover-next">
+            Next: <time datetime="{{ card.next_show.starttime|date:'c' }}">{{ card.next_show.starttime|date:'D, M j' }}</time>{% if not card.next_show.starttime_override %} · {{ card.next_show.starttime|time:'g:i a' }}{% else %} · {{ card.next_show.starttime_override }}{% endif %}
+            · {{ card.next_show.venue_name }}{% if card.next_show.town %}, {{ card.next_show.town }}{% endif %}{% if card.more_shows %} · +{{ card.more_shows }} more show{{ card.more_shows|pluralize }}{% endif %}
+          </p>
+          {% if card.previews %}
+            <div class="artist-previews">
+              {% with preview=card.previews %}
+                {% if preview.youtube %}
+                  <a class="youtube-play" href="{% if preview.youtube.video %}https://www.youtube.com/watch?v={{ preview.youtube.video }}{% else %}https://www.youtube.com/channel/{{ preview.youtube.channel }}{% endif %}" data-youtube-video="{{ preview.youtube.video }}" data-youtube-channel="{{ preview.youtube.channel }}" data-artist-name="{{ preview.label }}" target="_blank" rel="noopener" title="Listen to {{ preview.label }} on YouTube">
+                    <svg class="service-icon youtube-mark" aria-hidden="true"><use href="#icon-youtube"></use></svg>YouTube
+                  </a>
+                {% endif %}
+                {% if preview.apple %}
+                  <a class="apple-play" href="https://music.apple.com/us/artist/{{ preview.apple.artist }}" data-apple-artist="{{ preview.apple.artist }}" data-apple-song="{{ preview.apple.song }}" data-apple-album="{{ preview.apple.album }}" data-artist-name="{{ preview.label }}" target="_blank" rel="noopener" title="Listen to {{ preview.label }} on Apple Music">
+                    <svg class="service-icon apple-mark" aria-hidden="true"><use href="#icon-apple-music"></use></svg>Apple Music
+                  </a>
+                {% endif %}
+                {% if preview.spotify %}
+                  <a class="spotify-play" href="https://open.spotify.com/artist/{{ preview.spotify }}" data-spotify-artist="{{ preview.spotify }}" target="_blank" rel="noopener" title="Listen to {{ preview.label }} on Spotify">
+                    <svg class="service-icon spotify-mark" aria-hidden="true"><use href="#icon-spotify"></use></svg>Spotify
+                  </a>
+                {% endif %}
+              {% endwith %}
+            </div>
+          {% endif %}
+          <ol class="discover-shows">
+            {% for event in card.shows %}
+              <li data-event-id="{{ event.pk }}" id="{{ event.anchor }}">
+                <time datetime="{{ event.starttime|date:'c' }}"><span class="show-date">{{ event.starttime|date:'D, M j' }}</span>{% if not event.starttime_override %} <span class="show-time">{{ event.starttime|time:'g:i a' }}</span>{% else %} <span class="show-time">{{ event.starttime_override }}</span>{% endif %}</time>
+                <span class="show-where"><span class="show-venue">{{ event.venue_name }}</span>{% if event.town %}, <span class="show-town">{{ event.town }}</span>{% endif %}</span>
+                {{ event.actions }}
+              </li>
+            {% endfor %}
+          </ol>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="discover-empty">There are no bands to discover yet. Have a look at the <a href="/">listings</a> instead.</p>
+  {% endif %}
+</section>
+{% endblock content %}

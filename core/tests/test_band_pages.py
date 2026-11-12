@@ -224,6 +224,8 @@ class FinishFixesTestCase(TestCase):
         for pk in event_ids:
             self.assertIn(f'action="/saved/toggle/{pk}"', html)
             self.assertIn(f'href="/event/{pk}/ics"', html)
+            # the bookmark returns to the show on this page, as before the deck's anchors
+            self.assertIn(f'name="next" value="{band.get_absolute_url()}#event-{pk}"', html)
         self.assertIn(f'id="event-{event_ids[0]}"', html)
 
     def test_one_show_isnt_listed_twice(self):

@@ -44,12 +44,15 @@ def distance_html(event, location):
     return f'<span class="event-distance">({format_miles(miles(location.point, (latitude, longitude)))})</span>'
 
 
-def actions_html(event, saved_ids, next_url, location=None):
+def actions_html(event, saved_ids, next_url, location=None, anchor=None):
     """
     the event's icon row, with the save bookmark filled when the visitor saved the show, and
-    how far away it is when the visitor has given a location (core/location.py)
+    how far away it is when the visitor has given a location (core/location.py). without
+    javascript the bookmark's post comes back to the anchor, "event-<id>" unless a page
+    gives each copy of a show its own (the discovery deck's cards)
     """
     pk = int(event.pk)
+    anchor = anchor or f"event-{pk}"
     parts = [
         f'<div class="event-actions"><a href="/event/{pk}/ics" class="ical" title="Download to your calendar (.ics)">{ICAL}</a>',
         # /event/<id>/gcal redirects to google: building google's link for every event on
@@ -71,7 +74,7 @@ def actions_html(event, saved_ids, next_url, location=None):
     # a form, so saving works without javascript; core/js/saved_shows.js saves in place
     parts.append(
         f'<form class="save-form" method="post" action="/saved/toggle/{pk}">'
-        f'<input type="hidden" name="next" value="{escape(next_url)}#event-{pk}">'
+        f'<input type="hidden" name="next" value="{escape(next_url)}#{escape(anchor)}">'
         f'<button type="submit" class="save{" is-saved" if is_saved else ""}" data-event-id="{pk}" '
         f'aria-pressed="{"true" if is_saved else "false"}" title="{save_label(is_saved)}">{SAVE}</button></form>'
     )
@@ -79,5 +82,5 @@ def actions_html(event, saved_ids, next_url, location=None):
     return mark_safe("".join(parts))
 
 
-def with_actions(baked_html, event, saved_ids, next_url, location=None):
-    return baked_html.replace(PLACEHOLDER, actions_html(event, saved_ids, next_url, location), 1)
+def with_actions(baked_html, event, saved_ids, next_url, location=None, anchor=None):
+    return baked_html.replace(PLACEHOLDER, actions_html(event, saved_ids, next_url, location, anchor), 1)
