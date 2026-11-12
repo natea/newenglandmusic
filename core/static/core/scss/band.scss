@@ -104,6 +104,23 @@ $quiet: #4f4b44;
   margin-top: 2px;
 }
 
+// the hub link joins the strip: one more line in the same lavender band, under the show's actions
+.act .act-hub {
+  margin: 0 0 18px;
+  padding: 8px 14px;
+  background: $strip;
+  border-top: 1px solid $rule;
+  font-size: 1.05rem;
+
+  a {
+    font-weight: 700;
+  }
+}
+
+.act-next-actions + .act-hub {
+  margin-top: -18px;
+}
+
 .act-next-none {
   margin-bottom: 18px;
   color: $quiet;
