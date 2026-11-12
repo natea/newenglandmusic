@@ -313,3 +313,54 @@ class TitleLinksTestCase(TestCase):
         html = self.listing(title="Some Night", artists="Nobody Here", hyperlink="https://as220.org/y")
         self.assertNotIn("event-info", html)
         self.assertIn('<a href="https://as220.org/y" target="_blank">', html)
+
+
+class LinkHubTestCase(BandPageTestCase):
+    def test_an_act_on_linktree(self):
+        band = self.band(link_hub_url="https://linktr.ee/bonerama", website="https://bonerama.com/")
+        html = self.page(band).content.decode()
+        self.assertIn('<a href="https://linktr.ee/bonerama" rel="noopener" target="_blank">All links on Linktree</a>', html)
+
+    def test_it_comes_before_the_members_and_links(self):
+        band = self.full_band()
+        band.link_hub_url = "https://linktr.ee/bonerama"
+        band.save()
+        html = self.page(band).content.decode()
+        hub = html.index("All links on Linktree")
+        self.assertLess(html.index("act-next"), hub)
+        self.assertLess(hub, html.index("<dt>Members</dt>"))
+        self.assertLess(hub, html.index("<dt>Links</dt>"))
+
+    def test_another_hub(self):
+        html = self.page(self.band(link_hub_url="https://solo.to/dana")).content.decode()
+        self.assertIn(">All links on Solo.to<", html)
+
+    def test_no_link_hub(self):
+        html = self.page(self.full_band()).content.decode()
+        self.assertNotIn("All links", html)
+        self.assertNotIn("act-hub", html)
+
+    def test_not_repeated_among_the_links(self):
+        band = self.band(
+            website="https://bonerama.com/", bandcamp_url="https://bonerama.bandcamp.com/", link_hub_url="https://linktr.ee/bonerama",
+        )
+        html = self.page(band).content.decode()
+        links = html[html.index('class="act-links"'):]
+        self.assertIn(">Website<", links)
+        self.assertIn(">Bandcamp<", links)
+        self.assertNotIn("linktr.ee", links)
+        self.assertEqual(html.count("https://linktr.ee/bonerama"), 1)
+
+    def test_a_hub_only_in_the_website_field(self):
+        html = self.page(self.band(website="https://linktr.ee/bonerama")).content.decode()
+        self.assertIn('href="https://linktr.ee/bonerama" rel="noopener" target="_blank">All links on Linktree<', html)
+        self.assertNotIn(">Website<", html)
+        self.assertNotIn("<dt>Links</dt>", html)
+
+    def test_an_address_on_no_supported_hub(self):
+        html = self.page(self.band(link_hub_url="https://example.com/dana")).content.decode()
+        self.assertIn('href="https://example.com/dana" rel="noopener" target="_blank">All links</a>', html)
+
+    def test_a_hub_alone_does_not_open_the_fields_list(self):
+        html = self.page(self.band(link_hub_url="https://linktr.ee/bonerama")).content.decode()
+        self.assertNotIn("act-fields", html)

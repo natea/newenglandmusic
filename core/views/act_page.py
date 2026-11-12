@@ -18,6 +18,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
 from core.event_actions import actions_html
+from core.link_hubs import hub_for
 from core.location import location_from_request
 from core.models import Artist, Band, Event
 from core.opengraph import get_meta
@@ -73,12 +74,23 @@ def upcoming_shows(act):
 
 
 def links_of(act):
+    # a hub in the website field is shown as the hub link, not repeated here
     return [
         (label, url) for label, url in (
-            ("Website", act.website), ("Bandcamp", act.bandcamp_url),
+            ("Website", act.website if hub_for(act.website) is None else ""), ("Bandcamp", act.bandcamp_url),
             ("Instagram", act.instagram_url), ("YouTube", act.youtube_url),
         ) if url
     ]
+
+
+def link_hub_of(act):
+    """("All links on Linktree", url), or None. the website counts when it's a hub and link_hub_url is empty"""
+    url = act.link_hub_url or (act.website if hub_for(act.website) is not None else "")
+    if not url:
+        return None
+    hub = hub_for(url)
+    # an editor can type any address, so an unsupported one gets a plain label rather than an error
+    return (f"All links on {hub.name}" if hub else "All links"), url
 
 
 def members_of(band):
@@ -153,6 +165,7 @@ def act_page(request, act):
             "members_have_headshots": any(entry[3] for entry in current + former),
             "bands": [] if is_band else bands_of(act),
             "links": links_of(act),
+            "link_hub": link_hub_of(act),
             "photo": photo_of(act, PHOTO_WIDTH),
             "wikipedia_title": wikipedia_title(act) if act.wikipedia_url else "",
             "invitation": invitation(request, act),

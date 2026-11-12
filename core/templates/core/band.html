@@ -22,6 +22,10 @@
       <p class="act-next act-next-none">No upcoming shows listed.</p>
     {% endif %}
 
+    {% if link_hub %}
+      <p class="act-hub"><a href="{{ link_hub.1 }}" rel="noopener" target="_blank">{{ link_hub.0 }}</a> &rarr;</p>
+    {% endif %}
+
     {% if current_members or former_members or bands or links %}
     <dl class="act-fields">
       {% if current_members or former_members %}

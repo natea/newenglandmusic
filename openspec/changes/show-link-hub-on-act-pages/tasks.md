@@ -4,9 +4,9 @@ Issue: [#52 Show an act's Linktree link hub prominently on its artist or band pa
 
 ## 1. The hub link
 
-- [ ] 1.1 Add `link_hub_of(act)` to `core/views/act_page.py`, returning the "All links on <hub name>" label and address (falling back to a supported hub address in `website` when `link_hub_url` is empty; "All links" for an unsupported address; nothing when there is none), and pass it to the template; make `links_of` skip a website that `hub_for` recognises; verify with tests for Linktree, Solo.to, a hub only in `website`, an unsupported address and no address.
-- [ ] 1.2 Draw the link in `core/templates/core/band.html` in the placement of the chosen design, above the members and links, with its style in `band.scss` once the design is chosen; verify the order and that the Links row doesn't repeat it.
-- [ ] 1.3 Write the automated tests for the scenarios of "The link hub is shown prominently" and "The hub link stands apart from the other links": an act on Linktree, another hub, no link hub, not repeated among the links, a hub only in the website field, an unsupported address; run them with the network blocked.
+- [x] 1.1 Add `link_hub_of(act)` to `core/views/act_page.py`, returning the "All links on <hub name>" label and address (falling back to a supported hub address in `website` when `link_hub_url` is empty; "All links" for an unsupported address; nothing when there is none), and pass it to the template; make `links_of` skip a website that `hub_for` recognises; verify with tests for Linktree, Solo.to, a hub only in `website`, an unsupported address and no address.
+- [x] 1.2 Draw the link in `core/templates/core/band.html` in the placement of the chosen design, above the members and links, with its style in `band.scss` once the design is chosen; verify the order and that the Links row doesn't repeat it.
+- [x] 1.3 Write the automated tests for the scenarios of "The link hub is shown prominently" and "The hub link stands apart from the other links": an act on Linktree, another hub, no link hub, not repeated among the links, a hub only in the website field, an unsupported address; run them with the network blocked.
 
 ## 2. Counting a hub as links
 
