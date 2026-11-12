@@ -5,7 +5,7 @@
 ## 1. The name and tagline
 
 - [ ] 1.1 In `nycnoise/settings/base.py`:
-  - default `SITE_NAME` to "Stagehopper";
+  - default `SITE_NAME` to "StageHopper";
   - add `SITE_TAGLINE`, defaulting to "Live music across New England";
   - default `UID_DOMAIN` to "stagehopper";
   - add `CANONICAL_HOST`, empty by default.
@@ -14,7 +14,7 @@
 - [ ] 1.2 Read `SITE_NAME` in the masthead (`base.html`, with the tagline under it), the admin's title and header, `opengraph.DEFAULT_TITLE` and `Event.calendar_name`. Keep the masthead's layout at phone width.
 - [ ] 1.3 Tests for "The masthead and title", "A name from the setting", "An event's calendar entry", "The default tagline" and "No tagline".
 - [ ] 1.4 Tests for "Calendar name" and "Default names", against the real defaults rather than an override. Keep "Names from the settings", "Stable identifiers", "Cancelled event", "Window" and "Unapproved event left out" passing.
-- [ ] 1.5 Make a Stagehopper share preview image in the old one's layout, and set the web manifest's `name` and `short_name`. Check the Open Graph tags point at the new image.
+- [ ] 1.5 Make a StageHopper share preview image in the old one's layout, and set the web manifest's `name` and `short_name`. Check the Open Graph tags point at the new image.
 
 ## 2. The address and redirects
 
@@ -29,7 +29,7 @@
 - [ ] 3.1 Add `/terms` on the static-page layout, and link "Terms" beside "Privacy" in the footer. Tests for "The footer" and "The terms page".
 - [ ] 3.2 Add the "Your email address" section to the privacy page. Test "Email addresses on the privacy page".
 - [ ] 3.3 Name the site from `SITE_NAME` on both pages. Test "Both pages follow the setting".
-- [ ] 3.4 Show Nate both texts as rendered, with who runs the site filled in as he says, and get his approval of the wording before the merge.
+- [ ] 3.4 Show Nate both texts as rendered, naming Jazkarta, Inc. d/b/a StageHopper as the operator, and get his approval of the wording before the merge.
 
 ## 4. Docs and the suite
 
@@ -48,7 +48,7 @@
 
 - [ ] 5.1 Do the steps in `design.md` decision 7, in order: check `SITE_NAME` isn't set and set `SITE_URL` to the onrender address before the merge; deploy, check the blueprint sync, resave and check no static page at `/boston/` or `/nyc/`; add Render's custom domain; verify the domain with GitHub, add `info`, and allow it for Mapbox, PostHog and Datadog; move the landing page; point the apex's A records and www at Render; set `CANONICAL_HOST` and `SITE_URL`, then press Manual Sync for the jobs.
 - [ ] 5.2 Live check:
-  - https://stagehopper.app shows "Stagehopper" with the tagline;
+  - https://stagehopper.app shows "StageHopper" with the tagline;
   - www and the onrender address redirect;
   - `/health` answers on the onrender address;
   - `stagehopper.app/privacy.html` reaches StageHopper's policy at info.stagehopper.app;

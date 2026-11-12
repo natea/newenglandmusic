@@ -1,19 +1,19 @@
 ## Why
 
-The site is called "New England Music" and lives at newenglandmusic.onrender.com. The name was never final: `PRODUCT.md` says it covers the wider Northeast. Nate decided on 11 November 2026 to rename it Stagehopper and serve it at https://stagehopper.app, with a New England music tagline. stagehopper.app now serves StageHopper's landing page (and the privacy policy and terms of its website and iOS app), which moves to info.stagehopper.app.
+The site is called "New England Music" and lives at newenglandmusic.onrender.com. The name was never final: `PRODUCT.md` says it covers the wider Northeast. Nate decided on 11 November 2026 to rename it StageHopper and serve it at https://stagehopper.app, with a New England music tagline. stagehopper.app now serves StageHopper's landing page (and the privacy policy and terms of its website and iOS app), which moves to info.stagehopper.app.
 
 Nate also asked that the site have terms and privacy pages, since it collects email addresses: event submitters' emails today, and subscribers' for the planned email digest.
 
 ## What Changes
 
-- **The site is named Stagehopper.** `SITE_NAME` defaults to "Stagehopper". That carries the name into:
+- **The site is named StageHopper.** `SITE_NAME` defaults to "StageHopper". That carries the name into:
   - the masthead, page titles and link previews (Open Graph);
   - the admin's header;
-  - the calendar feeds' names ("Stagehopper: Vermont");
-  - each event's calendar entry ("… [Stagehopper]");
+  - the calendar feeds' names ("StageHopper: Vermont");
+  - each event's calendar entry ("… [StageHopper]");
   - the privacy and terms pages.
 
-  The masthead gains a tagline under the name, set by `SITE_TAGLINE`, with the default "Live music across New England" (wording to confirm).
+  The masthead gains a tagline under the name, set by `SITE_TAGLINE`, with the default "Live music across New England" (Nate, 12 November 2026).
 - **Its address is https://stagehopper.app.** Production sets `SITE_URL` to it, and accepts stagehopper.app, www.stagehopper.app and the onrender.com address as hosts. The contact address the site's API clients send (MusicBrainz, Wikidata, Last.fm and others) comes from `SITE_URL` instead of the hard-coded onrender address.
 - **Other addresses redirect to it.** A new setting, `CANONICAL_HOST`, set only in production, switches the redirects on, so tests and development never redirect. With it set, a request to www.stagehopper.app or to the onrender.com address is redirected permanently to the same path and query at https://stagehopper.app (301, or 308 for a form submission, so it isn't lost). Only the health check is served at any address. It moves from `/` to its own `/health`, since `/` on the old address now redirects.
 - **Calendar UIDs and names change too.** `UID_DOMAIN` defaults to "stagehopper". Nate said on 11 November 2026 that he doesn't think anyone has subscribed to the feeds, so no subscriber's calendar would show events twice, and feeds need no exception from the redirect.
@@ -51,13 +51,13 @@ Each of the first three can follow as its own change if Nate wants it (see the d
 
 ### Modified Capabilities
 
-- `area-calendar-feeds`: "Feed events stay up to date in calendar apps" defaults the calendar's name to "Stagehopper" and the UID domain to "stagehopper".
+- `area-calendar-feeds`: "Feed events stay up to date in calendar apps" defaults the calendar's name to "StageHopper" and the UID domain to "stagehopper".
 
 ## Impact
 
 - `nycnoise/settings/base.py` and `prod.py`: `SITE_NAME`, `SITE_TAGLINE`, `UID_DOMAIN`, `CANONICAL_HOST`, the hosts.
 - `render.yaml`: `healthCheckPath`, the database's paid `plan`, and `SITE_URL` passed from the web service to both scheduled jobs. `SITE_URL` and `CANONICAL_HOST` are dashboard settings (`sync: false`).
-- `core/static/core/images/share-preview.png` (a Stagehopper version) and the web manifest's name.
+- `core/static/core/images/share-preview.png` (a StageHopper version) and the web manifest's name.
 - New middleware for the redirects.
 - `core/templates/core/base.html`: the masthead and its tagline, and the footer's terms link.
 - `core/templates/core/privacy.html`, and a new `core/templates/core/terms.html`.

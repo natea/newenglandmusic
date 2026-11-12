@@ -9,9 +9,9 @@ Each event in a feed SHALL have:
 
 A cancelled event SHALL have `STATUS:CANCELLED`. The feed SHALL include events that started up to 7 days ago, through those starting within the next 90 days, in start-time order.
 
-The calendar SHALL be named for the site and the area, such as "Stagehopper: Vermont", and SHALL ask to be refreshed every six hours (`REFRESH-INTERVAL` and `X-PUBLISHED-TTL`).
+The calendar SHALL be named for the site and the area, such as "StageHopper: Vermont", and SHALL ask to be refreshed every six hours (`REFRESH-INTERVAL` and `X-PUBLISHED-TTL`).
 
-The site's name in the calendar's name, and the part of each UID after "@", SHALL come from the `SITE_NAME` and `UID_DOMAIN` settings, which default to "Stagehopper" and "stagehopper".
+The site's name in the calendar's name, and the part of each UID after "@", SHALL come from the `SITE_NAME` and `UID_DOMAIN` settings, which default to "StageHopper" and "stagehopper".
 
 #### Scenario: Names from the settings
 - **WHEN** `SITE_NAME` is "Boston Shows" and `UID_DOMAIN` is "boston-shows"
@@ -35,9 +35,9 @@ The site's name in the calendar's name, and the part of each UID after "@", SHAL
 
 #### Scenario: Calendar name
 - **WHEN** a calendar app fetches `/calendar.ics?metro=ma-cape-cod`
-- **THEN** the calendar is named "Stagehopper: MA: Cape Cod", and asks to be refreshed every six hours
+- **THEN** the calendar is named "StageHopper: MA: Cape Cod", and asks to be refreshed every six hours
 
 #### Scenario: Default names
 
 - **WHEN** a feed is fetched with `SITE_NAME` and `UID_DOMAIN` unset
-- **THEN** a Vermont feed's calendar is named "Stagehopper: Vermont", and event 12's UID is `event-12@stagehopper`
+- **THEN** a Vermont feed's calendar is named "StageHopper: Vermont", and event 12's UID is `event-12@stagehopper`

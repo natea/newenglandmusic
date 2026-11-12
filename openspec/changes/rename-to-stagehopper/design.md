@@ -30,7 +30,7 @@ See `proposal.md` for why. Today:
 ## Goals / Non-Goals
 
 **Goals:**
-- One public name, Stagehopper, and one address, https://stagehopper.app, with every other address sending visitors there.
+- One public name, StageHopper, and one address, https://stagehopper.app, with every other address sending visitors there.
 - Nothing outside relies on breaks: the health check, and the landing page's links (above all, the iOS app's privacy policy link).
 - A terms page, and a privacy page that covers email, before the site starts asking for email addresses.
 
@@ -42,11 +42,11 @@ See `proposal.md` for why. Today:
 
 ### 1. The name lives in settings, everywhere
 
-`SITE_NAME` defaults to "Stagehopper". The four hard-coded places read it: the masthead, through the existing `site` context processor; the admin's `site_title` and `site_header`, set where the admin is configured; `opengraph.DEFAULT_TITLE`, read when called; and `Event.calendar_name`.
+`SITE_NAME` defaults to "StageHopper". The four hard-coded places read it: the masthead, through the existing `site` context processor; the admin's `site_title` and `site_header`, set where the admin is configured; `opengraph.DEFAULT_TITLE`, read when called; and `Event.calendar_name`.
 
-A new `SITE_TAGLINE` (default "Live music across New England") goes under the masthead's name as a smaller line, through the same context processor. A blank or whitespace-only value hides it. The masthead keeps `DESIGN.md`'s headline style, and the tagline uses the existing small text style, so the masthead's layout doesn't change at phone width. The web manifest's `name` and `short_name` become "Stagehopper". The share preview image needs a Stagehopper version, made as a plain text-on-colour image in the old one's layout until there's a real visual identity (task 1.5).
+A new `SITE_TAGLINE` (default "Live music across New England") goes under the masthead's name as a smaller line, through the same context processor. A blank or whitespace-only value hides it. The masthead keeps `DESIGN.md`'s headline style, and the tagline uses the existing small text style, so the masthead's layout doesn't change at phone width. The web manifest's `name` and `short_name` become "StageHopper". The share preview image needs a StageHopper version, made as a plain text-on-colour image in the old one's layout until there's a real visual identity (task 1.5).
 
-The spelling is "Stagehopper", as Nate wrote it. The landing page and app use "StageHopper". The spelling, like the tagline's wording, is Nate's to confirm (Open Questions).
+The spelling is "StageHopper", with a capital H, matching the landing page and the iOS app, and the tagline is "Live music across New England" (Nate's answers, 12 November 2026).
 
 ### 2. One middleware redirects every other host, switched on by CANONICAL_HOST
 
@@ -68,7 +68,7 @@ The rule lives in code, not in Cloudflare or Render, because neither can redirec
 
 ### 4. Calendar UIDs and names change
 
-`UID_DOMAIN`'s default becomes "stagehopper", so feeds and downloads say Stagehopper throughout. Nate believes nobody has subscribed, so no calendar would show an event twice (11 November 2026).
+`UID_DOMAIN`'s default becomes "stagehopper", so feeds and downloads say StageHopper throughout. Nate believes nobody has subscribed, so no calendar would show an event twice (11 November 2026).
 
 ### 5. The landing page's old paths go to info.stagehopper.app
 
@@ -95,7 +95,7 @@ The privacy page gains a "Your email address" section:
 - who can see them: the site's editors;
 - how to have one removed: write to the contact address.
 
-Both are plain-language drafts, not reviewed by a lawyer. Nate approves the wording before the merge (task 3.4). Who runs the site, which the landing page's terms name as Jazkarta, Inc. d/b/a StageHopper, is his to state (Open Questions).
+Both are plain-language drafts, not reviewed by a lawyer. Nate approves the wording before the merge (task 3.4). The terms page names the operator as Jazkarta, Inc. d/b/a StageHopper (Nate, 12 November 2026).
 
 ### 7. The switch, in order
 
@@ -107,7 +107,7 @@ Done by Nate in the dashboards, with Claude watching each step. Steps 0–3 are 
    - **Check the dump restores**, only ever into a local scratch database: `createdb nem_scratch && pg_restore --no-owner --dbname nem_scratch prod-YYYY-MM-DD.dump`. Never point `pg_restore` at the External Database URL. Keep the dump out of the repository, since it holds admin password hashes.
 
    This change alters no data beyond re-rendering stored event pages (`resave_all_events`) and the deploy's migrations, but the switch is where a mistake would be hardest to undo.
-1. **Merge and deploy.** Before merging, check in the Render dashboard that `SITE_NAME` isn't already set on the web service (if it is, clear it or set it to "Stagehopper"), and set `SITE_URL=https://newenglandmusic.onrender.com` if it's blank: `render.yaml` now passes `SITE_URL` to the jobs with `fromService`, and `PRODUCTION.md` records that a blueprint sync fails at once when the web service lacks a variable a job takes from it. After merging, check that the blueprint sync succeeded, which also applies the database plan. The name changes at once at the onrender address (masthead, feeds, admin, Sites record), but no redirect runs, since `CANONICAL_HOST` isn't set. Then run `python manage.py resave_all_events` in the Shell tab, so stored event pages and their calendar links carry the new name. Also check in the admin that no static page lives at `/boston/` or `/nyc/`, the landing page's folders, which the redirect will send away.
+1. **Merge and deploy.** Before merging, check in the Render dashboard that `SITE_NAME` isn't already set on the web service (if it is, clear it or set it to "StageHopper"), and set `SITE_URL=https://newenglandmusic.onrender.com` if it's blank: `render.yaml` now passes `SITE_URL` to the jobs with `fromService`, and `PRODUCTION.md` records that a blueprint sync fails at once when the web service lacks a variable a job takes from it. After merging, check that the blueprint sync succeeded, which also applies the database plan. The name changes at once at the onrender address (masthead, feeds, admin, Sites record), but no redirect runs, since `CANONICAL_HOST` isn't set. Then run `python manage.py resave_all_events` in the Shell tab, so stored event pages and their calendar links carry the new name. Also check in the admin that no static page lives at `/boston/` or `/nyc/`, the landing page's folders, which the redirect will send away.
 2. **Add Render's custom domain**, stagehopper.app, under the web service's Settings > Custom Domains. Render adds www itself, and redirects www to the apex at its edge. Render waits for DNS before it verifies, and adding it first shortens the gap in step 5.
 3. **Prepare the landing page's new home:**
    - verify stagehopper.app under the GitHub account's Pages settings (a TXT record in Cloudflare), so no one else can claim it while it's unclaimed in steps 4–5;
@@ -144,8 +144,9 @@ The steps above. Rollback before step 6 means undoing the DNS changes and the tw
 
 ## Open Questions
 
-- **The tagline.** The default is "Live music across New England". Nate asked for a tagline "about New England Music". But `PRODUCT.md` says the site covers the wider Northeast, which was one reason the old name wasn't final. Confirm the wording, or pick one that covers the Northeast.
-- **The spelling.** "Stagehopper", as Nate wrote it, or "StageHopper", as the landing page and app write it?
-- **Who runs the site**, for the terms page. Is it Jazkarta, Inc. d/b/a StageHopper, as on the landing page's terms?
-- **The terms and privacy texts** need Nate's approval as written (task 3.4).
-- **Renaming the Render service, the repository or the database** later, as their own changes, if Nate wants them.
+Settled by Nate on 12 November 2026, with his G2:
+- **The tagline:** "Live music across New England".
+- **The spelling:** "StageHopper", with a capital H, as on the landing page and app.
+- **Who runs the site:** Jazkarta, Inc. d/b/a StageHopper, named on the terms page, as on the landing page's terms.
+
+Still open, for later changes: renaming the Render service, the repository or the database, if Nate wants them.

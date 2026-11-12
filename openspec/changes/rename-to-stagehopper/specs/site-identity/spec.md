@@ -1,13 +1,13 @@
 ## ADDED Requirements
 
-### Requirement: The site is named Stagehopper
+### Requirement: The site is named StageHopper
 
-The site's name SHALL come from `SITE_NAME`, which defaults to "Stagehopper" (Nate's decision, 11 November 2026). The name SHALL appear in the masthead, every page's title and link preview, the admin's header, and each event's calendar entry, which is named for the event followed by "[Stagehopper]".
+The site's name SHALL come from `SITE_NAME`, which defaults to "StageHopper" (Nate's decision, 11 November 2026). The name SHALL appear in the masthead, every page's title and link preview, the admin's header, and each event's calendar entry, which is named for the event followed by "[StageHopper]".
 
 #### Scenario: The masthead and title
 
 - **WHEN** a visitor opens the home page with `SITE_NAME` unset
-- **THEN** the masthead reads "Stagehopper", and the page's title and its Open Graph title name "Stagehopper"
+- **THEN** the masthead reads "StageHopper", and the page's title and its Open Graph title name "StageHopper"
 
 #### Scenario: A name from the setting
 
@@ -17,7 +17,7 @@ The site's name SHALL come from `SITE_NAME`, which defaults to "Stagehopper" (Na
 #### Scenario: An event's calendar entry
 
 - **WHEN** the single-event download of an event whose title and artists read "Dummy Ache" is fetched with `SITE_NAME` unset
-- **THEN** its entry is named "Dummy Ache [Stagehopper]"
+- **THEN** its entry is named "Dummy Ache [StageHopper]"
 
 ### Requirement: The masthead carries a tagline
 
@@ -26,7 +26,7 @@ Under the name, the masthead SHALL show a tagline from `SITE_TAGLINE`, which def
 #### Scenario: The default tagline
 
 - **WHEN** a visitor opens any page with `SITE_TAGLINE` unset
-- **THEN** the masthead shows "Live music across New England" under "Stagehopper"
+- **THEN** the masthead shows "Live music across New England" under "StageHopper"
 
 #### Scenario: No tagline
 
@@ -108,15 +108,13 @@ When `CANONICAL_HOST` is set, the paths StageHopper's landing page served at sta
 - **WHEN** a visitor opens `https://stagehopper.app/privacy` with `CANONICAL_HOST` stagehopper.app
 - **THEN** they get the site's privacy page, not a redirect
 
-### Requirement: The site has a terms page and says how it handles email addresses
+### Requirement: The site has a terms page
 
 Every page's footer SHALL link `/terms`, beside the `/privacy` link that `youtube-artist-preview` requires. Both pages SHALL name the site by `SITE_NAME`. The terms page SHALL say:
-- what the site is;
+- what the site is, and that Jazkarta, Inc. d/b/a StageHopper runs it (Nate, 12 November 2026);
 - what visitors may and may not do with it;
 - that listings come from venues and other sources and may be wrong;
 - how to contact the site.
-
-The privacy page SHALL say what email addresses the site keeps (an event submitter's, a subscriber's), why, who can see them, and how to have one removed.
 
 #### Scenario: The footer
 
@@ -126,14 +124,18 @@ The privacy page SHALL say what email addresses the site keeps (an event submitt
 #### Scenario: The terms page
 
 - **WHEN** a visitor opens `/terms` with `SITE_NAME` unset
-- **THEN** the page names "Stagehopper" and includes how to contact the site
+- **THEN** the page names "StageHopper", says Jazkarta, Inc. d/b/a StageHopper runs it, and includes how to contact the site
+
+#### Scenario: Both pages follow the setting
+
+- **WHEN** `SITE_NAME` is "Boston Shows" and a visitor opens `/terms` and `/privacy`
+- **THEN** both pages name "Boston Shows", not "StageHopper"
+
+### Requirement: The privacy page says how email addresses are handled
+
+The privacy page SHALL say what email addresses the site keeps (an event submitter's, a subscriber's), why, who can see them, and how to have one removed.
 
 #### Scenario: Email addresses on the privacy page
 
 - **WHEN** a visitor opens `/privacy`
 - **THEN** it has a section on email addresses that covers submitters' and subscribers' addresses and how to have one removed
-
-#### Scenario: Both pages follow the setting
-
-- **WHEN** `SITE_NAME` is "Boston Shows" and a visitor opens `/terms` and `/privacy`
-- **THEN** both pages name "Boston Shows", not "Stagehopper"
