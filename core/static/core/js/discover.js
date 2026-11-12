@@ -5,11 +5,15 @@
 // the top card alone has a player (core/js/artist_preview.js): YouTube, else Apple Music, else
 // Spotify. the first card waits for a Start press, laid over our own placeholder (its video's
 // thumbnail, or a plain dark box) and gone when the player loads; from then on each top card's
-// player is loaded in the handler of the swipe, button or key that brought it up, asking
+// player is created in the same step as the swipe, button or key that brought it up (the passed
+// card's player is removed first, and the card slides off as a copy with no player), asking
 // YouTube to start playing (Apple Music and Spotify load ready). beyond autoplay=1 in its
-// address, the top card's YouTube player is also driven over its message channel (watch()): the
+// address, the top card's YouTube player is also driven over its message channel (watchYouTube()): the
 // page tells it we are listening and, when it reports ready, posts playVideo to it. only the
-// top card's frame is listened to, and only messages from YouTube's embed hosts. nothing is
+// top card's frame is listened to, and only messages from YouTube's embed hosts. a player that
+// has not started 4 seconds after ready is asked once more, and 3 seconds later (7 from loading
+// if it never answers) a line below it asks the visitor to press play; a video that can't be
+// embedded is replaced by a message and a link to it. nothing is
 // stored about what was passed.
 (function () {
   const section = document.querySelector(".discover");
