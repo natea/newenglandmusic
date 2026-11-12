@@ -77,6 +77,13 @@ No outside service is called, and tests never touch the network. Spotify, Apple 
 
 10. **The thumbnail.** The Start button sits over the top card's YouTube video thumbnail (the stored `video_id`'s image from YouTube's image address, loaded for the top card only). Is showing that thumbnail before a click allowed under YouTube's current developer policies, and does it count as loading from YouTube before the visitor acts, so that the visitor's address reaches YouTube on page view (the site otherwise stresses `youtube-nocookie.com`)? The terms and privacy check is recorded here before building, task 3.0. The thumbnail is for the top card only, never for the no-JavaScript list's other cards. If not, the button sits on a plain dark box. Acts with no `video_id`, or matched only on Apple Music or Spotify, show the plain box.
 
+## YouTube terms check (task 3.0, recorded before building)
+
+Read in YouTube's Required Minimum Functionality page and its revision history, through a web search (the pages themselves could not be fetched while building, so Nate should read the live page once):
+
+- **Autoplay is allowed.** The page does not forbid an embedded player from starting on its own. It asks that playback begin when the player is visible (one snapshot says more than half of it is visible), that a page not autoplay more than one player at once, and that the player be at least 200 by 200 px. The deck has one player at a time, 232 px high, and starts it only after the visitor's own Start, swipe, button or key, so it meets these. The July 2025 revision history note says autoplay means data is collected from page load, and setting it to false limits what is shared before the visitor interacts: the deck asks for autoplay only after the visitor has acted, so the player (and anything YouTube learns from it) loads after that action. The deck therefore builds `autoplay=1`.
+- **The thumbnail.** Nothing found forbids showing a video's thumbnail from YouTube's image address before a click. It is an image request, so the visitor's address does reach YouTube when the first card is shown, before they press Start, unlike the players, which load only after Start. This is the privacy point of open question 10, and it is built as sketched (Nate chose option A), for the top card only. If Nate would rather not, the fix is one line in `discover.js` (always the plain dark box).
+
 ## Sketches
 
 Option A, chosen by Nate and revised: the Start button is laid over the top card's video thumbnail rather than a black box. The other options were removed.
