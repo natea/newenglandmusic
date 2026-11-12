@@ -18,11 +18,11 @@ The daily job SHALL run, in this order: `sync_venues_from_gsheets`, `lookup_venu
 - **THEN** the job exits with an error naming the enrichment, and the steps before it have already run
 
 ### Requirement: The weekly job runs the source check and matching in order
-The weekly job SHALL run, in this order: `check_event_sources`, `match_ticketmaster_venues`, `match_eventbrite_organizers`, `match_seatgeek_venues` and `lookup_venue_neighborhoods`.
+The weekly job SHALL run, in this order: `check_event_sources`, `match_ticketmaster_venues`, `match_eventbrite_organizers`, `match_seatgeek_venues`, `lookup_venue_neighborhoods` and `read_artist_link_hubs`. The link-hub reading runs last, after the venue steps. A failure in it SHALL fail the run without stopping the other steps, as the other steps do, and it SHALL be recorded as a `JobRun` with a summary of the records read, filled, flagged and failed.
 
 #### Scenario: Weekly run
 - **WHEN** the weekly job runs and every step succeeds
-- **THEN** the five commands run in that order, and the job succeeds
+- **THEN** the six commands run in that order, the job succeeds, and the hub step's summary is listed at `/admin/core/jobrun/`
 
 ### Requirement: A failed step doesn't stop the job, but fails it
 When a step fails, the job SHALL still run the steps after it, and SHALL end with a failing exit status, naming the steps that failed.
