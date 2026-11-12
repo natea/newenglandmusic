@@ -231,3 +231,23 @@ On a touch screen and with a mouse, a swipe right SHALL open the picker to add t
 #### Scenario: Touch swipe left
 - **WHEN** a visitor drags a card to the left with a finger on a phone-sized screen
 - **THEN** the next card is shown, nothing is saved and no picker opens
+
+### Requirement: The deck is ordered by each act's soonest show
+The deck SHALL put the acts in order of their next upcoming show in the chosen areas, soonest first, so the cards a visitor sees first are the imminent ones and shows months away come last. Acts whose next show falls on the same calendar day (New York time) SHALL be in a random order among themselves for each visit. A show's date, not the act's name or a random draw across the whole deck, SHALL decide where its card falls.
+
+#### Scenario: Imminent acts come first
+- **WHEN** Belly plays tomorrow, Anjimile plays in three weeks and Frankie Cosmos plays in April 2027, all with something to play
+- **THEN** the deck is in the order Belly, Anjimile, Frankie Cosmos
+
+#### Scenario: Next show decides, not the last
+- **WHEN** Anjimile has shows tomorrow and in April 2027, and Belly has one show in three weeks
+- **THEN** Anjimile's card comes before Belly's
+
+#### Scenario: Order follows the filter
+- **WHEN** a visitor filters to Vermont, Belly plays in Rhode Island tomorrow and in Vermont in April 2027, and Anjimile plays in Vermont next month
+- **THEN** Anjimile's card comes before Belly's, because only Vermont shows count
+
+#### Scenario: Same day in a random order
+- **WHEN** Belly and Anjimile both play tomorrow, on different visits
+- **THEN** both come before any act playing later, and their order between them may differ from visit to visit
+

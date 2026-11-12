@@ -1,5 +1,3 @@
-Issue: [#63 some improvements to the tinder-style band discovery tool](https://github.com/natea/newenglandmusic/issues/63)
-
 Issue: [#63 some improvements to the tinder-style band discovery feature](https://github.com/natea/newenglandmusic/issues/63)
 
 ## Context
@@ -12,7 +10,7 @@ Issue: [#63 some improvements to the tinder-style band discovery feature](https:
 
 ## Goals / Non-Goals
 
-**Goals:** a deck that starts music without a tap where browsers permit, holds only acts with something to play, narrows by the listing's area filters, and has right = add, left = skip.
+**Goals:** a deck ordered soonest show first that starts music without a tap where browsers permit, holds only acts with something to play, narrows by the listing's area filters, and has right = add, left = skip.
 
 **Non-Goals:** a genre filter (open question 4); remembering passed acts; a Bandcamp player; changing the listing's filter or the saved shows; muting or volume controls of our own (the services' players have their own).
 
@@ -43,6 +41,9 @@ The deck follows the **same remembered filter** as the listing (one cookie, redi
 
 Changing a filter reloads the page, which restarts the deck (a new random order, the Start control again). The listing's form auto-submits with an inline script that is part of the shared partial, so including it is enough. The filter context is extracted into one helper used by the listing and the deck, so the two do not drift. Filtering uses the linked venue, so a show whose card displays a `venue_override` can sit under its linked venue's filter, as on the listing. The no-JavaScript bookmark returns to the full URL, so the filter survives with cookies off. The filter form sits above the deck, outside the player's box.
 
+### 4b. Order: soonest show first
+`discover` today calls `random.shuffle(cards)` on the whole deck, so an act whose next show is in April 2027 is as likely to come first as one playing tomorrow (the issue's screenshot). The shuffle is replaced by a sort on each card's `next_show` start time, using the shows left after the area filter, so the order follows the filter. `upcoming_performances` already orders shows by start time, so each card's first show is its next. To keep a little variety, cards whose next show is on the same New York calendar day are shuffled among themselves (group by day, shuffle each group, concatenate). Tests that fixed the shuffle by patching `random.shuffle` are changed to fix the within-day shuffle the same way. The deck is still never cached, as the same-day shuffle and bookmarks differ per visit. Sorting is in memory on cards already built, so the query count is unchanged. This supersedes the "random per visit" assumption of `add-band-discovery-swipe` (its open question 4 asked whether it should be soonest first). A cutoff, hiding acts whose next show is beyond a horizon, is not built: open question 9.
+
 ### 5. Genre
 Acts have a `genres` array filled from MusicBrainz (`MusicAct`, `core/models.py`), but the listing has no genre filter and the data is sparse, so a genre filter would show a partial deck. The issue says "eventually"; it is left out, and no field or option is added. It is open question 4.
 
@@ -62,8 +63,6 @@ No outside service is called, and tests never touch the network. Spotify, Apple 
 
 ## Open Questions
 
-8. **Photos.** The issue asked only to hide acts with no media; this change also removes card photos, since every card now has a player. Keep the photo beside the player instead?
-
 1. **The reference site.** How does nolajazzfest.stagehopper.app start its players (a first tap, muted, a service's own API)? It wasn't inspected. Nate should say, or the design round can copy what it does.
 2. **Wording.** The code already treats right as add and left as skip. Should the right-hand label say "Add to my schedule" instead of "Add", and the site's "Saved shows" wording follow, or is "Add" enough? And if the reporter still sees the reverse on their device, which device and browser?
 3. **The first card.** Is a "Start" press before the first card plays acceptable, or is muted autoplay with an unmute tap preferred? Both are browser-legal; this proposal builds the Start press.
@@ -71,6 +70,10 @@ No outside service is called, and tests never touch the network. Spotify, Apple 
 5. **Spotify's iFrame API.** May the deck load Spotify's iFrame API script to start its player? It is an extra script from Spotify; without it Spotify-only acts don't autostart.
 6. **The remembered filter.** Should the deck share the listing's remembered filter (built here, so a bare `/discover` may redirect), or take only the URL's parameters?
 7. **Acts left out by area.** Built here: a card lists only shows in the chosen area. Should it instead keep all of the act's shows and list the area's first?
+
+8. **Photos.** The issue asked only to hide acts with no media; this change also removes card photos, since every card now has a player. Keep the photo beside the player instead?
+
+9. **A horizon.** The deck is now ordered soonest first, so far-off shows come last but still appear for a visitor who swipes through the near ones. Should acts whose next show is more than some time away (for example 60 days) be left out of the deck altogether, and if so how far, or should it stay a pure ordering?
 
 ## Sketches
 
