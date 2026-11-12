@@ -89,3 +89,99 @@ class ANameFromTheSettingTestCase(TestCase):
         venue = Venue.objects.create(name=f"venue {uuid.uuid4()}", city_town="Boston", state="MA")
         event = Event.objects.create(title="Dummy Ache", starttime=timezone.now(), venue=venue)
         self.assertIn("SUMMARY:Dummy Ache [Boston Shows]", self.client.get(f"/event/{event.pk}/ics").content.decode())
+
+
+ONRENDER = "newenglandmusic.onrender.com"
+HOSTS = ["stagehopper.app", "www.stagehopper.app", ONRENDER, "testserver", "127.0.0.1"]
+PRODUCTION = override_settings(CANONICAL_HOST="stagehopper.app", SITE_URL="https://stagehopper.app", ALLOWED_HOSTS=HOSTS)
+
+
+class TheSitesAddressTestCase(SimpleTestCase):
+    """The site's address comes from SITE_URL"""
+
+    def test_productions_hosts(self):
+        from core.tests.test_prod_settings import ProdSettingsTestCase
+
+        prod = ProdSettingsTestCase().prod_settings(allowed_hosts="", RENDER_EXTERNAL_HOSTNAME=ONRENDER)
+        for host in ("stagehopper.app", "www.stagehopper.app", ONRENDER):
+            self.assertIn(host, prod["allowed_hosts"])
+
+    @override_settings(SITE_URL="https://stagehopper.app")
+    def test_the_api_clients_contact_address(self):
+        from core.user_agent import user_agent
+
+        self.assertIn("https://stagehopper.app", user_agent())
+        self.assertNotIn("onrender.com", user_agent())
+
+    def test_the_scheduled_jobs_get_the_address(self):
+        import yaml
+
+        services = yaml.safe_load((PROJECT_ROOT / "render.yaml").read_text())["services"]
+        jobs = [s for s in services if s["type"] == "cron"]
+        self.assertEqual(len(jobs), 2)
+        for job in jobs:
+            site_url = next(v for v in job["envVars"] if v["key"] == "SITE_URL")
+            self.assertEqual(site_url["fromService"], {"type": "web", "name": "newenglandmusic", "envVarKey": "SITE_URL"})
+
+
+@PRODUCTION
+class OtherAddressesRedirectTestCase(TestCase):
+    """Other addresses redirect to the site's address; a redirected form keeps its method"""
+
+    def test_the_old_address(self):
+        response = self.client.get("/bands", {"state": "VT"}, HTTP_HOST=ONRENDER)
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(response["Location"], "https://stagehopper.app/bands?state=VT")
+
+    def test_the_www_address(self):
+        response = self.client.get("/", HTTP_HOST="www.stagehopper.app")
+        self.assertEqual((response.status_code, response["Location"]), (301, "https://stagehopper.app/"))
+
+    def test_a_calendar_feed_on_the_old_address(self):
+        response = self.client.get("/calendar.ics", {"state": "VT"}, HTTP_HOST=ONRENDER)
+        self.assertEqual((response.status_code, response["Location"]), (301, "https://stagehopper.app/calendar.ics?state=VT"))
+
+    def test_a_form_posted_to_the_old_address(self):
+        response = self.client.post("/submit-event", {"title": "x"}, HTTP_HOST=ONRENDER)
+        self.assertEqual((response.status_code, response["Location"]), (308, "https://stagehopper.app/submit-event"))
+
+    def test_the_target_never_comes_from_the_host_header(self):
+        response = self.client.get("/", HTTP_HOST="127.0.0.1")
+        self.assertEqual(response["Location"], "https://stagehopper.app/")
+
+
+class NoCanonicalHostTestCase(TestCase):
+    @override_settings(CANONICAL_HOST="", SITE_URL="http://localhost:8001", ALLOWED_HOSTS=HOSTS)
+    def test_no_canonical_host(self):
+        self.assertEqual(self.client.get("/", HTTP_HOST="127.0.0.1:8001").status_code, 200)
+        self.assertEqual(self.client.get("/").status_code, 200)
+
+    def test_the_default_settings_redirect_nothing(self):
+        self.assertEqual(self.client.get("/").status_code, 200)
+
+
+@PRODUCTION
+class TheHealthCheckTestCase(TestCase):
+    def test_the_health_check(self):
+        response = self.client.get("/health", HTTP_HOST=ONRENDER)
+        self.assertEqual((response.status_code, response.content), (200, b"ok"))
+
+
+@PRODUCTION
+class TheLandingPagesOldPathsTestCase(TestCase):
+    """The landing page's old paths go to its new address"""
+
+    def test_the_landing_pages_privacy_policy(self):
+        response = self.client.get("/privacy.html", HTTP_HOST="stagehopper.app")
+        self.assertEqual((response.status_code, response["Location"]), (301, "https://info.stagehopper.app/privacy.html"))
+
+    def test_a_landing_map(self):
+        response = self.client.get("/events_map_boston.html", HTTP_HOST="stagehopper.app")
+        self.assertEqual(response["Location"], "https://info.stagehopper.app/events_map_boston.html")
+
+    def test_its_data_images_and_folders(self):
+        for path in ("/nyc.geojson", "/boston_gallery.json", "/og_nyc.png", "/boston/thumb.jpg"):
+            self.assertEqual(self.client.get(path, HTTP_HOST="stagehopper.app")["Location"], f"https://info.stagehopper.app{path}", path)
+
+    def test_the_sites_own_privacy_page(self):
+        self.assertEqual(self.client.get("/privacy", HTTP_HOST="stagehopper.app").status_code, 200)

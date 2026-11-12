@@ -18,11 +18,11 @@
 
 ## 2. The address and redirects
 
-- [ ] 2.1 Build `core/user_agent.py`'s contact address from `SITE_URL`. Give both scheduled jobs in `render.yaml` `SITE_URL` from the web service. Add stagehopper.app and www.stagehopper.app to production's hosts in `prod.py`. Tests for "The API clients' contact address" and "Production's hosts".
-- [ ] 2.2 Add `/health` (200, body "ok", no database) and set `render.yaml`'s `healthCheckPath` to it. Test "The health check".
-- [ ] 2.3 Add the redirect middleware after `SecurityMiddleware`, acting only when `CANONICAL_HOST` is set. For any other host except `/health`, redirect to `SITE_URL` with the same path and query: 301 for GET and HEAD, 308 otherwise, with the target built from settings only. Tests for "The old address", "The www address", "A calendar feed on the old address", "A form posted to the old address" and "No canonical host".
-- [ ] 2.4 In the same middleware, redirect the landing page's paths on the site's own host to the same path at https://info.stagehopper.app: top-level `.html`, `.json` and `.geojson`; `og.png`, `og_boston.png` and `og_nyc.png`; anything under `/boston/` and `/nyc/`. Tests for "The landing page's privacy policy", "A landing map" and "The site's own privacy page".
-- [ ] 2.5 Set `render.yaml`'s database `plan` to the paid plan's exact Blueprint name, as the dashboard shows it after 0.1, so a blueprint sync doesn't move it back to free.
+- [x] 2.1 Build `core/user_agent.py`'s contact address from `SITE_URL`. Give both scheduled jobs in `render.yaml` `SITE_URL` from the web service. Add stagehopper.app and www.stagehopper.app to production's hosts in `prod.py`. Tests for "The API clients' contact address" and "Production's hosts".
+- [x] 2.2 Add `/health` (200, body "ok", no database) and set `render.yaml`'s `healthCheckPath` to it. Test "The health check".
+- [x] 2.3 Add the redirect middleware after `SecurityMiddleware`, acting only when `CANONICAL_HOST` is set. For any other host except `/health`, redirect to `SITE_URL` with the same path and query: 301 for GET and HEAD, 308 otherwise, with the target built from settings only. Tests for "The old address", "The www address", "A calendar feed on the old address", "A form posted to the old address" and "No canonical host".
+- [x] 2.4 In the same middleware, redirect the landing page's paths on the site's own host to the same path at https://info.stagehopper.app: top-level `.html`, `.json` and `.geojson`; `og.png`, `og_boston.png` and `og_nyc.png`; anything under `/boston/` and `/nyc/`. Tests for "The landing page's privacy policy", "A landing map" and "The site's own privacy page".
+- [x] 2.5 Set `render.yaml`'s database `plan` to the paid plan's exact Blueprint name, as the dashboard shows it after 0.1, so a blueprint sync doesn't move it back to free.
 
 ## 3. Terms and privacy
 
