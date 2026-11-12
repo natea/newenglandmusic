@@ -181,11 +181,23 @@ The deck SHALL use the same remembered-filter cookie as the listing, with the sa
 - **THEN** Maine acts are in the deck and the cookie holds `state=maine`
 
 ### Requirement: The top card starts playing after a visitor's action
-Browsers allow sound to start by itself only after the visitor has acted on the page, so the first card SHALL wait for one: until the visitor has pressed a start control outside the player, the deck SHALL load no player.
+Browsers allow sound to start by itself only after the visitor has acted on the page, so the first card SHALL wait for one: until the visitor has pressed a start control, the deck SHALL load no player. The start control SHALL be laid over a placeholder, which SHALL be removed with it when the player loads. The placeholder is the first card's video thumbnail (top card only) or, when there is none or the design's open question 10 does not allow it, a plain dark box.
 
 #### Scenario: Nothing plays before the visitor acts
 - **WHEN** a visitor opens `/discover`
 - **THEN** a start control is shown and no YouTube, Apple Music or Spotify player is requested
+
+#### Scenario: Start sits over the video thumbnail
+- **WHEN** a visitor opens `/discover` and the first card is matched on YouTube with a video
+- **THEN** the start control is shown over that video's thumbnail, and pressing it removes the thumbnail and the control and loads the player, so nothing is ever over the player
+
+#### Scenario: Thumbnail for the top card only
+- **WHEN** a visitor opens `/discover` with several YouTube-matched cards
+- **THEN** only the top card's thumbnail is requested
+
+#### Scenario: No thumbnail to show
+- **WHEN** a visitor opens `/discover` and the first card has no YouTube video (Apple Music or Spotify only, or a channel match)
+- **THEN** the start control is shown on a plain dark box
 
 #### Scenario: Start begins the first card
 - **WHEN** the visitor presses the start control and the first card is matched on YouTube
@@ -215,7 +227,7 @@ After the start control, each card that comes to the top because of a swipe, a b
 - **THEN** each new top card's player is loaded asking to start playing
 
 ### Requirement: Apple Music and Spotify cards load ready
-Apple Music and Spotify cards SHALL load ready, with their own play control, unless the design's open questions 1 and 5 settle a documented way to start them. Spotify's iFrame API script SHALL NOT be loaded unless that is approved.
+Apple Music and Spotify cards SHALL load ready, with their own play control. Spotify's iFrame API script SHALL NOT be loaded. A later change may amend this if a documented way to start them is approved.
 
 #### Scenario: Ready, not started
 - **WHEN** a card matched on Apple Music or Spotify only comes to the top

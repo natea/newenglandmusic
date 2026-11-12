@@ -2,7 +2,7 @@ Issue: [#63 some improvements to the tinder-style band discovery feature](https:
 
 ## Why
 
-The band discovery deck at `/discover` (built by the still-open change `add-band-discovery-swipe`) works, but five things hold it back. A visitor has to press play on every card, which takes the "flip and listen" feel out of it. Acts with nothing to play still appear, as a photo and a name with no music. The deck shows every act in the Northeast, while the event listing lets a visitor narrow to their own region, state or metro. And the issue says a right swipe skips an act when it should add its shows to the visitor's schedule.
+The band discovery deck at `/discover` (built by the still-open change `add-band-discovery-swipe`) works, but five things hold it back. A visitor has to press play on every card, which takes the "flip and listen" feel out of it. Acts with nothing to play still appear, as a photo and a name with no music. The deck shows every act in the Northeast, while the event listing lets a visitor narrow to their own region, state or metro. It is also shuffled across every act, so a show months away can come up before one tomorrow. And the issue says a right swipe skips an act when it should add its shows to the visitor's schedule.
 
 ## What Changes
 
