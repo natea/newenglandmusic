@@ -12,7 +12,7 @@ from django.test import SimpleTestCase
 
 ROOT = Path(__file__).resolve().parents[2]
 BUILD = ROOT / ".fabro" / "workflows" / "build"
-INPUTS = ["issue_number", "issue_title", "issue_body", "issue_author", "issue_thread", "change_name"]
+INPUTS = ["issue_number", "issue_title", "issue_body", "issue_author", "issue_thread", "change_name", "picked_design"]
 
 
 def settings(name="build"):
@@ -186,7 +186,14 @@ class BuildAgentsTestCase(SimpleTestCase):
             text = prompt(name)
             self.assertIn("{{ inputs.change_name }}", text, name)
             used = set(re.findall(r"\{\{ inputs\.(\w+) \}\}", text))
-            self.assertLessEqual(used, {"change_name", "issue_number", "issue_title"}, name)
+            self.assertLessEqual(used, {"change_name", "picked_design", "issue_number", "issue_title"}, name)
+
+    def test_the_apply_prompt_names_the_pick(self):
+        text = prompt("apply")
+        self.assertIn("{{ inputs.picked_design }}", text)
+        self.assertIn("build the screens from `sketches/{{ inputs.picked_design }}.html`", text)
+        self.assertIn("treat the other sketches as rejected", text)
+        self.assertIn("If that sketch is missing from the branch, stop", text)
 
     def test_acp_agents_only(self):
         agents = {name for name, attrs in steps().items() if attrs.get("type") == "agent"}

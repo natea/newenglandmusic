@@ -223,3 +223,27 @@ class ImportArtistsCommandTestCase(TestCase):
         self.addCleanup(os.unlink, file.name)
         with self.assertRaisesMessage(CommandError, "missing columns: Act_ID, Kind"):
             self.call("--csv", file.name)
+
+
+class HubFillTestCase(TestCase):
+    def test_a_row_replaces_a_hub_fill(self):
+        import_rows(rows(KRILL))
+        Band.objects.filter(act_id="A0001").update(
+            instagram_url="https://www.instagram.com/hubfill/", field_sources={"instagram_url": "link hub"}
+        )
+        header = "Act_ID,Name,Kind,Members,Town,State,Website,Bandcamp,Instagram,YouTube,MusicBrainz_ID,Notes\n"
+        text = header + "A0001,Krill,band,,Boston,MA,,,https://instagram.com/krill.band/,,,\n"
+        import_rows(rows_from_csv(io.StringIO(text)))
+        band = Band.objects.get(act_id="A0001")
+        self.assertEqual(band.instagram_url, "https://instagram.com/krill.band/")
+        self.assertEqual(band.field_sources["instagram_url"], "import")
+
+    def test_a_blank_row_keeps_a_hub_fill(self):
+        import_rows(rows(KRILL))
+        Band.objects.filter(act_id="A0001").update(
+            instagram_url="https://www.instagram.com/hubfill/", field_sources={"instagram_url": "link hub"}
+        )
+        header = "Act_ID,Name,Kind,Members,Town,State,Website,Bandcamp,Instagram,YouTube,MusicBrainz_ID,Notes\n"
+        import_rows(rows_from_csv(io.StringIO(header + "A0001,Krill,band,,Boston,MA,,,,,,\n")))
+        band = Band.objects.get(act_id="A0001")
+        self.assertEqual((band.instagram_url, band.field_sources["instagram_url"]), ("https://www.instagram.com/hubfill/", "link hub"))

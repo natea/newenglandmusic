@@ -5,14 +5,19 @@ graph = "workflow.fabro"
 
 # Started by the intentable bridge for an issue in spec-review on
 # natea/newenglandmusic, in the server's daytona environment. The bridge passes
-# all five inputs as text; the empty defaults only let a run started by hand be
-# created.
+# the five issue inputs as text; the empty defaults only let a run started by
+# hand be created. A revision run (feedback on a published draft) also passes
+# change_name, feedback and revision_scope, and targets the change's draft
+# branch; for a new proposal they stay empty.
 [run.inputs]
 issue_number = ""
 issue_title = ""
 issue_body = ""
 issue_author = ""
 issue_thread = ""
+change_name = ""
+feedback = ""
+revision_scope = ""
 
 # The agents write a proposal in the sandbox; nothing is pushed and no pull
 # request is opened. The bridge commits the draft from Fabro's record of the

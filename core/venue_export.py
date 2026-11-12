@@ -6,6 +6,11 @@ accident: test_venue_export fails until a new field is exported or named in NOT_
 google's coordinates (and what's worked out from them) are never exported, because google's
 terms keep them for only 30 days and a file outlives that.
 """
+import csv
+
+from django.http import StreamingHttpResponse
+from django.utils import timezone
+
 from .models import Venue
 
 VENUE_COLUMNS = [
@@ -77,3 +82,23 @@ def venue_row(venue):
         source = None
     row += [cell(getattr(source, name)) if source else "" for name in SOURCE_COLUMNS.values()]
     return row
+
+
+def csv_download(header, rows, filename_prefix):
+    """rows (an iterable of lists) streamed as a csv attachment named <prefix>-<date>.csv"""
+
+    class Echo:
+        def write(self, value):
+            return value
+
+    writer = csv.writer(Echo())
+
+    def lines():
+        # excel needs the byte order mark to read accents
+        yield "\ufeff" + writer.writerow(header)
+        for row in rows:
+            yield writer.writerow(row)
+
+    response = StreamingHttpResponse(lines(), content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename_prefix}-{timezone.localdate():%Y-%m-%d}.csv"'
+    return response

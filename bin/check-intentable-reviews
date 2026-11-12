@@ -8,11 +8,15 @@ usage: check-intentable-reviews --record-existing
 --record-existing, in the install step before any agent runs: writes the
 names of every change in openspec/changes/ and its archive to
 .intentable/existing-changes.txt, so a later check can tell a new change from
-an old one (Fabro's checkpoint commits make HEAD an unreliable base).
+an old one, and the checkout's commit to .intentable/base, for a
+sketches-only revision's check (Fabro's checkpoint commits make HEAD an
+unreliable base).
 
 --route, after the first draft check: records the draft's labels in
 .intentable/route.json and prints the route as a Fabro routing object:
-"back" for a needs-info draft, "sketch" for needs-design, else "review".
+"back" for a needs-info draft, "revised" for a revision (its sketches were
+edited by the propose agent, so the sketch agent doesn't run), "sketch" for
+needs-design, else "review".
 
 with no flag, after each round of review: files the round's three reports,
 and the revise notes written after the round before, under
@@ -23,6 +27,7 @@ exits 0 unless something is broken, which then fails the run.
 """
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -44,6 +49,8 @@ def record_existing():
     archive = CHANGES / "archive"
     names += [p.name for p in archive.iterdir() if p.is_dir()] if archive.is_dir() else []
     (INTENTABLE / "existing-changes.txt").write_text("".join(f"{name}\n" for name in sorted(names)))
+    head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=60, check=True)
+    (INTENTABLE / "base").write_text(head.stdout.strip() + "\n")
 
 
 def route():
@@ -52,6 +59,8 @@ def route():
     (INTENTABLE / "route.json").write_text(json.dumps({"labels": labels, "change": draft.get("change")}) + "\n")
     if draft.get("state") == "needs-info":
         routing(route="back")
+    elif draft.get("revision") is True:
+        routing(route="revised")
     elif "needs-design" in labels:
         routing(route="sketch")
     else:

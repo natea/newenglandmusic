@@ -290,6 +290,94 @@ class EnrichCommandTestCase(TestCase):
         self.assertEqual(Band.objects.get(name="Speedy Ortiz").musicbrainz_id, SPEEDY_ORTIZ)
 
 
+class DailyEnrichmentTestCase(TestCase):
+    """the daily job's step: enrich_artists_from_musicbrainz --limit 100, never --refresh"""
+
+    run_command = EnrichCommandTestCase.run_command
+
+    def daily(self, **kwargs):
+        return self.run_command("--limit", "100", **kwargs)
+
+    def test_more_records_than_the_limit(self):
+        for i in range(40):
+            Band.objects.create(name=f"Band {i:02d}")
+        for i in range(90):
+            Artist.objects.create(name=f"Artist {i:02d}")
+        _, mb = self.daily()
+        looked_up = [call[1] for call in mb.calls if call[0] == "search"]
+        self.assertEqual(len(looked_up), 100)
+        # bands before artists
+        self.assertEqual(looked_up[:40], [f"Band {i:02d}" for i in range(40)])
+        self.assertEqual(Band.objects.filter(musicbrainz_checked_at=None).count(), 0)
+        self.assertEqual(Artist.objects.filter(musicbrainz_checked_at=None).count(), 30)
+        # the next day's run takes the 30 left
+        _, mb = self.daily()
+        self.assertEqual(len([c for c in mb.calls if c[0] == "search"]), 30)
+
+    def test_a_bands_members_are_looked_up_by_a_later_run(self):
+        Band.objects.create(name="Speedy Ortiz")
+        self.daily()
+        members = Artist.objects.filter(memberships__band__name="Speedy Ortiz")
+        self.assertEqual(members.count(), 6)
+        self.assertEqual(members.filter(musicbrainz_checked_at=None).count(), 6)
+        _, mb = self.daily()
+        self.assertEqual(Artist.objects.filter(musicbrainz_checked_at=None).count(), 0)
+        # members come with their musicbrainz ids, so they're looked up, not searched
+        self.assertEqual(len([c for c in mb.calls if c[0] == "lookup"]), 6)
+
+    def test_an_ambiguous_record_is_not_retried(self):
+        mb = FakeMusicBrainz(searches={"Horse": [candidate(HORSE_A, "Horse"), candidate(HORSE_B, "Horse")]})
+        Band.objects.create(name="Horse")
+        self.daily(mb=mb)
+        self.assertEqual(Band.objects.get().musicbrainz_status, Status.AMBIGUOUS)
+        _, mb = self.daily()
+        self.assertEqual(mb.calls, [])
+        self.assertEqual(Band.objects.get().musicbrainz_status, Status.AMBIGUOUS)
+
+    def test_records_looked_up_before_cause_no_request(self):
+        Band.objects.create(name="Speedy Ortiz")
+        Band.objects.create(name="Nobody At All")
+        mb = FakeMusicBrainz(searches={"Horse": [candidate(HORSE_A, "Horse", kind="Person"), candidate(HORSE_B, "Horse", kind="Person")]})
+        Artist.objects.create(name="Horse")
+        self.daily(mb=mb)
+        # the band's members, added by that run, are looked up by the next
+        self.daily(mb=mb)
+        statuses = {r.musicbrainz_status for r in list(Band.objects.all()) + list(Artist.objects.all())}
+        self.assertTrue({Status.MATCHED, Status.AMBIGUOUS, Status.NOT_FOUND} <= statuses)
+        _, mb = self.daily()
+        self.assertEqual(mb.calls, [])
+
+    def test_musicbrainz_busy_keeps_earlier_records_and_the_next_run_does_the_rest(self):
+        from core.music_ids import MusicBrainzBusy
+
+        for name in ("Aaa", "Bbb", "Ccc", "Ddd"):
+            Band.objects.create(name=name)
+        mb = FakeMusicBrainz()
+        original = mb.search_artists
+
+        def search(name, kind):
+            if name == "Ccc":
+                raise MusicBrainzBusy("musicbrainz: HTTP 503 after 4 tries")
+            return original(name, kind)
+
+        mb.search_artists = search
+        output, _ = self.daily(mb=mb)
+        self.assertIn("stopping this run", output)
+        done = set(Band.objects.filter(musicbrainz_checked_at__isnull=False).values_list("name", flat=True))
+        self.assertEqual(done, {"Aaa", "Bbb"})
+        _, mb = self.daily()
+        self.assertEqual([c[1] for c in mb.calls if c[0] == "search"], ["Ccc", "Ddd"])
+
+    def test_a_record_held_for_review_is_looked_up_and_stays_hidden(self):
+        band = Band.objects.create(name="Speedy Ortiz", needs_review=True, review_reasons=["several"])
+        self.assertEqual(self.client.get(f"/bands/{band.slug}").status_code, 404)
+        self.daily()
+        band.refresh_from_db()
+        self.assertEqual(band.musicbrainz_id, SPEEDY_ORTIZ)
+        self.assertTrue(band.needs_review)
+        self.assertEqual(self.client.get(f"/bands/{band.slug}").status_code, 404)
+
+
 class WikipediaClientTestCase(SimpleTestCase):
     def test_requests_user_agent_and_pace(self):
         wikipedia, session = fake_wikipedia()
@@ -508,3 +596,84 @@ class PhotoAndSocialEnrichmentTestCase(TestCase):
         stored = json.dumps(Band.objects.filter(pk=band.pk).values().get(), default=str)
         self.assertNotIn("upload.wikimedia.org", stored)
         self.assertNotIn("http", band.photo_file)
+
+
+class LinkHubEnrichmentTestCase(TestCase):
+    """the link-hub address and the links a hub filled, through enrichment"""
+
+    def enrich(self, band, relations, **wikipedia):
+        return PhotoAndSocialEnrichmentTestCase.enrich(self, band, relations, **wikipedia)
+
+    def test_a_hub_address_from_musicbrainz(self):
+        band = self.enrich(Band.objects.create(name="Krill"), [url_rel("free streaming", "https://beacons.ai/krillband")])
+        self.assertEqual(band.link_hub_url, "https://beacons.ai/krillband")
+        self.assertEqual(band.field_sources["link_hub_url"], "musicbrainz")
+
+    def test_a_hub_link_among_several_links(self):
+        band = self.enrich(Band.objects.create(name="Krill"), [
+            url_rel("social network", "https://www.facebook.com/krill"),
+            url_rel("social network", "https://linktr.ee/krill"),
+        ])
+        self.assertEqual(band.link_hub_url, "https://linktr.ee/krill")
+        self.assertEqual(band.instagram_url, "")
+
+    def test_links_reads_a_hub_of_any_relation_type(self):
+        found = links({"relations": [url_rel("free streaming", "https://linktr.ee/krill"), url_rel("other databases", "https://example.com/x")]})
+        self.assertEqual(found, {"link_hub_url": "https://linktr.ee/krill"})
+
+    def test_a_page_that_is_not_a_hub_page_is_not_kept(self):
+        self.assertEqual(links({"relations": [url_rel("social network", "https://linktr.ee/")]}), {})
+
+    def test_an_editors_address_is_kept(self):
+        band = Band.objects.create(name="Krill", link_hub_url="https://linktr.ee/editors", field_sources={"link_hub_url": "editor"})
+        band = self.enrich(band, [url_rel("social network", "https://beacons.ai/krillband")])
+        self.assertEqual((band.link_hub_url, band.field_sources["link_hub_url"]), ("https://linktr.ee/editors", "editor"))
+
+    def test_a_copy_of_the_website_is_kept(self):
+        band = Band.objects.create(name="Krill", link_hub_url="https://linktr.ee/krill", field_sources={"link_hub_url": "import"})
+        band = self.enrich(band, [url_rel("social network", "https://beacons.ai/krillband")])
+        self.assertEqual(band.link_hub_url, "https://linktr.ee/krill")
+
+    def test_musicbrainzs_own_address_is_replaced_and_dropped_with_its_link(self):
+        band = self.enrich(Band.objects.create(name="Krill"), [url_rel("social network", "https://linktr.ee/old")])
+        band.musicbrainz_checked_at = None
+        band = self.enrich(band, [url_rel("social network", "https://linktr.ee/new")])
+        self.assertEqual(band.link_hub_url, "https://linktr.ee/new")
+        band = self.enrich(band, [])
+        self.assertEqual((band.link_hub_url, "link_hub_url" in band.field_sources), ("", False))
+
+    def hub_filled(self, **fields):
+        urls = {
+            "instagram_url": "https://www.instagram.com/hubfill/", "youtube_url": "https://www.youtube.com/@hubfill",
+            "website": "https://hubfill.example.com", "bandcamp_url": "https://hubfill.bandcamp.com",
+        }
+        return Band.objects.create(name="Anamanaguchi", **urls, field_sources={name: "link hub" for name in urls}, **fields)
+
+    def test_enrichment_keeps_a_hub_fill(self):
+        band = self.enrich(self.hub_filled(), [url_rel("wikidata", "https://www.wikidata.org/wiki/Q892329")])
+        self.assertEqual(
+            (band.instagram_url, band.youtube_url, band.website, band.bandcamp_url),
+            ("https://www.instagram.com/hubfill/", "https://www.youtube.com/@hubfill", "https://hubfill.example.com", "https://hubfill.bandcamp.com"),
+        )
+        self.assertEqual({band.field_sources[n] for n in ("instagram_url", "youtube_url", "website", "bandcamp_url")}, {"link hub"})
+
+    def test_a_hub_fill_is_replaced_by_musicbrainz(self):
+        band = self.enrich(self.hub_filled(), [
+            url_rel("social network", "https://www.instagram.com/from_musicbrainz/"),
+            url_rel("youtube", "https://www.youtube.com/channel/UCmusicbrainz"),
+            url_rel("official homepage", "https://musicbrainz.example.com/"),
+            url_rel("bandcamp", "https://musicbrainz.bandcamp.com/"),
+        ])
+        self.assertEqual(
+            (band.instagram_url, band.youtube_url, band.website, band.bandcamp_url),
+            ("https://www.instagram.com/from_musicbrainz/", "https://www.youtube.com/channel/UCmusicbrainz", "https://musicbrainz.example.com/", "https://musicbrainz.bandcamp.com/"),
+        )
+        self.assertEqual({band.field_sources[n] for n in ("instagram_url", "youtube_url", "website", "bandcamp_url")}, {"musicbrainz"})
+
+    def test_a_hub_fill_is_replaced_by_wikidata(self):
+        band = self.enrich(self.hub_filled(), [url_rel("wikidata", "https://www.wikidata.org/wiki/Q485416")])
+        self.assertEqual(band.instagram_url, "https://www.instagram.com/anamanaguchi_official/")
+        self.assertEqual(band.youtube_url, "https://www.youtube.com/channel/UCtdPSQIDsZyhq3L7kITrKoA")
+        self.assertEqual((band.field_sources["instagram_url"], band.field_sources["youtube_url"]), ("wikidata", "wikidata"))
+        # the website and bandcamp link are musicbrainz's to give, not wikidata's
+        self.assertEqual(band.field_sources["website"], "link hub")

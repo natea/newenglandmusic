@@ -24,6 +24,7 @@ from django.utils import timezone
 from core.artist_evidence import covered_places, shares_name
 from core.artist_matching import normalize
 from core.artists import is_bandcamp_url
+from core.link_hubs import LINK_HUB, clean_hub_url
 from core.models import Artist, Band, BandMembership, MusicAct
 from core.wikipedia import WikipediaError
 
@@ -35,7 +36,7 @@ TYPES = {Artist: {"Person"}, Band: {"Group", "Orchestra", "Choir"}}
 SEARCH_TYPES = {Artist: "person", Band: "group"}
 # musicbrainz's member attributes that aren't a role
 NOT_ROLES = {"original", "additional", "founder", "minor", "guest"}
-# url relationship types -> how each is kept
+# url relationship types -> how each is kept (a link hub's address is kept under any type)
 URL_TYPES = ("official homepage", "bandcamp", "wikidata", "discogs", "social network", "youtube", "video channel")
 SOCIAL_FIELDS = ("instagram_url", "youtube_url")
 PHOTO_FIELDS = ("photo_file", "photo_author", "photo_license", "photo_license_url")
@@ -132,13 +133,18 @@ def host(url):
 
 def links(details):
     """
-    {"website", "bandcamp_url", "wikidata_id", "discogs_url", "instagram_url", "youtube_url"}
-    from the url relationships
+    {"website", "bandcamp_url", "wikidata_id", "discogs_url", "instagram_url", "youtube_url",
+    "link_hub_url"} from the url relationships
     """
     found = {}
     for relation in details.get("relations") or []:
         kind, url = relation.get("type"), ((relation.get("url") or {}).get("resource")) or ""
-        if relation.get("target-type") != "url" or kind not in URL_TYPES or relation.get("ended"):
+        if relation.get("target-type") != "url" or relation.get("ended"):
+            continue
+        hub_address = clean_hub_url(url)
+        if hub_address:
+            found.setdefault("link_hub_url", hub_address)
+        if kind not in URL_TYPES:
             continue
         if kind == "official homepage":
             found.setdefault("website", url)
@@ -193,18 +199,31 @@ def apply_details(record, details, status):
     # instagram and youtube: musicbrainz's, unless an editor set them (wikidata's come later,
     # where musicbrainz has none)
     for name in SOCIAL_FIELDS:
-        if record.field_sources.get(name) == "editor":
+        source = record.field_sources.get(name)
+        # a link the record's hub filled stays unless musicbrainz has one of its own
+        if source == "editor" or (source == LINK_HUB and not found.get(name)):
             continue
         setattr(record, name, found.get(name, ""))
         if found.get(name):
             record.field_sources[name] = MUSICBRAINZ
         else:
             record.field_sources.pop(name, None)
-    # the record's own website and bandcamp link stay; musicbrainz's fill only empty ones
+    # the record's own website and bandcamp link stay; musicbrainz's fill only empty ones,
+    # or ones its own or the link hub's
     for name in ("website", "bandcamp_url"):
-        if found.get(name) and (not getattr(record, name) or record.field_sources.get(name) == MUSICBRAINZ):
+        if found.get(name) and (not getattr(record, name) or record.field_sources.get(name) in (MUSICBRAINZ, LINK_HUB)):
             setattr(record, name, found[name])
             record.field_sources[name] = MUSICBRAINZ
+    # the link hub's address: musicbrainz's fills an empty one or replaces its own, never an
+    # editor's or the import's copy of the website
+    hub_source = record.field_sources.get("link_hub_url")
+    if not record.link_hub_url or hub_source == MUSICBRAINZ:
+        if found.get("link_hub_url"):
+            record.link_hub_url = found["link_hub_url"]
+            record.field_sources["link_hub_url"] = MUSICBRAINZ
+        elif hub_source == MUSICBRAINZ:
+            record.link_hub_url = ""
+            record.field_sources.pop("link_hub_url", None)
 
 
 def member_artist(band, member):
@@ -278,7 +297,7 @@ def add_introduction(record, wikipedia, problems):
     for name in SOCIAL_FIELDS:
         source = record.field_sources.get(name)
         value = (entity or {}).get(name.removesuffix("_url"), "")
-        if source in ("editor", MUSICBRAINZ):
+        if source in ("editor", MUSICBRAINZ) or (source == LINK_HUB and not value):
             continue
         setattr(record, name, value)
         if value:
