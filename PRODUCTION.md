@@ -52,7 +52,7 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 - **`DEFAULT_FROM_EMAIL`:** the sender of outgoing email.
   - Submission emails go out through Amazon SES, so this must be an address verified in SES.
   - They also need `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
-- **`PROTOMAPS_API_KEY`:** the home page's maps. In your Protomaps account, restrict it to your domain. `MAP_CENTER_LATITUDE`, `MAP_CENTER_LONGITUDE` and `MAP_ZOOM` set where the maps start.
+- **`PROTOMAPS_API_KEY`:** the home page's maps. In your Protomaps account, restrict it to your domain: its CORS origins list each address the pages are served from (now `https://stagehopper.app`), and the day maps are blank anywhere else. `MAP_CENTER_LATITUDE`, `MAP_CENTER_LONGITUDE` and `MAP_ZOOM` set where the maps start.
 - **`GOOGLE_ANALYTICS_ID`, `GOATCOUNTER_CODE`:** analytics. Each one loads only when it is set.
 
 ## The web process

@@ -46,8 +46,13 @@
 
 ## 5. The switch (Nate, in the dashboards, around the merge)
 
-- [ ] 5.1 Do the steps in `design.md` decision 7, in order: check `SITE_NAME` isn't set and set `SITE_URL` to the onrender address before the merge; deploy, check the blueprint sync, resave and check no static page at `/boston/` or `/nyc/`; add Render's custom domain; verify the domain with GitHub, add `info`, and allow it for Mapbox, PostHog and Datadog; move the landing page; point the apex's A records and www at Render; set `CANONICAL_HOST` and `SITE_URL`, then press Manual Sync for the jobs.
-- [ ] 5.2 Live check:
+- [x] 5.1 Do the steps in `design.md` decision 7, in order: check `SITE_NAME` isn't set and set `SITE_URL` to the onrender address before the merge; deploy, check the blueprint sync, resave and check no static page at `/boston/` or `/nyc/`; add Render's custom domain; verify the domain with GitHub, add `info`, and allow it for Mapbox, PostHog and Datadog; move the landing page; point the apex's A records and www at Render; set `CANONICAL_HOST` and `SITE_URL`, then press Manual Sync for the jobs.
+
+  Done by Nate on 12 November 2026. Notes:
+  - Nate skipped the Mapbox, PostHog and Datadog origins; only the landing page's old Tech Week pages use them.
+  - Not in the plan: the site's own Protomaps key allows only listed CORS origins, so `https://stagehopper.app` was added to it after the day maps went blank.
+  - www already had a CNAME to GitHub Pages; it was edited rather than added.
+- [x] 5.2 Live check:
   - https://stagehopper.app shows "StageHopper" with the tagline;
   - www and the onrender address redirect;
   - `/health` answers on the onrender address;
@@ -56,4 +61,10 @@
   - nola., nolajazzfest. and worldcup.stagehopper.app still load;
   - admin login works at the new address;
   - a scheduled job's user agent names https://stagehopper.app (from its next run's log, or a one-off run).
+
+  All passed on 12 November 2026, with two notes:
+  - worldcup.stagehopper.app shows Render's "Service Suspended" page. That service was suspended separately; its DNS is untouched.
+  - The jobs don't print their user agent, so this was checked by both cron jobs showing `SITE_URL=https://stagehopper.app` after the Manual Sync.
 - [ ] 5.3 Add `https://stagehopper.app/…` to Spotify's redirect URIs alongside the existing ones, and update the unmerged `add-spotify-followed-artists` change to use `SITE_URL`.
+
+  Left open: it goes with `add-spotify-followed-artists`, which isn't merged.
