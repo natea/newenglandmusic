@@ -55,6 +55,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # other hosts and the landing page's old paths, before whitenoise serves anything
+    "core.middleware.CanonicalHostMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -228,12 +230,18 @@ META_USE_TITLE_TAG = True
 SITE_URL = (
     os.environ.get("SITE_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "http://localhost:8001"
 ).rstrip("/")
-# the site's name: the calendar feeds' names ("New England Music: Vermont"; see
-# core/calendar_feeds.py) and the "install" banner on iphones (base.html)
-SITE_NAME = os.environ.get("SITE_NAME") or "New England Music"
-# the part after "@" in each show's calendar UID. keep it fixed: changing it after people
-# subscribe makes their calendars show every show twice
-UID_DOMAIN = os.environ.get("UID_DOMAIN") or "newenglandmusic"
+# the site's name: the masthead, page titles and link previews, the admin's header, the
+# calendar feeds' names ("StageHopper: Vermont"; see core/calendar_feeds.py), each event's
+# calendar entry, the privacy and terms pages, and the "install" banner on iphones
+SITE_NAME = os.environ.get("SITE_NAME") or "StageHopper"
+# the line under the name in the masthead; blank or spaces hide it
+SITE_TAGLINE = os.environ.get("SITE_TAGLINE", "Live music across New England")
+# the part after "@" in each show's calendar UID. keep it fixed once people subscribe:
+# changing it makes their calendars show every show twice
+UID_DOMAIN = os.environ.get("UID_DOMAIN") or "stagehopper"
+# the host every other host redirects to (core/middleware.py), set only in production
+# (stagehopper.app); empty, the default, redirects nothing, so tests and development don't
+CANONICAL_HOST = os.environ.get("CANONICAL_HOST", "").strip().lower()
 META_SITE_PROTOCOL = urlparse(SITE_URL).scheme
 META_SITE_DOMAIN = urlparse(SITE_URL).netloc
 META_SITE_TYPE = "website"

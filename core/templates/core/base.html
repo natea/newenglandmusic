@@ -150,7 +150,8 @@
                       <a href="javascript:;" onclick="toggleBurgerMenuContents()">☰</a>
                   </div>
                   <div class='leftColumn'>
-                      <a href="/"><h1>New England Music</h1></a>
+                      <a href="/"><h1>{{ site_name }}</h1></a>
+                      {% if site_tagline %}<p class="tagline">{{ site_tagline }}</p>{% endif %}
                   </div>
                   <div class='rightColumn'>
                       <div>
@@ -201,7 +202,7 @@
             {% for menu_item in all_footer_menu_items %}
               <a href="{{ menu_item.url }}">{{ menu_item.name }}</a> |
             {% endfor %}
-            <a href="/privacy">Privacy</a>
+            <a href="/privacy">Privacy</a> | <a href="/terms">Terms</a>
             {# venues' neighborhoods come from openstreetmap, whose license (odbl) asks for this credit #}
             | <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>
           </div>

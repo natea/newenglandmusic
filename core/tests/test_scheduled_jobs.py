@@ -150,13 +150,15 @@ class RenderConfigurationTestCase(SimpleTestCase):
                 "APPLE_MUSIC_PREVIEWS",
                 "YOUTUBE_API_KEY",
                 "API_CONTACT_EMAIL",
+                # the contact address in the api clients' user agent
+                "SITE_URL",
                 "YOUTUBE_PREVIEWS",
                 "LASTFM_API_KEY",
             },
         )
         self.assertEqual(
             self.keys_from_web(weekly),
-            {"DJANGO_SECRET_KEY", "TICKETMASTER_API_KEY", "EVENTBRITE_API_KEY", "SEATGEEK_CLIENT_ID", "API_CONTACT_EMAIL"},
+            {"DJANGO_SECRET_KEY", "TICKETMASTER_API_KEY", "EVENTBRITE_API_KEY", "SEATGEEK_CLIENT_ID", "API_CONTACT_EMAIL", "SITE_URL"},
         )
         for job in (daily, weekly):
             database = next(var for var in job["envVars"] if var["key"] == "DATABASE_URL")

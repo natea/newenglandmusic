@@ -18,7 +18,7 @@ def summaries(response):
 
 
 # the defaults, whatever SITE_NAME and UID_DOMAIN a developer's .env sets
-DEFAULTS = override_settings(SITE_NAME="New England Music", UID_DOMAIN="newenglandmusic")
+DEFAULTS = override_settings(SITE_NAME="StageHopper", UID_DOMAIN="stagehopper")
 
 
 @DEFAULTS
@@ -35,7 +35,7 @@ class SingleEventDownloadTestCase(TestCase):
 
     def test_uid_doesnt_depend_on_the_sites_address(self):
         with self.settings(SITE_URL="https://newenglandmusic.example"):
-            self.assertEqual(event_uid(self.event), f"event-{self.event.pk}@newenglandmusic")
+            self.assertEqual(event_uid(self.event), f"event-{self.event.pk}@stagehopper")
 
     def test_uid_domain_from_the_settings(self):
         with self.settings(UID_DOMAIN="boston-shows"):
@@ -81,13 +81,13 @@ class FeedTestCase(TestCase):
         response = self.client.get("/calendar.ics?state=" + self.slug("Vermont"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/calendar; charset=utf-8")
-        self.assertEqual(summaries(response), ["burlington show [New England Music]"])
+        self.assertEqual(summaries(response), ["burlington show [StageHopper]"])
 
     def test_metro_feed(self):
         self.show("boston show", "Boston")
         self.show("cape show", "Hyannis")
         response = self.client.get("/calendar.ics?metro=" + self.slug("MA: Boston"))
-        self.assertEqual(summaries(response), ["boston show [New England Music]"])
+        self.assertEqual(summaries(response), ["boston show [StageHopper]"])
 
     def test_whole_northeast(self):
         for city in ("Boston", "Hyannis", "Burlington", "Providence"):
@@ -98,7 +98,7 @@ class FeedTestCase(TestCase):
         self.show("burlington show", "Burlington")
         self.client.cookies[GEO_COOKIE] = "state=" + self.slug("Massachusetts")
         response = self.client.get("/calendar.ics?state=" + self.slug("Vermont"))
-        self.assertEqual(summaries(response), ["burlington show [New England Music]"])
+        self.assertEqual(summaries(response), ["burlington show [StageHopper]"])
         self.assertNotIn(GEO_COOKIE, response.cookies)
 
     def test_unknown_area(self):
@@ -124,22 +124,29 @@ class FeedTestCase(TestCase):
             self.show(f"day {days}", "Boston", days=days)
         self.assertEqual(
             summaries(self.client.get("/calendar.ics")),
-            ["day -2 [New England Music]", "day 30 [New England Music]"],
+            ["day -2 [StageHopper]", "day 30 [StageHopper]"],
         )
 
     def test_unapproved_event_left_out(self):
         self.show("waiting", "Boston", is_approved=False)
         self.show("approved", "Boston")
-        self.assertEqual(summaries(self.client.get("/calendar.ics")), ["approved [New England Music]"])
+        self.assertEqual(summaries(self.client.get("/calendar.ics")), ["approved [StageHopper]"])
 
     def test_calendar_name_and_refresh(self):
         response = self.client.get("/calendar.ics?metro=" + self.slug("MA: Cape Cod"))
         cal = parse(response)
-        self.assertEqual(str(cal["X-WR-CALNAME"]), "New England Music: MA: Cape Cod")
+        self.assertEqual(str(cal["X-WR-CALNAME"]), "StageHopper: MA: Cape Cod")
         text = response.content.decode()
         self.assertIn("REFRESH-INTERVAL;VALUE=DURATION:PT6H", text)
         self.assertIn("X-PUBLISHED-TTL:PT6H", text)
-        self.assertEqual(str(parse(self.client.get("/calendar.ics"))["X-WR-CALNAME"]), "New England Music")
+        self.assertEqual(str(parse(self.client.get("/calendar.ics"))["X-WR-CALNAME"]), "StageHopper")
+
+    def test_default_names(self):
+        # the defaults themselves are pinned in test_site_identity.DefaultsTestCase
+        response = self.client.get("/calendar.ics?state=" + self.slug("Vermont"))
+        self.assertEqual(str(parse(response)["X-WR-CALNAME"]), "StageHopper: Vermont")
+        event = Event.objects.create(title="default names", starttime=self.now + timedelta(days=1))
+        self.assertEqual(event_uid(event), f"event-{event.pk}@stagehopper")
 
     def test_calendar_name_from_the_settings(self):
         with self.settings(SITE_NAME="Boston Shows"):
@@ -161,7 +168,7 @@ class FeedTestCase(TestCase):
         self.show("new show", "Boston", days=4)
         again = self.client.get("/calendar.ics", HTTP_IF_NONE_MATCH=first["ETag"])
         self.assertEqual(again.status_code, 200)
-        self.assertIn("new show [New England Music]", summaries(again))
+        self.assertIn("new show [StageHopper]", summaries(again))
         self.assertNotEqual(again["ETag"], first["ETag"])
 
 

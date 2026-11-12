@@ -19,8 +19,8 @@ def maps(request):
 
 
 def site(request):
-    """the site's name from .env (SITE_NAME), for text that names the site"""
-    return {"site_name": settings.SITE_NAME}
+    """the site's name and tagline from .env (SITE_NAME, SITE_TAGLINE), for text that names the site"""
+    return {"site_name": settings.SITE_NAME, "site_tagline": settings.SITE_TAGLINE.strip()}
 
 
 def contact(request):

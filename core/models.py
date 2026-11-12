@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVectorField
@@ -252,7 +253,7 @@ class Event(models.Model):
     @property
     def calendar_name(self):
         """the event name to show on calendars"""
-        return f"{self.title_and_artists} [New England Music]"
+        return f"{self.title_and_artists} [{settings.SITE_NAME}]"
 
     def __str__(self):
         return self.title_and_artists

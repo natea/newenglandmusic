@@ -1,4 +1,4 @@
-# Deploying New England Music
+# Deploying StageHopper
 
 How to run this site in production. For running it locally, see `AGENTS.md`.
 
@@ -84,21 +84,18 @@ gunicorn nycnoise.wsgi:application
 `render.yaml` is a Render Blueprint for the web service and its Postgres database, in the Virginia region. It doesn't include the scheduled jobs yet; see [Before the jobs can run on a server](#before-the-jobs-can-run-on-a-server).
 
 - **What deploys:** Render deploys `main` from the GitHub repo [natea/newenglandmusic](https://github.com/natea/newenglandmusic), and only once CI has passed on that commit (`autoDeployTrigger: checksPass`). `origin` is the upstream nyc noise repo; never deploy from or push to it.
-- **Plans:** $7 a month for the web service; the database is still free.
+- **Plans:** $7 a month for the web service and $6 a month (plus storage) for the database.
   - **Web service:** `0.5c-512mb` ($7 a month), with two gunicorn workers.
     - It stays awake. The `free` plan slept after 15 minutes without visitors and took about a minute to wake.
     - It has a Shell tab for one-off commands, which can also run from your machine (see below).
-  - **Database:** `free`, with these limits:
-    - It expires 30 days after it's created, and Render deletes it 14 days after that.
-    - It has no backups and holds 1 GB (the data is about 20 MB).
-    - Only one free database is allowed per workspace.
-  - **Keeping the data:** before the 30 days are up, either upgrade the database to a paid plan in the dashboard (it keeps its data, and `0.1c-256mb` is $10.50 a month), or dump it and restore into a new one. Until then, take your own dumps: `pg_dump --format=custom "<External Database URL>" > prod-YYYY-MM-DD.dump`.
+  - **Database:** `0.1c-256mb` ($6 a month for compute, plus storage), upgraded from `free` on 11 November 2026, since free databases are deleted after 30 days and have no backups. `render.yaml`'s `plan` must stay the dashboard's name for it, or a blueprint sync tries to change it. The data is about 20 MB.
+  - **Backups:** the paid plan has point-in-time recovery for a limited window. Take your own dumps too, before any risky change, with a `pg_dump` of version 17 or newer (the database is Postgres 17; on a Mac with Homebrew, `/opt/homebrew/opt/postgresql@17/bin/pg_dump`): `pg_dump --format=custom "<External Database URL>" > prod-YYYY-MM-DD.dump`. Check a dump by restoring it into a local scratch database (`createdb nem_scratch && pg_restore --no-owner --dbname nem_scratch prod-YYYY-MM-DD.dump`), never into the External Database URL. Keep dumps out of the repository: they hold admin password hashes.
 - **Settings Render fills in:**
   - `DJANGO_SECRET_KEY` is generated.
   - `DATABASE_URL` comes from the database.
   - The service's `onrender.com` hostname is added to `ALLOWED_HOSTS` automatically.
   - Its URL is used as `SITE_URL` when that's blank.
-- **Settings you're asked for when creating the Blueprint:** `ALLOWED_HOSTS` and `SITE_URL` (leave both blank until there's a custom domain), `PROTOMAPS_API_KEY`, `CONTACT_EMAIL` and `GOATCOUNTER_CODE`. All are optional.
+- **Settings you're asked for when creating the Blueprint:** `ALLOWED_HOSTS`, `SITE_URL` and `CANONICAL_HOST` (blank until there's a custom domain; but `SITE_URL` must be set, to the onrender address if nothing else, because the scheduled jobs take it from the web service, see below), `PROTOMAPS_API_KEY`, `CONTACT_EMAIL` and `GOATCOUNTER_CODE`. All are optional.
 
 **First deploy:**
 1. In the Render dashboard, choose **New > Blueprint**, connect the GitHub repo and apply `render.yaml`.
@@ -138,7 +135,12 @@ DATABASE_URL="<External Database URL>" DJANGO_SETTINGS_MODULE=nycnoise.settings.
 
 **Staff accounts without superuser access.** Every `migrate` keeps a group named `admin` holding every permission on the site's own records (events, venues, artists, bands, job runs and the rest of `core`) and none on users, groups or sites (`core/admin_group.py`). To give someone an account, sign in as a superuser, add them at `/admin/auth/user/add/`, then tick **Staff status**, leave **Superuser status** off, and choose the `admin` group. They can edit the site's records but can't add accounts or change anyone's access, their own included.
 
-**A custom domain:** add it under the service's **Settings > Custom Domains**, then set `ALLOWED_HOSTS` to the domain and `SITE_URL` to `https://` plus the domain. The next deploy's `migrate` updates Django's Sites record to match (`core/site_record.py`); it's read-only in the admin, since it always follows `SITE_URL` and `SITE_NAME`.
+**The address: stagehopper.app.** The site is served at https://stagehopper.app, a custom domain on the web service (Render adds www and redirects it to the apex). `prod.py` already allows stagehopper.app and www.stagehopper.app, so `ALLOWED_HOSTS` needs only other domains. Two settings on the web service finish it:
+
+- `SITE_URL=https://stagehopper.app`: share links, the sitemap, the calendar feeds' links, and the contact address the API clients send. The scheduled jobs take it from the web service, so press **Manual Sync** on the blueprint after changing it.
+- `CANONICAL_HOST=stagehopper.app`: switches on `core/middleware.py`. Any other host (www, newenglandmusic.onrender.com) is redirected permanently to the same path at `SITE_URL` (301, or 308 for a form), except `/health`, Render's health check. The landing page's old paths at stagehopper.app (its `.html`, `.json` and `.geojson` files, `og*.png`, `/boston/`, `/nyc/`) go to the same path at https://info.stagehopper.app, where StageHopper's landing page now lives (natea/twag, `docs/`). Clearing `CANONICAL_HOST` turns all redirects off with one redeploy.
+
+DNS is in Cloudflare, DNS only: the apex's A records and www point at Render; `info` is a CNAME to natea.github.io; the MX and SPF records are Cloudflare's email routing; nola., nolajazzfest. and worldcup. are other sites. The steps of the move from newenglandmusic.onrender.com are in `openspec/changes/rename-to-stagehopper/design.md` (decision 7). Each deploy's `migrate` updates Django's Sites record to match `SITE_URL` and `SITE_NAME` (`core/site_record.py`).
 
 ## Scheduled jobs
 

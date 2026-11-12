@@ -9,6 +9,12 @@ DEBUG = False
 if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
     ALLOWED_HOSTS.append(os.environ["RENDER_EXTERNAL_HOSTNAME"])
 
+# the site's address (see PRODUCTION.md), accepted from the first deploy, before DNS points
+# here, so the switch has no moment when django refuses the new hosts
+for host in ("stagehopper.app", "www.stagehopper.app"):
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
+
 # the host's proxy ends https and forwards plain http: without this, django
 # thinks every request is insecure and refuses admin logins (csrf origin check)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

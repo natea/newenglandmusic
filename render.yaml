@@ -3,10 +3,10 @@
 databases:
   - name: newenglandmusic
     databaseName: newenglandmusic
-    # free: expires 30 days after creation and is deleted 14 days later, with no
-    # backups. upgrade it to a paid plan in place (data kept) before then, or
-    # restore a dump into a new one; see PRODUCTION.md
-    plan: free
+    # 0.1c-256mb ($6/month for compute, plus storage): upgraded from free on 11 nov 2026,
+    # since free databases are deleted after 30 days and have no backups. keep this the
+    # dashboard's name for the plan, or a blueprint sync tries to change it
+    plan: 0.1c-256mb
     # closest region to the venues (the northeast)
     region: virginia
     postgresMajorVersion: "17"
@@ -25,7 +25,8 @@ services:
     # also runs the migrations, so a failed migration fails the build
     buildCommand: ./bin/build.sh
     startCommand: 'gunicorn --access-logformat ''%(h)s %(l)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" reqtime: %(M)s ms'' nycnoise.wsgi:application'
-    healthCheckPath: /
+    # answers without the database, at any host, as the redirect leaves it alone
+    healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.14
@@ -124,6 +125,13 @@ services:
           type: web
           name: newenglandmusic
           envVarKey: DJANGO_SECRET_KEY
+      # the address the jobs' api clients give as their contact (core/user_agent.py); the
+      # web service must have SITE_URL set, or the blueprint sync fails (PRODUCTION.md)
+      - key: SITE_URL
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: SITE_URL
       - key: GOOGLE_SERVICE_ACCOUNT_JSON
         fromService:
           type: web
@@ -248,6 +256,13 @@ services:
           type: web
           name: newenglandmusic
           envVarKey: DJANGO_SECRET_KEY
+      # the address the jobs' api clients give as their contact (core/user_agent.py); the
+      # web service must have SITE_URL set, or the blueprint sync fails (PRODUCTION.md)
+      - key: SITE_URL
+        fromService:
+          type: web
+          name: newenglandmusic
+          envVarKey: SITE_URL
       - key: TICKETMASTER_API_KEY
         fromService:
           type: web
