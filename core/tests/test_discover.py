@@ -124,13 +124,55 @@ class DeckTestCase(DiscoverTestCase):
         self.assertEqual(self.names(self.page()), ["Belly"])
         self.assertEqual(self.client.cookies["geo_filter"].value, "vt")
 
-    def test_a_random_order_each_visit_which_tests_can_fix(self):
-        for n, act in enumerate((self.belly, self.anjimile)):
-            show(act, days(n + 1), self.lupo)
+    def order(self):
+        return [card.act.name for card in self.page().context["cards"]]
+
+    def test_imminent_acts_come_first(self):
+        frankie = Band.objects.create(name="Frankie Cosmos")
+        for act, n in ((frankie, 150), (self.anjimile, 21), (self.belly, 1)):
+            show(act, days(n), self.lupo)
+        self.assertEqual(self.order(), ["Belly", "Anjimile", "Frankie Cosmos"])
+
+    def test_the_next_show_decides_not_the_last(self):
+        show(self.anjimile, days(150), self.lupo)
+        show(self.anjimile, days(1), self.lupo)
+        show(self.belly, days(21), self.lupo)
+        self.assertEqual(self.order(), ["Anjimile", "Belly"])
+
+    def test_the_same_day_order_is_the_shuffles(self):
+        for act in (self.belly, self.anjimile):
+            show(act, days(2), self.lupo)
+        show(Band.objects.create(name="Later"), days(9), self.lupo)
         with mock.patch("core.views.discover.random.shuffle", lambda cards: cards.sort(key=lambda c: c.act.name)):
-            self.assertEqual([c.act.name for c in self.page().context["cards"]], ["Anjimile", "Belly"])
+            self.assertEqual(self.order(), ["Anjimile", "Belly", "Later"])
         with mock.patch("core.views.discover.random.shuffle", lambda cards: cards.sort(key=lambda c: c.act.name, reverse=True)):
-            self.assertEqual([c.act.name for c in self.page().context["cards"]], ["Belly", "Anjimile"])
+            self.assertEqual(self.order(), ["Belly", "Anjimile", "Later"])
+
+    def test_the_day_is_the_new_york_day_not_the_utc_one(self):
+        from datetime import datetime, timezone as utc
+
+        # 9 pm in New York on one day is 02:00 UTC the next: the same New York day as 6 pm
+        # that day, so the two are shuffled together, though a UTC day would split them
+        evening = datetime(2099, 1, 15, 2, 0, tzinfo=utc.utc)
+        earlier = datetime(2099, 1, 14, 23, 0, tzinfo=utc.utc)
+        show(self.belly, evening, self.lupo)
+        show(self.anjimile, earlier, self.lupo)
+        with mock.patch("core.views.discover.random.shuffle", lambda cards: cards.sort(key=lambda c: c.act.name)):
+            self.assertEqual(self.order(), ["Anjimile", "Belly"])
+        with mock.patch("core.views.discover.random.shuffle", lambda cards: cards.sort(key=lambda c: c.act.name, reverse=True)):
+            self.assertEqual(self.order(), ["Belly", "Anjimile"])
+
+    def test_the_order_queries_do_not_grow(self):
+        def add(n):
+            show(Band.objects.create(name=f"Act {n}"), days(30 - n), venue(f"Venue {n}", sheet_id=f"O{n}"))
+
+        add(0)
+        with CaptureQueriesContext(connection) as queries:
+            self.page()
+        for n in range(1, 8):
+            add(n)
+        with self.assertNumQueries(len(queries)):
+            self.page()
 
     def test_not_cached(self):
         cache_control = self.page()["Cache-Control"]

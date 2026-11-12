@@ -1,15 +1,17 @@
 """
 the band discovery deck at /discover (add-band-discovery-swipe): one card for each live band
 or artist with an upcoming approved show and something to play (a YouTube, Apple Music or
-Spotify match), in a random order for each visit, which core/static/
-core/js/discover.js swipes through. every card is rendered into the page, with its shows, so
-the picker needs no request and the page works without javascript as a list of cards.
+Spotify match), ordered by each act's next show, soonest first, with a random order only among
+acts playing the same New York day. core/static/core/js/discover.js swipes through it. every
+card is rendered into the page, with its shows, so the picker needs no request and the page
+works without javascript as a list of cards.
 
 the deck ignores the remembered area filter, as /saved does, and never changes it.
 """
 
 import random
 from dataclasses import dataclass, field
+from itertools import groupby
 
 from django.conf import settings
 from django.shortcuts import render
@@ -23,7 +25,7 @@ from core.location import location_from_request
 from core.models import Band, Event, EventPerformer
 from core.opengraph import get_meta
 from core.saved_shows import COOKIE_NAME, parse_saved
-from core.utils_datemath import beginning_of_day, get_current_new_york_datetime
+from core.utils_datemath import NYCTZ, beginning_of_day, get_current_new_york_datetime
 
 
 @dataclass
@@ -102,10 +104,24 @@ def deck_cards(request):
     return [card for card in cards if card.previews]
 
 
+def order_deck(cards):
+    """
+    soonest next show first. cards whose next show falls on the same new york calendar day are
+    shuffled among themselves, for variety; the day is the new york one, so a late show doesn't
+    land on the next utc day. each card's first show is its next, as the shows come in order
+    """
+    cards = sorted(cards, key=lambda card: card.next_show.starttime)
+    ordered = []
+    for _, same_day in groupby(cards, key=lambda card: card.next_show.starttime.astimezone(NYCTZ).date()):
+        same_day = list(same_day)
+        random.shuffle(same_day)
+        ordered.extend(same_day)
+    return ordered
+
+
 @never_cache
 def discover(request):
-    cards = deck_cards(request)
-    random.shuffle(cards)
+    cards = order_deck(deck_cards(request))
     return render(
         request,
         "core/discover.html",

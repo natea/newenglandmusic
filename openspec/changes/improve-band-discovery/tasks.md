@@ -9,7 +9,7 @@ Archive `add-band-discovery-swipe` before this change, since this modifies its s
 
 ## 1b. Soonest first
 
-- [ ] 1.3 Replace the whole-deck `random.shuffle` in `core/views/discover.py` with an order by each card's next show (after the area filter), shuffling only within the same New York calendar day (convert `event.starttime` with the New York zone, `core/utils_datemath.py`), and update the module docstring. Verify with view tests for the four "ordered by each act's soonest show" scenarios (soonest first, next show not last show, order following a filter, same-day order varying with the shuffle patched, using a late-evening show at 03:00 UTC the next day to catch a UTC grouping bug), and an `assertNumQueries` bound that does not grow. Change `test_a_random_order_each_visit_which_tests_can_fix` and the browser fixture that patches `random.shuffle` to the same-day shuffle.
+- [x] 1.3 Replace the whole-deck `random.shuffle` in `core/views/discover.py` with an order by each card's next show (after the area filter), shuffling only within the same New York calendar day (convert `event.starttime` with the New York zone, `core/utils_datemath.py`), and update the module docstring. Verify with view tests for the four "ordered by each act's soonest show" scenarios (soonest first, next show not last show, order following a filter, same-day order varying with the shuffle patched, using a late-evening show at 03:00 UTC the next day to catch a UTC grouping bug), and an `assertNumQueries` bound that does not grow. Change `test_a_random_order_each_visit_which_tests_can_fix` and the browser fixture that patches `random.shuffle` to the same-day shuffle.
 
 ## 2. Area filters
 
