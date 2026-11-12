@@ -8,6 +8,7 @@ see core/tests/browser.py.
 
 import os
 from unittest import mock
+from urllib.parse import quote
 
 from core.models import Band
 from core.tests.apple_music_fixture import SWITCHED_ON as APPLE_ON
@@ -32,6 +33,11 @@ class DiscoverBrowserTestCase(BrowserTestCase):
         events = [show(band, days(3 + n), self.lupo, media=not services) for n in range(shows)]
         return band, events
 
+    def autoplay_src(self, video):
+        """the address of the deck's youtube player: autoplay, and the player API's switch and origin"""
+        origin = quote(self.live_server_url, safe="")
+        return f"https://www.youtube-nocookie.com/embed/{video}?autoplay=1&playsinline=1&enablejsapi=1&origin={origin}"
+
     def requests_to(self, *hosts):
         return [url for url in self.blocked if any(host in url for host in hosts)]
 
@@ -48,6 +54,21 @@ class PlayersAreNotRequestedUntilClickedTestCase(DiscoverBrowserTestCase):
         self.assertEqual(self.requests_to("apple.com", "youtube"), [])
 
 
+YOUTUBE_EMBED = "**/www.youtube-nocookie.com/embed/**"
+
+# what youtube's embed does, as far as the deck can tell: it records the commands it is sent and
+# the page's "listening" message, and says whatever the test makes it say (window.say)
+YOUTUBE_STUB = """<!doctype html><title>stub</title><script>
+window.commands = [];
+window.heard = [];
+window.addEventListener("message", function (e) {
+  const message = JSON.parse(e.data);
+  if (message.event === "command") { window.commands.push(message.func); } else { window.heard.push(message.event); }
+});
+window.say = function (message) { parent.postMessage(JSON.stringify(message), "*"); };
+</script>"""
+
+
 def by_name(cards):
     cards.sort(key=lambda card: card.act.name)
 
@@ -55,9 +76,24 @@ def by_name(cards):
 class DeckBrowserTestCase(DiscoverBrowserTestCase):
     """a deck in a fixed order: Anjimile, Belly, Cheap Trick"""
 
+    # when set, requests for youtube's embed get a local stub page (YOUTUBE_STUB) in place of
+    # being blocked, so a test can play the part of youtube's player
+    stub_youtube_embed = False
+
     def setUp(self):
         super().setUp()
         self.enterContext(mock.patch("core.views.discover.random.shuffle", by_name))
+
+    def youtube_stub(self, route):
+        route.fulfill(status=200, content_type="text/html", body=YOUTUBE_STUB)
+
+    def video_deck(self, first="youtube", second="youtube"):
+        # Aardvark and Anjimile come first, in name order, ahead of Belly and Cheap Trick
+        Band.objects.filter(name="Anjimile").delete()
+        for name, service in (("Aardvark", first), ("Anjimile", second)):
+            band = Band.objects.create(name=name, city_town="Providence", state="RI")
+            {"youtube": youtube, "apple": apple, "spotify": spotify}[service](name.lower())
+            show(band, days(3), self.lupo, media=False)
 
     def make_deck(self, services=("youtube", "apple", "spotify")):
         for name in ("Anjimile", "Belly", "Cheap Trick"):
@@ -77,6 +113,8 @@ class DeckBrowserTestCase(DiscoverBrowserTestCase):
         )
         self.addCleanup(context.close)
         context.route("**/*", self.only_the_test_server)
+        if self.stub_youtube_embed:
+            context.route(YOUTUBE_EMBED, self.youtube_stub)
         if cookie:
             context.add_cookies([{"name": "saved_shows", "value": cookie, "url": self.live_server_url}])
         _, page = self.open_page("/discover", context=context)
@@ -331,14 +369,14 @@ class PlayerTestCase(DeckBrowserTestCase):
     def test_video_first(self):
         page = self.only_belly(("youtube", "apple", "spotify"))
         self.assertEqual(
-            self.frames(page), ["https://www.youtube-nocookie.com/embed/vid123?autoplay=1&playsinline=1"]
+            self.frames(page), [self.autoplay_src("vid123")]
         )
         self.assertEqual(page.locator(".discover-card:not([hidden]) a.apple-play").count(), 1)
         # Anjimile, passed, has a Spotify player of its own; Belly's ids are sp123 and 200
         self.assertEqual(self.requests_to("apple.com", "artist/sp123"), [])
         # after Start and a skip, the deck asks YouTube to start it
         self.assertEqual(
-            self.frames(page), ["https://www.youtube-nocookie.com/embed/vid123?autoplay=1&playsinline=1"]
+            self.frames(page), [self.autoplay_src("vid123")]
         )
 
     def test_apple_music_before_spotify(self):
@@ -555,14 +593,6 @@ class AccessTestCase(DeckBrowserTestCase):
 class StartTestCase(DeckBrowserTestCase):
     """the Start control, the first card's placeholder, and each later card's autoplay"""
 
-    def video_deck(self, first="youtube", second="youtube"):
-        # Aardvark and Anjimile come first, in name order, ahead of Belly and Cheap Trick
-        Band.objects.filter(name="Anjimile").delete()
-        for name, service in (("Aardvark", first), ("Anjimile", second)):
-            band = Band.objects.create(name=name, city_town="Providence", state="RI")
-            {"youtube": youtube, "apple": apple, "spotify": spotify}[service](name.lower())
-            show(band, days(3), self.lupo, media=False)
-
     def clear_acts(self):
         from core.models import AppleMusicArtistLink, Event, SpotifyArtistLink, YouTubeArtistLink
 
@@ -602,7 +632,7 @@ class StartTestCase(DeckBrowserTestCase):
         self.assertEqual(page.locator(".discover-start").count(), 0)
         self.assertEqual(page.locator(".deck-start").count(), 0)
         self.assertEqual(
-            self.frames(page), ["https://www.youtube-nocookie.com/embed/aard1?autoplay=1&playsinline=1"]
+            self.frames(page), [self.autoplay_src("aard1")]
         )
         self.assertIn("autoplay", self.allows(page)[0])
         self.assertTrue(page.locator(".deck-hint").is_visible())
@@ -639,7 +669,7 @@ class StartTestCase(DeckBrowserTestCase):
 
     def test_the_next_youtube_card_autoplays_after_a_skip_button_key_swipe_and_save(self):
         self.video_deck()
-        autoplay = "https://www.youtube-nocookie.com/embed/vid123?autoplay=1&playsinline=1"
+        autoplay = self.autoplay_src("vid123")
         page = self.open_deck()
         self.assertEqual(self.frames(page), [autoplay])
         page.click(".deck-skip")
@@ -672,7 +702,7 @@ class StartTestCase(DeckBrowserTestCase):
         page.click(".picker-save")
         page.wait_for_function("() => document.querySelector('.discover-card:not([hidden])').dataset.act === 'Anjimile'")
         self.assertEqual(
-            self.frames(page), ["https://www.youtube-nocookie.com/embed/vid123?autoplay=1&playsinline=1"]
+            self.frames(page), [self.autoplay_src("vid123")]
         )
         self.assertEqual(page.locator("iframe").count(), 1)
 
@@ -685,7 +715,7 @@ class StartTestCase(DeckBrowserTestCase):
         page.click(".deck-again")
         self.assertEqual(self.shown(page), "Aardvark")
         self.assertEqual(
-            self.frames(page), ["https://www.youtube-nocookie.com/embed/vid123?autoplay=1&playsinline=1"]
+            self.frames(page), [self.autoplay_src("vid123")]
         )
         self.assertEqual(page.locator(".deck-start").count(), 0)
 

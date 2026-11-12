@@ -85,7 +85,12 @@ function clearCard(card) {
   }
 }
 
-window.ArtistPreview = { spotifyPlayer, applePlayer, youtubePlayer, showInCard, clearCard };
+// the youtube iframe of a deck card, for the deck to post commands to and hear messages from
+function youtubeFrame(card) {
+  return card.querySelector(".discover-player-box .youtube-player iframe");
+}
+
+window.ArtistPreview = { spotifyPlayer, applePlayer, youtubePlayer, showInCard, clearCard, youtubeFrame };
 
 // as spotify's "creating an embed" guide gives it; 152 is the compact height
 function spotifyPlayer(button, height) {
@@ -137,8 +142,10 @@ function applePlayer(button, height) {
 // which sets no cookies until the visitor plays. a matched video plays; a channel matched by
 // id alone plays its uploads, whose playlist is the channel's id with "UC" made "UU". no
 // autoplay in the listings: the visitor presses play in youtube's player. the discovery deck
-// passes autoplay after the visitor's action, and gets autoplay=1 (and playsinline=1 for ios)
-// and an allow that includes autoplay. the referrer policy is the one
+// passes autoplay after the visitor's action, and gets autoplay=1 (and playsinline=1 for ios),
+// an allow that includes autoplay, and enablejsapi=1 with the page's origin, so the deck can
+// post youtube's player commands to it and hear its messages (core/js/discover.js). the
+// listings' player has none of them. the referrer policy is the one
 // youtube asks for, so its player knows which site embeds it
 function youtubePlayer(button, height, autoplay) {
   const box = document.createElement("div");
@@ -153,7 +160,8 @@ function youtubePlayer(button, height, autoplay) {
   player.allowFullscreen = true;
   player.allow = autoplay ? "autoplay; encrypted-media; picture-in-picture; fullscreen" : "encrypted-media; picture-in-picture; fullscreen";
   if (autoplay) {
-    player.src += (player.src.includes("?") ? "&" : "?") + "autoplay=1&playsinline=1";
+    player.src += (player.src.includes("?") ? "&" : "?") + "autoplay=1&playsinline=1&enablejsapi=1&origin="
+      + encodeURIComponent(window.location.origin);
   }
   player.referrerPolicy = "strict-origin-when-cross-origin";
   if (height) {

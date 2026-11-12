@@ -6,8 +6,11 @@
 // Spotify. the first card waits for a Start press, laid over our own placeholder (its video's
 // thumbnail, or a plain dark box) and gone when the player loads; from then on each top card's
 // player is loaded in the handler of the swipe, button or key that brought it up, asking
-// YouTube to start playing (Apple Music and Spotify load ready). nothing is stored about what
-// was passed.
+// YouTube to start playing (Apple Music and Spotify load ready). beyond autoplay=1 in its
+// address, the top card's YouTube player is also driven over its message channel (watch()): the
+// page tells it we are listening and, when it reports ready, posts playVideo to it. only the
+// top card's frame is listened to, and only messages from YouTube's embed hosts. nothing is
+// stored about what was passed.
 (function () {
   const section = document.querySelector(".discover");
   const deck = section && section.querySelector(".deck");
@@ -87,6 +90,55 @@
       || card.querySelector("a.spotify-play");
     if (button) {
       window.ArtistPreview.showInCard(card, button, true);
+      watchYouTube(card);
+    }
+  }
+
+  // the top card's YouTube player, listened to and asked to play. {card, frame, origin, ready}
+  const YOUTUBE_ORIGINS = ["https://www.youtube-nocookie.com", "https://www.youtube.com"];
+  let watch = null;
+
+  function post(message) {
+    // to the embed's own origin, never "*"
+    watch.frame.contentWindow.postMessage(JSON.stringify(message), watch.origin);
+  }
+
+  function onPlayerMessage(e) {
+    if (!watch || e.source !== watch.frame.contentWindow || YOUTUBE_ORIGINS.indexOf(e.origin) === -1) {
+      return;
+    }
+    let message;
+    try {
+      message = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+    } catch (error) {
+      return;
+    }
+    if (message && message.event === "onReady") {
+      watch.ready = true;
+      post({ event: "command", func: "playVideo", args: [] });
+    }
+  }
+
+  function watchYouTube(card) {
+    const frame = window.ArtistPreview.youtubeFrame(card);
+    if (!frame || (watch && watch.frame === frame)) {
+      return;
+    }
+    stopWatching();
+    watch = { card: card, frame: frame, origin: new URL(frame.src).origin, ready: false };
+    window.addEventListener("message", onPlayerMessage);
+    // the player sends nothing until told we are listening, which it can hear once it has loaded
+    frame.addEventListener("load", function () {
+      if (watch && watch.frame === frame) {
+        post({ event: "listening", id: 1, channel: "widget" });
+      }
+    });
+  }
+
+  function stopWatching() {
+    if (watch) {
+      window.removeEventListener("message", onPlayerMessage);
+      watch = null;
     }
   }
 
@@ -126,6 +178,9 @@
   }
 
   function show() {
+    if (watch && watch.card !== top()) {
+      stopWatching();
+    }
     cards.forEach(function (card, position) {
       card.hidden = position !== index;
       card.style.transition = "";
@@ -156,6 +211,7 @@
   }
 
   function advance() {
+    stopWatching();
     window.ArtistPreview.clearCard(top());
     index += 1;
     show();
