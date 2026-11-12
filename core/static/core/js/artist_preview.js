@@ -11,6 +11,13 @@ document.addEventListener("click", function (e) {
   }
   e.preventDefault();
 
+  // the discovery deck's card has a player of its own, which this button replaces
+  const card = button.closest(".discover-card");
+  if (card) {
+    showInCard(card, button);
+    return;
+  }
+
   const row = button.closest(".artist-previews");
   const id = playerId(button);
   const open = document.querySelector(".artist-player");
@@ -39,13 +46,51 @@ function playerId(button) {
   return "spotify:" + button.dataset.spotifyArtist;
 }
 
+// the discovery deck's card (core/js/discover.js) hosts one player in its .discover-player-box,
+// the card's own: pressing one of the card's play buttons replaces it with that service's
+// (pressing the one shown leaves it), and the listings' one-player rule isn't involved. the
+// height is at least 200px, which youtube's rules ask of its player and the others share
+const CARD_PLAYER_HEIGHT = 232;
+
+function playerFor(button, height) {
+  return button.classList.contains("apple-play") ? applePlayer(button, height)
+    : button.classList.contains("youtube-play") ? youtubePlayer(button, height) : spotifyPlayer(button, height);
+}
+
+function showInCard(card, button) {
+  const box = card.querySelector(".discover-player-box");
+  const id = playerId(button);
+  if (!box || box.dataset.playing === id) {
+    return;
+  }
+  const player = playerFor(button, CARD_PLAYER_HEIGHT);
+  // the card is on top: its player is wanted now, not when scrolled to
+  player.querySelectorAll("iframe").forEach(function (frame) { frame.loading = "eager"; });
+  if (player.tagName === "IFRAME") {
+    player.loading = "eager";
+  }
+  player.classList.add("discover-player");
+  box.replaceChildren(player);
+  box.dataset.playing = id;
+}
+
+function clearCard(card) {
+  const box = card.querySelector(".discover-player-box");
+  if (box) {
+    box.replaceChildren();
+    delete box.dataset.playing;
+  }
+}
+
+window.ArtistPreview = { spotifyPlayer, applePlayer, youtubePlayer, showInCard, clearCard };
+
 // as spotify's "creating an embed" guide gives it; 152 is the compact height
-function spotifyPlayer(button) {
+function spotifyPlayer(button, height) {
   const player = document.createElement("iframe");
   player.className = "spotify-player";
   player.src = "https://open.spotify.com/embed/artist/" + encodeURIComponent(button.dataset.spotifyArtist);
   player.width = "100%";
-  player.height = "152";
+  player.height = String(height || 152);
   player.frameBorder = "0";
   player.allowFullscreen = true;
   player.loading = "lazy";
@@ -57,7 +102,7 @@ function spotifyPlayer(button) {
 // the artist's top song in apple's player, which plays a preview for everyone (apple's
 // artist player plays nothing for visitors not signed in), then a link to the artist's page.
 // the attributes are those of apple's own embed code
-function applePlayer(button) {
+function applePlayer(button, height) {
   const box = document.createElement("div");
   box.className = "apple-player";
 
@@ -65,7 +110,7 @@ function applePlayer(button) {
   player.src = "https://embed.music.apple.com/us/album/" + encodeURIComponent(button.dataset.appleAlbum)
     + "?i=" + encodeURIComponent(button.dataset.appleSong);
   player.width = "100%";
-  player.height = "175";
+  player.height = String(height || 175);
   player.frameBorder = "0";
   player.loading = "lazy";
   player.allow = "autoplay *; encrypted-media *; fullscreen *; clipboard-write";
@@ -90,7 +135,7 @@ function applePlayer(button) {
 // id alone plays its uploads, whose playlist is the channel's id with "UC" made "UU". no
 // autoplay: the visitor presses play in youtube's player. the referrer policy is the one
 // youtube asks for, so its player knows which site embeds it
-function youtubePlayer(button) {
+function youtubePlayer(button, height) {
   const box = document.createElement("div");
   box.className = "youtube-player";
 
@@ -103,6 +148,9 @@ function youtubePlayer(button) {
   player.allowFullscreen = true;
   player.allow = "encrypted-media; picture-in-picture; fullscreen";
   player.referrerPolicy = "strict-origin-when-cross-origin";
+  if (height) {
+    player.height = String(height);
+  }
   player.title = button.title;
   box.appendChild(player);
 

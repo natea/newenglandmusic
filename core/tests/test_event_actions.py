@@ -2,6 +2,7 @@ import re
 from datetime import timedelta
 from unittest import mock
 
+from core.event_actions import actions_html
 from core.models import Event, SpotifyArtistLink, Venue
 from core.saved_shows import COOKIE_NAME, MAX_SAVED, format_saved, parse_saved
 from core.tests.spotify_fixture import CREDENTIALS
@@ -150,3 +151,18 @@ class ToggleTestCase(TestCase):
         response = self.client.get(f"/saved/toggle/{self.show.pk}")
         self.assertEqual(response.status_code, 405)
         self.assertNotIn(COOKIE_NAME, response.cookies)
+
+
+class AnchorTestCase(TestCase):
+    def setUp(self):
+        self.event = Event.objects.create(title="a show", starttime=timezone.now() + timedelta(days=2))
+
+    def test_the_default_anchor_is_the_events(self):
+        # what the listings and the band page have always had
+        html = actions_html(self.event, set(), "/bands/belly")
+        self.assertIn(f'name="next" value="/bands/belly#event-{self.event.pk}"', html)
+
+    def test_a_page_can_give_its_own_anchor(self):
+        html = actions_html(self.event, set(), "/discover", anchor="bands-belly-event-9")
+        self.assertIn('name="next" value="/discover#bands-belly-event-9"', html)
+        self.assertNotIn("#event-", html)

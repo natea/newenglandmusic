@@ -1,0 +1,400 @@
+// the band discovery deck (core/templates/core/discover.html): index cards on the site's
+// grey ground, each act's name on its purple tab, as on the band page. the sketch is
+// openspec/changes/add-band-discovery-swipe/sketches/c.html
+
+$card: #f6f4ee;
+$hairline: #b9b4a8;
+$tab: #8b5d8b;
+$ink: #1a1a1a;
+$quiet: #4f4b44;
+
+.discover {
+  margin: 22px 0 8px;
+
+  .discover-title {
+    margin: 0 0 12px;
+  }
+
+  p {
+    display: block;
+  }
+
+  .discover-card {
+    background: $card;
+    color: $ink;
+    border: 1px solid $hairline;
+    padding: 0 16px 14px;
+    margin-bottom: 16px;
+  }
+
+  .discover-photo {
+    margin: 0 -16px;
+
+    img {
+      display: block;
+      width: 100%;
+      max-height: 280px;
+      object-fit: cover;
+    }
+
+    figcaption {
+      font-size: 0.75rem;
+      color: $quiet;
+      padding: 2px 16px;
+    }
+  }
+
+  .discover-name {
+    display: inline-block;
+    background: $tab;
+    margin: 12px 0 0;
+    padding: 0.18em 0.45em 0.12em;
+    font-size: 1.6rem;
+    line-height: 1.05;
+
+    a {
+      color: #fff;
+      text-decoration: none;
+    }
+  }
+
+  .discover-meta,
+  .discover-next {
+    margin: 6px 0;
+  }
+
+  .discover-kind {
+    font-weight: 700;
+    text-transform: capitalize;
+  }
+
+  .discover-next {
+    color: $quiet;
+    font-size: 0.9rem;
+  }
+
+  // the listings' play buttons, a size up, each with its service's mark beside its name
+  .artist-previews {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0;
+  }
+
+  .spotify-play,
+  .apple-play,
+  .youtube-play {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: black;
+    text-decoration: none;
+    border: 1px solid #000;
+    border-radius: 14px;
+    background: #fff;
+    padding: 3px 12px 3px 6px;
+  }
+
+  .service-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .youtube-mark {
+    fill: #ff0000;
+  }
+
+  .apple-mark {
+    fill: #fa243c;
+  }
+
+  .spotify-mark {
+    fill: #1db954;
+  }
+
+  .discover-shows {
+    margin: 8px 0 0;
+    padding-left: 0;
+    list-style: none;
+
+    li {
+      padding: 4px 0;
+      border-top: 1px solid $hairline;
+    }
+
+    time {
+      font-weight: 700;
+      margin-right: 6px;
+    }
+  }
+
+  .discover-empty {
+    margin: 12px 0;
+  }
+
+  // the player's own box: at least 200 x 200px whatever the service, and nothing is drawn
+  // over it (youtube's rules). the hint, buttons and text are all outside it
+  .discover-player-box {
+    margin: 0 -16px;
+
+    &:empty {
+      display: none;
+    }
+
+    iframe {
+      display: block;
+      border: 0;
+      width: 100%;
+      min-width: 200px;
+      min-height: 200px;
+    }
+
+    .apple-more,
+    .youtube-more {
+      display: block;
+      font-size: 0.85rem;
+      padding: 2px 16px;
+    }
+  }
+
+  // with javascript: one card at a time, swiped (see core/js/discover.js)
+  &.is-deck {
+    .discover-card {
+      touch-action: pan-y;
+      user-select: none;
+      margin-bottom: 0;
+
+      &[hidden] {
+        display: none;
+      }
+    }
+
+    .discover-shows {
+      display: none;
+    }
+
+    .deck-stage {
+      position: relative;
+      margin: 0 auto;
+      max-width: 420px;
+      padding: 0 10px;
+
+      // the cards beneath, peeking out
+      &::before,
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 6px 14px -6px;
+        background: $card;
+        border: 1px solid $hairline;
+        transform: rotate(-3deg);
+        z-index: 0;
+      }
+
+      &::after {
+        background: #eeeeff;
+        transform: rotate(2.5deg);
+      }
+
+      .discover-card {
+        position: relative;
+        z-index: 1;
+      }
+    }
+  }
+
+  .deck-hint {
+    display: none;
+    justify-content: space-between;
+    max-width: 420px;
+    margin: 14px auto 0;
+    font-weight: 800;
+
+    span {
+      padding: 4px 12px;
+      border: 3px solid;
+      background: $card;
+    }
+
+    .hint-skip {
+      color: #555;
+    }
+
+    .hint-add {
+      color: $tab;
+    }
+  }
+
+  &.is-hinting {
+    .deck-hint {
+      display: flex;
+    }
+
+    // the card sways left and right, until the first swipe or button; reduced motion keeps
+    // the labels and drops the movement
+    .discover-card:not([hidden]) {
+      animation: discover-sway 2.4s ease-in-out infinite;
+    }
+  }
+
+  .deck-controls {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin: 14px 0 6px;
+
+    button {
+      font: inherit;
+      font-weight: 700;
+      padding: 10px 22px;
+      border: 2px solid #000;
+      border-radius: 4px;
+      background: #fff;
+      color: #000;
+      cursor: pointer;
+    }
+
+    .deck-add,
+    .deck-again {
+      background: $tab;
+      border-color: $tab;
+      color: #fff;
+    }
+  }
+
+  .deck-keys {
+    text-align: center;
+    color: $quiet;
+    font-size: 0.9rem;
+  }
+
+  .deck-end {
+    text-align: center;
+    margin: 20px 0;
+
+    .deck-again {
+      font: inherit;
+      font-weight: 700;
+      padding: 10px 22px;
+      border: 2px solid $tab;
+      border-radius: 4px;
+      background: $tab;
+      color: #fff;
+      cursor: pointer;
+      margin-right: 12px;
+    }
+  }
+
+  .deck-live {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  // the picker, a sheet at the foot of the page
+  .picker {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    max-height: 80vh;
+    overflow-y: auto;
+    background: $card;
+    color: $ink;
+    border-top: 3px solid $tab;
+    box-shadow: 0 -8px 0 rgba(0, 0, 0, 0.15);
+    padding: 16px;
+
+    > * {
+      max-width: 560px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .picker-title {
+      margin: 0 auto 4px;
+    }
+
+    .picker-note {
+      margin: 0 auto 10px;
+      color: $quiet;
+      font-size: 0.9rem;
+    }
+
+    .picker-shows {
+      list-style: none;
+      padding: 0;
+      margin-top: 0;
+      margin-bottom: 12px;
+    }
+
+    // the whole row is the tap target
+    .picker-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      background: #fff;
+      border: 1px solid $hairline;
+      cursor: pointer;
+
+      input {
+        width: 24px;
+        height: 24px;
+        flex: none;
+      }
+    }
+
+    .picker-saved {
+      margin-left: auto;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: $tab;
+    }
+
+    button {
+      font: inherit;
+      font-weight: 700;
+      padding: 10px 22px;
+      border: 2px solid #000;
+      border-radius: 4px;
+      background: #fff;
+      color: #000;
+      margin-right: 8px;
+      cursor: pointer;
+    }
+
+    .picker-save {
+      background: $tab;
+      border-color: $tab;
+      color: #fff;
+    }
+  }
+}
+
+@keyframes discover-sway {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0);
+  }
+
+  25% {
+    transform: translateX(-18px) rotate(-1.5deg);
+  }
+
+  75% {
+    transform: translateX(18px) rotate(1.5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discover.is-hinting .discover-card:not([hidden]) {
+    animation: none;
+  }
+}

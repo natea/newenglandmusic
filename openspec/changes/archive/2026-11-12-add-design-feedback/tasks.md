@@ -32,9 +32,10 @@
 
 ## 4. Live check (with Nate's go-ahead, together with intentable's)
 
-- [ ] 4.1 With both sides deployed, confirm issue #26's revision run:
+- [x] 4.1 With both sides deployed, confirm issue #26's revision run:
   - it skips the sketch step and leaves only a refined `sketches/c.html`;
   - its message answers whether the show picker appears always or only after a right swipe;
   - its message names the site-wide header as its own issue;
   - the three reviewers pass it;
   - `install`'s fetch of the default branch worked in the sandbox.
+  - Done 11 November 2026 on run 01M75YRAC9N1X3J6FEZ1HZKMCH (after a failed draft check and a Daytona failure in two earlier runs): `install` succeeded, the graph went from `route` to the reviewers without `sketch`, and both review rounds passed `check_reviews`. Its commit 8ceb932 removed `a.html` and `b.html` and changed `c.html`. Its message said the show picker appears only after a right swipe, and that the site-wide header should be its own issue.

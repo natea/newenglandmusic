@@ -18,6 +18,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
 from core.event_actions import actions_html
+from core.link_hubs import hub_for
 from core.location import location_from_request
 from core.models import Artist, Band, Event
 from core.opengraph import get_meta
@@ -73,12 +74,23 @@ def upcoming_shows(act):
 
 
 def links_of(act):
+    # a hub in the website field is shown as the hub link, not repeated here
     return [
         (label, url) for label, url in (
-            ("Website", act.website), ("Bandcamp", act.bandcamp_url),
+            ("Website", act.website if hub_for(act.website) is None else ""), ("Bandcamp", act.bandcamp_url),
             ("Instagram", act.instagram_url), ("YouTube", act.youtube_url),
         ) if url
     ]
+
+
+def link_hub_of(act):
+    """("All links on Linktree", url), or None. the website counts when it's a hub and link_hub_url is empty"""
+    url = act.link_hub_url or (act.website if hub_for(act.website) is not None else "")
+    if not url:
+        return None
+    hub = hub_for(url)
+    # an editor can type any address, so an unsupported one gets a plain label rather than an error
+    return (f"All links on {hub.name}" if hub else "All links"), url
 
 
 def members_of(band):
@@ -107,11 +119,24 @@ def origin_of(act):
 def invitation(request, act):
     """an email to the site's contact address, for a page missing its photo, bio or links"""
     email = os.environ.get("API_CONTACT_EMAIL", "").strip()
-    if not email or (act.photo_file and (act.wikipedia_extract or act.disambiguation) and links_of(act)):
+    has_bio = bool(act.wikipedia_extract or act.disambiguation)
+    has_links = bool(links_of(act))
+    has_hub = link_hub_of(act) is not None
+    if not email or (act.photo_file and has_bio and (has_links or has_hub)):
         return None
     subject = f"{act.name} on {settings.SITE_NAME}"
     body = f"About {request.build_absolute_uri()}\n\nPhoto (and who took it), bio, and links:\n"
-    return f"mailto:{email}?subject={quote(subject)}&body={quote(body)}"
+    visible = "photo, bio or links"
+    if has_hub and not has_links:
+        # the hub is the act's only links, so ask only for what is missing
+        asked = []
+        if not act.photo_file:
+            asked.append(("photo", "Photo (and who took it)"))
+        if not has_bio:
+            asked.append(("bio", "bio"))
+        body = f"About {request.build_absolute_uri()}\n\n{', '.join(b for _, b in asked)}:\n"
+        visible = " or ".join(v for v, _ in asked)
+    return f"mailto:{email}?subject={quote(subject)}&body={quote(body)}", visible
 
 
 def wikipedia_title(act):
@@ -137,6 +162,7 @@ def act_page(request, act):
     description = act.disambiguation or f"{act.name}: upcoming shows in the Northeast, members and links."
     if act.wikipedia_extract:
         description = act.wikipedia_extract.split(". ")[0][:200]
+    invite = invitation(request, act)
     return render(
         request,
         "core/band.html",
@@ -153,9 +179,11 @@ def act_page(request, act):
             "members_have_headshots": any(entry[3] for entry in current + former),
             "bands": [] if is_band else bands_of(act),
             "links": links_of(act),
+            "link_hub": link_hub_of(act),
             "photo": photo_of(act, PHOTO_WIDTH),
             "wikipedia_title": wikipedia_title(act) if act.wikipedia_url else "",
-            "invitation": invitation(request, act),
+            "invitation": invite[0] if invite else None,
+            "invitation_asks": invite[1] if invite else "",
             "meta": get_meta(url=request.path.rstrip("/"), title=f"{act.name} | {settings.SITE_NAME}", description=description),
         },
     )

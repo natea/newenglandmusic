@@ -224,6 +224,8 @@ class FinishFixesTestCase(TestCase):
         for pk in event_ids:
             self.assertIn(f'action="/saved/toggle/{pk}"', html)
             self.assertIn(f'href="/event/{pk}/ics"', html)
+            # the bookmark returns to the show on this page, as before the deck's anchors
+            self.assertIn(f'name="next" value="{band.get_absolute_url()}#event-{pk}"', html)
         self.assertIn(f'id="event-{event_ids[0]}"', html)
 
     def test_one_show_isnt_listed_twice(self):
@@ -313,3 +315,88 @@ class TitleLinksTestCase(TestCase):
         html = self.listing(title="Some Night", artists="Nobody Here", hyperlink="https://as220.org/y")
         self.assertNotIn("event-info", html)
         self.assertIn('<a href="https://as220.org/y" target="_blank">', html)
+
+
+class LinkHubTestCase(BandPageTestCase):
+    def test_an_act_on_linktree(self):
+        band = self.band(link_hub_url="https://linktr.ee/bonerama", website="https://bonerama.com/")
+        html = self.page(band).content.decode()
+        self.assertIn('<a href="https://linktr.ee/bonerama" rel="noopener" target="_blank">All links on Linktree</a>', html)
+
+    def test_it_comes_before_the_members_and_links(self):
+        band = self.full_band()
+        band.link_hub_url = "https://linktr.ee/bonerama"
+        band.save()
+        html = self.page(band).content.decode()
+        hub = html.index("All links on Linktree")
+        self.assertLess(html.index("act-next"), hub)
+        self.assertLess(hub, html.index("<dt>Members</dt>"))
+        self.assertLess(hub, html.index("<dt>Links</dt>"))
+
+    def test_another_hub(self):
+        html = self.page(self.band(link_hub_url="https://solo.to/dana")).content.decode()
+        self.assertIn(">All links on Solo.to<", html)
+
+    def test_no_link_hub(self):
+        html = self.page(self.full_band()).content.decode()
+        self.assertNotIn("All links", html)
+        self.assertNotIn("act-hub", html)
+
+    def test_not_repeated_among_the_links(self):
+        band = self.band(
+            website="https://bonerama.com/", bandcamp_url="https://bonerama.bandcamp.com/", link_hub_url="https://linktr.ee/bonerama",
+        )
+        html = self.page(band).content.decode()
+        links = html[html.index('class="act-links"'):]
+        self.assertIn(">Website<", links)
+        self.assertIn(">Bandcamp<", links)
+        self.assertNotIn("linktr.ee", links)
+        self.assertEqual(html.count("https://linktr.ee/bonerama"), 1)
+
+    def test_a_hub_only_in_the_website_field(self):
+        html = self.page(self.band(website="https://linktr.ee/bonerama")).content.decode()
+        self.assertIn('href="https://linktr.ee/bonerama" rel="noopener" target="_blank">All links on Linktree<', html)
+        self.assertNotIn(">Website<", html)
+        self.assertNotIn("<dt>Links</dt>", html)
+
+    def test_an_address_on_no_supported_hub(self):
+        html = self.page(self.band(link_hub_url="https://example.com/dana")).content.decode()
+        self.assertIn('href="https://example.com/dana" rel="noopener" target="_blank">All links</a>', html)
+
+    def test_a_hub_alone_does_not_open_the_fields_list(self):
+        html = self.page(self.band(link_hub_url="https://linktr.ee/bonerama")).content.decode()
+        self.assertNotIn("act-fields", html)
+
+
+class LinkHubInvitationTestCase(BandPageTestCase):
+    def complete(self, **fields):
+        return self.band(
+            wikipedia_extract="A band.", photo_file="x.jpg", photo_author="a", photo_license="CC BY-SA 3.0", **fields,
+        )
+
+    def test_only_a_link_hub_needs_no_invitation(self):
+        html = self.page(self.complete(link_hub_url="https://linktr.ee/bonerama")).content.decode()
+        self.assertIn("All links on Linktree", html)
+        self.assertNotIn("Is this you?", html)
+
+    def test_a_hub_and_a_missing_photo(self):
+        band = self.band(wikipedia_extract="A band.", link_hub_url="https://linktr.ee/bonerama")
+        html = self.page(band).content.decode()
+        self.assertIn("Send us a photo</a>", html)
+        self.assertNotIn("links</a>", html)
+        mailto = html[html.index("mailto:"):html.index('"', html.index("mailto:"))]
+        self.assertIn("Photo%20%28and%20who%20took%20it%29%3A", mailto)
+        self.assertNotIn("links", mailto)
+
+    def test_a_hub_with_other_links_and_a_missing_photo(self):
+        band = self.band(wikipedia_extract="A band.", website="https://bonerama.com/", link_hub_url="https://linktr.ee/bonerama")
+        plain = self.band(name="Plain", wikipedia_extract="A band.", website="https://plain.com/")
+        html = self.page(band).content.decode()
+        self.assertIn("Send us a photo, bio or links</a>", html)
+        mail = lambda h: h[h.index("mailto:"):h.index('"', h.index("mailto:"))].split("%0A%0A")[1]
+        self.assertEqual(mail(html), mail(self.page(plain).content.decode()))
+        self.assertIn("links", mail(html))
+
+    def test_the_default_invitation_wording(self):
+        html = self.page(self.band(name="Krill")).content.decode()
+        self.assertIn("Send us a photo, bio or links</a>", html)
