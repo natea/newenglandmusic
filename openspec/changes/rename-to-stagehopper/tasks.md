@@ -1,6 +1,6 @@
 ## 0. The database, now (Nate, before the review finishes)
 
-- [ ] 0.1 Upgrade the production database to a paid plan in the dashboard, `0.1c-256mb` unless Nate picks another. Dump it with `PRODUCTION.md`'s backup command (`pg_dump` 17+), and check the dump restores into a local scratch database, never the External Database URL (design decision 7, step 0).
+- [ ] 0.1 Upgrade the production database to a paid plan in the dashboard, `0.1c-256mb` unless Nate picks another (done by Nate, 11 November 2026: `0.1c-256mb`, $6 a month for compute). Dump it with `PRODUCTION.md`'s backup command (`pg_dump` 17+), and check the dump restores into a local scratch database, never the External Database URL (design decision 7, step 0).
 
 ## 1. The name and tagline
 
