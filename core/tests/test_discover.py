@@ -1,12 +1,16 @@
 import os
+import re
+from importlib import import_module
 from unittest import mock
 
 from core.artist_previews import act_previews
-from core.models import Artist, Band
+from core.models import Artist, Band, EventPerformer, MenuItem
+from core.saved_shows import COOKIE_NAME, format_saved
 from core.tests.apple_music_fixture import SWITCHED_ON as APPLE_ON
 from core.tests.discover_fixture import apple, days, show, spotify, venue, youtube
 from core.tests.spotify_fixture import CREDENTIALS as SPOTIFY_ON
 from core.tests.youtube_fixture import SWITCHED_ON as YOUTUBE_ON
+from django.apps import apps as django_apps
 from django.db import connection
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
@@ -233,3 +237,81 @@ class CardTestCase(DiscoverTestCase):
         for n in (2, 4, 6):
             show(self.belly, days(n), self.lupo)
         self.assertContains(self.page(), "+2 more shows")
+
+
+class WithoutJavaScriptTestCase(DiscoverTestCase):
+    def forms_of(self, html):
+        return re.findall(r'<form class="save-form" method="post" action="(/saved/toggle/\d+)"><input type="hidden" name="next" value="([^"]*)">', html)
+
+    def test_every_card_lists_its_shows_with_bookmarks_that_return_to_the_card(self):
+        events = [show(self.belly, days(n), self.lupo) for n in (3, 5)]
+        other = show(self.anjimile, days(4), self.lupo)
+        html = self.page().content.decode()
+        forms = dict(self.forms_of(html))
+        for event, anchor in ((events[0], "bands-belly"), (events[1], "bands-belly"), (other, "artists-anjimile")):
+            self.assertEqual(forms[f"/saved/toggle/{event.pk}"], f"/discover#{anchor}-event-{event.pk}")
+            self.assertIn(f'id="{anchor}-event-{event.pk}"', html)
+        for name in ("Belly", "Anjimile"):
+            self.assertIn(f'aria-label="{name}"', html)
+
+    def test_a_show_on_two_cards_has_two_anchors(self):
+        artist = Artist.objects.create(name="Belly Solo")
+        event = show(self.belly, days(3), self.lupo)
+        EventPerformer.objects.create(event=event, artist=artist)
+        html = self.page().content.decode()
+        nexts = [value for action, value in self.forms_of(html) if action == f"/saved/toggle/{event.pk}"]
+        self.assertEqual(sorted(nexts), sorted([
+            f"/discover#bands-belly-event-{event.pk}", f"/discover#artists-belly-solo-event-{event.pk}",
+        ]))
+
+    def test_a_bookmark_posts_and_returns_to_the_card(self):
+        event = show(self.belly, days(3), self.lupo)
+        response = self.client.post(
+            f"/saved/toggle/{event.pk}", {"next": f"/discover#bands-belly-event-{event.pk}"}
+        )
+        self.assertRedirects(
+            response, f"/discover#bands-belly-event-{event.pk}", fetch_redirect_response=False
+        )
+
+    def test_saved_state_comes_from_the_cookie(self):
+        saved, unsaved = show(self.belly, days(3), self.lupo), show(self.anjimile, days(4), self.lupo)
+        self.client.cookies[COOKIE_NAME] = format_saved([saved.pk])
+        html = self.page().content.decode()
+        self.assertRegex(html, rf'class="save is-saved" data-event-id="{saved.pk}"')
+        self.assertRegex(html, rf'class="save" data-event-id="{unsaved.pk}"')
+
+
+class MenuTestCase(TestCase):
+    def test_the_link_is_in_the_header_and_the_footer(self):
+        html = self.client.get("/").content.decode()
+        header, footer = html.split('id="footer"') if 'id="footer"' in html else html.split("id='footer'")
+        self.assertIn('<a href="/discover">Discover bands</a>', header)
+        self.assertIn('<a href="/discover">Discover bands</a>', footer)
+        item = MenuItem.objects.get(url="/discover")
+        self.assertTrue(item.show_in_header and item.show_in_footer)
+
+    def test_the_migration_adds_one_item_however_often_it_runs(self):
+        migration = import_module("core.migrations.0103_discover_menu_item")
+        MenuItem.objects.filter(url="/discover").delete()
+        migration.add_menu_item(django_apps, None)
+        migration.add_menu_item(django_apps, None)
+        self.assertEqual(MenuItem.objects.filter(name="Discover bands").count(), 1)
+        migration.remove_menu_item(django_apps, None)
+        self.assertEqual(MenuItem.objects.filter(url="/discover").count(), 0)
+
+
+class SiteHeaderTestCase(TestCase):
+    def parts(self, path):
+        html = self.client.get(path).content.decode()
+        header = re.search(r"<div class='header'>.*?id='burgerMenuContents'>.*?</div>", html, re.S).group(0)
+        footer = re.search(r"<div id='footer'>.*?</div>", html, re.S).group(0)
+        return [re.sub(r"\s+", " ", part) for part in (header, footer)]
+
+    def test_the_masthead_search_and_menus_are_the_home_pages(self):
+        home, discover = self.parts("/"), self.parts("/discover")
+        self.assertIn("Saved shows", home[0])
+        self.assertIn("Discover bands", home[0])
+        self.assertIn("site-search", home[0])
+        self.assertEqual(home, discover)
+        # and the page has no header of its own
+        self.assertEqual(self.client.get("/discover").content.decode().count("<header"), 0)

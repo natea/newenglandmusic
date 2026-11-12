@@ -58,9 +58,10 @@
           {% endif %}
           <ol class="discover-shows">
             {% for event in card.shows %}
-              <li data-event-id="{{ event.pk }}" id="{{ card.anchor }}-event-{{ event.pk }}">
+              <li data-event-id="{{ event.pk }}" id="{{ event.anchor }}">
                 <time datetime="{{ event.starttime|date:'c' }}"><span class="show-date">{{ event.starttime|date:'D, M j' }}</span>{% if not event.starttime_override %} <span class="show-time">{{ event.starttime|time:'g:i a' }}</span>{% else %} <span class="show-time">{{ event.starttime_override }}</span>{% endif %}</time>
                 <span class="show-where"><span class="show-venue">{{ event.venue_name }}</span>{% if event.town %}, <span class="show-town">{{ event.town }}</span>{% endif %}</span>
+                {{ event.actions }}
               </li>
             {% endfor %}
           </ol>
