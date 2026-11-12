@@ -1,8 +1,8 @@
 ## Why
 
-The site is called "New England Music" and lives at newenglandmusic.onrender.com. That name was never final: `PRODUCT.md` says it covers the wider Northeast. Nate decided on 11 November 2026 to rename it Stagehopper and serve it at https://stagehopper.app, with a New England music tagline. stagehopper.app now serves Stagehopper's landing page, which moves to info.stagehopper.app.
+The site is called "New England Music" and lives at newenglandmusic.onrender.com. The name was never final: `PRODUCT.md` says it covers the wider Northeast. Nate decided on 11 November 2026 to rename it Stagehopper and serve it at https://stagehopper.app, with a New England music tagline. stagehopper.app now serves StageHopper's landing page (and the privacy policy and terms of its website and iOS app), which moves to info.stagehopper.app.
 
-Nate also asked that the site keep a privacy page and gain a terms page, since it collects email addresses: event submitters' emails today, and subscribers' for the planned email digest.
+Nate also asked that the site have terms and privacy pages, since it collects email addresses: event submitters' emails today, and subscribers' for the planned email digest.
 
 ## What Changes
 
@@ -11,52 +11,56 @@ Nate also asked that the site keep a privacy page and gain a terms page, since i
   - the admin's header;
   - the calendar feeds' names ("Stagehopper: Vermont");
   - each event's calendar entry ("… [Stagehopper]");
-  - the privacy page.
+  - the privacy and terms pages.
 
-  The masthead gains a tagline under the name, set by `SITE_TAGLINE`, with the default "Live music across New England".
-- **Its address is https://stagehopper.app.** Production sets `SITE_URL` to it, and `ALLOWED_HOSTS` takes stagehopper.app and www.stagehopper.app. The contact address the site's API clients send (MusicBrainz, Wikidata, Last.fm and others) comes from `SITE_URL` instead of the hard-coded onrender address.
-- **Other addresses redirect to it.** A request to www.stagehopper.app or to the service's onrender.com address is redirected permanently (301) to the same path and query at https://stagehopper.app. There are two exceptions:
-  - calendar feeds and single-event downloads are served at any allowed address, so existing subscriptions keep working without a calendar app having to follow a redirect;
-  - the health check is served directly. It moves from `/` to its own `/health`, since `/` on the old address now redirects.
-- **Calendar UIDs don't change.** `UID_DOMAIN` stays "newenglandmusic", because a new UID domain would make every subscribed calendar show each show twice.
-- **The landing page's old pages redirect.** `/privacy.html` and `/terms.html`, which stagehopper.app served for the landing page, redirect to the site's own `/privacy` and `/terms`.
-- **A terms page and an updated privacy page.**
-  - A new `/terms` page sits beside `/privacy` in every page's footer.
+  The masthead gains a tagline under the name, set by `SITE_TAGLINE`, with the default "Live music across New England" (wording to confirm).
+- **Its address is https://stagehopper.app.** Production sets `SITE_URL` to it, and accepts stagehopper.app, www.stagehopper.app and the onrender.com address as hosts. The contact address the site's API clients send (MusicBrainz, Wikidata, Last.fm and others) comes from `SITE_URL` instead of the hard-coded onrender address.
+- **Other addresses redirect to it.** A new setting, `CANONICAL_HOST`, set only in production, switches the redirects on, so tests and development never redirect. With it set, a request to www.stagehopper.app or to the onrender.com address is redirected permanently to the same path and query at https://stagehopper.app (301, or 308 for a form submission, so it isn't lost). Only the health check is served at any address. It moves from `/` to its own `/health`, since `/` on the old address now redirects.
+- **Calendar UIDs and names change too.** `UID_DOMAIN` defaults to "stagehopper". Nate said on 11 November 2026 that nobody has subscribed to the feeds, so there are no subscribers whose calendars would show events twice, and feeds need no exception from the redirect.
+- **Saved shows on the old address are left behind.** They live in a cookie that belongs to the old host. Nate said few people have saved shows (11 November 2026).
+- **The landing page's old addresses go to its new home.** stagehopper.app served the landing page's own files: its privacy policy and terms, the Boston and New York maps and galleries, and their data and images. Those paths redirect permanently to the same path at https://info.stagehopper.app. Links in the wild, including the iOS app's privacy policy link, keep reaching StageHopper's own policy.
+- **A terms page and an updated privacy page for the site.**
+  - A new `/terms` page sits beside the existing `/privacy` link in every page's footer.
   - The privacy page gains a section on email addresses: what's collected (a submitter's email, a subscriber's email), why, who sees it, and how to have it removed.
 
-  Both texts are drafted for Nate to approve before they go live.
+  Both texts are plain-language drafts, not reviewed by a lawyer, and Nate approves their wording before the merge.
 - **Hosting moves**, done by Nate in the dashboards, with the steps in `PRODUCTION.md`:
   - Render serves the web service at stagehopper.app and www.stagehopper.app as custom domains.
-  - Cloudflare's DNS points those two names at Render and info.stagehopper.app at GitHub Pages, as DNS-only records while Render issues certificates.
-  - The landing page's GitHub Pages site (`natea/twag`, `docs/`) changes its custom domain to info.stagehopper.app, and its links to `https://stagehopper.app/` change to the new address.
-  - nola., nolajazzfest. and worldcup.stagehopper.app are left as they are.
+  - Cloudflare's DNS points those names at Render and info.stagehopper.app at GitHub Pages, as DNS-only records, as today.
+  - The landing page's Pages site (`natea/twag`, `docs/`) changes its custom domain to info.stagehopper.app, and its canonical links and `og:url`s (`index.html`, `privacy.html`, `terms.html`) move with it.
+  - nola., nolajazzfest. and worldcup.stagehopper.app stay as they are.
 - **After the switch**, `resave_all_events` re-renders every event, since each event stores its page's HTML with the old name in it.
-- **Docs:** `PRODUCT.md` (name, address), `PRODUCTION.md` (custom domains, the redirect, the old address), `.env.example` (`SITE_NAME`, `SITE_TAGLINE`), and `DESIGN.md`'s masthead.
+- **Docs:** `PRODUCT.md` (name, address), `PRODUCTION.md` (custom domains, the redirect, the switch), `.env.example` (`SITE_NAME`, `SITE_TAGLINE`, `UID_DOMAIN`), and `DESIGN.md`'s masthead.
 
-Out of scope:
-- renaming the GitHub repository, the Render service or the database;
-- the Fabro workflow prompts and the Spek page title, which name the project, not the public site;
-- the design mocks in `.impeccable/`, which are a record of past decisions;
-- a logo or new visual identity.
+Out of scope, each for a reason:
+- **Renaming the Render service:** that changes its onrender.com address, which the redirect, the deploy settings and the docs all rely on, for no visible gain once stagehopper.app is the address.
+- **Renaming the GitHub repository:** that breaks the Spek pages' address, the intentable bridge's settings and every clone's remote, for no visible gain.
+- **Renaming the database:** its name is never shown.
+- **The Fabro workflow prompts and the Spek page title:** they name the project for agents, not the public site.
+- **The design mocks in `.impeccable/`:** a record of past decisions.
+- **A logo or new visual identity:** a design decision of its own.
+
+Each of the first three can follow as its own change if Nate wants it (see the design's Open Questions).
 
 ## Capabilities
 
 ### New Capabilities
 
-- `site-identity`: the site's name and tagline, its address, redirects from its other addresses, and its privacy and terms pages.
+- `site-identity`: the site's name and tagline, its address and the redirects from its other addresses, the landing page's old paths, the health check, and the terms page and the privacy page's email section.
 
 ### Modified Capabilities
 
-- `area-calendar-feeds`: "Feed events stay up to date in calendar apps" defaults the calendar's name to "Stagehopper", keeping the UID domain "newenglandmusic".
+- `area-calendar-feeds`: "Feed events stay up to date in calendar apps" defaults the calendar's name to "Stagehopper" and the UID domain to "stagehopper".
 
 ## Impact
 
-- `nycnoise/settings/base.py` and `prod.py`: `SITE_NAME`, `SITE_TAGLINE`, the hosts.
-- `render.yaml`: `SITE_URL`, `ALLOWED_HOSTS` and `healthCheckPath`.
+- `nycnoise/settings/base.py` and `prod.py`: `SITE_NAME`, `SITE_TAGLINE`, `UID_DOMAIN`, `CANONICAL_HOST`, the hosts.
+- `render.yaml`: `healthCheckPath`, and `SITE_URL` passed from the web service to both scheduled jobs. `SITE_URL` and `CANONICAL_HOST` are dashboard settings (`sync: false`).
+- `core/static/core/images/share-preview.png` (a Stagehopper version) and the web manifest's name.
 - New middleware for the redirects.
 - `core/templates/core/base.html`: the masthead and its tagline, and the footer's terms link.
 - `core/templates/core/privacy.html`, and a new `core/templates/core/terms.html`.
-- `core/urls.py`: `/terms`, and the two old landing-page addresses.
+- `core/urls.py`: `/terms` and `/health`.
 - `core/admin.py`, `core/opengraph.py`, `core/models.py` (`calendar_name`) and `core/user_agent.py`.
 - Tests beside each.
-- Outside the repository: Render's custom domains, Cloudflare DNS records, and the `natea/twag` Pages site, all done by Nate. Spotify's registered redirect URIs for the unmerged `add-spotify-followed-artists` change need the new address added.
+- Outside the repository: Render's custom domains, Cloudflare's DNS records, and the `natea/twag` Pages site, all done by Nate. Spotify's registered redirect URIs for the unmerged `add-spotify-followed-artists` change need the new address added.

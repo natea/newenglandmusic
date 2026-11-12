@@ -11,7 +11,7 @@ A cancelled event SHALL have `STATUS:CANCELLED`. The feed SHALL include events t
 
 The calendar SHALL be named for the site and the area, such as "Stagehopper: Vermont", and SHALL ask to be refreshed every six hours (`REFRESH-INTERVAL` and `X-PUBLISHED-TTL`).
 
-The site's name in the calendar's name, and the part of each UID after "@", SHALL come from the `SITE_NAME` and `UID_DOMAIN` settings, which default to "Stagehopper" and "newenglandmusic". The UID domain keeps its old default when the site is renamed, so that subscribed calendars don't show each show twice.
+The site's name in the calendar's name, and the part of each UID after "@", SHALL come from the `SITE_NAME` and `UID_DOMAIN` settings, which default to "Stagehopper" and "stagehopper".
 
 #### Scenario: Names from the settings
 - **WHEN** `SITE_NAME` is "Boston Shows" and `UID_DOMAIN` is "boston-shows"
@@ -37,7 +37,7 @@ The site's name in the calendar's name, and the part of each UID after "@", SHAL
 - **WHEN** a calendar app fetches `/calendar.ics?metro=ma-cape-cod`
 - **THEN** the calendar is named "Stagehopper: MA: Cape Cod", and asks to be refreshed every six hours
 
-#### Scenario: UIDs survive the rename
+#### Scenario: Default names
 
 - **WHEN** a feed is fetched with `SITE_NAME` and `UID_DOMAIN` unset
-- **THEN** event 12's UID is `event-12@newenglandmusic`, as before the site was named Stagehopper
+- **THEN** a Vermont feed's calendar is named "Stagehopper: Vermont", and event 12's UID is `event-12@stagehopper`
