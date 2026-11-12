@@ -35,7 +35,12 @@ $PG psql -q -c 'ALTER USER postgres WITH PASSWORD $$postgres$$'
 $PG createdb djtesting
 VERSION=$($PG psql -tA -c 'SHOW server_version_num')
 if [ $VERSION -lt 140000 ]; then echo 'the site needs Postgres 14 or later; this sandbox has' $VERSION; exit 1; fi
-venv/bin/python -m playwright install --with-deps chromium
+# Playwright's download servers sometimes reset the connection (12 November 2026); try three times
+for try in 1 2 3; do
+  if venv/bin/python -m playwright install --with-deps chromium; then break; fi
+  if [ $try = 3 ]; then echo 'the browser download failed three times'; exit 1; fi
+  sleep 20
+done
 mkdir -p .intentable
 cat > .intentable/test.env <<'EOT'
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/djtesting
