@@ -8,8 +8,8 @@ Issue: [#58 Remove non-New England regions and states from the homepage search f
 
 ## 2. Search choices
 
-- [ ] 2.1 Add `new_england_only` to `offered_areas` and `parse_geo_filter`, comparing states case-insensitively; pass it from the site's callers (index options, `metro_groups`, `geo_filter_for_request`, the calendar feed) and not from `core/admin.py`; verify with tests for "Regions outside New England", "States outside New England", "Metros of removed states", "Area with no states", "Sheet order", "Lowercase sheet states" and "Admin sidebar keeps every area", plus a `town=` link under the flag and a venue with a lowercase state.
-- [ ] 2.2 Verify old links, cookies and feeds with tests for "Old link to New York", "Old cookie" and "Old feed subscription".
+- [x] 2.1 Add `new_england_only` to `offered_areas` and `parse_geo_filter`, comparing states case-insensitively; pass it from the site's callers (index options, `metro_groups`, `geo_filter_for_request`, the calendar feed) and not from `core/admin.py`; verify with tests for "Regions outside New England", "States outside New England", "Metros of removed states", "Area with no states", "Sheet order", "Lowercase sheet states" and "Admin sidebar keeps every area", plus a `town=` link under the flag and a venue with a lowercase state.
+- [x] 2.2 Verify old links, cookies and feeds with tests for "Old link to New York", "Old cookie" and "Old feed subscription".
 
 ## 3. Finish
 
