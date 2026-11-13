@@ -471,6 +471,12 @@ Small acts often keep all their links on one Linktree-style page. `read_artist_l
 - **Caching:** responses carry an `ETag` and `Cache-Control: public, max-age=3600`, and an unchanged feed answers 304.
 - **Subscribing:** a "Subscribe to this calendar" panel under the area filter offers a `webcal://` link, a Google Calendar link and the plain URL, all built from `SITE_URL`. Apple Calendar fetches `webcal://` over HTTPS, so locally (plain HTTP) subscribe to the `http://localhost:8001/calendar.ics?...` address instead. Set `SITE_URL` to the public address once there's a custom domain, or the links keep pointing at the `onrender.com` one.
 
+## What the site lists
+
+The public site lists only events at venues in Massachusetts, Connecticut, Rhode Island, New Hampshire, Maine and Vermont, and offers only the regions, states and metro areas inside them. Events at other venues, and events with no venue, are hidden from the listings, search, calendar feeds, saved shows, act pages, the discover page and the sitemap, but nothing is deleted: the admin shows them all, `fetch_events` keeps fetching them, and the artist matching still reads them. An event opened by its own link still works.
+
+The states are one list, `NEW_ENGLAND_STATES` in `core/geo_filters.py`; widening the scope is a change to that list. A venue whose state is blank in the sheet is hidden too, so an editor should fix its state there.
+
 ## Saved shows and the event icons
 
 Each event has a row of link icons below its text: calendar file, Google Calendar, map, share, and a bookmark to save the show. `/saved` lists a visitor's upcoming saved shows by date. Saved shows live only in the visitor's browser, in a `saved_shows` cookie of event IDs, so there are no accounts and nothing is stored on the server. The bookmark works without JavaScript too: it posts to `/saved/toggle/<id>`, which updates the cookie and goes back to the event.

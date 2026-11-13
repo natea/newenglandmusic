@@ -8,6 +8,7 @@ import datetime
 from core.models import (
     AppleMusicArtistLink, Artist, Band, Event, EventPerformer, SpotifyArtistLink, Venue, YouTubeArtistLink,
 )
+from core.tests.new_england_fixture import new_england_venue
 from django.utils import timezone
 
 
@@ -15,7 +16,10 @@ def days(n):
     return timezone.now() + datetime.timedelta(days=n)
 
 
-def show(act, when, venue=None, approved=True, cancelled=False, **fields):
+def show(act, when, venue=..., approved=True, cancelled=False, **fields):
+    # a show with no venue is left out of the deck, so the default is one the site lists
+    if venue is ...:
+        venue = new_england_venue()
     event = Event.all_objects.create(
         title="show", starttime=when, venue=venue, is_approved=approved, is_cancelled=cancelled, **fields
     )

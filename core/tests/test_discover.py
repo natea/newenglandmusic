@@ -234,7 +234,7 @@ class CardTestCase(DiscoverTestCase):
 
     def test_a_show_with_no_venue_is_left_out(self):
         nowhere = Band.objects.create(name="Nowhere Men")
-        show(nowhere, days(2))
+        show(nowhere, days(2), None)
         self.assertNotContains(self.page(), "Nowhere Men")
 
     def test_more_shows_are_counted(self):
