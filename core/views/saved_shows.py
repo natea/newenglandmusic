@@ -5,6 +5,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from ..geo_filters import new_england_q
 from ..models import Event
 from ..opengraph import get_meta
 from ..saved_shows import COOKIE_MAX_AGE, COOKIE_NAME, format_saved, parse_saved, toggle_saved
@@ -27,7 +28,7 @@ def saved_shows(request):
     events = list(
         # Event.objects: approved events only
         Event.objects.select_related("venue")
-        .filter(pk__in=saved, starttime__gte=beginning_of_day(get_current_new_york_datetime()))
+        .filter(new_england_q(prefix="venue__"), pk__in=saved, starttime__gte=beginning_of_day(get_current_new_york_datetime()))
         .order_by("starttime", "same_time_order_override")
         .annotate(date=TruncDate("starttime"))
     )

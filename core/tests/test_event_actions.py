@@ -4,6 +4,7 @@ from unittest import mock
 
 from core.event_actions import actions_html
 from core.models import Event, SpotifyArtistLink, Venue
+from core.tests.new_england_fixture import new_england_venue
 from core.saved_shows import COOKIE_NAME, MAX_SAVED, format_saved, parse_saved
 from core.tests.spotify_fixture import CREDENTIALS
 from core.utils_datemath import beginning_of_day, get_current_new_york_datetime
@@ -45,7 +46,7 @@ class IconRowTestCase(TestCase):
         self.assertIn('target="_blank" rel="noopener"', row)
 
     def test_no_map_without_a_location(self):
-        nowhere = Venue.objects.create(name="Nowhere")
+        nowhere = Venue.objects.create(name="Nowhere", state="MA")
         unplaced = Event.objects.create(title="unplaced", starttime=self.tomorrow, venue=nowhere)
         overridden = Event.objects.create(
             title="overridden", starttime=self.tomorrow, venue=self.paradise, venue_override="a basement"
@@ -108,7 +109,7 @@ class IconRowTestCase(TestCase):
 
 class ToggleTestCase(TestCase):
     def setUp(self):
-        self.show = Event.objects.create(title="a show", starttime=timezone.now() + timedelta(days=2))
+        self.show = Event.objects.create(venue=new_england_venue(), title="a show", starttime=timezone.now() + timedelta(days=2))
 
     def toggle(self, event_id, next_url="/", saved=None):
         if saved is not None:
@@ -155,7 +156,7 @@ class ToggleTestCase(TestCase):
 
 class AnchorTestCase(TestCase):
     def setUp(self):
-        self.event = Event.objects.create(title="a show", starttime=timezone.now() + timedelta(days=2))
+        self.event = Event.objects.create(venue=new_england_venue(), title="a show", starttime=timezone.now() + timedelta(days=2))
 
     def test_the_default_anchor_is_the_events(self):
         # what the listings and the band page have always had

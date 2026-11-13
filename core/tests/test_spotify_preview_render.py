@@ -2,6 +2,7 @@ import datetime
 from unittest import mock
 
 from core.models import Event, SpotifyArtistLink
+from core.tests.new_england_fixture import new_england_venue
 from core.tests.spotify_fixture import CREDENTIALS
 from django.test import TestCase
 from django.utils import timezone
@@ -22,6 +23,7 @@ class PreviewRenderTestCase(TestCase):
         matched("lake street dive", "fakeLSD")
         # tomorrow, inside the homepage's three weeks
         self.event = Event.objects.create(
+            venue=new_england_venue(),
             title="SHEBAD", artists="SHEBAD, Psymon Spine", starttime=timezone.now() + datetime.timedelta(days=1)
         )
 
@@ -47,6 +49,7 @@ class PreviewRenderTestCase(TestCase):
     def test_buttons_in_the_order_the_names_appear(self):
         matched("shebad", "fakeShebad")
         event = Event.objects.create(
+            venue=new_england_venue(),
             title="SHEBAD", artists="Lake Street Dive, Psymon Spine",
             starttime=timezone.now() + datetime.timedelta(days=1),
         )
@@ -57,6 +60,7 @@ class PreviewRenderTestCase(TestCase):
     def test_duo_gets_a_button_per_matched_act(self):
         matched("boulder canyon", "fakeBoulder")
         event = Event.objects.create(
+            venue=new_england_venue(),
             title="Chris Collins & Boulder Canyon", starttime=timezone.now() + datetime.timedelta(days=1)
         )
         html = self.baked(event)
@@ -66,6 +70,7 @@ class PreviewRenderTestCase(TestCase):
     def test_occasion_labelled_with_the_artists_part_of_the_name(self):
         matched("buffalo tom", "fakeBT")
         event = Event.objects.create(
+            venue=new_england_venue(),
             title="BUFFALO TOM 3rd Annual charity concert", starttime=timezone.now() + datetime.timedelta(days=1)
         )
         html = self.baked(event)
@@ -75,6 +80,7 @@ class PreviewRenderTestCase(TestCase):
     def test_one_button_per_artist(self):
         matched("dark star orchestra", "fakeDSO")
         event = Event.objects.create(
+            venue=new_england_venue(),
             title="Dark Star Orchestra - Celebrating 45 Years", artists="Dark Star Orchestra",
             starttime=timezone.now() + datetime.timedelta(days=1),
         )
@@ -84,7 +90,7 @@ class PreviewRenderTestCase(TestCase):
         now = timezone.now()
         for key, status in (("shebad", SpotifyArtistLink.Status.AMBIGUOUS), ("dyr faser", SpotifyArtistLink.Status.NONE)):
             SpotifyArtistLink.objects.create(name_key=key, status=status, checked_at=now, last_seen_at=now)
-        event = Event.objects.create(artists="SHEBAD, Dyr Faser", starttime=now + datetime.timedelta(days=1))
+        event = Event.objects.create(venue=new_england_venue(), artists="SHEBAD, Dyr Faser", starttime=now + datetime.timedelta(days=1))
         self.assertNotIn("spotify-play", self.baked(event))
 
     def test_homepage_has_buttons_but_no_player(self):

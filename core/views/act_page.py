@@ -18,6 +18,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
 from core.event_actions import actions_html
+from core.geo_filters import new_england_q
 from core.link_hubs import hub_for
 from core.location import location_from_request
 from core.models import Artist, Band, Event
@@ -67,7 +68,7 @@ def upcoming_shows(act):
     field = "performers__band" if isinstance(act, Band) else "performers__artist"
     return list(
         # Event.objects: approved events only
-        Event.objects.filter(**{field: act}, starttime__gte=beginning_of_day(get_current_new_york_datetime()))
+        Event.objects.filter(new_england_q(prefix="venue__"), **{field: act}, starttime__gte=beginning_of_day(get_current_new_york_datetime()))
         .select_related("venue")
         .order_by("starttime", "same_time_order_override")
     )

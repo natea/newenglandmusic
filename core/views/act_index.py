@@ -11,6 +11,7 @@ from django.conf import settings
 from django.db.models import Min, Q
 from django.shortcuts import redirect, render
 
+from core.geo_filters import new_england_q
 from core.models import Artist, Band
 from core.opengraph import get_meta
 from core.utils_datemath import beginning_of_day, get_current_new_york_datetime
@@ -62,6 +63,7 @@ def live_acts():
     """every live band and artist, with next_show (its next upcoming approved show's start, or None)"""
     today = beginning_of_day(get_current_new_york_datetime())
     upcoming = Q(performances__event__is_approved=True, performances__event__starttime__gte=today)
+    upcoming &= new_england_q(prefix="performances__event__venue__")
     acts = []
     for model in (Band, Artist):
         acts.extend(

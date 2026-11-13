@@ -27,6 +27,15 @@ from core.models import GeoArea
 
 FILTER_PARAMS = ("region", "state", "metro")
 
+# the states whose venues' events the public site lists, and whose areas it offers; widen
+# the site's scope by changing this list alone
+NEW_ENGLAND_STATES = ["MA", "CT", "RI", "NH", "ME", "VT"]
+
+
+def new_england_q(prefix=""):
+    """the events (or venues, with no prefix) in New England; no venue, or no state, is out"""
+    return Q(**{f"{prefix}state__in": NEW_ENGLAND_STATES})
+
 
 def area_q(area, prefix=""):
     q = Q(**{f"{prefix}state__in": [state.upper() for state in area.states]})
@@ -41,10 +50,15 @@ def area_q(area, prefix=""):
     return q & place_q
 
 
-def offered_areas(kind):
+def offered_areas(kind, new_england_only=False):
     # an area with no states can't match anything (e.g. "Northeast Corridor"
     # before the sheet gives it states), so it isn't worth offering
-    return GeoArea.objects.filter(kind=kind).exclude(states=[])
+    areas = GeoArea.objects.filter(kind=kind).exclude(states=[])
+    if not new_england_only:
+        return areas
+    # the site offers only areas wholly inside New England; the sheet stores states lowercase
+    allowed = {state.lower() for state in NEW_ENGLAND_STATES}
+    return [area for area in areas if {state.lower() for state in area.states} <= allowed]
 
 
 @dataclass
@@ -147,17 +161,19 @@ def metro_fits_state(metro, state):
     return state is None or metro.home_state == state.home_state
 
 
-def parse_geo_filter(querydict):
+def parse_geo_filter(querydict, new_england_only=False):
     """
     resolves the region, state and metro slugs in querydict to offered areas.
     unknown slugs are dropped, as is a metro from a different state than the
-    chosen one, so a stale or hand-edited url just filters less.
+    chosen one, so a stale or hand-edited url just filters less. new_england_only is the
+    site's view: an area outside New England is unknown to it, though the admin resolves it.
     """
     geo_filter = GeoFilter()
     for param in FILTER_PARAMS:
         slug = querydict.get(param, "").strip()
         if slug:
-            setattr(geo_filter, param, offered_areas(param).filter(slug=slug).first())
+            areas = offered_areas(param, new_england_only)
+            setattr(geo_filter, param, next((area for area in areas if area.slug == slug), None))
     if geo_filter.metro and not metro_fits_state(geo_filter.metro, geo_filter.state):
         geo_filter.metro = None
     wanted = [value.strip() for value in querydict.getlist("town") if value.strip()] if hasattr(querydict, "getlist") else []
@@ -199,13 +215,13 @@ def geo_filter_for_request(request):
     if "clear" in params or (given and not any(params[param].strip() for param in given)):
         return GeoFilter(), CookieAction.CLEAR
     if given:
-        geo_filter = parse_geo_filter(params)
+        geo_filter = parse_geo_filter(params, new_england_only=True)
         return geo_filter, CookieAction.SET if geo_filter else None
 
     cookie = request.COOKIES.get(COOKIE_NAME)
     if not cookie:
         return GeoFilter(), None
-    geo_filter = parse_geo_filter(QueryDict(cookie))
+    geo_filter = parse_geo_filter(QueryDict(cookie), new_england_only=True)
     # a cookie naming only areas that are gone from the sheet is just stale
     return geo_filter, CookieAction.REDIRECT if geo_filter else CookieAction.CLEAR
 
@@ -227,9 +243,9 @@ def apply_cookie_action(request, response, geo_filter, cookie_action):
 
 def metro_groups(state=None):
     """offered metros as [(state label, [metros])], in sheet order, for <optgroup>s"""
-    state_labels = {area.home_state: area.label for area in offered_areas(GeoArea.Kind.STATE)}
+    state_labels = {area.home_state: area.label for area in offered_areas(GeoArea.Kind.STATE, new_england_only=True)}
     groups = {}
-    for metro in offered_areas(GeoArea.Kind.METRO):
+    for metro in offered_areas(GeoArea.Kind.METRO, new_england_only=True):
         if metro_fits_state(metro, state):
             groups.setdefault(metro.home_state, []).append(metro)
     return [

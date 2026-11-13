@@ -9,7 +9,7 @@ from django.urls import reverse
 
 class ArchivePageTestCase(TestCase):
     def setUp(self):
-        self.venue = Venue.objects.create(name=f"venue {uuid.uuid4()}")
+        self.venue = Venue.objects.create(name=f"venue {uuid.uuid4()}", state="MA")
 
     def test_event_in_current_month_shows_up_on_index_page(self):
         nyctz = tz.gettz("America/New_York")

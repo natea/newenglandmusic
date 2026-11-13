@@ -8,6 +8,7 @@ import datetime
 from urllib.parse import unquote
 
 from core.models import Event
+from core.tests.new_england_fixture import new_england_venue
 from core.saved_shows import COOKIE_NAME, MAX_SAVED
 from core.tests.browser import BrowserTestCase
 from django.utils import timezone
@@ -17,8 +18,8 @@ class SavedShowsBrowserTestCase(BrowserTestCase):
     def setUp(self):
         super().setUp()
         tomorrow = timezone.now() + datetime.timedelta(days=1)
-        self.first = Event.objects.create(title="first show", starttime=tomorrow)
-        self.second = Event.objects.create(title="second show", starttime=tomorrow + datetime.timedelta(hours=1))
+        self.first = Event.objects.create(venue=new_england_venue(), title="first show", starttime=tomorrow)
+        self.second = Event.objects.create(venue=new_england_venue(), title="second show", starttime=tomorrow + datetime.timedelta(hours=1))
 
     def save_link(self, page, event):
         return page.locator(f"#event-{event.pk} button.save")

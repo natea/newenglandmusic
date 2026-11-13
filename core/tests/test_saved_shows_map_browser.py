@@ -26,8 +26,8 @@ class SavedShowsMapBrowserTestCase(BrowserTestCase):
         today = beginning_of_day(get_current_new_york_datetime())
         self.day1 = today + datetime.timedelta(days=1, hours=19)
         self.day3 = today + datetime.timedelta(days=3, hours=21)
-        self.paradise = Venue.objects.create(name="Paradise Rock Club", latitude=42.3519, longitude=-71.1195)
-        self.higher_ground = Venue.objects.create(name="Higher Ground", latitude=44.4567, longitude=-73.2071)
+        self.paradise = Venue.objects.create(name="Paradise Rock Club", latitude=42.3519, longitude=-71.1195, state="MA")
+        self.higher_ground = Venue.objects.create(name="Higher Ground", latitude=44.4567, longitude=-73.2071, state="MA")
         self.boston_show = Event.objects.create(title="boston show", starttime=self.day1, venue=self.paradise)
         self.vermont_show = Event.objects.create(title="vermont show", starttime=self.day3, venue=self.higher_ground)
 
@@ -85,8 +85,8 @@ class SavedShowsMapBrowserTestCase(BrowserTestCase):
 
     def test_next_door_venues_share_a_pin(self):
         # the 9:30 Club and The Atlantis, 28 metres apart
-        nine_thirty = Venue.objects.create(name="9:30 Club", latitude=38.917948, longitude=-77.0237227)
-        atlantis = Venue.objects.create(name="The Atlantis", latitude=38.9181819, longitude=-77.023636)
+        nine_thirty = Venue.objects.create(name="9:30 Club", latitude=38.917948, longitude=-77.0237227, state="MA")
+        atlantis = Venue.objects.create(name="The Atlantis", latitude=38.9181819, longitude=-77.023636, state="MA")
         dana = Event.objects.create(title="Dana and Alden", starttime=self.day1, venue=atlantis)
         rooks = Event.objects.create(title="Giant Rooks", starttime=self.day3, venue=nine_thirty)
         page = self.open_saved(dana, rooks)
@@ -103,7 +103,7 @@ class SavedShowsMapBrowserTestCase(BrowserTestCase):
 
     def test_venues_a_street_apart_keep_their_own_pins(self):
         # about 100 metres north of Paradise Rock Club
-        neighbour = Venue.objects.create(name="Up the street", latitude=42.3528, longitude=-71.1195)
+        neighbour = Venue.objects.create(name="Up the street", latitude=42.3528, longitude=-71.1195, state="MA")
         nearby = Event.objects.create(title="nearby show", starttime=self.day3, venue=neighbour)
         page = self.open_saved(self.boston_show, nearby)
         self.open_map(page)
@@ -141,9 +141,9 @@ class SavedShowsMapBrowserTestCase(BrowserTestCase):
         self.assertEqual(widths[0], widths[1])
 
     def test_shows_that_cant_be_mapped(self):
-        nowhere = Venue.objects.create(name="Nowhere")
+        nowhere = Venue.objects.create(name="Nowhere", state="MA")
         unplaced = Event.objects.create(title="unplaced show", starttime=self.day1, venue=nowhere)
-        no_venue = Event.objects.create(title="basement show", starttime=self.day1, venue_override="a basement")
+        no_venue = Event.objects.create(title="basement show", starttime=self.day1, venue=nowhere, venue_override="a basement")
         cancelled = Event.objects.create(
             title="cancelled show", starttime=self.day1, venue=self.higher_ground, is_cancelled=True
         )

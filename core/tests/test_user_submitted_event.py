@@ -12,7 +12,7 @@ class UserSubmittedEventTestCase(TestCase):
     endpoint = reverse("submit_event")
 
     def setUp(self):
-        self.venue = Venue.objects.create(name=f"venue {uuid.uuid4()}")
+        self.venue = Venue.objects.create(name=f"venue {uuid.uuid4()}", state="MA")
 
     def test_get(self):
         response = self.client.get(self.endpoint)
@@ -88,7 +88,7 @@ class UserSubmittedEventTestCase(TestCase):
         self.assertFalse(Event.all_objects.filter(title="brutal prog matinée").exists())
 
     def test_unapproved_events_are_hidden(self):
-        admin_event = Event(title=uuid.uuid4(), starttime=timezone.now())
+        admin_event = Event(title=uuid.uuid4(), starttime=timezone.now(), venue=self.venue)
         admin_event.save()
 
         unapproved_event = UserSubmittedEventForm(
@@ -99,7 +99,7 @@ class UserSubmittedEventTestCase(TestCase):
         self.assertNotContains(response, unapproved_event.title)
 
     def test_approved_events_are_shown(self):
-        admin_event = Event(title=uuid.uuid4(), starttime=timezone.now())
+        admin_event = Event(title=uuid.uuid4(), starttime=timezone.now(), venue=self.venue)
         admin_event.save()
 
         submitted_event = UserSubmittedEventForm(

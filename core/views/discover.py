@@ -18,6 +18,7 @@ from django.views.decorators.cache import never_cache
 from core.artist_matching import normalize
 from core.artist_previews import act_previews
 from core.event_actions import actions_html
+from core.geo_filters import new_england_q
 from core.location import location_from_request
 from core.models import Band, Event, EventPerformer
 from core.opengraph import get_meta
@@ -66,7 +67,7 @@ def upcoming_performances():
     (approved only), not the acts' own related manager
     """
     upcoming = Event.objects.filter(
-        starttime__gte=beginning_of_day(get_current_new_york_datetime()), is_cancelled=False
+        new_england_q(prefix="venue__"), starttime__gte=beginning_of_day(get_current_new_york_datetime()), is_cancelled=False
     )
     return (
         EventPerformer.objects.filter(event__in=upcoming)

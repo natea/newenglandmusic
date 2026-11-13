@@ -2,9 +2,9 @@ Issue: [#58 Remove non-New England regions and states from the homepage search f
 
 ## 1. Scope list and event filter
 
-- [ ] 1.1 Add the New England state list and the shared event filter helper, and apply it in the homepage and month listings (event list, calendar dates, day maps); verify with tests for "Listing hides a New York show", "Event without a linked venue" and "Widening the list".
-- [ ] 1.2 Apply the filter in site search and its suggestions, the calendar feeds, saved shows, act and band pages, the A–Z act index and act suggestions' next-show dates, the discover page (on the inner `Event.objects` queryset in `upcoming_performances()`, not the outer performance query) and the sitemap (the helper must work on its annotated month query); leave `core/spotify_links.py` alone; verify with tests for "Search hides a New Jersey show", "Calendar feed outside New England", the "area-calendar-feeds" scenarios (State feed, Metro feed, Whole Northeast, Remembered filter ignored, Unknown area), "Act page", "Next-show dates", "Saved shows", "Discover", "Search suggestions" and "Sitemap months".
-- [ ] 1.3 Verify the admin and pipeline are unaffected with tests for "Admin and data untouched", "Fetching continues" and "Artist matching unchanged".
+- [x] 1.1 Add the New England state list and the shared event filter helper, and apply it in the homepage and month listings (event list, calendar dates, day maps); verify with tests for "Listing hides a New York show", "Event without a linked venue" and "Widening the list".
+- [x] 1.2 Apply the filter in site search and its suggestions, the calendar feeds, saved shows, act and band pages, the A–Z act index and act suggestions' next-show dates, the discover page (on the inner `Event.objects` queryset in `upcoming_performances()`, not the outer performance query) and the sitemap (the helper must work on its annotated month query); leave `core/spotify_links.py` alone; verify with tests for "Search hides a New Jersey show", "Calendar feed outside New England", the "area-calendar-feeds" scenarios (State feed, Metro feed, Whole Northeast, Remembered filter ignored, Unknown area), "Act page", "Next-show dates", "Saved shows", "Discover", "Search suggestions" and "Sitemap months".
+- [x] 1.3 Verify the admin and pipeline are unaffected with tests for "Admin and data untouched", "Fetching continues" and "Artist matching unchanged".
 
 ## 2. Search choices
 

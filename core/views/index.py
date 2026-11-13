@@ -12,6 +12,7 @@ from ..geo_filters import (
     geo_filter_for_request,
     metro_groups,
     metro_towns,
+    new_england_q,
     neighborhood_label,
     offered_areas,
     town_label,
@@ -90,6 +91,7 @@ def _fetch_events_from_start_to_end_time_group_by_date_as_list(
         Event.objects.select_related("venue")
         .filter(
             geo_filter.q(prefix="venue__"),
+            new_england_q(prefix="venue__"),
             starttime__gte=events_start_time,
             starttime__lt=events_end_time,
         )
@@ -192,8 +194,8 @@ def _get_events_page_for_month(
             "is_index": is_index,
             "geo_filter": geo_filter,
             "geo_query": geo_query,
-            "region_options": offered_areas(GeoArea.Kind.REGION),
-            "state_options": offered_areas(GeoArea.Kind.STATE),
+            "region_options": offered_areas(GeoArea.Kind.REGION, new_england_only=True),
+            "state_options": offered_areas(GeoArea.Kind.STATE, new_england_only=True),
             "metro_groups": metro_groups(geo_filter.state),
             "metro_towns": [town_label(town, state) for town, state in metro_towns(geo_filter.metro)]
             if geo_filter.metro
