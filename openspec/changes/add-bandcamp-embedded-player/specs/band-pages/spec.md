@@ -5,14 +5,14 @@ An artist or band page SHALL show Bandcamp's embedded player for an act with a u
 
 #### Scenario: Band page with a player
 - **WHEN** a visitor opens a band page whose band has a usable album player
-- **THEN** the page has a "Listen on Bandcamp" section with a play button, and no Bandcamp frame yet
+- **THEN** the page has a "Listen on Bandcamp" section with a play button and no Bandcamp frame or artwork yet
 
 #### Scenario: Pressing play on a band page
 - **WHEN** a visitor presses the play button
-- **THEN** a frame loading `bandcamp.com/EmbeddedPlayer/album=<id>/…` replaces it, titled with the band's name
+- **THEN** a frame loading `bandcamp.com/EmbeddedPlayer/album=<id>/…` replaces it, titled "Bandcamp player: <band name>", and pressing the button again closes it
 
 ### Requirement: The listening section is drawn only when it works
-The section SHALL NOT be drawn for an act with no usable player, including one whose Bandcamp URL changed since the player was found unless an editor set it. Without JavaScript the section SHALL be a link to the act's Bandcamp page.
+The section SHALL NOT be drawn for an act with no usable player, including one whose Bandcamp URL changed since the player was found unless an editor set it. Without JavaScript the section SHALL be a link to the act's Bandcamp page, and a declined act gets no section.
 
 #### Scenario: Band page with no player
 - **WHEN** a visitor opens the page of an act with a Bandcamp link but no usable player
