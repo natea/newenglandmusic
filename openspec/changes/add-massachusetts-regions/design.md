@@ -53,7 +53,7 @@ Each Massachusetts county has one default sub-region, for venues in towns the ed
 Middlesex is split five ways by the editors' lists, so its default will carry unlisted towns (Woburn, Lexington, Burlington…); the report in task 4.2 lists every venue a default placed, for the editors to add towns where the default is wrong.
 
 ### 5. Labels and addresses
-Sub-region labels are "MA: <name>" (`short_label` drops "MA: " in the grouped dropdown), so their URL values follow the existing rule: `ma-the-berkshires`, `ma-north-of-the-charles`, `ma-downtown-central-boston`. The seven old slugs map to the state in `parse_geo_filter`, before unknown values are dropped (an `OLD_METRO_SLUGS` set beside `AREAS`); the listing, the remembered filter and `/calendar.ics` all go through it.
+Sub-region labels are "MA: <name>" (`short_label` drops "MA: " in the grouped dropdown), so their URL values follow the existing rule: `ma-the-berkshires`, `ma-north-of-the-charles`, `ma-downtown-central-boston`. The old slugs map to the state in `parse_geo_filter`, apart from `ma-north-shore`, which the new North Shore ("MA: North Shore") takes over, keeping its Essex County venues, before unknown values are dropped (an `OLD_METRO_SLUGS` set beside `AREAS`); the listing, the remembered filter and `/calendar.ics` all go through it.
 
 ### 6. The other areas are copied as they are
 The current regions, states and non-Massachusetts metros are written into `AREAS` from the stored areas (read from production, which the daily sync last filled), in their current order and with their keys, so nothing outside Massachusetts changes. The New England-only offering stays as it is.

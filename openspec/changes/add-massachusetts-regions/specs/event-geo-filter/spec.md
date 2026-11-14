@@ -128,7 +128,7 @@ Once one or more towns are chosen in the town filter, the filter SHALL offer the
 ## ADDED Requirements
 
 ### Requirement: Massachusetts is divided into sub-regions
-Massachusetts's metros SHALL be the editors' 30 sub-regions, each with a label ("MA: The Berkshires"), its group, and its towns, in seven groups: Western Massachusetts, Central Massachusetts, MetroWest, Greater Boston, Northeast Massachusetts, South of Boston & Southeast, and Cape Cod & the Islands. Every Massachusetts venue SHALL belong to exactly one sub-region, chosen in this order: the sub-region listing its town; for a Boston venue, the sub-region listing its neighborhood (by name or alias); otherwise its county's default sub-region.
+Massachusetts's metros SHALL be the editors' 28 sub-regions, each with a label ("MA: The Berkshires"), its group, and its towns, in seven groups: Western Massachusetts, Central Massachusetts, MetroWest, Greater Boston, Northeast Massachusetts, South of Boston & Southeast, and Cape Cod & the Islands. Every Massachusetts venue SHALL belong to exactly one sub-region, chosen in this order: the sub-region listing its town; for a Boston venue, the sub-region listing its neighborhood (by name or alias); otherwise its county's default sub-region.
 
 #### Scenario: A listed town
 - **WHEN** a Massachusetts venue's town is Northampton
@@ -147,7 +147,7 @@ Massachusetts's metros SHALL be the editors' 30 sub-regions, each with a label (
 - **THEN** every active Massachusetts venue with a county belongs to exactly one sub-region
 
 ### Requirement: Old Massachusetts metro addresses still cover Massachusetts
-The seven Massachusetts metros the sheet defined (`ma-berkshires`, `ma-boston`, `ma-boston-metro-region`, `ma-cape-cod`, `ma-central`, `ma-north-shore`, `ma-south-shore-coast`) SHALL be read, wherever a metro is given (the listing, the remembered filter and the calendar feeds), as the state Massachusetts, so an old link or a subscribed feed keeps showing Massachusetts's shows rather than every area's.
+The Massachusetts metros the sheet defined whose addresses no sub-region takes over (`ma-berkshires`, `ma-boston`, `ma-boston-metro-region`, `ma-cape-cod`, `ma-central`, `ma-south-shore-coast`) SHALL be read, wherever a metro is given (the listing, the remembered filter and the calendar feeds), as the state Massachusetts, so an old link or a subscribed feed keeps showing Massachusetts's shows rather than every area's.
 
 #### Scenario: An old listing link
 - **WHEN** a visitor opens `/?metro=ma-boston-metro-region`
@@ -156,3 +156,7 @@ The seven Massachusetts metros the sheet defined (`ma-berkshires`, `ma-boston`, 
 #### Scenario: A subscribed feed
 - **WHEN** a calendar app fetches `/calendar.ics?metro=ma-cape-cod`
 - **THEN** the feed holds Massachusetts's events, and no others
+
+#### Scenario: The North Shore address kept
+- **WHEN** a visitor opens `/?metro=ma-north-shore`
+- **THEN** the listing shows the new North Shore sub-region's events, with it chosen

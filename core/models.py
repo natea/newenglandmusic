@@ -519,6 +519,12 @@ class GeoArea(models.Model):
     states = ArrayField(models.CharField(max_length=2), blank=True, default=list)
     counties = ArrayField(models.CharField(max_length=255), blank=True, default=list)
     cities = ArrayField(models.CharField(max_length=255), blank=True, default=list)
+    # massachusetts's sub-regions (core/geo_areas.py): the heading they're grouped under in the
+    # metro options, the boston neighborhoods they list, and the counties whose unlisted towns
+    # they take by default
+    group = models.CharField(max_length=255, blank=True, default="")
+    neighborhoods = ArrayField(models.CharField(max_length=255), blank=True, default=list)
+    default_counties = ArrayField(models.CharField(max_length=255), blank=True, default=list)
 
     @property
     def short_label(self):

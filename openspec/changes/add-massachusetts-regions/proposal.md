@@ -1,13 +1,13 @@
 ## Why
 
-Massachusetts, where most of the site's venues are, has only seven broad metros ("MA: Central" runs from Acton to Athol), so the location filter can't narrow to the places people actually go out in. The editors have drawn up 30 sub-regions in seven groups, from the Berkshires to the Elizabeth Islands. And the venue sheet is being retired: the daily sync stops, venues are kept in the admin, and the areas the sync used to load from the sheet need a home in the code.
+Massachusetts, where most of the site's venues are, has only seven broad metros ("MA: Central" runs from Acton to Athol), so the location filter can't narrow to the places people actually go out in. The editors have drawn up 28 sub-regions in seven groups, from the Berkshires to the Elizabeth Islands. And the venue sheet is being retired: the daily sync stops, venues are kept in the admin, and the areas the sync used to load from the sheet need a home in the code.
 
 ## What Changes
 
-- **Massachusetts's seven metros are replaced by 30 sub-regions,** in seven groups (Western Massachusetts, Central Massachusetts, MetroWest, Greater Boston, Northeast Massachusetts, South of Boston & Southeast, Cape Cod & the Islands), each with the towns the editors listed, and the Boston sub-regions with their neighborhoods.
+- **Massachusetts's seven metros are replaced by 28 sub-regions,** in seven groups (Western Massachusetts, Central Massachusetts, MetroWest, Greater Boston, Northeast Massachusetts, South of Boston & Southeast, Cape Cod & the Islands), each with the towns the editors listed, and the Boston sub-regions with their neighborhoods.
 - **Every Massachusetts venue lands in exactly one sub-region:** by its town when a sub-region lists it, by its Boston neighborhood for Boston's sub-regions, and otherwise by its county's default sub-region, so no venue falls outside them.
 - **The filter shows the groups as headings** in the Metro Area options, with the sub-regions under them; choosing a sub-region lists its towns, then neighborhoods, as metros do today.
-- **Old Massachusetts metro addresses** (`metro=ma-boston-metro-region`, saved filters, and subscribed calendar feeds such as `/calendar.ics?metro=ma-cape-cod`) **cover all of Massachusetts** instead of being dropped, which would widen them to every area.
+- **Old Massachusetts metro addresses** (`metro=ma-boston-metro-region`, saved filters, and subscribed calendar feeds such as `/calendar.ics?metro=ma-cape-cod`) **cover all of Massachusetts** instead of being dropped, which would widen them to every area. `ma-north-shore` keeps working as the new North Shore, which has the same address.
 - **All areas are defined in the code** (regions, states, every state's metros, and the new sub-regions), in one data file, loaded on deploy; editors change them through the code.
 - **BREAKING (operations): the daily sheet sync stops.** `sync_venues_from_gsheets` leaves the daily job, and no longer reads or changes areas; the command stays for a manual, previewed import. Venues are edited and added in the admin, and a venue added there gets the next venue ID automatically.
 

@@ -2,7 +2,7 @@
 
 ### Requirement: Regions, states and metro areas are synced from the sheet
 **Reason**: The venue sheet is retired as the source of the site's geography. Areas are defined in the site's own data (event-geo-filter, "A venue belongs to an area by its rules"), and Massachusetts's sub-regions can't be expressed in the sheet's rules.
-**Migration**: The areas the sheet last loaded are copied into the site's area data as they are, apart from Massachusetts's seven metros, which the 30 sub-regions replace; the sync no longer reads the `geo-filters_json` tab, adds, changes or removes areas.
+**Migration**: The areas the sheet last loaded are copied into the site's area data as they are, apart from Massachusetts's seven metros, which the 28 sub-regions replace; the sync no longer reads the `geo-filters_json` tab, adds, changes or removes areas.
 
 ## MODIFIED Requirements
 
