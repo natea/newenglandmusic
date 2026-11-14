@@ -167,7 +167,7 @@ These run in this order. Each one depends on the one before it:
 
 | Command | Suggested schedule | Cost per run |
 |---|---|---|
-| `sync_venues_from_gsheets` | daily | free |
+| `sync_venues_from_gsheets` | by hand only, `--dry-run` first: venues are kept in the admin, and it overwrites editors' changes | free |
 | `lookup_venue_places` | daily (it only looks up venues without a match yet, so most days it does nothing) | Places: about one call per new venue. 5,000 calls a month are free |
 | `lookup_venue_places --refresh-stale` | daily, after the lookup | Places: refreshes coordinates more than 25 days old by place ID, so each venue about every 25 days: roughly 880 Place Details Pro calls a month, inside the 5,000 free. Every run also deletes coordinates older than 30 days, as Google's terms require |
 | `check_event_sources` | weekly | free, but it crawls every venue's site, so don't run it more often |
@@ -189,10 +189,10 @@ These run in this order. Each one depends on the one before it:
 
 | Job | Schedule (UTC) | Script | Runs |
 |---|---|---|---|
-| `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | sheet sync, Places lookup, coordinate refresh, `fetch_events --all`, Spotify, Apple Music, Last.fm and YouTube matching, MusicBrainz enrichment |
+| `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | Places lookup, coordinate refresh, `fetch_events --all`, Spotify, Apple Music, Last.fm and YouTube matching, MusicBrainz enrichment |
 | `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster, Eventbrite and SeatGeek matching, neighborhoods, link hubs |
 
-- **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed sheet sync leaves the venues as they were, and they can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.
+- **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed Places lookup leaves the venues as they were, and their events can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.
 - **Builds:** the jobs build with `bin/build-job.sh`, which only installs the requirements. Only the web service migrates. Like the web service, they deploy a commit only once CI passes.
 - **Setting them up:** after `render.yaml` changes on `main`, run a blueprint sync in the Render dashboard (the blueprint's page, **Manual Sync**). It shows the services it will create and their cost for approval.
 - **New variables for the jobs: set them on the web service first.** A job's variable that copies the web service's (`fromService` with an `envVarKey`) makes the blueprint sync fail when the web service doesn't have that variable yet. The sync fails within a second, and Render doesn't say why. That happened on 2026-10-27, when the Apple Music variables were pushed before they were set on the web service, and on 2026-10-28 with `YOUTUBE_PREVIEWS`. So:
@@ -343,7 +343,16 @@ Nothing from Last.fm is displayed or stored, but its data decides which buttons 
 
 A visitor can give a ZIP code or town, or press "Use my location". Each event at a located venue then shows how far away it is, such as "(0.5 mi away)". Events stay in time order. The location is kept only in the visitor's `near` cookie, rounded to about 100 m.
 
-Once a metro area is chosen, the filter also offers a multi-select of the metro's towns that have venues: `?metro=…&town=Somerville, MA&town=Cambridge, MA`. Calendar feeds take the same `town` values.
+Once a metro area is chosen, the filter also offers a multi-select of the metro's towns that have venues: `?metro=…&town=Somerville, MA&town=Cambridge, MA`. Calendar feeds take the same `town` values. A metro with only one town (Downtown & Central Boston is all Boston) skips the towns and offers that town's neighborhoods.
+
+## Areas
+
+The regions, states and metro areas are defined in `core/geo_areas.py`, and every migrate (so every deploy) makes the stored areas match it. The filter offers State and Metro Area menus; a `region` in a link or feed still applies.
+
+- **Massachusetts's sub-regions:** 28, in seven groups that head the Metro Area options. Each venue is in exactly one: the sub-region listing its town; for Boston, the one listing its neighborhood; otherwise its county's default (`default_counties`).
+- **Changing an area:** edit its entry in `core/geo_areas.py` (add a town to `cities`, say), run the tests, and deploy. Keep an area's `key`; a new label changes its address.
+- **Checking the placement:** `python manage.py report_massachusetts_regions` counts each sub-region's venues and lists those only a county default placed, so the editors can add their towns where the default is wrong.
+- **Old addresses:** the metros Massachusetts had before (`ma-boston-metro-region`, `ma-cape-cod` and the rest, listed in `OLD_METRO_SLUGS`) now show all of Massachusetts, in links, saved filters and calendar feeds. `ma-north-shore` is the new North Shore's address.
 
 **Loading the ZIP and town data:**
 - **What:** the Census Bureau's Gazetteer files (public domain): ZIP Code Tabulation Areas, county subdivisions (New England's towns) and places.
@@ -502,17 +511,16 @@ The icon row is built when a page is rendered (`core/event_actions.py`), not sto
 
 ## Reading the sheet on a server
 
-Locally, `sync_venues_from_gsheets` reads the sheet with the `gog` CLI, which signs in to Google as you through a browser. A server can't do that, so there it reads the sheet with a **Google Cloud service account** instead. The account can only read, and only sheets shared with it, so the sheet stays private. Set it up once:
+The sheet sync now runs only by hand, for a one-off import; venues are kept in the admin. Locally, `sync_venues_from_gsheets` reads the sheet with the `gog` CLI, which signs in to Google as you through a browser. A server can't do that, so there it reads the sheet with a **Google Cloud service account** instead. The account can only read, and only sheets shared with it, so the sheet stays private. Set it up once:
 
 1. **Create the account.** In the Google Cloud console, pick or create a project and enable the **Google Sheets API** for it. Under **IAM & Admin > Service Accounts**, create a service account; it needs no roles.
 2. **Create its key.** On the account's **Keys** tab, add a key of type **JSON**. A file downloads; keep it out of the repo.
 3. **Share the sheet.** Share the venue sheet copy ("Northeastern US Music Venues - v3 (venue-db copy)") with the account's email address, which ends in `iam.gserviceaccount.com`, as a **Viewer**. Don't share the original sheet.
 4. **Give Render the key.** In the web service's **Environment** settings, set `GOOGLE_SERVICE_ACCOUNT_JSON` to the whole contents of the JSON file, then delete the downloaded file.
-5. **Check it.** In the service's **Shell** tab, run `python manage.py sync_venues_from_gsheets --dry-run`. It should report the venues and areas with no errors. An error names the tab and what to fix, such as sharing the sheet with the account's email.
+5. **Check it.** In the service's **Shell** tab, run `python manage.py sync_venues_from_gsheets --dry-run`. It should report the venues with no errors. An error names the tab and what to fix, such as sharing the sheet with the account's email.
 
 If the key ever leaks, delete it on the account's **Keys** tab and create a new one.
 
-**Still to do:** a Render Cron Job that runs the sync and the other daily jobs every day.
 
 ## Launch checklist
 

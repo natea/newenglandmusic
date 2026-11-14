@@ -24,11 +24,11 @@
 
 - [ ] 4.1 Run the whole suite with the network blocked and verify it passes, with every scenario in this change's specs covered by a test.
 - [ ] 4.2 Add a `report_massachusetts_regions` command (each sub-region's venue count, and the venues placed by a county default or by none), run it against a copy of production's venues locally, and send the editors its list of default-placed and unplaced venues; verify every active Massachusetts venue with a county is in exactly one sub-region.
-- [ ] 4.3 Check the filter on the local site at 1440px and 390px: the grouped Metro Area options, choosing North of the Charles then Somerville, and Downtown & Central Boston then a neighborhood.
+- [x] 4.3 Check the filter on the local site at 1440px and 390px: the grouped Metro Area options, choosing North of the Charles then Somerville, and Downtown & Central Boston then a neighborhood.
 
 ## 5. Finish
 
-- [ ] 5.1 Update `AGENTS.md` (venues kept in the admin, areas in `core/geo_areas.py`, the sync manual only) and `PRODUCTION.md` (the daily job, how to change an area, the old metro addresses); verify both describe the shipped behavior.
+- [x] 5.1 Update `AGENTS.md` (venues kept in the admin, areas in `core/geo_areas.py`, the sync manual only) and `PRODUCTION.md` (the daily job, how to change an area, the old metro addresses); verify both describe the shipped behavior.
 
 ## Workflow follow-up
 
