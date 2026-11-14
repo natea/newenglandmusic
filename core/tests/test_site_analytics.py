@@ -47,7 +47,8 @@ class PostHogTestCase(TestCase):
         response = self.client.get("/privacy")
         self.assertContains(response, "uses PostHog")
         self.assertContains(response, "sets a cookie")
-        self.assertContains(response, "no names, email addresses, locations or IP addresses")
+        self.assertContains(response, "approximate city and region from your IP address, then discards the address")
+        self.assertContains(response, "no names, email addresses, IP addresses or recordings of your visit")
         self.assertContains(response, 'id="analytics-toggle"')
 
     @override_settings(POSTHOG_PROJECT_TOKEN="")

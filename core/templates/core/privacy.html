@@ -32,7 +32,7 @@
 
     <h2>Analytics</h2>
     {% if posthog_project_token %}
-    <p>{{ site_name }} uses PostHog to learn how the site is used: the pages you open, what you click, and a few actions: the words you search for, the shows you save, the play buttons you press, the ticket and calendar links you follow, and what you skip or save in the discovery deck. PostHog sets a cookie in your browser so it can tell when the same browser comes back. It records no names, email addresses, locations or IP addresses, and no recordings of your visit.</p>
+    <p>{{ site_name }} uses PostHog to learn how the site is used: the pages you open, what you click, and a few actions: the words you search for, the shows you save, the play buttons you press, the ticket and calendar links you follow, and what you skip or save in the discovery deck. PostHog sets a cookie in your browser so it can tell when the same browser comes back. It works out your approximate city and region from your IP address, then discards the address, which it doesn't keep. It records no names, email addresses, IP addresses or recordings of your visit, and the site never sends it the location you give for distances.</p>
     {# shown by core/js/analytics.js once posthog has loaded; without javascript posthog never loads #}
     <p class="analytics-control" hidden>
       <button type="button" id="analytics-toggle">Turn off analytics in this browser</button>

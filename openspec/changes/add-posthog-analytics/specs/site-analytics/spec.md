@@ -51,7 +51,7 @@ With PostHog switched on, the site SHALL record each pageview and autocaptured c
 - **THEN** a `ticket_link_opened` event is recorded with that show's ID
 
 ### Requirement: Nothing that identifies a person is sent
-The site SHALL NOT send PostHog a name, an email address, a visitor's location or distance, or the contents of any form field other than the search words; it SHALL NOT identify visitors as people, SHALL NOT record sessions, and SHALL keep anonymous visitors out of PostHog's person profiles. PostHog SHALL keep one first-party cookie to recognise a returning browser.
+The site SHALL NOT send PostHog a name, an email address, the location a visitor gives for distances (a ZIP code, town or their position) or a distance, or the contents of any form field other than the search words; it SHALL NOT identify visitors as people, SHALL NOT record sessions, and SHALL keep anonymous visitors out of PostHog's person profiles. PostHog SHALL keep one first-party cookie to recognise a returning browser, and SHALL discard each visitor's IP address after working out their approximate location from it, so the address is never stored.
 
 #### Scenario: A submission's email stays out
 - **WHEN** a visitor submits an event with their email address
@@ -62,7 +62,7 @@ The site SHALL NOT send PostHog a name, an email address, a visitor's location o
 - **THEN** session recording is off
 
 ### Requirement: Visitors can turn analytics off
-The privacy page SHALL say that the site uses PostHog, what it records (pages opened and the key actions above), that it sets a cookie to recognise a returning browser, and that it records no names, emails or locations; and it SHALL offer a control that turns PostHog off in that browser, and back on. A browser that has turned it off SHALL send PostHog nothing.
+The privacy page SHALL say that the site uses PostHog, what it records (pages opened and the key actions above), that it sets a cookie to recognise a returning browser, that it works out an approximate city and region from the IP address and then discards the address, and that it records no names, emails or IP addresses; and it SHALL offer a control that turns PostHog off in that browser, and back on. A browser that has turned it off SHALL send PostHog nothing.
 
 #### Scenario: Turning it off
 - **WHEN** a visitor turns analytics off on the privacy page and then searches
