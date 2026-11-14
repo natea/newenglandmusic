@@ -52,18 +52,21 @@ function playerId(button) {
 // height is at least 200px, which youtube's rules ask of its player and the others share
 const CARD_PLAYER_HEIGHT = 232;
 
-function playerFor(button, height) {
+function playerFor(button, height, autoplay) {
   return button.classList.contains("apple-play") ? applePlayer(button, height)
-    : button.classList.contains("youtube-play") ? youtubePlayer(button, height) : spotifyPlayer(button, height);
+    : button.classList.contains("youtube-play") ? youtubePlayer(button, height, autoplay) : spotifyPlayer(button, height);
 }
 
-function showInCard(card, button) {
+// autoplay asks the service to start playing, which only youtube's embed takes by a documented
+// parameter: apple music's and spotify's load ready, with their own play control. the deck
+// asks only after the visitor's own action (its Start, a swipe, a button or a key)
+function showInCard(card, button, autoplay) {
   const box = card.querySelector(".discover-player-box");
   const id = playerId(button);
   if (!box || box.dataset.playing === id) {
     return;
   }
-  const player = playerFor(button, CARD_PLAYER_HEIGHT);
+  const player = playerFor(button, CARD_PLAYER_HEIGHT, autoplay);
   // the card is on top: its player is wanted now, not when scrolled to
   player.querySelectorAll("iframe").forEach(function (frame) { frame.loading = "eager"; });
   if (player.tagName === "IFRAME") {
@@ -133,9 +136,11 @@ function applePlayer(button, height) {
 // functionality asks (the css keeps it at least 200px each way), from youtube-nocookie.com,
 // which sets no cookies until the visitor plays. a matched video plays; a channel matched by
 // id alone plays its uploads, whose playlist is the channel's id with "UC" made "UU". no
-// autoplay: the visitor presses play in youtube's player. the referrer policy is the one
+// autoplay in the listings: the visitor presses play in youtube's player. the discovery deck
+// passes autoplay after the visitor's action, and gets autoplay=1 (and playsinline=1 for ios)
+// and an allow that includes autoplay. the referrer policy is the one
 // youtube asks for, so its player knows which site embeds it
-function youtubePlayer(button, height) {
+function youtubePlayer(button, height, autoplay) {
   const box = document.createElement("div");
   box.className = "youtube-player";
 
@@ -146,7 +151,10 @@ function youtubePlayer(button, height) {
     : "https://www.youtube-nocookie.com/embed/videoseries?list=UU" + encodeURIComponent(button.dataset.youtubeChannel.slice(2));
   player.frameBorder = "0";
   player.allowFullscreen = true;
-  player.allow = "encrypted-media; picture-in-picture; fullscreen";
+  player.allow = autoplay ? "autoplay; encrypted-media; picture-in-picture; fullscreen" : "encrypted-media; picture-in-picture; fullscreen";
+  if (autoplay) {
+    player.src += (player.src.includes("?") ? "&" : "?") + "autoplay=1&playsinline=1";
+  }
   player.referrerPolicy = "strict-origin-when-cross-origin";
   if (height) {
     player.height = String(height);

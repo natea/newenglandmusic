@@ -15,6 +15,8 @@ from core.views.act_index import live_acts
 from core.utils_datemath import get_current_new_york_datetime
 from django.contrib.auth.models import User
 from django.core.management import call_command
+from core.artist_matching import normalize
+from core.tests.discover_fixture import spotify
 from django.test import TestCase
 from django.utils import timezone
 from icalendar import Calendar
@@ -138,8 +140,11 @@ class ActsTestCase(ScopeTestCase):
         self.act_show(band, self.new_york)
         self.assertNotContains(self.client.get("/discover"), "Outsiders")
         home = Band.objects.create(name="Locals")
+        # the deck holds only acts with something to play: a spotify link, with spotify switched on
+        spotify(normalize(home.name), "sp-locals")
         self.act_show(home, self.vermont)
-        self.assertContains(self.client.get("/discover"), "Locals")
+        with mock.patch.dict("os.environ", CREDENTIALS):
+            self.assertContains(self.client.get("/discover"), "Locals")
 
 
 class SavedShowsTestCase(ScopeTestCase):

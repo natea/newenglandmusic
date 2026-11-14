@@ -2,8 +2,12 @@
 // into a deck of one card at a time. left (swipe, "Skip" button, left arrow) passes an act and
 // stores nothing. right (swipe, "Add" button, right arrow) opens a picker of the act's shows;
 // its Save applies the ticks to the saved_shows cookie in one write (core/js/saved_shows.js).
-// the top card alone has a player (core/js/artist_preview.js), loaded ready and never started
-// here: YouTube, else Apple Music, else Spotify. nothing is stored about what was passed.
+// the top card alone has a player (core/js/artist_preview.js): YouTube, else Apple Music, else
+// Spotify. the first card waits for a Start press, laid over our own placeholder (its video's
+// thumbnail, or a plain dark box) and gone when the player loads; from then on each top card's
+// player is loaded in the handler of the swipe, button or key that brought it up, asking
+// YouTube to start playing (Apple Music and Spotify load ready). nothing is stored about what
+// was passed.
 (function () {
   const section = document.querySelector(".discover");
   const deck = section && section.querySelector(".deck");
@@ -15,8 +19,10 @@
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let index = 0;
   let picker = null;
+  // false until the visitor presses Start: no player loads, and the deck's controls wait
+  let started = false;
 
-  section.classList.add("is-deck");
+  section.classList.add("is-deck", "is-waiting");
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -59,7 +65,6 @@
   stage.after(hint, controls, keys, end, live);
 
   let hinting = true;
-  section.classList.add("is-hinting");
   function stopHint() {
     if (hinting) {
       hinting = false;
@@ -75,13 +80,49 @@
     return index >= cards.length;
   }
 
-  // the player of the top card, and no other: the card's best match, ready but not playing
+  // the player of the top card, and no other: the card's best match, asking to start playing
+  // (only youtube's takes it). only called after the visitor's Start or another action
   function loadPlayer(card) {
     const button = card.querySelector("a.youtube-play") || card.querySelector("a.apple-play")
       || card.querySelector("a.spotify-play");
     if (button) {
-      window.ArtistPreview.showInCard(card, button);
+      window.ArtistPreview.showInCard(card, button, true);
     }
+  }
+
+  // the first card's Start control, over our own placeholder in the player's box: the video's
+  // thumbnail when the card has a youtube video (this card's only), else a plain dark box. the
+  // player is never overlaid: Start removes both before the player loads
+  function showStart(card) {
+    const box = card.querySelector(".discover-player-box");
+    const video = card.querySelector("a.youtube-play");
+    const placeholder = element("div", "discover-start");
+    if (video && video.dataset.youtubeVideo) {
+      const thumbnail = element("img", "discover-thumbnail");
+      thumbnail.src = "https://i.ytimg.com/vi/" + encodeURIComponent(video.dataset.youtubeVideo) + "/hqdefault.jpg";
+      thumbnail.alt = "";
+      placeholder.appendChild(thumbnail);
+    }
+    const start = element("button", "deck-start", "▶ Start");
+    start.type = "button";
+    start.addEventListener("click", startDeck);
+    placeholder.append(start, element("span", "discover-start-note", "Music plays on its own once you start"));
+    box.replaceChildren(placeholder);
+  }
+
+  function startDeck() {
+    if (started) {
+      return;
+    }
+    started = true;
+    section.classList.remove("is-waiting");
+    if (hinting) {
+      section.classList.add("is-hinting");
+    }
+    // the press is the visitor's action: the placeholder and control go as the player loads
+    top().querySelector(".discover-player-box").replaceChildren();
+    loadPlayer(top());
+    addButton.focus();
   }
 
   function show() {
@@ -106,7 +147,11 @@
       return;
     }
     hint.hidden = false;
-    loadPlayer(top());
+    if (started) {
+      loadPlayer(top());
+    } else {
+      showStart(top());
+    }
     live.textContent = top().dataset.act + ", " + (index + 1) + " of " + cards.length;
   }
 
@@ -239,7 +284,7 @@
   });
 
   document.addEventListener("keydown", function (e) {
-    if (picker || finished() || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) {
+    if (!started || picker || finished() || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) {
       return;
     }
     const target = e.target;
@@ -261,7 +306,7 @@
   let dragged = false;
   stage.addEventListener("pointerdown", function (e) {
     const card = top();
-    if (!card || !card.contains(e.target) || e.target.closest(".discover-player-box") || (e.pointerType === "mouse" && e.button !== 0)) {
+    if (!started || !card || !card.contains(e.target) || e.target.closest(".discover-player-box") || (e.pointerType === "mouse" && e.button !== 0)) {
       return;
     }
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 };
