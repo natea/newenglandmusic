@@ -37,7 +37,8 @@
 9. **Suggestions by kind:** `search_suggestion_chosen` broken down by `kind`, as a bar. *Do people look for bands, artists, venues or shows?*
 
 **Acts**
-10. **Most-viewed acts:** `act_page_viewed` broken down by `name`, as a table of the top 25, with a second column split by `has_upcoming_show`. *Which acts draw visits, and whether people visit acts with nothing coming up.*
+10. **Most-viewed acts:** `act_page_viewed` broken down by `name`, as a table of the top 25. *Which acts draw visits.*
+10a. **Act pages with and without a show:** `act_page_viewed` broken down by `has_upcoming_show`, as a pie. *Do people visit acts with nothing coming up?*
 11. **From search to tickets:** a funnel `search_suggestion_chosen` (kind band or artist) → `act_page_viewed` → `ticket_link_opened`, within one day. *Does finding an act lead to buying a ticket?*
 
 **Shows**
@@ -50,13 +51,13 @@
 16. **The deck:** trend of `deck_act_passed` and of the sum of `deck_shows_saved.count`. *Is the deck used, and does it lead to saved shows?*
 
 ### 2. Two new events, from what each page already has
-- `search_results_viewed` is captured by `analytics.js` on load when the results page marks itself (a `data-search-counts` attribute on the results card holding the query and the counts the view already computed: `acts`, `venues`, `upcoming`, `past`, `pages`, `total`). A no-results page carries `total: 0`.
-- `act_page_viewed` is captured on load from a `data-act-view` attribute on the act page (`name`, `kind`, `has_upcoming_show`).
-- Show events read the name from the show's `data-title-and-artists` beside its ID. No event carries anything about the visitor.
+- `search_results_viewed` is captured by `analytics.js` on load from a `search-counts` JSON block (Django's `json_script`, safe for any search words) holding the query and the counts the view already has: `acts`, `venues`, `upcoming`, `past`, `pages`, `total`. A no-results page carries `total: 0`.
+- `act_page_viewed` is captured on load from an `act-view` JSON block on the act page (`name`, `kind`, `has_upcoming_show`).
+- Show events read the name from the show's `data-title-and-artists` beside its ID; the act page's and search results' show rows gain that attribute, as the listing's already have it. No event carries anything about the visitor.
 
 ### 3. Definitions as Python, synced by a command
-`core/analytics_dashboard.py` holds `DASHBOARD` (name, description) and `CHARTS`, a list of `{key, name, description, query}` where `query` is the PostHog query JSON built by small helpers (`trend(events, breakdown=…)`, `funnel(steps, window=…)`, `table(...)`), so the sixteen definitions stay short and alike. `sync_posthog_dashboard` lists the project's dashboards and insights, finds its own by the key it stores in each insight's description footer ("chart key: <key>") and by the dashboard's name, then creates, updates or deletes so PostHog matches `CHARTS`; it deletes the wizard's dashboard by its name. Requests use `requests`, already a dependency.
-*Alternatives:* build by hand (rejected by the decision to keep charts in code); Terraform's PostHog provider (rejected: a new tool for sixteen charts).
+`core/analytics_dashboard.py` holds `DASHBOARD` (name, description) and `CHARTS`, a list of `{key, name, description, query}` where `query` is the PostHog query JSON built by small helpers (`trend(events, breakdown=…)`, `funnel(steps, window=…)`, `table(...)`), so the seventeen definitions stay short and alike. `sync_posthog_dashboard` lists the project's dashboards and insights, finds its own by the key it stores in each insight's description footer ("chart key: <key>") and by the dashboard's name, then creates, updates or deletes so PostHog matches `CHARTS`; it deletes the wizard's dashboard by its name. Requests use `requests`, already a dependency.
+*Alternatives:* build by hand (rejected by the decision to keep charts in code); Terraform's PostHog provider (rejected: a new tool for seventeen charts).
 
 ### 4. Credentials
 `POSTHOG_PERSONAL_API_KEY` is created in PostHog (Settings → Personal API keys) scoped to project 735651 with `insight:read`, `insight:write`, `dashboard:read`, `dashboard:write`, kept in local `.env` only: the command is run by hand, never by the scheduled jobs, so the key isn't put on Render. `POSTHOG_PROJECT_ID=735651`, `POSTHOG_APP_HOST=https://us.posthog.com`.

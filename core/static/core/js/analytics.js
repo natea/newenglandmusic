@@ -19,21 +19,43 @@
 
   window.siteAnalytics = { capture: capture };
 
-  // the show a link belongs to: its row's id is "event-<id>" on every listing
+  // the show a link belongs to: its row's id is "event-<id>" on every listing, and its name
+  // is its title and artists as the listing prints them
   function showId(element) {
     const row = element.closest("[id^='event-']");
     return row ? row.id.slice("event-".length) : undefined;
   }
 
+  function showName(element) {
+    const row = element.closest("[data-title-and-artists]");
+    return row ? row.dataset.titleAndArtists : undefined;
+  }
+
+  window.siteAnalytics.showName = showName;
+
+  // a page's own event, from the json its view put in the page (json_script)
+  function pageData(id) {
+    const tag = document.getElementById(id);
+    if (!tag) return null;
+    try { return JSON.parse(tag.textContent); } catch (e) { return null; }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const counts = pageData("search-counts");
+    if (counts) capture("search_results_viewed", counts);
+    const act = pageData("act-view");
+    if (act) capture("act_page_viewed", act);
+  });
+
   document.addEventListener("click", function (e) {
     const link = e.target.closest && e.target.closest("a.ticket, a.ical, a.gcal, a.calendarLink");
     if (!link) return;
     if (link.classList.contains("ticket")) {
-      capture("ticket_link_opened", { event_id: showId(link) }, true);
+      capture("ticket_link_opened", { event_id: showId(link), show: showName(link) }, true);
     } else if (link.classList.contains("calendarLink")) {
       capture("calendar_feed_subscribed", { how: link.classList.contains("google") ? "google" : "webcal" }, true);
     } else {
-      capture("show_added_to_calendar", { how: link.classList.contains("gcal") ? "google" : "ics", event_id: showId(link) }, true);
+      capture("show_added_to_calendar", { how: link.classList.contains("gcal") ? "google" : "ics", event_id: showId(link), show: showName(link) }, true);
     }
   });
 

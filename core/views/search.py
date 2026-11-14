@@ -76,8 +76,24 @@ def search(request):
             "results_pages": results_pages,
             "upcoming_shows": upcoming_shows,
             "past_shows": past_shows,
+            # for the search_results_viewed analytics event (core/js/analytics.js)
+            "search_counts": search_counts(query, groups, upcoming_shows, past_shows, results_pages),
         },
     )
+
+
+
+def search_counts(query, groups, upcoming_shows, past_shows, results_pages):
+    """the words searched and how many of each kind matched, as the results page shows them"""
+    found = dict(groups)
+    counts = {
+        "acts": len(found.get("Bands & artists", [])),
+        "venues": len(found.get("Venues", [])),
+        "upcoming": upcoming_shows.count(),
+        "past": past_shows.count(),
+        "pages": results_pages.count(),
+    }
+    return {"query": query, **counts, "total": sum(counts.values())}
 
 
 # suggestions per kind, and the fewest characters worth suggesting for

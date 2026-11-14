@@ -170,6 +170,8 @@ def act_page(request, act):
         {
             "act": act,
             "is_band": is_band,
+            # for the act_page_viewed analytics event (core/js/analytics.js); nothing about the visitor
+            "act_view": {"name": act.name, "kind": "band" if is_band else "artist", "has_upcoming_show": bool(shows)},
             "meta_line": " · ".join(meta_bits),
             "shows": shows,
             "next_show": shows[0] if shows else None,

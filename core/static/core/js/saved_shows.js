@@ -84,7 +84,9 @@
     const id = button.dataset.eventId;
     let ids = readSaved();
     const wasSaved = ids.includes(id);
-    if (window.siteAnalytics) window.siteAnalytics.capture(wasSaved ? "show_unsaved" : "show_saved", { event_id: id });
+    if (window.siteAnalytics) {
+      window.siteAnalytics.capture(wasSaved ? "show_unsaved" : "show_saved", { event_id: id, show: window.siteAnalytics.showName(button) });
+    }
     if (wasSaved) {
       ids = ids.filter(function (saved) { return saved !== id; });
     } else {

@@ -115,7 +115,8 @@ class ListingEventsTestCase(StubbedPostHog, BrowserTestCase):
         button.click()
         self.assertEqual(
             [(c["name"], c["properties"]) for c in self.captures(page) if c["name"].startswith("show_")],
-            [("show_saved", {"event_id": str(self.show.pk)}), ("show_unsaved", {"event_id": str(self.show.pk)})],
+            [("show_saved", {"event_id": str(self.show.pk), "show": "Belly"}),
+             ("show_unsaved", {"event_id": str(self.show.pk), "show": "Belly"})],
         )
 
     def test_a_play_button(self):
@@ -128,7 +129,7 @@ class ListingEventsTestCase(StubbedPostHog, BrowserTestCase):
         page.locator(f"#event-{self.show.pk} a.ticket").click()
         page.wait_for_function("() => (sessionStorage.getItem('captures') || '').includes('ticket_link_opened')")
         opened = self.named(page, "ticket_link_opened")
-        self.assertEqual([o["properties"] for o in opened], [{"event_id": str(self.show.pk)}])
+        self.assertEqual([o["properties"] for o in opened], [{"event_id": str(self.show.pk), "show": "Belly"}])
         self.assertEqual(opened[0]["options"], {"transport": "sendBeacon", "send_instantly": True})
 
     def test_a_show_added_to_a_calendar(self):
@@ -137,7 +138,36 @@ class ListingEventsTestCase(StubbedPostHog, BrowserTestCase):
             page.locator(f"#event-{self.show.pk} a.ical").click()
         self.assertEqual(
             [c["properties"] for c in self.named(page, "show_added_to_calendar")],
-            [{"how": "ics", "event_id": str(self.show.pk)}],
+            [{"how": "ics", "event_id": str(self.show.pk), "show": "Belly"}],
+        )
+
+    def test_a_search_that_finds_nothing(self):
+        page = self.stubbed_page("/?s=zzzz")
+        page.wait_for_function("() => (sessionStorage.getItem('captures') || '').includes('search_results_viewed')")
+        self.assertEqual(
+            [c["properties"] for c in self.named(page, "search_results_viewed")],
+            [{"query": "zzzz", "acts": 0, "venues": 0, "upcoming": 0, "past": 0, "pages": 0, "total": 0}],
+        )
+
+    def test_a_searchs_counts(self):
+        venue = self.show.venue
+        Event.objects.create(venue=venue, artists="Belly", starttime=timezone.now() + datetime.timedelta(days=5))
+        Event.objects.create(venue=venue, artists="Belly", starttime=timezone.now() - datetime.timedelta(days=5))
+        page = self.stubbed_page("/?s=belly")
+        page.wait_for_function("() => (sessionStorage.getItem('captures') || '').includes('search_results_viewed')")
+        viewed = self.named(page, "search_results_viewed")[0]["properties"]
+        self.assertEqual((viewed["acts"], viewed["upcoming"], viewed["past"]), (1, 2, 1))
+        self.assertEqual(viewed["total"], viewed["acts"] + viewed["venues"] + viewed["upcoming"] + viewed["past"] + viewed["pages"])
+
+    def test_an_act_page(self):
+        from core.models import EventPerformer
+
+        EventPerformer.objects.create(event=self.show, band=self.belly, order=0)
+        page = self.stubbed_page(self.belly.get_absolute_url())
+        page.wait_for_function("() => (sessionStorage.getItem('captures') || '').includes('act_page_viewed')")
+        self.assertEqual(
+            [c["properties"] for c in self.named(page, "act_page_viewed")],
+            [{"name": "Belly", "kind": "band", "has_upcoming_show": True}],
         )
 
     def test_a_submissions_email_stays_out(self):

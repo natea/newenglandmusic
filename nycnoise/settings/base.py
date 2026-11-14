@@ -202,6 +202,11 @@ GOATCOUNTER_CODE = os.environ.get("GOATCOUNTER_CODE", "")
 # region (us or eu). posthog loads in the browser only (see PRODUCTION.md, "Analytics")
 POSTHOG_PROJECT_TOKEN = os.environ.get("POSTHOG_PROJECT_TOKEN", "")
 POSTHOG_HOST = os.environ.get("POSTHOG_HOST") or "https://us.i.posthog.com"
+# for sync_posthog_dashboard only, run by hand: a personal api key (secret, local .env only),
+# the project, and posthog's app address (not the event host above)
+POSTHOG_PERSONAL_API_KEY = os.environ.get("POSTHOG_PERSONAL_API_KEY", "")
+POSTHOG_PROJECT_ID = os.environ.get("POSTHOG_PROJECT_ID") or "735651"
+POSTHOG_APP_HOST = os.environ.get("POSTHOG_APP_HOST") or "https://us.posthog.com"
 
 # the home page's maps draw protomaps tiles; without a key the maps are hidden
 PROTOMAPS_API_KEY = os.environ.get("PROTOMAPS_API_KEY", "")
