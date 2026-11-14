@@ -60,7 +60,7 @@ class FilterListingTestCase(GeoFilterPageTestCase):
         )
 
     def test_region_and_state_together(self):
-        response = self.client.get("/?region=tri-state&state=vermont")
+        response = self.client.get("/?region=new-england-south&state=vermont")
         self.assertEqual(self.titles(response), set())
         self.assertContains(response, "no events match these filters")
         self.assertContains(response, 'href="/?clear=1"')
@@ -79,7 +79,7 @@ class FilterListingTestCase(GeoFilterPageTestCase):
 
     def test_no_filter(self):
         response = self.client.get("/")
-        self.assertEqual(len(self.titles(response)), 7)
+        self.assertEqual(len(self.titles(response)), 6)
         self.assertNotContains(response, "no events match these filters")
 
     def test_no_areas_synced_shows_no_form(self):
@@ -138,7 +138,7 @@ class NavigationAndBadInputTestCase(GeoFilterPageTestCase):
 
     def test_unknown_value(self):
         response = self.client.get("/?state=atlantis")
-        self.assertEqual(len(self.titles(response)), 7)
+        self.assertEqual(len(self.titles(response)), 6)
 
 
 class RememberedFilterTestCase(GeoFilterPageTestCase):
@@ -177,7 +177,7 @@ class RememberedFilterTestCase(GeoFilterPageTestCase):
     def test_clearing_by_choosing_all(self):
         self.remember("state=vermont")
         response = self.client.get("/?region=&state=&metro=")
-        self.assertEqual(len(self.titles(response)), 7)
+        self.assertEqual(len(self.titles(response)), 6)
         self.assertEqual(response.cookies[COOKIE_NAME].value, "")
         self.assertEqual(response.cookies[COOKIE_NAME]["max-age"], 0)
         self.assertEqual(self.client.get("/").status_code, 200)
@@ -185,14 +185,14 @@ class RememberedFilterTestCase(GeoFilterPageTestCase):
     def test_clearing_by_the_show_all_link(self):
         self.remember("state=vermont")
         response = self.client.get("/?clear=1")
-        self.assertEqual(len(self.titles(response)), 7)
+        self.assertEqual(len(self.titles(response)), 6)
         self.assertEqual(response.cookies[COOKIE_NAME]["max-age"], 0)
         self.assertEqual(self.client.get("/").status_code, 200)
 
     def test_stale_cookie(self):
         self.remember("metro=ma-somewhere-removed")
         response = self.client.get("/")
-        self.assertEqual(len(self.titles(response)), 7)
+        self.assertEqual(len(self.titles(response)), 6)
         self.assertEqual(response.cookies[COOKIE_NAME]["max-age"], 0)
 
     def test_no_filter_chosen(self):
@@ -203,7 +203,7 @@ class RememberedFilterTestCase(GeoFilterPageTestCase):
     def test_unknown_value_leaves_the_cookie_alone(self):
         self.remember("state=vermont")
         response = self.client.get("/?state=atlantis")
-        self.assertEqual(len(self.titles(response)), 7)
+        self.assertEqual(len(self.titles(response)), 6)
         self.assertNotIn(COOKIE_NAME, response.cookies)
 
     def test_search_ignores_the_cookie(self):

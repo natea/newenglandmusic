@@ -12,7 +12,7 @@ class CacheTestCase(TestCase):
 
         venue_name = str(uuid.uuid4())
 
-        venue = Venue.objects.create(name=venue_name)
+        venue = Venue.objects.create(name=venue_name, state="MA")
 
         event = Event.objects.create(
             title=title,

@@ -64,9 +64,10 @@ class DeckFilterTestCase(DeckFilterBase):
         self.assertEqual(self.names(self.get("?state=vermont")), [])
 
     def test_a_show_with_no_venue_matches_no_filter(self):
-        show(self.belly, days(3))
+        show(self.belly, days(3), venue=None)
         self.assertEqual(self.names(self.get("?state=massachusetts")), [])
-        self.assertEqual(self.names(self.get("?clear=1")), ["Belly"])
+        # and isn't in the deck at all: the site lists only new england's shows (new-england-scope)
+        self.assertEqual(self.names(self.get("?clear=1")), [])
 
     def test_filter_by_region(self):
         show(self.belly, days(3), self.providence)
@@ -84,7 +85,8 @@ class DeckFilterTestCase(DeckFilterBase):
     def test_region_and_state_together(self):
         show(self.belly, days(3), self.burlington)
         self.assertEqual(self.names(self.get("?region=new-england-south&state=vermont")), [])
-        self.assertEqual(self.names(self.get("?region=tri-state&state=vermont")), [])
+        # a region outside new england isn't offered, so it's ignored like any unknown value
+        self.assertEqual(self.names(self.get("?region=tri-state&state=vermont")), ["Belly"])
 
     def test_an_unknown_value_gives_the_unfiltered_deck(self):
         show(self.belly, days(3), self.providence)

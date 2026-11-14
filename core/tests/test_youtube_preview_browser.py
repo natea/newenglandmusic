@@ -8,6 +8,7 @@ import datetime
 from unittest import mock
 
 from core.models import Event, YouTubeArtistLink
+from core.tests.new_england_fixture import new_england_venue
 from core.tests.apple_music_fixture import SWITCHED_ON as APPLE_ON
 from core.tests.browser import BrowserTestCase
 from core.tests.test_artist_preview_browser import apple_matched
@@ -33,8 +34,8 @@ class YouTubePreviewBrowserTestCase(BrowserTestCase):
         apple_matched("ballroom thieves", "489634654", "964625539", "964625535")
         youtube_matched("dinosaur jr", channel_id=DINOSAUR_CHANNEL)
         tomorrow = timezone.now() + datetime.timedelta(days=1)
-        Event.objects.create(artists="The Ballroom Thieves", starttime=tomorrow)
-        Event.objects.create(artists="Dinosaur Jr.", starttime=tomorrow + datetime.timedelta(hours=1))
+        Event.objects.create(venue=new_england_venue(), artists="The Ballroom Thieves", starttime=tomorrow)
+        Event.objects.create(venue=new_england_venue(), artists="Dinosaur Jr.", starttime=tomorrow + datetime.timedelta(hours=1))
 
     def player(self, page):
         return page.locator(".youtube-player iframe")

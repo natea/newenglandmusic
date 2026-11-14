@@ -2,6 +2,7 @@ import datetime
 from unittest import mock
 
 from core.models import Event, YouTubeArtistLink
+from core.tests.new_england_fixture import new_england_venue
 from core.tests.apple_music_fixture import SWITCHED_ON as APPLE_ON
 from core.tests.spotify_fixture import CREDENTIALS as SPOTIFY_CREDENTIALS
 from core.tests.test_apple_music_preview_render import apple_link, spotify_link
@@ -25,7 +26,7 @@ class YouTubePreviewRenderTestCase(TestCase):
         self.enterContext(mock.patch.dict("os.environ", {**SWITCHED_ON, **APPLE_ON, **SPOTIFY_CREDENTIALS}))
 
     def event(self, **fields):
-        event = Event.objects.create(starttime=timezone.now() + datetime.timedelta(days=1), **fields)
+        event = Event.objects.create(venue=new_england_venue(), starttime=timezone.now() + datetime.timedelta(days=1), **fields)
         return Event.objects.get(pk=event.pk).baked_html_template
 
     def test_youtube_button_beside_the_others(self):

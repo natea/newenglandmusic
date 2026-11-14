@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.cache import cache_control
 
+from ..geo_filters import new_england_q
 from ..models import Event, SearchableStaticPageBit, StaticPage
 from ..search_kinds import KINDS, shows
 from ..utils_datemath import beginning_of_day, get_current_new_york_datetime
@@ -38,6 +39,7 @@ def search(request):
     found_events = (
         # the venue, for each event's map icon (core/event_actions.py)
         Event.objects.select_related("venue")
+        .filter(new_england_q(prefix="venue__"))
         .annotate(
             search=SearchVector(
                 "title",

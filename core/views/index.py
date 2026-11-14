@@ -11,6 +11,7 @@ from ..geo_filters import (
     apply_cookie_action,
     geo_filter_context,
     geo_filter_for_request,
+    new_england_q,
 )
 from ..models import DateMessage, Event, IndexPageMessages, StaticPage
 from ..opengraph import get_meta
@@ -85,6 +86,7 @@ def _fetch_events_from_start_to_end_time_group_by_date_as_list(
         Event.objects.select_related("venue")
         .filter(
             geo_filter.q(prefix="venue__"),
+            new_england_q(prefix="venue__"),
             starttime__gte=events_start_time,
             starttime__lt=events_end_time,
         )
