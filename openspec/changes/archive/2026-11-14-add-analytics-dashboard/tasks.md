@@ -18,7 +18,8 @@
 ## 4. Finish
 
 - [x] 4.1 Run the whole suite with the network blocked and verify it passes, with every scenario in this change's specs covered by a test.
-- [ ] 4.2 After the events are deployed, run `sync_posthog_dashboard --dry-run`, then for real; verify the dashboard in PostHog shows all seventeen charts, that the wizard's dashboard is gone, and that a second run changes nothing.
+- [x] 4.2 After the events are deployed, run `sync_posthog_dashboard --dry-run`, then for real; verify the dashboard in PostHog shows all seventeen charts, that the wizard's dashboard is gone, and that a second run changes nothing.
+  - 2026-11-14, after PR #87 deployed (`d2d7157`): the sync deleted the wizard's dashboard and its five charts and created "StageHopper: how the site is used" (dashboard 2354980) with its seventeen charts; the starter dashboard was left alone, and a second run reported the charts up to date.
 - [x] 4.3 Update `PRODUCTION.md` (the dashboard, how to change a chart and rerun the command, the personal key's scopes and where it's kept, the two new events) and `AGENTS.md`'s Secrets (`POSTHOG_PERSONAL_API_KEY`, `POSTHOG_PROJECT_ID`, `POSTHOG_APP_HOST`); verify both describe the shipped behavior.
 
 ## Workflow follow-up
