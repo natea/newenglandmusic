@@ -37,17 +37,41 @@ def new_england_q(prefix=""):
     return Q(**{f"{prefix}state__in": NEW_ENGLAND_STATES})
 
 
+def any_iexact(field, values):
+    """the field is one of values, whatever its case (venues' spelling and case vary)"""
+    q = Q(pk__in=[])
+    for value in values:
+        q |= Q(**{f"{field}__iexact": value})
+    return q
+
+
 def area_q(area, prefix=""):
     q = Q(**{f"{prefix}state__in": [state.upper() for state in area.states]})
+    if area.group:
+        return q & sub_region_q(area, prefix)
     if not area.counties and not area.cities:
         return q
-    # the sheet's spelling and case vary, so compare each value case-insensitively
-    place_q = Q()
-    for county in area.counties:
-        place_q |= Q(**{f"{prefix}county__iexact": county})
-    for city in area.cities:
-        place_q |= Q(**{f"{prefix}city_town__iexact": city})
-    return q & place_q
+    return q & (any_iexact(f"{prefix}county", area.counties) | any_iexact(f"{prefix}city_town", area.cities))
+
+
+def boston_neighborhood_q(neighborhoods, prefix=""):
+    return Q(**{f"{prefix}city_town__iexact": "boston"}) & any_iexact(f"{prefix}neighborhood", neighborhoods)
+
+
+def sub_region_q(area, prefix=""):
+    """
+    a massachusetts sub-region (core/geo_areas.py) holds the venues in its towns, the boston
+    venues in its neighborhoods, and, in its default counties, the venues no sub-region's town
+    or neighborhood placed, so each venue is in exactly one sub-region
+    """
+    q = any_iexact(f"{prefix}city_town", area.cities) | boston_neighborhood_q(area.neighborhoods, prefix)
+    if not area.default_counties:
+        return q
+    sub_regions = GeoArea.objects.exclude(group="")
+    all_towns = [town for towns in sub_regions.values_list("cities", flat=True) for town in towns]
+    all_neighborhoods = [name for names in sub_regions.values_list("neighborhoods", flat=True) for name in names]
+    placed = any_iexact(f"{prefix}city_town", all_towns) | boston_neighborhood_q(all_neighborhoods, prefix)
+    return q | (any_iexact(f"{prefix}county", area.default_counties) & ~placed)
 
 
 def offered_areas(kind, new_england_only=False):
