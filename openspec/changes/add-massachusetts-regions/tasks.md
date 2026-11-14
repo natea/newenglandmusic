@@ -9,9 +9,9 @@
 ## 2. Matching and the filter
 
 - [x] 2.1 Teach `area_q` the sub-regions' rules (town, Boston neighborhood, county default only for venues no town or neighborhood placed); verify "A listed town", "A Boston neighborhood", "A town the list doesn't name", "Every venue placed", and the modified matching scenarios ("Metro matched by county", "Metro matched by county or city", "Same county name in another state", "Nested metros").
-- [ ] 2.2 Group the Metro Area options by `group` for Massachusetts (`metro_groups`), keeping other states grouped by state; verify "Metros narrowed to the state" and the admin's "Review queue for one metro".
-- [ ] 2.3 Map `OLD_METRO_SLUGS` to the state in `parse_geo_filter`; verify "An old listing link", "A subscribed feed" and "The North Shore address kept", and that a remembered filter cookie holding an old slug redirects to Massachusetts.
-- [ ] 2.4 Update the towns and neighborhoods tests to the sub-regions (`ma-north-of-the-charles`, `ma-downtown-central-boston`); verify every scenario of "Visitors can narrow a metro area to some of its towns" and "…to some of their neighborhoods", and the calendar feed's "Metro feed".
+- [x] 2.2 Group the Metro Area options by `group` for Massachusetts (`metro_groups`), keeping other states grouped by state; verify "Metros narrowed to the state" and the admin's "Review queue for one metro".
+- [x] 2.3 Map `OLD_METRO_SLUGS` to the state in `parse_geo_filter`; verify "An old listing link", "A subscribed feed" and "The North Shore address kept", and that a remembered filter cookie holding an old slug redirects to Massachusetts.
+- [x] 2.4 Update the towns and neighborhoods tests to the sub-regions (`ma-north-of-the-charles`, `ma-downtown-central-boston`); verify every scenario of "Visitors can narrow a metro area to some of its towns" and "…to some of their neighborhoods", and the calendar feed's "Metro feed".
 
 ## 3. The sheet sync stops
 

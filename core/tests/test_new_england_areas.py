@@ -20,58 +20,52 @@ from icalendar import Calendar
 Kind = GeoArea.Kind
 
 
-def area(kind, label, states, home_state="", **rules):
-    return GeoArea.objects.create(
-        kind=kind, sheet_id=f"{kind}_{label}", label=label, slug=label.lower().replace(": ", "-").replace(" ", "-"),
-        home_state=home_state, states=states, sort_order=GeoArea.objects.count(), **rules,
-    )
-
-
 class SiteOptionsTestCase(TestCase):
     def setUp(self):
+        # core/geo_areas.py's areas, which reach well beyond new england
         load_geo_fixture()
-        area(Kind.REGION, "Chesapeake Bay", ["dc", "md"])
-        area(Kind.REGION, "Mid-Atlantic", ["ny", "nj", "pa"])
-        for label, code in (("DC", "dc"), ("Delaware", "de"), ("Maryland", "md"), ("New Jersey", "nj"),
-                            ("New York", "ny"), ("Pennsylvania", "pa"), ("Connecticut", "ct"), ("Maine", "me"),
-                            ("New Hampshire", "nh")):
-            area(Kind.STATE, label, [code], code.upper())
-        area(Kind.METRO, "NY: Hudson Valley", ["ny"], "NY")
-        area(Kind.METRO, "CT: Hartford", ["ct"], "CT")
 
     def labels(self, kind, **kwargs):
         return [a.label for a in offered_areas(kind, new_england_only=True, **kwargs)]
 
     def test_regions_outside_new_england(self):
         # Tri-State has a state outside New England, so it goes with the others
-        self.assertEqual(self.labels(Kind.REGION), ["New England: South"])
+        self.assertEqual(self.labels(Kind.REGION), ["New England", "New England: North", "New England: South"])
         self.assertIn("Tri-State", [a.label for a in offered_areas(Kind.REGION)])
 
     def test_states_outside_new_england(self):
         self.assertEqual(
             self.labels(Kind.STATE),
-            ["Massachusetts", "Rhode Island", "Vermont", "Connecticut", "Maine", "New Hampshire"],
+            ["Connecticut", "Maine", "Massachusetts", "New Hampshire", "Rhode Island", "Vermont"],
         )
 
     def test_metros_of_removed_states(self):
         groups = metro_groups()
         self.assertNotIn("NY: Hudson Valley", [metro.label for _, metros in groups for metro in metros])
-        self.assertEqual([label for label, _ in groups], ["Massachusetts", "Vermont", "Connecticut"])
+        self.assertEqual(
+            [label for label, _ in groups],
+            [
+                "Connecticut", "Western Massachusetts", "Central Massachusetts", "MetroWest", "Greater Boston",
+                "Northeast Massachusetts", "South of Boston & Southeast", "Cape Cod & the Islands", "Maine",
+                "New Hampshire", "Vermont",
+            ],
+        )
 
     def test_area_with_no_states(self):
         self.assertNotIn("Northeast Corridor", self.labels(Kind.REGION))
 
     def test_sheet_order(self):
-        self.assertEqual(self.labels(Kind.REGION)[0], "New England: South")
-        self.assertEqual(self.labels(Kind.STATE)[:3], ["Massachusetts", "Rhode Island", "Vermont"])
+        self.assertEqual(self.labels(Kind.REGION)[0], "New England")
+        self.assertEqual(self.labels(Kind.STATE)[:3], ["Connecticut", "Maine", "Massachusetts"])
 
     def test_lowercase_sheet_states(self):
         self.assertTrue(all(state == state.lower() for a in GeoArea.objects.all() for state in a.states))
-        self.assertEqual(len(self.labels(Kind.METRO)), 7)
+        # connecticut's, maine's, new hampshire's and vermont's two each, and massachusetts's 28
+        self.assertEqual(len(self.labels(Kind.METRO)), 36)
 
     def test_the_homepage_form_offers_them(self):
         response = self.client.get("/")
-        self.assertEqual([a.label for a in response.context["state_options"]][:2], ["Massachusetts", "Rhode Island"])
+        self.assertEqual([a.label for a in response.context["state_options"]][:2], ["Connecticut", "Maine"])
         self.assertNotContains(response, "tri-state")
         self.assertNotContains(response, "new-york")
         self.assertNotContains(response, "hudson-valley")
@@ -83,24 +77,24 @@ class SiteOptionsTestCase(TestCase):
 
     def test_a_town_link_under_the_flag(self):
         Venue.objects.create(name="Cambridge Club", state="MA", county="Middlesex", city_town="Cambridge")
-        query = QueryDict("metro=ma-boston&town=Cambridge, MA")
+        query = QueryDict("metro=ma-north-of-the-charles&town=Cambridge, MA")
         self.assertEqual(parse_geo_filter(query, new_england_only=True).towns, [("Cambridge", "MA")])
 
     def test_a_venue_with_a_lowercase_state_has_no_town(self):
         Venue.objects.create(name="Lower Hall", state="ma", county="Suffolk", city_town="Boston")
-        query = QueryDict("metro=ma-boston&town=Boston, ma")
+        query = QueryDict("metro=ma-downtown-central-boston&town=Boston, ma")
         self.assertEqual(parse_geo_filter(query, new_england_only=True).towns, [])
 
 
 class AdminSidebarTestCase(TestCase):
     def setUp(self):
         load_geo_fixture()
-        area(Kind.STATE, "New York", ["ny"], "NY")
-        area(Kind.METRO, "NY: Hudson Valley", ["ny"], "NY", cities=["beacon"])
         self.user = User.objects.create_superuser("admin", "a@example.com", "pw")
         soon = timezone.now() + timezone.timedelta(days=3)
-        for name, state, city in (("Beacon Hall", "NY", "Beacon"), ("Hartford Hall", "CT", "Hartford")):
-            venue = Venue.objects.create(name=name, state=state, city_town=city)
+        for name, state, county, city in (
+            ("Beacon Hall", "NY", "Dutchess", "Beacon"), ("Hartford Hall", "CT", "Hartford", "Hartford")
+        ):
+            venue = Venue.objects.create(name=name, state=state, county=county, city_town=city)
             Event.objects.create(title=name, starttime=soon, venue=venue)
 
     def changelist(self, admin, url, params):
@@ -128,8 +122,6 @@ class AdminSidebarTestCase(TestCase):
 class StaleLinksTestCase(TestCase):
     def setUp(self):
         load_geo_fixture()
-        area(Kind.STATE, "New York", ["ny"], "NY")
-        area(Kind.REGION, "Mid-Atlantic", ["ny", "nj", "pa"])
         new_england_venue()
         Event.objects.create(
             title="boston show", starttime=timezone.now() + timezone.timedelta(minutes=30), venue=new_england_venue()

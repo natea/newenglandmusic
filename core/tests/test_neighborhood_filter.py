@@ -11,13 +11,13 @@ from django.utils import timezone
 def setup_boston():
     load_geo_fixture()
     soon = get_current_new_york_datetime() + datetime.timedelta(hours=3)
-    for title, town, neighborhood in (
-        ("west end show", "Boston", "West End"), ("allston show", "Boston", "Allston"),
-        ("fenway show", "Boston", "Fenway"), ("cambridge show", "Cambridge", "East Cambridge"),
+    for title, town, neighborhood, county in (
+        ("west end show", "Boston", "West End", "Suffolk"), ("beacon hill show", "Boston", "Beacon Hill", "Suffolk"),
+        ("fenway show", "Boston", "Fenway", "Suffolk"), ("cambridge show", "Cambridge", "East Cambridge", "Middlesex"),
     ):
-        venue = Venue.objects.create(name=f"{title} venue", state="MA", county="Suffolk", city_town=town, neighborhood=neighborhood)
+        venue = Venue.objects.create(name=f"{title} venue", state="MA", county=county, city_town=town, neighborhood=neighborhood)
         Event.objects.create(title=title, starttime=soon, venue=venue)
-    return GeoArea.objects.get(label__endswith="Boston Metro Region").slug
+    return GeoArea.objects.get(label="MA: Downtown & Central Boston").slug
 
 
 class NeighborhoodFilterTestCase(TestCase):
@@ -27,13 +27,13 @@ class NeighborhoodFilterTestCase(TestCase):
     def titles(self, response):
         return {e.title for day in response.context["grouped_events_as_list"] for e in day["events"]}
 
-    def get(self, towns=(), neighborhoods=()):
-        params = [("metro", self.metro)] + [("town", t) for t in towns] + [("neighborhood", n) for n in neighborhoods]
+    def get(self, towns=(), neighborhoods=(), metro=None):
+        params = [("metro", metro or self.metro)] + [("town", t) for t in towns] + [("neighborhood", n) for n in neighborhoods]
         return self.client.get("/", params)
 
     def test_two_neighborhoods(self):
-        response = self.get(["Boston, MA"], ["West End, Boston, MA", "Allston, Boston, MA"])
-        self.assertEqual(self.titles(response), {"west end show", "allston show"})
+        response = self.get(["Boston, MA"], ["West End, Boston, MA", "Beacon Hill, Boston, MA"])
+        self.assertEqual(self.titles(response), {"west end show", "beacon hill show"})
         html = response.content.decode()
         self.assertIn('<option value="West End, Boston, MA" selected>', html)
         self.assertIn('<option value="Fenway, Boston, MA" >', html)
@@ -44,7 +44,7 @@ class NeighborhoodFilterTestCase(TestCase):
         self.assertNotIn('name="neighborhood"', response.content.decode())
 
     def test_neighborhood_from_another_town(self):
-        response = self.get(["Cambridge, MA"], ["West End, Boston, MA"])
+        response = self.get(["Cambridge, MA"], ["West End, Boston, MA"], metro="ma-north-of-the-charles")
         self.assertEqual(self.titles(response), {"cambridge show"})
         self.assertEqual(response.context["geo_filter"].neighborhoods, [])
 
@@ -56,9 +56,9 @@ class NeighborhoodFilterTestCase(TestCase):
 
     def test_calendar_feed(self):
         body = self.client.get(
-            "/calendar.ics", [("metro", self.metro), ("town", "Boston, MA"), ("neighborhood", "Allston, Boston, MA")]
+            "/calendar.ics", [("metro", self.metro), ("town", "Boston, MA"), ("neighborhood", "Beacon Hill, Boston, MA")]
         ).content.decode()
-        self.assertIn("allston show", body)
+        self.assertIn("beacon hill show", body)
         self.assertNotIn("west end show", body)
 
 

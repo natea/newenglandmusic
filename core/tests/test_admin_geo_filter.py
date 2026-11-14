@@ -46,7 +46,7 @@ class AdminGeoFilterTestCase(TestCase):
 
     def test_review_queue_for_one_metro(self):
         self.assertEqual(
-            self.listed_events(metro="ma-boston-metro-region", is_approved__exact="0"),
+            self.listed_events(metro="ma-north-of-the-charles", is_approved__exact="0"),
             {"Cambridge Club pending"},
         )
 
@@ -61,7 +61,7 @@ class AdminGeoFilterTestCase(TestCase):
 
     def test_venues_by_state_and_metro(self):
         self.assertEqual(self.listed_venues(state="massachusetts"), {"Cambridge Club", "Hyannis Hall"})
-        self.assertEqual(self.listed_venues(metro="ma-cape-cod"), {"Hyannis Hall"})
+        self.assertEqual(self.listed_venues(metro="ma-mid-cape"), {"Hyannis Hall"})
 
     def test_unknown_value_filters_nothing(self):
         self.assertEqual(len(self.listed_venues(state="atlantis")), 5)

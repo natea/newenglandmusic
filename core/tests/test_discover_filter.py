@@ -76,10 +76,11 @@ class DeckFilterTestCase(DeckFilterBase):
 
     def test_filter_by_metro_and_by_a_town_in_it(self):
         show(self.belly, days(3), self.providence)
-        show(self.anjimile, days(2), self.boston)
+        show(self.anjimile, days(2), venue("The Sinclair", "Cambridge", "MA", "V5"))
         show(Band.objects.create(name="Frankie Cosmos"), days(4), self.somerville)
-        self.assertEqual(self.names(self.get("?metro=ma-boston-metro-region")), ["Anjimile", "Frankie Cosmos"])
-        response = self.get("?metro=ma-boston-metro-region&town=Somerville, MA")
+        show(Band.objects.create(name="Speedy Ortiz"), days(5), self.boston)
+        self.assertEqual(self.names(self.get("?metro=ma-north-of-the-charles")), ["Anjimile", "Frankie Cosmos"])
+        response = self.get("?metro=ma-north-of-the-charles&town=Somerville, MA")
         self.assertEqual(self.names(response), ["Frankie Cosmos"])
 
     def test_region_and_state_together(self):
@@ -95,7 +96,13 @@ class DeckFilterTestCase(DeckFilterBase):
     def test_metro_options_follow_the_state(self):
         response = self.get("?state=massachusetts")
         groups = [(label, [m.short_label for m in metros]) for label, metros in response.context["metro_groups"]]
-        self.assertEqual([label for label, _ in groups], ["Massachusetts"])
+        self.assertEqual(
+            [label for label, _ in groups],
+            [
+                "Western Massachusetts", "Central Massachusetts", "MetroWest", "Greater Boston",
+                "Northeast Massachusetts", "South of Boston & Southeast", "Cape Cod & the Islands",
+            ],
+        )
 
     def test_order_follows_the_filter(self):
         show(self.belly, days(1), self.providence)

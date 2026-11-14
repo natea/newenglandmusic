@@ -15,6 +15,7 @@ def geo_fixture_rows():
 
 
 def load_geo_fixture():
-    """stores the fixture's areas, as a sync would"""
-    areas, _ = sync.geo_areas_from_rows(geo_fixture_rows())
-    sync.save_geo_areas(areas)
+    """the site's own areas (core/geo_areas.py), as every migrate loads them"""
+    from core.geo_area_sync import sync_geo_areas
+
+    sync_geo_areas()

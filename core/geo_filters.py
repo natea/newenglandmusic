@@ -1,20 +1,21 @@
 """
-filters venues and events by the regions, states and metro areas of the venue
-sheet's geo-filters_json tab (synced into GeoArea by sync_venues_from_gsheets).
+filters venues and events by the regions, states and metro areas of core/geo_areas.py
+(loaded into GeoArea on every migrate).
 
-a venue belongs to an area when its state is in the area's states and, if the
-area lists counties or cities, its county or its city is one of them:
+a venue belongs to an area when its state is in the area's states and, if the area lists
+counties or cities, its county or its city is one of them; massachusetts's sub-regions have
+their own rules (sub_region_q), which put each venue in exactly one:
 
     Event.objects.filter(area_q(area, prefix="venue__"))
 
 the listing pages and the admin both take the same url parameters:
 
-    /?region=new-england&state=massachusetts&metro=ma-boston-metro-region
+    /?region=new-england&state=massachusetts&metro=ma-north-of-the-charles
 
 a metro can be narrowed to some of its towns, by the venues' own town and state (not the
 sheet's metro city lists, so this keeps working if the areas move out of the sheet):
 
-    /?metro=ma-boston-metro-region&town=Somerville, MA&town=Cambridge, MA
+    /?metro=ma-north-of-the-charles&town=Somerville, MA&town=Cambridge, MA
 """
 
 from dataclasses import dataclass, field
@@ -23,6 +24,7 @@ from urllib.parse import urlencode
 from django.db.models import Q
 from django.http import QueryDict
 
+from core.geo_areas import OLD_METRO_SLUGS
 from core.models import GeoArea
 
 FILTER_PARAMS = ("region", "state", "metro")
@@ -198,6 +200,11 @@ def parse_geo_filter(querydict, new_england_only=False):
         if slug:
             areas = offered_areas(param, new_england_only)
             setattr(geo_filter, param, next((area for area in areas if area.slug == slug), None))
+    old_metro = querydict.get("metro", "").strip() in OLD_METRO_SLUGS
+    if old_metro and not geo_filter.metro and not geo_filter.state:
+        # a link, cookie or feed from before massachusetts's sub-regions covers the whole state
+        states = offered_areas(GeoArea.Kind.STATE, new_england_only)
+        geo_filter.state = next((area for area in states if area.home_state == "MA"), None)
     if geo_filter.metro and not metro_fits_state(geo_filter.metro, geo_filter.state):
         geo_filter.metro = None
     wanted = [value.strip() for value in querydict.getlist("town") if value.strip()] if hasattr(querydict, "getlist") else []
@@ -266,15 +273,17 @@ def apply_cookie_action(request, response, geo_filter, cookie_action):
 
 
 def metro_groups(state=None):
-    """offered metros as [(state label, [metros])], in sheet order, for <optgroup>s"""
+    """
+    offered metros as [(heading, [metros])], in the areas' order, for <optgroup>s: grouped by
+    state, except massachusetts's sub-regions, which are grouped by their own groups
+    """
     state_labels = {area.home_state: area.label for area in offered_areas(GeoArea.Kind.STATE, new_england_only=True)}
     groups = {}
     for metro in offered_areas(GeoArea.Kind.METRO, new_england_only=True):
         if metro_fits_state(metro, state):
-            groups.setdefault(metro.home_state, []).append(metro)
-    return [
-        (state_labels.get(home_state, home_state), metros) for home_state, metros in groups.items()
-    ]
+            heading = metro.group or state_labels.get(metro.home_state, metro.home_state)
+            groups.setdefault(heading, []).append(metro)
+    return list(groups.items())
 
 
 def geo_filter_context(geo_filter):

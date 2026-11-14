@@ -62,6 +62,7 @@ class FeedTestCase(TestCase):
         for city, state, county in [
             ("Boston", "MA", "Suffolk"),
             ("Hyannis", "MA", "Barnstable"),
+            ("Somerville", "MA", "Middlesex"),
             ("Burlington", "VT", "Chittenden"),
             ("Providence", "RI", "Providence"),
         ]:
@@ -84,10 +85,10 @@ class FeedTestCase(TestCase):
         self.assertEqual(summaries(response), ["burlington show [StageHopper]"])
 
     def test_metro_feed(self):
+        self.show("somerville show", "Somerville")
         self.show("boston show", "Boston")
-        self.show("cape show", "Hyannis")
-        response = self.client.get("/calendar.ics?metro=" + self.slug("MA: Boston"))
-        self.assertEqual(summaries(response), ["boston show [StageHopper]"])
+        response = self.client.get("/calendar.ics?metro=ma-north-of-the-charles")
+        self.assertEqual(summaries(response), ["somerville show [StageHopper]"])
 
     def test_whole_northeast(self):
         for city in ("Boston", "Hyannis", "Burlington", "Providence"):
@@ -133,9 +134,9 @@ class FeedTestCase(TestCase):
         self.assertEqual(summaries(self.client.get("/calendar.ics")), ["approved [StageHopper]"])
 
     def test_calendar_name_and_refresh(self):
-        response = self.client.get("/calendar.ics?metro=" + self.slug("MA: Cape Cod"))
+        response = self.client.get("/calendar.ics?metro=" + self.slug("MA: Mid-Cape"))
         cal = parse(response)
-        self.assertEqual(str(cal["X-WR-CALNAME"]), "StageHopper: MA: Cape Cod")
+        self.assertEqual(str(cal["X-WR-CALNAME"]), "StageHopper: MA: Mid-Cape")
         text = response.content.decode()
         self.assertIn("REFRESH-INTERVAL;VALUE=DURATION:PT6H", text)
         self.assertIn("X-PUBLISHED-TTL:PT6H", text)

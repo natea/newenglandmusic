@@ -149,17 +149,17 @@ class OfferedAreasTestCase(TestCase):
         self.assertNotIn("Northeast Corridor", labels)
 
     def test_sheet_order(self):
-        # the fixture lists New England: South before Tri-State
+        # core/geo_areas.py lists Chesapeake Bay, Mid-Atlantic and New England in that order
         labels = [area.label for area in offered_areas(GeoArea.Kind.REGION)]
-        self.assertEqual(labels, ["New England: South", "Tri-State"])
+        self.assertEqual(labels[:3], ["Chesapeake Bay", "Mid-Atlantic", "New England"])
 
     def test_slugs_come_from_labels(self):
-        self.assertEqual(GeoArea.objects.get(label="MA: Boston Metro Region").slug, "ma-boston-metro-region")
+        self.assertEqual(GeoArea.objects.get(label="MA: Downtown & Central Boston").slug, "ma-downtown-central-boston")
         self.assertEqual(GeoArea.objects.get(label="New England: South").slug, "new-england-south")
         self.assertEqual(GeoArea.objects.get(label="Massachusetts").slug, "massachusetts")
 
     def test_short_label_drops_the_state(self):
-        self.assertEqual(GeoArea.objects.get(label="MA: Cape Cod").short_label, "Cape Cod")
+        self.assertEqual(GeoArea.objects.get(label="MA: Outer Cape").short_label, "Outer Cape")
         self.assertEqual(GeoArea.objects.get(label="Tri-State").short_label, "Tri-State")
 
 
@@ -171,24 +171,24 @@ class ParseGeoFilterTestCase(TestCase):
         return parse_geo_filter(QueryDict(query))
 
     def test_resolves_slugs(self):
-        geo_filter = self.parse("region=tri-state&state=massachusetts&metro=ma-cape-cod")
+        geo_filter = self.parse("region=tri-state&state=massachusetts&metro=ma-outer-cape")
         self.assertEqual(geo_filter.region.label, "Tri-State")
         self.assertEqual(geo_filter.state.label, "Massachusetts")
-        self.assertEqual(geo_filter.metro.label, "MA: Cape Cod")
+        self.assertEqual(geo_filter.metro.label, "MA: Outer Cape")
         self.assertEqual(
-            geo_filter.query_string, "region=tri-state&state=massachusetts&metro=ma-cape-cod"
+            geo_filter.query_string, "region=tri-state&state=massachusetts&metro=ma-outer-cape"
         )
 
     def test_unknown_slug_is_dropped(self):
-        geo_filter = self.parse("state=atlantis&metro=ma-cape-cod")
+        geo_filter = self.parse("state=atlantis&metro=ma-outer-cape")
         self.assertIsNone(geo_filter.state)
-        self.assertEqual(geo_filter.metro.label, "MA: Cape Cod")
+        self.assertEqual(geo_filter.metro.label, "MA: Outer Cape")
 
     def test_area_with_no_states_is_dropped(self):
         self.assertFalse(self.parse("region=northeast-corridor"))
 
     def test_metro_from_another_state_is_dropped(self):
-        geo_filter = self.parse("state=vermont&metro=ma-cape-cod")
+        geo_filter = self.parse("state=vermont&metro=ma-outer-cape")
         self.assertEqual(geo_filter.state.label, "Vermont")
         self.assertIsNone(geo_filter.metro)
         self.assertEqual(geo_filter.query_string, "state=vermont")
