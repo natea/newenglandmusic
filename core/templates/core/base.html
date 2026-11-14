@@ -43,6 +43,8 @@
         defaults: "2026-08-30",
         person_profiles: "identified_only",
         disable_session_recording: true,
+        // no surveys yet: off, so posthog doesn't fetch their script on every page
+        disable_surveys: true,
         autocapture: true,
         // the privacy page's turn-off control waits for the real sdk (core/js/analytics.js)
         loaded: function () { document.dispatchEvent(new Event("posthog:loaded")); },
