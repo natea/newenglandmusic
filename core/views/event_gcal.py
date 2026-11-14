@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect
 
 from ..models import Event
@@ -11,6 +10,4 @@ from ..utils import get_gcal_link_from_event
 # is followed does the view below generate the google calendar link and redirects to it
 def event_gcal_redirect(request, event_id):
     event = get_object_or_404(Event, id=event_id)
-    if posthog_client := settings.POSTHOG_MW_CLIENT:
-        posthog_client.capture("event_google_calendar_opened")
     return redirect(get_gcal_link_from_event(event))

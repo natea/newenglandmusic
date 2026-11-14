@@ -43,10 +43,6 @@ mypy==1.17.1
 mypy-extensions==1.1.0
 nodeenv==1.9.1
 packaging==26.3
-opentelemetry-api
-opentelemetry-exporter-otlp
-opentelemetry-sdk
-posthog>=7.69.0,<8
 pathspec==1.1.1
 pipenv==2025.0.4
 pippip==0.0.10

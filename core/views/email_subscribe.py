@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.shortcuts import redirect, render
 
 from ..models import EmailSubscriber
@@ -15,9 +14,7 @@ def email_subscribe(request):
     # 'email' field is marked as unique in model, which
     # would create an error if we did attempt to re-create object
     # for same email address
-    _, created = EmailSubscriber.objects.get_or_create(email=email_address)
-    if created and (posthog_client := settings.POSTHOG_MW_CLIENT):
-        posthog_client.capture("email_subscription_created")
+    EmailSubscriber.objects.get_or_create(email=email_address)
 
     # redirect from POST to GET to avoid 'do you want to submit...'
     # on clicking back

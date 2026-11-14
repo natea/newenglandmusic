@@ -6,7 +6,6 @@ structured data, ticketing pages and ticketmaster are labelled here, in batches.
 """
 
 import json
-import uuid
 
 import anthropic
 
@@ -56,21 +55,14 @@ def describe(index, item):
     return "\n".join(lines)
 
 
-def classify_batch(client, items, model, posthog_properties=None, posthog_trace_id=None):
+def classify_batch(client, items, model):
     fallback_options = {}
     if model in MODELS_WITH_FALLBACKS:
         fallback_options = {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"}
-    posthog_options = {}
-    if posthog_properties and posthog_trace_id:
-        posthog_options = {
-            "posthog_properties": posthog_properties,
-            "posthog_trace_id": posthog_trace_id,
-        }
     response = client.beta.messages.create(
         model=model,
         max_tokens=4000,
         **fallback_options,
-        **posthog_options,
         output_config={
             "effort": "low",
             "format": {"type": "json_schema", "schema": LABELS_SCHEMA},
@@ -94,7 +86,7 @@ def classify_batch(client, items, model, posthog_properties=None, posthog_trace_
     return kinds, response.usage
 
 
-def classify(client, items, model=MODEL, posthog_properties=None):
+def classify(client, items, model=MODEL):
     """
     labels items -- dicts with title, artists, description and venue -- in batches.
     returns (a kind per item, "" when unlabelled; a list of error messages; input and
@@ -104,14 +96,8 @@ def classify(client, items, model=MODEL, posthog_properties=None):
     input_tokens = output_tokens = 0
     for start in range(0, len(items), BATCH_SIZE):
         batch = items[start : start + BATCH_SIZE]
-        posthog_options = {}
-        if posthog_properties:
-            posthog_options = {
-                "posthog_properties": posthog_properties,
-                "posthog_trace_id": str(uuid.uuid4()),
-            }
         try:
-            batch_kinds, usage = classify_batch(client, batch, model, **posthog_options)
+            batch_kinds, usage = classify_batch(client, batch, model)
         except (anthropic.APIError, ValueError, KeyError, StopIteration) as e:
             errors.append(f"labelling events {start + 1}-{start + len(batch)} failed: {e}"[:200])
             kinds += [""] * len(batch)

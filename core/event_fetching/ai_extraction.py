@@ -151,32 +151,16 @@ def to_event_dict(raw, page_url):
     }
 
 
-def extract_events(
-    client,
-    venue_name,
-    venue_location,
-    page_url,
-    page_text,
-    model=MODEL,
-    posthog_properties=None,
-    posthog_trace_id=None,
-):
+def extract_events(client, venue_name, venue_location, page_url, page_text, model=MODEL):
     today = timezone.localdate().isoformat()
     fallback_options = {}
     if model in MODELS_WITH_FALLBACKS:
         # if the model declines a request, the api re-runs it on a fallback model
         fallback_options = {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"}
-    posthog_options = {}
-    if posthog_properties and posthog_trace_id:
-        posthog_options = {
-            "posthog_properties": posthog_properties,
-            "posthog_trace_id": posthog_trace_id,
-        }
     response = client.beta.messages.create(
         model=model,
         max_tokens=16000,
         **fallback_options,
-        **posthog_options,
         output_config={
             "effort": "low",
             "format": {"type": "json_schema", "schema": EVENTS_SCHEMA},
@@ -216,29 +200,15 @@ def split_text(text):
 
 
 def extract_events_in_parts(
-    client,
-    venue_name,
-    venue_location,
-    page_url,
-    page_text,
-    model=MODEL,
-    splits_left=MAX_SPLITS,
-    posthog_properties=None,
-    posthog_trace_id=None,
+    client, venue_name, venue_location, page_url, page_text, model=MODEL, splits_left=MAX_SPLITS
 ):
     """
     extract_events, but a page that lists more events than fit in one response (it stops
     with max_tokens, e.g. a bar with months of nightly shows) is split in halves, and each
     half extracted on its own. returns (events, usage), usage summed over every request
     """
-    posthog_options = {}
-    if posthog_properties and posthog_trace_id:
-        posthog_options = {
-            "posthog_properties": posthog_properties,
-            "posthog_trace_id": posthog_trace_id,
-        }
     try:
-        return extract_events(client, venue_name, venue_location, page_url, page_text, model, **posthog_options)
+        return extract_events(client, venue_name, venue_location, page_url, page_text, model)
     except ExtractionError as e:
         if "max_tokens" not in str(e) or splits_left == 0 or len(page_text) < MIN_SPLIT_LENGTH:
             raise
@@ -248,14 +218,7 @@ def extract_events_in_parts(
     events = {}
     for part in split_text(page_text):
         part_events, usage = extract_events_in_parts(
-            client,
-            venue_name,
-            venue_location,
-            page_url,
-            part,
-            model,
-            splits_left - 1,
-            **posthog_options,
+            client, venue_name, venue_location, page_url, part, model, splits_left - 1
         )
         # an event can appear in both halves; its external_id is the same in each
         for event in part_events:

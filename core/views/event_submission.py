@@ -123,16 +123,7 @@ class EventCreateView(CreateView):
             messages.INFO,
             "thanks buddy! your event is submitted for approval.",
         )
-        response = super().form_valid(form)
-        if posthog_client := settings.POSTHOG_MW_CLIENT:
-            posthog_client.capture(
-                "event_submitted",
-                properties={
-                    "has_ticket_link": bool(self.object.ticket_hyperlink),
-                    "has_price": bool(self.object.price),
-                },
-            )
-        return response
+        return super().form_valid(form)
 
     def get_success_url(self):
         return "/"
