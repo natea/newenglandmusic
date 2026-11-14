@@ -36,6 +36,10 @@ class PostHogTestCase(TestCase):
     def test_no_session_recording(self):
         self.assertContains(self.client.get("/"), "disable_session_recording: true")
 
+    @override_settings(**ON)
+    def test_no_surveys(self):
+        self.assertContains(self.client.get("/"), "disable_surveys: true")
+
     @override_settings(POSTHOG_PROJECT_TOKEN='phc_"</script>', POSTHOG_HOST="https://us.i.posthog.com")
     def test_the_token_is_escaped(self):
         html = self.client.get("/").content.decode()

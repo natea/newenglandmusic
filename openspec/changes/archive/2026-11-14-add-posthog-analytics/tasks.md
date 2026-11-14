@@ -27,7 +27,8 @@
 
 - [x] 6.1 Run the whole suite with the network blocked and verify it passes, with every scenario in `specs/site-analytics/spec.md` covered by a test.
 - [x] 6.2 Update `PRODUCTION.md` (the PostHog project, its two settings, IP discarding, the events and their properties, the opt-out, GoatCounter's code) and the Secrets section of `AGENTS.md` (`POSTHOG_PROJECT_TOKEN`, `POSTHOG_HOST`); verify both describe the shipped behavior.
-- [ ] 6.3 With Nate's approval, set `POSTHOG_PROJECT_TOKEN`, `POSTHOG_HOST` and `GOATCOUNTER_CODE=stagehopper` on Render's web service, deploy, and verify on the live site that the page includes PostHog and GoatCounter, and that a pageview and a `search` event appear in PostHog's activity view and a visit in GoatCounter.
+- [x] 6.3 With Nate's approval, set `POSTHOG_PROJECT_TOKEN`, `POSTHOG_HOST` and `GOATCOUNTER_CODE=stagehopper` on Render's web service, deploy, and verify on the live site that the page includes PostHog and GoatCounter, and that a pageview and a `search` event appear in PostHog's activity view and a visit in GoatCounter.
+  - 2026-11-14: settings written to Render, deployed with PR #85 (`374d635`); the live pages load PostHog and GoatCounter (both answered 200), and PostHog's activity view showed the test visit's pageviews, `search` and pageleave.
 
 ## Workflow follow-up
 
