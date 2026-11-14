@@ -1,19 +1,11 @@
 {% comment %}
-  region / state / metro filter for the listing pages. a plain GET form, so it
+  state / metro filter for the listing pages (no region menu: new england's regions are few,
+  and a state is simpler to pick; a region in a link or feed still applies). a plain GET form, so it
   works without js; the script only submits it as soon as a select changes.
   choosing "All" submits an empty value, which clears the remembered filter.
 {% endcomment %}
 {% if state_options %}
   <form class="geoFilter" method="get" action="{{ request.path }}">
-    <label>
-      region
-      <select name="region">
-        <option value="">All</option>
-        {% for area in region_options %}
-          <option value="{{ area.slug }}" {% if area == geo_filter.region %}selected{% endif %}>{{ area.label }}</option>
-        {% endfor %}
-      </select>
-    </label>
     <label>
       state
       <select name="state">
@@ -53,8 +45,8 @@
       {% endif %}
       {% if town_neighborhoods %}
         {% comment %}
-          the chosen towns' neighborhoods (from openstreetmap): choose none for the whole
-          towns. chips with js, like the towns
+          the chosen towns' neighborhoods (from openstreetmap), or a one-town metro's: choose
+          none for the whole towns. chips with js, like the towns
         {% endcomment %}
         <label class="neighborhood-filter">
           neighborhoods

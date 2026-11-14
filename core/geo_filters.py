@@ -96,6 +96,8 @@ class GeoFilter:
     towns: list = field(default_factory=list)
     # (neighborhood, town, state code) within the chosen towns (lookup_venue_neighborhoods)
     neighborhoods: list = field(default_factory=list)
+    # the towns whose neighborhoods are offered: the chosen ones, or a one-town metro's town
+    neighborhood_towns: list = field(default_factory=list)
 
     @property
     def areas(self):
@@ -207,15 +209,21 @@ def parse_geo_filter(querydict, new_england_only=False):
         geo_filter.state = next((area for area in states if area.home_state == "MA"), None)
     if geo_filter.metro and not metro_fits_state(geo_filter.metro, geo_filter.state):
         geo_filter.metro = None
+    towns = metro_towns(geo_filter.metro) if geo_filter.metro else []
     wanted = [value.strip() for value in querydict.getlist("town") if value.strip()] if hasattr(querydict, "getlist") else []
-    if geo_filter.metro and wanted:
+    if len(towns) > 1 and wanted:
         # only the metro's own towns: a town from elsewhere, or a metro that changed, drops it
-        known = {town_label(town, state).casefold(): (town, state) for town, state in metro_towns(geo_filter.metro)}
+        known = {town_label(town, state).casefold(): (town, state) for town, state in towns}
         geo_filter.towns = [known[label.casefold()] for label in dict.fromkeys(wanted) if label.casefold() in known]
+    # a metro with one town (downtown & central boston is all boston) offers no town filter, so
+    # its neighborhoods come straight after it
+    geo_filter.neighborhood_towns = geo_filter.towns or (towns if len(towns) == 1 else [])
     wanted = [value.strip() for value in querydict.getlist("neighborhood") if value.strip()] if hasattr(querydict, "getlist") else []
-    if geo_filter.towns and wanted:
-        # only the chosen towns' neighborhoods: one from another town, or a town dropped, drops it
-        known = {neighborhood_label(*triple).casefold(): triple for triple in town_neighborhoods(geo_filter.towns)}
+    if geo_filter.neighborhood_towns and wanted:
+        # only those towns' neighborhoods: one from another town, or a town dropped, drops it
+        known = {
+            neighborhood_label(*triple).casefold(): triple for triple in town_neighborhoods(geo_filter.neighborhood_towns)
+        }
         geo_filter.neighborhoods = [known[label.casefold()] for label in dict.fromkeys(wanted) if label.casefold() in known]
     return geo_filter
 
@@ -286,20 +294,26 @@ def metro_groups(state=None):
     return list(groups.items())
 
 
+def metro_town_options(metro):
+    """the town filter's options: none for a metro with one town, which there's no narrowing"""
+    towns = metro_towns(metro) if metro else []
+    return [town_label(town, state) for town, state in towns] if len(towns) > 1 else []
+
+
 def geo_filter_context(geo_filter):
     """
     what core/geo_filter_form.html needs, for the listing and the discovery deck alike: the
-    region and state options, the metros of the chosen state, and the chosen metro's towns
+    state options, the metros of the chosen state, and the chosen metro's towns
     and the chosen towns' neighborhoods
     """
     return {
         "geo_filter": geo_filter,
-        # the site lists new england only, so it offers only new england's areas
-        "region_options": offered_areas(GeoArea.Kind.REGION, new_england_only=True),
+        # the site lists new england only, so it offers only new england's areas; no regions,
+        # which are few, so a state is simpler to pick
         "state_options": offered_areas(GeoArea.Kind.STATE, new_england_only=True),
         "metro_groups": metro_groups(geo_filter.state),
-        "metro_towns": [town_label(town, state) for town, state in metro_towns(geo_filter.metro)]
-        if geo_filter.metro
-        else [],
-        "town_neighborhoods": [neighborhood_label(*triple) for triple in town_neighborhoods(geo_filter.towns)],
+        "metro_towns": metro_town_options(geo_filter.metro),
+        "town_neighborhoods": [
+            neighborhood_label(*triple) for triple in town_neighborhoods(geo_filter.neighborhood_towns)
+        ],
     }

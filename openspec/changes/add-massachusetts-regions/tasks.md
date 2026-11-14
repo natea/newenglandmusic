@@ -13,6 +13,8 @@
 - [x] 2.3 Map `OLD_METRO_SLUGS` to the state in `parse_geo_filter`; verify "An old listing link", "A subscribed feed" and "The North Shore address kept", and that a remembered filter cookie holding an old slug redirects to Massachusetts.
 - [x] 2.4 Update the towns and neighborhoods tests to the sub-regions (`ma-north-of-the-charles`, `ma-downtown-central-boston`); verify every scenario of "Visitors can narrow a metro area to some of its towns" and "…to some of their neighborhoods", and the calendar feed's "Metro feed".
 
+- [x] 2.5 Drop the Region menu from the filter form (the `region` parameter still applies), and for a metro with one town offer no town filter but that town's neighborhoods; verify "No region menu", "A metro with one town", and the modified neighborhood scenarios ("Two neighborhoods", "No town chosen").
+
 ## 3. The sheet sync stops
 
 - [ ] 3.1 Remove the sync's area step (and its geo-tab option) and its tests, and drop `sync_venues_from_gsheets` from `bin/daily.sh`; verify "Not in the daily job", the daily job's "Daily run" (eight commands), and that the sync's remaining tests (venue tab only, service account, errors) pass with the modified scenarios.

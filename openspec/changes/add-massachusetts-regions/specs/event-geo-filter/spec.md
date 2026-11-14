@@ -36,6 +36,33 @@ Comparisons SHALL ignore case and surrounding whitespace. A venue MAY belong to 
 - **WHEN** an event has no linked venue
 - **THEN** it doesn't match any region, state or metro filter
 
+### Requirement: Visitors can filter the events listing by region, state and metro area
+The homepage and the month archive pages SHALL offer State and Metro Area filters, and no Region menu: New England's regions are few, and picking a state is simpler. Region, state and metro SHALL be chosen with the `region`, `state` and `metro` URL query parameters, and SHALL work without JavaScript; a `region` parameter (from an old link, a remembered filter or a calendar feed) SHALL still apply. When a filter is set, the event list, the calendar's event dates and the day maps SHALL include only events that belong to the chosen areas. Filters given together SHALL all apply. With no filter set, the page SHALL show what it shows today.
+
+#### Scenario: Filter by state
+- **WHEN** a visitor opens `/?state=vermont`
+- **THEN** only events at Vermont venues are listed, and the State filter shows Vermont as selected
+
+#### Scenario: Filter by metro area
+- **WHEN** a visitor opens `/?metro=ny-hudson-valley`
+- **THEN** only events at venues in the Hudson Valley counties are listed
+
+#### Scenario: Region and state together
+- **WHEN** a visitor opens `/?region=new-england&state=new-york`
+- **THEN** no events are listed, and the page says that no events match the filters and links to the unfiltered listing
+
+#### Scenario: Month archive
+- **WHEN** a visitor opens `/2026-11/?region=new-england-north`
+- **THEN** only November events at venues in ME, NH or VT are listed
+
+#### Scenario: No filter
+- **WHEN** a visitor with no remembered filter opens `/` with no filter parameters
+- **THEN** events from every venue are listed, as they are today
+
+#### Scenario: No region menu
+- **WHEN** a visitor opens `/`
+- **THEN** the filter offers State and Metro Area menus, and no Region menu
+
 ### Requirement: Only areas that can match appear as options
 The site and the admin SHALL offer as options only areas whose rules list at least one state. Options SHALL appear in the order the site's area data lists them. Each area SHALL have a URL value made from its label; for metro areas, the value SHALL include the state, so that two states' "North" metros don't clash.
 
@@ -78,7 +105,7 @@ The admin's event list and all-events list (`/admin/core/alleventproxy/`) SHALL 
 - **THEN** the Metro Area filter lists only "VT: North" and "VT: South"
 
 ### Requirement: Visitors can narrow a metro area to some of its towns
-Once a metro area is chosen, the filter SHALL offer the towns in it that have at least one venue, by the venues' town and state, in alphabetical order, as a multi-select. The `town` URL parameter SHALL name a chosen town as "<town>, <state code>", such as `town=Somerville, MA`, and MAY be repeated. When towns are chosen, the listing, the calendar's event dates, the day maps and the calendar feeds SHALL include only events at venues in those towns. A town outside the chosen metro, or unknown, SHALL be ignored. Choosing no town SHALL mean the whole metro. Without a metro, `town` SHALL be ignored. The chosen towns SHALL be kept in the remembered filter, and in the month links, like the other filters. The multi-select SHALL work without JavaScript. Changing the metro SHALL drop towns that aren't in the new one.
+Once a metro area is chosen, the filter SHALL offer the towns in it that have at least one venue, if there are two or more, by the venues' town and state, in alphabetical order, as a multi-select. The `town` URL parameter SHALL name a chosen town as "<town>, <state code>", such as `town=Somerville, MA`, and MAY be repeated. When towns are chosen, the listing, the calendar's event dates, the day maps and the calendar feeds SHALL include only events at venues in those towns. A town outside the chosen metro, or unknown, SHALL be ignored. Choosing no town SHALL mean the whole metro. Without a metro, `town` SHALL be ignored. The chosen towns SHALL be kept in the remembered filter, and in the month links, like the other filters. The multi-select SHALL work without JavaScript. Changing the metro SHALL drop towns that aren't in the new one. A metro with only one town SHALL offer no town filter.
 
 With JavaScript, the multi-select SHALL be shown as an "add a town" list beside the chosen towns. Each chosen town SHALL be shown as a chip with a button to remove it. Choosing a town from the list SHALL add it, and removing one SHALL drop it. Either SHALL apply the filter at once. Towns already chosen SHALL NOT be offered again in the list.
 
@@ -93,6 +120,10 @@ With JavaScript, the multi-select SHALL be shown as an "add a town" list beside 
 #### Scenario: Towns offered
 - **WHEN** a visitor has chosen North of the Charles
 - **THEN** the town options are the towns of the sub-region's venues, such as Cambridge, Medford and Somerville, and no town without a venue
+
+#### Scenario: A metro with one town
+- **WHEN** a visitor chooses Downtown & Central Boston, whose venues are all in Boston
+- **THEN** no town filter is offered, and Boston's neighborhoods are
 
 #### Scenario: Town outside the metro
 - **WHEN** a visitor opens `/?metro=ma-north-of-the-charles&town=Burlington, VT`
@@ -111,14 +142,14 @@ With JavaScript, the multi-select SHALL be shown as an "add a town" list beside 
 - **THEN** the feed holds only Somerville events
 
 ### Requirement: Visitors can narrow chosen towns to some of their neighborhoods
-Once one or more towns are chosen in the town filter, the filter SHALL offer the neighborhoods of those towns' venues, by neighborhood and town, in alphabetical order, as removable chips like the towns. A plain multi-select SHALL be offered without JavaScript. The `neighborhood` URL parameter SHALL name a chosen neighborhood as "<neighborhood>, <town>, <state code>", and MAY be repeated. When neighborhoods are chosen, the listing, the calendar's event dates, the day maps and the calendar feeds SHALL include only events at venues in those neighborhoods. A neighborhood outside the chosen towns, or unknown, SHALL be ignored. Without a chosen town, `neighborhood` SHALL be ignored. Chosen neighborhoods SHALL be remembered with the rest of the filter, and kept in the month links. Choosing no neighborhood SHALL mean the whole of the chosen towns.
+Once one or more towns are chosen in the town filter, or a metro with only one town is chosen, the filter SHALL offer the neighborhoods of those towns' venues (or that one town's), by neighborhood and town, in alphabetical order, as removable chips like the towns. A plain multi-select SHALL be offered without JavaScript. The `neighborhood` URL parameter SHALL name a chosen neighborhood as "<neighborhood>, <town>, <state code>", and MAY be repeated. When neighborhoods are chosen, the listing, the calendar's event dates, the day maps and the calendar feeds SHALL include only events at venues in those neighborhoods. A neighborhood outside the chosen towns, or unknown, SHALL be ignored. Without a chosen town, `neighborhood` SHALL be ignored, unless the metro has only one town. Chosen neighborhoods SHALL be remembered with the rest of the filter, and kept in the month links. Choosing no neighborhood SHALL mean the whole of the chosen towns.
 
 #### Scenario: Two neighborhoods
-- **WHEN** a visitor has chosen Boston, MA in Downtown & Central Boston, and picks "West End" and "Beacon Hill"
+- **WHEN** a visitor has chosen Downtown & Central Boston, and picks "West End" and "Beacon Hill"
 - **THEN** only events at venues in those neighborhoods are listed, and both show as chips
 
 #### Scenario: No town chosen
-- **WHEN** a visitor opens `/?metro=ma-downtown-central-boston&neighborhood=West End, Boston, MA`
+- **WHEN** a visitor opens `/?metro=ma-north-of-the-charles&neighborhood=Davis Square, Somerville, MA`
 - **THEN** the neighborhood is ignored, and the whole sub-region is listed
 
 #### Scenario: Neighborhood from another town

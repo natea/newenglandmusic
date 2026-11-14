@@ -117,9 +117,9 @@ class DeckFormTestCase(DeckFilterBase):
         show(self.belly, days(3), self.burlington)
         response = self.get("?state=vermont")
         self.assertEqual(response.context["geo_filter"].state.slug, "vermont")
-        self.assertTrue(response.context["region_options"])
         self.assertContains(response, '<form class="geoFilter" method="get" action="/discover">')
-        self.assertContains(response, 'name="region"')
+        self.assertContains(response, 'name="state"')
+        self.assertNotContains(response, 'name="region"')
         self.assertContains(response, 'name="metro"')
 
     def test_nothing_matches_the_filters(self):

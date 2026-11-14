@@ -77,6 +77,7 @@ class SiteOptionsTestCase(TestCase):
 
     def test_a_town_link_under_the_flag(self):
         Venue.objects.create(name="Cambridge Club", state="MA", county="Middlesex", city_town="Cambridge")
+        Venue.objects.create(name="Somerville Pub", state="MA", county="Middlesex", city_town="Somerville")
         query = QueryDict("metro=ma-north-of-the-charles&town=Cambridge, MA")
         self.assertEqual(parse_geo_filter(query, new_england_only=True).towns, [("Cambridge", "MA")])
 

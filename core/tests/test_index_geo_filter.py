@@ -52,6 +52,12 @@ class FilterListingTestCase(GeoFilterPageTestCase):
         response = self.client.get("/?metro=ma-mid-cape")
         self.assertEqual(self.titles(response), {"cape cod show"})
 
+    def test_no_region_menu(self):
+        response = self.client.get("/")
+        self.assertContains(response, '<select name="state">')
+        self.assertContains(response, '<select name="metro">')
+        self.assertNotContains(response, 'name="region"')
+
     def test_filter_by_region(self):
         response = self.client.get("/?region=new-england-south")
         self.assertEqual(
