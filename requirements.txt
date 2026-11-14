@@ -55,7 +55,7 @@ pyasn1-modules==0.4.2
 pycparser==3.12
 pyinstrument==5.1.0
 PyJWT==2.15.1
-pylint==4.0.9
+pylint==4.1.3
 pylint-django==2.8.0
 pylint-plugin-utils==0.9.0
 pytest==9.0.3
@@ -69,7 +69,7 @@ requests==2.33.0
 rjsmin==1.2.2
 setuptools==84.1.0
 six==1.17.0
-soupsieve==2.9
+soupsieve==4.0
 sqlparse==0.6.0
 tomli==2.2.1
 tomlkit==0.13.3
