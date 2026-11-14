@@ -32,6 +32,7 @@ API keys live in `.env`, which is git-ignored:
 - `YOUTUBE_API_KEY` (a Google Cloud key restricted to YouTube Data API v3, the only Google API to enable for it), plus the non-secret switch `YOUTUBE_PREVIEWS`
 - `GOOGLE_PLACES_API_KEY` (restricted to the Places API (New))
 - `POSTHOG_PROJECT_TOKEN` and `POSTHOG_HOST` (PostHog's project token, its public browser-side key, and the account's host): analytics in the browser only, never server-side (see PRODUCTION.md, "Analytics"); leave the token blank when running tests
+- `POSTHOG_PERSONAL_API_KEY` (a PostHog personal API key scoped to project 735651 with insight and dashboard read and write), for `sync_posthog_dashboard`, run by hand: local `.env` only, never on Render; `POSTHOG_PROJECT_ID` and `POSTHOG_APP_HOST` default to 735651 and `https://us.posthog.com`
 
 `.env.example` lists them. Never print, log or commit a key; check only whether one is set. Pass keys in headers rather than URLs where the API allows it, and keep them out of error messages and test fixtures.
 
