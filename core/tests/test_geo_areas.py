@@ -1,9 +1,11 @@
 from collections import Counter
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 from django.utils.text import slugify
 
+from core.geo_area_sync import sync_geo_areas
 from core.geo_areas import AREAS, OLD_METRO_SLUGS
+from core.models import GeoArea
 
 # every county in massachusetts, as venues spell them (lowercased)
 MASSACHUSETTS_COUNTIES = {
@@ -81,3 +83,45 @@ class GeoAreasDataTestCase(SimpleTestCase):
         self.assertEqual(len(OLD_METRO_SLUGS), 6)
         slugs = {slugify(area["label"]) for area in AREAS}
         self.assertEqual(OLD_METRO_SLUGS & slugs, set())
+
+
+class GeoAreaSyncTestCase(TestCase):
+    def area(self, key, label, **fields):
+        return {
+            "key": key, "kind": "metro", "label": label, "home_state": "MA", "group": "", "states": ["ma"],
+            "counties": [], "cities": [], "neighborhoods": [], "default_counties": [], **fields,
+        }
+
+    def stored(self):
+        return list(GeoArea.objects.values_list("sheet_id", "label", "slug", "sort_order", "cities"))
+
+    def test_migrate_loads_the_file(self):
+        # the test database is migrated, so it already holds every area in the file
+        self.assertEqual(list(GeoArea.objects.values_list("sheet_id", flat=True)), [area["key"] for area in AREAS])
+        north = GeoArea.objects.get(slug="ma-north-of-the-charles")
+        self.assertEqual((north.group, north.kind), ("Greater Boston", "metro"))
+        self.assertIn("somerville", north.cities)
+
+    def test_new_area_added(self):
+        sync_geo_areas([self.area("a", "MA: One")])
+        self.assertEqual(sync_geo_areas([self.area("a", "MA: One"), self.area("b", "MA: Two")]), (1, 0, 0))
+        self.assertEqual(self.stored()[1], ("b", "MA: Two", "ma-two", 1, []))
+
+    def test_changed_area_updated(self):
+        sync_geo_areas([self.area("a", "MA: One")])
+        self.assertEqual(sync_geo_areas([self.area("a", "MA: Uno", cities=["salem"])]), (0, 1, 0))
+        self.assertEqual(self.stored(), [("a", "MA: Uno", "ma-uno", 0, ["salem"])])
+
+    def test_removed_area_deleted(self):
+        sync_geo_areas([self.area("a", "MA: One"), self.area("b", "MA: Two")])
+        self.assertEqual(sync_geo_areas([self.area("b", "MA: Two")]), (0, 1, 1))
+        self.assertEqual(self.stored(), [("b", "MA: Two", "ma-two", 0, [])])
+
+    def test_new_area_takes_a_removed_ones_slug(self):
+        sync_geo_areas([self.area("old", "MA: Boston")])
+        sync_geo_areas([self.area("new", "MA: Boston")])
+        self.assertEqual(self.stored(), [("new", "MA: Boston", "ma-boston", 0, [])])
+
+    def test_running_twice_changes_nothing(self):
+        self.assertEqual(sync_geo_areas(), (0, 0, 0))
+        self.assertEqual(sync_geo_areas(), (0, 0, 0))

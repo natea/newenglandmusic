@@ -4,7 +4,7 @@
 
 - [x] 1.1 Add `group`, `neighborhoods` and `default_counties` to `GeoArea` with a migration; verify `makemigrations --check` is clean and the migration applies.
 - [x] 1.2 Write `core/geo_areas.py`: the current regions, states and non-Massachusetts metros copied from production's stored areas (read only) in their order and with their keys, then the 28 Massachusetts sub-regions in seven groups with the editors' towns, Boston neighborhoods and aliases, and the county defaults (design Decisions 3 and 4), plus `OLD_METRO_SLUGS`; verify a test that every sub-region has a group, a label starting "MA: ", towns or neighborhoods, and that each Massachusetts county has exactly one default.
-- [ ] 1.3 Add the `post_migrate` sync (`core/geo_area_sync.py`) that makes `GeoArea` match `AREAS` (create, update, delete, keyed by `key`); verify with tests that a new area is added, a changed one updated, a removed one deleted, and that running it twice changes nothing.
+- [x] 1.3 Add the `post_migrate` sync (`core/geo_area_sync.py`) that makes `GeoArea` match `AREAS` (create, update, delete, keyed by `key`); verify with tests that a new area is added, a changed one updated, a removed one deleted, and that running it twice changes nothing.
 
 ## 2. Matching and the filter
 
