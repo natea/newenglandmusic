@@ -198,6 +198,10 @@ PROD_INTERNAL_API_SERVER = os.environ["PROD_INTERNAL_API_SERVER"]
 # analytics are off unless these are set, so local browsing isn't counted
 GOOGLE_ANALYTICS_ID = os.environ.get("GOOGLE_ANALYTICS_ID", "")
 GOATCOUNTER_CODE = os.environ.get("GOATCOUNTER_CODE", "")
+# posthog's project token is its public, browser-side key; its host names the account's
+# region (us or eu). posthog loads in the browser only (see PRODUCTION.md, "Analytics")
+POSTHOG_PROJECT_TOKEN = os.environ.get("POSTHOG_PROJECT_TOKEN", "")
+POSTHOG_HOST = os.environ.get("POSTHOG_HOST") or "https://us.i.posthog.com"
 
 # the home page's maps draw protomaps tiles; without a key the maps are hidden
 PROTOMAPS_API_KEY = os.environ.get("PROTOMAPS_API_KEY", "")

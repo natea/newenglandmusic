@@ -83,7 +83,9 @@
     e.preventDefault();
     const id = button.dataset.eventId;
     let ids = readSaved();
-    if (ids.includes(id)) {
+    const wasSaved = ids.includes(id);
+    if (window.siteAnalytics) window.siteAnalytics.capture(wasSaved ? "show_unsaved" : "show_saved", { event_id: id });
+    if (wasSaved) {
       ids = ids.filter(function (saved) { return saved !== id; });
     } else {
       // newest first; past the limit, the oldest saved goes

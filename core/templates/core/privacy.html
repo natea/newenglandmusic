@@ -31,6 +31,14 @@
     <p>{{ site_name }} uses YouTube API Services to find artists' own videos for its YouTube buttons. By using the YouTube player you agree to be bound by the <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube Terms of Service</a>, and Google handles what it collects under the <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>. The YouTube player comes from youtube-nocookie.com, which sets no cookies until you play a video.</p>
 
     <h2>Analytics</h2>
-    <p>The site may count visits with an analytics service (GoatCounter or Google Analytics), which records the pages opened. Google Analytics' data is handled under the Google Privacy Policy linked above.</p>
+    {% if posthog_project_token %}
+    <p>{{ site_name }} uses PostHog to learn how the site is used: the pages you open, what you click, and a few actions: the words you search for, the shows you save, the play buttons you press, the ticket and calendar links you follow, and what you skip or save in the discovery deck. PostHog sets a cookie in your browser so it can tell when the same browser comes back. It works out your approximate city and region from your IP address, then discards the address, which it doesn't keep. It records no names, email addresses, IP addresses or recordings of your visit, and the site never sends it the location you give for distances.</p>
+    {# shown by core/js/analytics.js once posthog has loaded; without javascript posthog never loads #}
+    <p class="analytics-control" hidden>
+      <button type="button" id="analytics-toggle">Turn off analytics in this browser</button>
+      <span id="analytics-state" role="status"></span>
+    </p>
+    {% endif %}
+    <p>The site may also count visits with GoatCounter, which sets no cookie, or Google Analytics, which records the pages opened. Google Analytics' data is handled under the Google Privacy Policy linked above.</p>
   </div>
 {% endblock %}

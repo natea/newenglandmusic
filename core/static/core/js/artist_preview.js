@@ -10,6 +10,11 @@ document.addEventListener("click", function (e) {
     return;
   }
   e.preventDefault();
+  if (window.siteAnalytics) {
+    const service = button.classList.contains("apple-play") ? "apple_music"
+      : button.classList.contains("youtube-play") ? "youtube" : "spotify";
+    window.siteAnalytics.capture("preview_played", { service: service });
+  }
 
   // the discovery deck's card has a player of its own, which this button replaces
   const card = button.closest(".discover-card");

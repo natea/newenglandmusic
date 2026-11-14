@@ -31,6 +31,7 @@ API keys live in `.env`, which is git-ignored:
 - `LASTFM_API_KEY` (a Last.fm API account's key; the secret isn't needed). Last.fm takes it only as a URL parameter, so never print or log a Last.fm request URL
 - `YOUTUBE_API_KEY` (a Google Cloud key restricted to YouTube Data API v3, the only Google API to enable for it), plus the non-secret switch `YOUTUBE_PREVIEWS`
 - `GOOGLE_PLACES_API_KEY` (restricted to the Places API (New))
+- `POSTHOG_PROJECT_TOKEN` and `POSTHOG_HOST` (PostHog's project token, its public browser-side key, and the account's host): analytics in the browser only, never server-side (see PRODUCTION.md, "Analytics"); leave the token blank when running tests
 
 `.env.example` lists them. Never print, log or commit a key; check only whether one is set. Pass keys in headers rather than URLs where the API allows it, and keep them out of error messages and test fixtures.
 
