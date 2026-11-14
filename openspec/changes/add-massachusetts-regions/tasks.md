@@ -18,7 +18,7 @@
 ## 3. The sheet sync stops
 
 - [x] 3.1 Remove the sync's area step (and its geo-tab option) and its tests, and drop `sync_venues_from_gsheets` from `bin/daily.sh`; verify "Not in the daily job", the daily job's "Daily run" (eight commands), and that the sync's remaining tests (venue tab only, service account, errors) pass with the modified scenarios.
-- [ ] 3.2 Give a venue added in the admin with no ID the next `V` number; verify "The next ID", "A duplicate ID" and "An edit stays" with admin tests.
+- [x] 3.2 Give a venue added in the admin with no ID the next `V` number; verify "The next ID", "A duplicate ID" and "An edit stays" with admin tests.
 
 ## 4. Check it on real data
 
