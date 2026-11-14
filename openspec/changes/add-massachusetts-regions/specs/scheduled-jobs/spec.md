@@ -10,3 +10,18 @@ The daily job SHALL run, in this order: `lookup_venue_places`, `lookup_venue_pla
 #### Scenario: Enrichment fails
 - **WHEN** `enrich_artists_from_musicbrainz` fails during the daily job
 - **THEN** the job exits with an error naming the enrichment, and the steps before it have already run
+
+## REMOVED Requirements
+
+### Requirement: A failed step doesn't stop the job, but fails it
+**Reason**: Its scenario named the sheet sync, which leaves the daily job; replaced by "A failed step fails the job without stopping it", whose scenario names the new first step.
+**Migration**: None; the behavior is unchanged.
+
+## ADDED Requirements
+
+### Requirement: A failed step fails the job without stopping it
+When a step fails, the job SHALL still run the steps after it, and SHALL end with a failing exit status, naming the steps that failed.
+
+#### Scenario: Places lookup fails
+- **WHEN** `lookup_venue_places`, the daily job's first step, fails
+- **THEN** the other lookups and the fetch still run, and the job exits with an error naming the lookup

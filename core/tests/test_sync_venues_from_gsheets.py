@@ -10,7 +10,6 @@ from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 
-from .geo_fixture import geo_fixture_rows
 
 # the sheet's columns, as read by venue_fields_from_row
 COLUMNS = [
@@ -113,21 +112,19 @@ class GetRowsTestCase(SimpleTestCase):
             self.run_gog(side_effect=error)
 
 
-def fake_sheet(rows, geo_rows):
-    """a get_rows_from_google_sheets that returns rows per tab"""
+def fake_sheet(rows):
+    """a get_rows_from_google_sheets that returns the venue tab's rows"""
 
     def get_rows(sheet_id, tab):
-        return geo_rows if tab == sync.DEFAULT_GEO_TAB else rows
+        return rows
 
     return get_rows
 
 
 class SyncCommandTestCase(TestCase):
-    def sync(self, rows, *args, geo_rows=()):
+    def sync(self, rows, *args):
         out = StringIO()
-        with mock.patch.object(
-            sync, "get_rows_from_google_sheets", side_effect=fake_sheet(rows, list(geo_rows))
-        ):
+        with mock.patch.object(sync, "get_rows_from_google_sheets", side_effect=fake_sheet(rows)):
             call_command("sync_venues_from_gsheets", *args, stdout=out)
         return out.getvalue()
 
@@ -279,110 +276,32 @@ class SyncCommandTestCase(TestCase):
         self.assertEqual(Event.all_objects.get(pk=event.pk).venue_id, venue.pk)
 
 
-def geo_row(kind, sheet_id, label, state, match_type, values=""):
-    return {
-        "FILTER_TYPE": kind,
-        "ID": sheet_id,
-        "LABEL": label,
-        "STATE": state,
-        "MATCH_TYPE": match_type,
-        "VALUES": values,
-    }
+class SyncLeavesAreasAloneTestCase(TestCase):
+    """areas live in core/geo_areas.py: the sync reads only the venue tab, and changes no area"""
 
-
-class SyncGeoAreasTestCase(TestCase):
     sync = SyncCommandTestCase.sync
 
-    def test_fixture_areas_are_stored(self):
-        output = self.sync([], geo_rows=geo_fixture_rows())
-        # 3 regions, 3 states and 6 metros; the ALL row isn't an area
-        self.assertEqual(GeoArea.objects.count(), 12)
-        self.assertFalse(GeoArea.objects.filter(label="ALL").exists())
-        self.assertIn("added 12 areas, updated 0, removed 0", output)
-
-    def test_metro_with_several_rules(self):
-        self.sync([], geo_rows=geo_fixture_rows())
-        boston = GeoArea.objects.get(sheet_id="metro_MA_Boston")
-        self.assertEqual(boston.kind, GeoArea.Kind.METRO)
-        self.assertEqual(boston.label, "MA: Boston")
-        self.assertEqual(boston.home_state, "MA")
-        self.assertEqual(boston.states, ["ma"])
-        self.assertEqual(boston.cities, ["brookline", "cambridge", "somerville"])
-        self.assertEqual(boston.counties, ["suffolk"])
-
-    def test_region_has_no_home_state(self):
-        self.sync([], geo_rows=geo_fixture_rows())
-        tri_state = GeoArea.objects.get(label="Tri-State")
-        self.assertEqual(tri_state.home_state, "")
-        self.assertEqual(tri_state.states, ["ct", "nj", "ny"])
-
-    def test_area_removed_from_the_sheet(self):
-        rows = geo_fixture_rows()
-        self.sync([], geo_rows=rows)
-        without_cape_cod = [r for r in rows if r["ID"] != "metro_MA_Cape_Cod"]
-        output = self.sync([], geo_rows=without_cape_cod)
-        self.assertFalse(GeoArea.objects.filter(label="MA: Cape Cod").exists())
-        self.assertIn("added 0 areas, updated 0, removed 1", output)
-
-    def test_changed_area_is_updated(self):
-        self.sync([], geo_rows=[geo_row("state", "state_PA", "Pennslyvania", "PA", "state", "PA")])
-        output = self.sync(
-            [], geo_rows=[geo_row("state", "state_PA", "Pennsylvania", "PA", "state", "PA")]
-        )
-        area = GeoArea.objects.get(sheet_id="state_PA")
-        self.assertEqual((area.label, area.slug), ("Pennsylvania", "pennsylvania"))
-        self.assertIn("added 0 areas, updated 1, removed 0", output)
-
-    def test_unknown_filter_type_or_match_type(self):
-        output = self.sync(
-            [],
-            geo_rows=[
-                geo_row("county", "county_X", "X", "MA", "state", "MA"),
-                geo_row("metro", "metro_Y", "MA: Y", "MA", "state", "MA"),
-                geo_row("metro", "metro_Y", "MA: Y", "MA", "zip", "02139"),
-            ],
-        )
-        self.assertIn("county_X: unknown filter type 'county', skipping", output)
-        self.assertIn("metro_Y: unknown match type 'zip', skipping", output)
-        self.assertFalse(GeoArea.objects.filter(sheet_id="county_X").exists())
-        self.assertEqual(GeoArea.objects.get(sheet_id="metro_Y").states, ["ma"])
-
-    def test_duplicate_slug_fails(self):
-        rows = [
-            geo_row("metro", "metro_a", "MA: North", "MA", "state", "MA"),
-            geo_row("metro", "metro_b", "MA North", "MA", "state", "MA"),
-        ]
-        with self.assertRaisesMessage(CommandError, "metro_b: another metro already has the url slug"):
-            self.sync([], geo_rows=rows)
-        self.assertFalse(GeoArea.objects.exists())
-
-    def test_missing_tab_changes_nothing(self):
-        Venue.objects.create(sheet_id="V0001", name="Before")
-        GeoArea.objects.create(kind="state", sheet_id="state_MA", label="Massachusetts", slug="massachusetts", states=["ma"])
+    def test_reads_only_the_venue_tab(self):
+        tabs = []
 
         def get_rows(sheet_id, tab):
-            if tab == sync.DEFAULT_GEO_TAB:
-                raise CommandError(f"gog failed reading tab {tab!r}: Unable to parse range")
-            return [row("V0001", "After")]
+            tabs.append(tab)
+            return [row("V0001", "New")]
 
         with mock.patch.object(sync, "get_rows_from_google_sheets", side_effect=get_rows):
-            with self.assertRaisesMessage(CommandError, "'geo-filters_json'"):
-                call_command("sync_venues_from_gsheets", stdout=StringIO())
-        self.assertEqual(Venue.objects.get(sheet_id="V0001").name, "Before")
-        self.assertEqual(list(GeoArea.objects.values_list("sheet_id", flat=True)), ["state_MA"])
+            call_command("sync_venues_from_gsheets", stdout=StringIO())
+        self.assertEqual(tabs, [sync.DEFAULT_TAB])
 
-    def test_dry_run_reports_area_counts_and_saves_nothing(self):
-        GeoArea.objects.create(kind="state", sheet_id="state_gone", label="Gone", slug="gone", states=["xx"])
-        output = self.sync([row("V0001", "New")], "--dry-run", geo_rows=geo_fixture_rows())
-        self.assertIn("[dry run] created 1 venues, updated 0 venues; added 12 areas, updated 0, removed 1", output)
+    def test_areas_unchanged(self):
+        before = list(GeoArea.objects.values_list("sheet_id", "label", "cities"))
+        self.sync([row("V0001", "New", Map_State="MA", Map_County="Middlesex", Map_City_Town="Woburn")])
+        self.assertEqual(list(GeoArea.objects.values_list("sheet_id", "label", "cities")), before)
+
+    def test_dry_run_reports_only_venue_counts(self):
+        output = self.sync([row("V0001", "New")], "--dry-run")
+        self.assertIn("[dry run] created 1 venues, updated 0 venues", output)
         self.assertFalse(Venue.objects.exists())
-        self.assertEqual(list(GeoArea.objects.values_list("sheet_id", flat=True)), ["state_gone"])
 
-    def test_reports_venues_in_no_metro_by_state(self):
-        rows = [
-            row("V0001", "Cambridge Club", Map_State="MA", Map_County="Middlesex", Map_City_Town="Cambridge"),
-            row("V0002", "Providence Hall", Map_State="RI", Map_County="Providence", Map_City_Town="Providence"),
-            row("V0003", "Pawtucket Pub", Map_State="RI", Map_County="Providence", Map_City_Town="Pawtucket"),
-        ]
-        output = self.sync(rows, geo_rows=geo_fixture_rows())
-        self.assertIn("venues in no metro area: RI 2", output)
+    def test_no_geo_tab_option(self):
+        with self.assertRaises(CommandError):
+            call_command("sync_venues_from_gsheets", "--geo-tab", "x", stdout=StringIO())

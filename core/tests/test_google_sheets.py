@@ -14,6 +14,7 @@ from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase
 from google.auth.exceptions import RefreshError
 
+# any sheet tab's values will do for reading; this is the old geo-filters_json tab's
 GEO_VALUES = json.loads((Path(__file__).parent / "fixtures" / "geo_filters.json").read_text())
 
 # a fake key with recognisable secrets, which must never appear in any output
@@ -147,27 +148,22 @@ class SyncWithServiceAccountTestCase(TestCase):
         self.addCleanup(credentials.stop)
         Venue.objects.create(sheet_id="V0001", name="Before", state="VT")
 
-    def sync(self, venue_response, geo_response):
-        def get(url, params=None, timeout=None):
-            return geo_response if "geo-filters_json" in url else venue_response
-
+    def sync(self, venue_response):
         out, err = StringIO(), StringIO()
-        with mock.patch.object(google_sheets.AuthorizedSession, "get", side_effect=get):
+        with mock.patch.object(google_sheets.AuthorizedSession, "get", return_value=venue_response):
             call_command("sync_venues_from_gsheets", stdout=out, stderr=err)
         return out.getvalue() + err.getvalue()
 
-    def test_missing_geo_tab_changes_nothing(self):
-        venues = response(200, {"values": venue_values(row("V0001", "After"))})
-        missing = response(400, {"error": {"message": "Unable to parse range: geo-filters_json"}})
-        with self.assertRaisesMessage(CommandError, "tab 'geo-filters_json' doesn't exist"):
-            self.sync(venues, missing)
+    def test_missing_venue_tab_changes_nothing(self):
+        missing = response(400, {"error": {"message": "Unable to parse range: V3 - Flattened"}})
+        with self.assertRaisesMessage(CommandError, "tab 'V3 - Flattened' doesn't exist"):
+            self.sync(missing)
         self.assertEqual(Venue.objects.get(sheet_id="V0001").name, "Before")
-        self.assertFalse(GeoArea.objects.exists())
 
-    def test_sync_reads_both_tabs(self):
-        venues = response(200, {"values": venue_values(row("V0001", "After"))})
-        output = self.sync(venues, response(200, {"values": GEO_VALUES}))
+    def test_sync_reads_the_venue_tab(self):
+        before = list(GeoArea.objects.values_list("sheet_id", flat=True))
+        output = self.sync(response(200, {"values": venue_values(row("V0001", "After"))}))
         self.assertEqual(Venue.objects.get(sheet_id="V0001").name, "After")
-        self.assertTrue(GeoArea.objects.exists())
+        self.assertEqual(list(GeoArea.objects.values_list("sheet_id", flat=True)), before)
         for secret in SECRETS:
             self.assertNotIn(secret, output)

@@ -6,6 +6,20 @@
 
 ## MODIFIED Requirements
 
+### Requirement: A sync is all or nothing and can be previewed
+The sync SHALL apply all venue changes in one transaction. With `--dry-run` it SHALL report how many venues it would create and update, and save nothing.
+
+#### Scenario: Dry run
+- **WHEN** the sync runs with `--dry-run`
+- **THEN** it reports the venue counts (created, updated), and the database is unchanged
+
+### Requirement: Both ways of reading give the same rows
+Reading with the service account and reading with gog SHALL produce the same rows from the same sheet: the header row gives the keys, and short rows are padded with blanks. Parsing, the dry run and the all-or-nothing transaction SHALL behave the same either way.
+
+#### Scenario: Same rows either way
+- **WHEN** the Sheets API returns a tab whose trailing empty cells are dropped, as gog's output does
+- **THEN** the rows are padded to the header exactly as gog's are, and the venues saved are the same
+
 ### Requirement: The sheet can be read with a Google service account
 When the `GOOGLE_SERVICE_ACCOUNT_JSON` environment variable is set, the sync SHALL read the venue tab through the Google Sheets API, signed in as the service account whose JSON key the variable holds, with read-only access. When the variable is not set, the sync SHALL read the sheet with the gog CLI, as before.
 
