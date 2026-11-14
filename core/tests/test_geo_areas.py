@@ -1,11 +1,13 @@
 from collections import Counter
+from io import StringIO
 
+from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase
 from django.utils.text import slugify
 
 from core.geo_area_sync import sync_geo_areas
 from core.geo_areas import AREAS, OLD_METRO_SLUGS
-from core.models import GeoArea
+from core.models import GeoArea, Venue
 
 # every county in massachusetts, as venues spell them (lowercased)
 MASSACHUSETTS_COUNTIES = {
@@ -125,3 +127,25 @@ class GeoAreaSyncTestCase(TestCase):
     def test_running_twice_changes_nothing(self):
         self.assertEqual(sync_geo_areas(), (0, 0, 0))
         self.assertEqual(sync_geo_areas(), (0, 0, 0))
+
+
+class ReportMassachusettsRegionsTestCase(TestCase):
+    def report(self):
+        out = StringIO()
+        call_command("report_massachusetts_regions", stdout=out)
+        return out.getvalue()
+
+    def test_counts_defaults_and_unplaced(self):
+        Venue.objects.create(name="Iron Horse", state="MA", county="Hampshire", city_town="Northampton")
+        Venue.objects.create(name="Woburn Hall", sheet_id="V0007", state="MA", county="Middlesex", city_town="Woburn")
+        Venue.objects.create(name="Nowhere Bar", state="MA", county="", city_town="Atlantis")
+        Venue.objects.create(name="Closed Club", state="MA", county="Middlesex", city_town="Woburn", is_active=False)
+        Venue.objects.create(name="Burlington Bar", state="VT", county="Chittenden", city_town="Burlington")
+        output = self.report()
+        self.assertIn("3 active Massachusetts venues", output)
+        self.assertIn("     1  Pioneer Valley / Connecticut River Valley", output)
+        self.assertIn("MetroWest (1)\n  Woburn Hall [V0007] (Woburn; Middlesex county)", output)
+        self.assertIn("in no sub-region (1):\n  Nowhere Bar [no ID] (Atlantis; no county)", output)
+        self.assertNotIn("Iron Horse [", output)
+        self.assertNotIn("Closed Club", output)
+        self.assertNotIn("several", output)

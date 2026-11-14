@@ -69,11 +69,15 @@ def sub_region_q(area, prefix=""):
     q = any_iexact(f"{prefix}city_town", area.cities) | boston_neighborhood_q(area.neighborhoods, prefix)
     if not area.default_counties:
         return q
+    return q | (any_iexact(f"{prefix}county", area.default_counties) & ~placed_by_name_q(prefix))
+
+
+def placed_by_name_q(prefix=""):
+    """venues some sub-region lists by town or boston neighborhood, so no county default takes"""
     sub_regions = GeoArea.objects.exclude(group="")
     all_towns = [town for towns in sub_regions.values_list("cities", flat=True) for town in towns]
     all_neighborhoods = [name for names in sub_regions.values_list("neighborhoods", flat=True) for name in names]
-    placed = any_iexact(f"{prefix}city_town", all_towns) | boston_neighborhood_q(all_neighborhoods, prefix)
-    return q | (any_iexact(f"{prefix}county", area.default_counties) & ~placed)
+    return any_iexact(f"{prefix}city_town", all_towns) | boston_neighborhood_q(all_neighborhoods, prefix)
 
 
 def offered_areas(kind, new_england_only=False):
