@@ -534,17 +534,36 @@ class PlaceReviewReasonFilter(SimpleListFilter):
         return queryset
 
 
+VENUE_ID = re.compile(r"^V(\d+)$")
+
+
+def next_venue_id():
+    """the venue ID after the highest, in the sheet's form: "V0731" after "V0730" """
+    numbers = [match.group(1) for sheet_id in Venue.objects.exclude(sheet_id=None).values_list("sheet_id", flat=True)
+               if (match := VENUE_ID.match(sheet_id))]
+    width = max([4, *(len(number) for number in numbers)])
+    return f"V{max([0, *map(int, numbers)]) + 1:0{width}d}"
+
+
 class VenueAdminForm(forms.ModelForm):
     no_neighborhood = forms.BooleanField(
         required=False,
         help_text="this venue isn't in a neighborhood worth naming: later lookups leave it blank",
     )
 
+    def clean_sheet_id(self):
+        sheet_id = (self.cleaned_data.get("sheet_id") or "").strip() or None
+        taken = Venue.objects.filter(sheet_id=sheet_id).exclude(pk=self.instance.pk).first() if sheet_id else None
+        if taken:
+            raise forms.ValidationError(f"the venue ID {sheet_id} is taken, by {taken.name}")
+        return sheet_id
+
     class Meta:
         model = Venue
         fields = "__all__"
         help_texts = {
             "neighborhood": "type one to set it by hand; later lookups keep an editor's neighborhood",
+            "sheet_id": "the venue ID, like V0042; leave it empty on a new venue for the next one",
         }
 
 
@@ -709,7 +728,12 @@ class VenueAdmin(admin.ModelAdmin):
         return response
 
     def save_model(self, request, venue, form, change):
-        """a neighborhood typed here, or "no neighborhood", is the editor's: lookups keep it"""
+        """
+        a neighborhood typed here, or "no neighborhood", is the editor's: lookups keep it. a new
+        venue with no ID gets the next one, now that venues are added here, not in the sheet
+        """
+        if not change and not venue.sheet_id:
+            venue.sheet_id = next_venue_id()
         if form.cleaned_data.get("no_neighborhood"):
             venue.neighborhood = ""
             venue.neighborhood_source = Venue.NeighborhoodSource.EDITOR
