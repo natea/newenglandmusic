@@ -1,5 +1,5 @@
 asgiref==3.9.1
-astroid==3.3.11
+astroid==4.0.4
 beautifulsoup4==4.13.4
 black==26.10.1
 boto3==1.40.6
@@ -50,13 +50,13 @@ platformdirs==4.4
 pluggy==1.6.0
 pre_commit==4.3.0
 psycopg2-binary==2.9.10
-pyasn1==0.6.4
+pyasn1==0.6.5
 pyasn1-modules==0.4.2
 pycparser==3.12
 pyinstrument==5.1.0
 PyJWT==2.15.1
-pylint==3.3.8
-pylint-django==2.6.1
+pylint==4.0.9
+pylint-django==2.8.0
 pylint-plugin-utils==0.9.0
 pytest==9.0.3
 pytest-django==4.11.1
