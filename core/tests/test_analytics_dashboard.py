@@ -89,6 +89,19 @@ class SyncTestCase(SimpleTestCase):
         self.assertIn("up to date", run(api))
         self.assertEqual(api.changes, [])
 
+    def test_posthogs_own_defaults_arent_a_change(self):
+        api = FakePostHog()
+        run(api)
+        # posthog stores each chart with its defaults filled in
+        for insight in api.items["insights"].values():
+            source = insight["query"]["source"]
+            source["version"] = 4
+            source["dateRange"]["explicitDate"] = False
+            source.setdefault("trendsFilter", {})["showLegend"] = False
+        api.changes.clear()
+        run(api)
+        self.assertEqual(api.changes, [])
+
     def test_a_chart_changed(self):
         api = FakePostHog()
         run(api)

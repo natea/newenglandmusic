@@ -7,6 +7,8 @@
 - The wizard left a dashboard ("Analytics basics (wizard)", 2352999) of five charts over server-side events that are no longer sent.
 - Each listed show's markup already carries its name (`data-title-and-artists` on the `event-<id>` element) and the search results view already counts each kind's matches; an act page knows its act, kind and next show.
 
+**Query shapes, as PostHog stores them** (read back from project 735651 on 2026-11-14, task 1.2): a trend is `{"kind": "InsightVizNode", "source": {"kind": "TrendsQuery", "series": [{"kind": "EventsNode", "event": …, "math": "total" | "dau"}], "interval": "day", "dateRange": {"date_from": "-30d"}, "trendsFilter": {"display": "ActionsLineGraph" | "ActionsBarValue" | "ActionsTable" | "ActionsPie"}, "breakdownFilter": {"breakdown": <property>, "breakdown_type": "event", "breakdown_limit": n}}}` (PostHog also accepts the newer `"breakdowns": [{"type": "event", "property": …}]`); a funnel is a `FunnelsQuery` with the same `series` and `funnelsFilter: {"funnelWindowInterval": n, "funnelWindowIntervalUnit": "day"}`. PostHog saves each with its own defaults filled in (`version`, legend and axis settings), so the sync compares only the fields the definitions set.
+
 ## Goals / Non-Goals
 
 **Goals:**

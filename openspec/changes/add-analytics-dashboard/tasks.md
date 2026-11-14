@@ -2,8 +2,8 @@
 
 ## 1. Access and the query shape
 
-- [ ] 1.1 Nate creates a PostHog personal API key scoped to project 735651 with `insight:read`, `insight:write`, `dashboard:read` and `dashboard:write`, and puts it in the local `.env` as `POSTHOG_PERSONAL_API_KEY` (never on Render or in chat); verify the command (task 3.1) can list the project's dashboards.
-- [ ] 1.2 Build one trend, one breakdown table and one funnel by hand in PostHog, read each back with `GET /api/projects/735651/insights/<id>/`, and record their `query` JSON shapes in `design.md`; verify the helpers in task 3.1 produce the same shapes.
+- [x] 1.1 Nate creates a PostHog personal API key scoped to project 735651 with `insight:read`, `insight:write`, `dashboard:read` and `dashboard:write`, and puts it in the local `.env` as `POSTHOG_PERSONAL_API_KEY` (never on Render or in chat); verify the command (task 3.1) can list the project's dashboards.
+- [x] 1.2 Build one trend, one breakdown table and one funnel by hand in PostHog, read each back with `GET /api/projects/735651/insights/<id>/`, and record their `query` JSON shapes in `design.md`; verify the helpers in task 3.1 produce the same shapes.
 
 ## 2. The new events
 

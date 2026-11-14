@@ -12,8 +12,6 @@ the charts it made are recognised by their tag and the key in their description'
 anything else in the project is left alone. the key goes only in the authorization header.
 """
 
-import json
-
 import requests
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -88,14 +86,21 @@ def chart_body(chart, dashboard_id):
     }
 
 
-def differs(insight, body):
-    def canon(value):
-        return json.dumps(value, sort_keys=True)
+def covers(stored, wanted):
+    """whether posthog's stored value has everything we set: it saves a chart with its own
+    defaults filled in (version, legend, axis settings...), which aren't a change"""
+    if isinstance(wanted, dict):
+        return isinstance(stored, dict) and all(key in stored and covers(stored[key], value) for key, value in wanted.items())
+    if isinstance(wanted, list):
+        return isinstance(stored, list) and len(stored) == len(wanted) and all(map(covers, stored, wanted))
+    return stored == wanted
 
+
+def differs(insight, body):
     return (
         insight.get("name") != body["name"]
         or (insight.get("description") or "") != body["description"]
-        or canon(insight.get("query")) != canon(body["query"])
+        or not covers(insight.get("query"), body["query"])
         or sorted(insight.get("dashboards") or []) != sorted(body["dashboards"])
     )
 
