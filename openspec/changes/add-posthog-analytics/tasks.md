@@ -2,7 +2,7 @@
 
 ## 1. The PostHog project
 
-- [ ] 1.1 Nate signs in to PostHog as `nate@stagehopper.app` and creates (or picks) the StageHopper project, noting its region (US or EU) and project API key; in the project's settings, turn on "Discard client IP data" and leave session replay off; verify both settings show in the project's settings page.
+- [x] 1.1 Nate signs in to PostHog as `nate@stagehopper.app` and creates (or picks) the StageHopper project, noting its region (US or EU) and project API key; in the project's settings, turn on "Discard client IP data" and leave session replay off; verify both settings show in the project's settings page.
 
 ## 2. The wizard, reviewed
 
