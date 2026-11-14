@@ -5,6 +5,7 @@ lon. the location goes in a cookie, never the database, and the visitor goes bac
 page they came from.
 """
 
+from django.conf import settings
 from django.contrib import messages
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
@@ -51,6 +52,8 @@ def set_location(request):
             return response
         location = found
     response.set_cookie(COOKIE_NAME, encode(location), max_age=COOKIE_MAX_AGE, samesite="Lax")
+    if posthog_client := settings.POSTHOG_MW_CLIENT:
+        posthog_client.capture("location_set")
     return response
 
 

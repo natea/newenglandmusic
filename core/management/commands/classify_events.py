@@ -1,8 +1,11 @@
+import logging
 import os
+import uuid
 from collections import defaultdict
 
 from core.event_fetching.classification import classify
 from core.models import Event
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
@@ -42,6 +45,18 @@ class Command(BaseCommand):
 
         from core.event_fetching.ai_extraction import MODEL
 
+        posthog_log_logger = None
+        posthog_properties = None
+        if settings.POSTHOG_MW_CLIENT:
+            posthog_log_logger = logging.getLogger("posthog_export")
+
+            from posthog.ai.anthropic import Anthropic as PostHogAnthropic
+
+            client = PostHogAnthropic(posthog_client=settings.POSTHOG_MW_CLIENT)
+            posthog_properties = {"$ai_session_id": f"classify-events-{uuid.uuid4()}"}
+        else:
+            client = anthropic.Anthropic()
+
         events = (
             Event.all_objects.filter(starttime__gte=timezone.now(), kind="")
             .exclude(source="")
@@ -53,10 +68,29 @@ class Command(BaseCommand):
             events = events[: options["limit"]]
         events = list(events)
         if not events:
+            if posthog_log_logger:
+                posthog_log_logger.info(
+                    "event classification completed",
+                    extra={
+                        "event": "event_classification_completed",
+                        "event_count": 0,
+                        "dry_run": options["dry_run"],
+                        "outcome": "no_work",
+                    },
+                )
             self.stdout.write("no events to label")
             return
 
         model = options["model"] or MODEL
+        if posthog_log_logger:
+            posthog_log_logger.info(
+                "event classification started",
+                extra={
+                    "event": "event_classification_started",
+                    "event_count": len(events),
+                    "dry_run": options["dry_run"],
+                },
+            )
         self.stdout.write(f"labelling {len(events)} events with {model}...")
         items = [
             {
@@ -67,9 +101,8 @@ class Command(BaseCommand):
             }
             for event in events
         ]
-        kinds, errors, (input_tokens, output_tokens) = classify(
-            anthropic.Anthropic(), items, model=model
-        )
+        posthog_options = {"posthog_properties": posthog_properties} if posthog_properties else {}
+        kinds, errors, (input_tokens, output_tokens) = classify(client, items, model=model, **posthog_options)
 
         counts = defaultdict(int)
         hidden_by_venue = defaultdict(list)
@@ -105,3 +138,16 @@ class Command(BaseCommand):
             )
         )
         self.stdout.write(f"tokens: {input_tokens} input / {output_tokens} output")
+        if posthog_log_logger:
+            posthog_log_logger.log(
+                logging.WARNING if errors else logging.INFO,
+                "event classification completed",
+                extra={
+                    "event": "event_classification_completed",
+                    "event_count": len(events),
+                    "hidden_count": hidden_count,
+                    "error_count": len(errors),
+                    "dry_run": options["dry_run"],
+                    "outcome": "completed_with_errors" if errors else "completed",
+                },
+            )

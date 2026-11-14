@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db.models.functions import TruncDate
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
@@ -71,8 +72,14 @@ def toggle_saved_show(request, event_id):
     visitor goes back to where they were (next, on this site only), at the event
     """
     saved = parse_saved(request.COOKIES.get(COOKIE_NAME))
-    if event_id in saved or Event.all_objects.filter(pk=event_id).exists():
+    was_saved = event_id in saved
+    if was_saved or Event.all_objects.filter(pk=event_id).exists():
         saved = toggle_saved(saved, event_id)
+        if posthog_client := settings.POSTHOG_MW_CLIENT:
+            posthog_client.capture(
+                "saved_show_toggled",
+                properties={"action": "removed" if was_saved else "saved"},
+            )
     next_url = request.POST.get("next", "")
     if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
         next_url = "/"

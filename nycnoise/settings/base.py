@@ -1,8 +1,11 @@
+import atexit
+import logging
 import os
 from pathlib import Path
 from urllib.parse import urlparse
 
 import dj_database_url
+from posthog import Posthog
 from django.utils.log import DEFAULT_LOGGING
 from dotenv import load_dotenv
 
@@ -21,6 +24,54 @@ SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
 # setting to False by default
 DEBUG = False
+
+POSTHOG_PROJECT_TOKEN = os.environ.get("POSTHOG_PROJECT_TOKEN", "")
+POSTHOG_HOST = os.environ.get("POSTHOG_HOST", "")
+POSTHOG_MW_CLIENT = None
+
+if POSTHOG_PROJECT_TOKEN and POSTHOG_HOST:
+    POSTHOG_MW_CLIENT = Posthog(
+        project_api_key=POSTHOG_PROJECT_TOKEN,
+        host=POSTHOG_HOST,
+        enable_exception_autocapture=True,
+        privacy_mode=False,
+    )
+    atexit.register(POSTHOG_MW_CLIENT.shutdown)
+
+    from opentelemetry._logs import set_logger_provider
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+    from opentelemetry.sdk.resources import Resource
+
+    posthog_log_provider = LoggerProvider(resource=Resource.create({"service.name": "nycnoise"}))
+    set_logger_provider(posthog_log_provider)
+    posthog_log_provider.add_log_record_processor(
+        BatchLogRecordProcessor(
+            OTLPLogExporter(
+                endpoint=f"{POSTHOG_HOST.rstrip('/')}/i/v1/logs",
+                headers={"Authorization": f"Bearer {POSTHOG_PROJECT_TOKEN}"},
+            )
+        )
+    )
+    posthog_log_logger = logging.getLogger("posthog_export")
+    posthog_log_logger.setLevel(logging.INFO)
+    posthog_log_logger.addHandler(LoggingHandler(logger_provider=posthog_log_provider))
+    posthog_log_logger.propagate = False
+    atexit.register(posthog_log_provider.shutdown)
+elif os.environ.get("DJANGO_SETTINGS_MODULE", "").endswith(".dev"):
+    logger = logging.getLogger(__name__)
+    if not POSTHOG_PROJECT_TOKEN:
+        logger.warning(
+            "POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, "
+            "this causes events to be silently missed. This error stops appearing once "
+            "POSTHOG_PROJECT_TOKEN is configured"
+        )
+    if not POSTHOG_HOST:
+        logger.warning(
+            "POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes "
+            "events to be silently missed. This error stops appearing once POSTHOG_HOST is configured"
+        )
 
 # blank is fine on render, which adds its own hostname (see settings/prod.py)
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get("ALLOWED_HOSTS", "").split(",") if host.strip()]
@@ -62,6 +113,11 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    *(
+        ["posthog.integrations.django.PosthogContextMiddleware"]
+        if POSTHOG_MW_CLIENT
+        else []
+    ),
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

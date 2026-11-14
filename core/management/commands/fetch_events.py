@@ -1,5 +1,6 @@
 import os
 import re
+import uuid
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
@@ -20,6 +21,7 @@ from core.management.commands.check_event_sources import TIMEOUT_SECONDS, robots
 from core.management.commands.match_eventbrite_organizers import polite_session
 from core.models import Event, Venue, VenueEventSource, VenueFetchStatus
 from core.job_runs import RecordedCommand
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
@@ -340,6 +342,7 @@ class Command(RecordedCommand, BaseCommand):
         if not targets:
             raise CommandError("no venues to fetch")
 
+        self.ai_session_id = f"fetch-events-{uuid.uuid4()}"
         self.stdout.write(f"fetching events for {len(targets)} venues...")
         events_by_venue = defaultdict(list)
         notes_by_venue = defaultdict(list)
@@ -732,11 +735,24 @@ class Command(RecordedCommand, BaseCommand):
 
         from core.event_fetching.ai_extraction import MODEL, ExtractionError, extract_events_in_parts
 
-        client = anthropic.Anthropic()
+        posthog_properties = None
+        if settings.POSTHOG_MW_CLIENT:
+            from posthog.ai.anthropic import Anthropic as PostHogAnthropic
+
+            client = PostHogAnthropic(posthog_client=settings.POSTHOG_MW_CLIENT)
+            posthog_properties = {"$ai_session_id": self.ai_session_id}
+        else:
+            client = anthropic.Anthropic()
         model = model or MODEL
 
         def extract(page):
             target = page["target"]
+            posthog_options = {}
+            if posthog_properties:
+                posthog_options = {
+                    "posthog_properties": posthog_properties,
+                    "posthog_trace_id": str(uuid.uuid4()),
+                }
             try:
                 events, usage = extract_events_in_parts(
                     client,
@@ -745,6 +761,7 @@ class Command(RecordedCommand, BaseCommand):
                     page["url"],
                     page["text"],
                     model=model,
+                    **posthog_options,
                 )
             except (anthropic.APIError, ExtractionError, ValueError) as e:
                 return page, [], None, e
@@ -807,6 +824,14 @@ class Command(RecordedCommand, BaseCommand):
 
         from core.event_fetching.ai_extraction import MODEL
 
+        posthog_properties = None
+        if settings.POSTHOG_MW_CLIENT:
+            from posthog.ai.anthropic import Anthropic as PostHogAnthropic
+
+            client = PostHogAnthropic(posthog_client=settings.POSTHOG_MW_CLIENT)
+            posthog_properties = {"$ai_session_id": self.ai_session_id}
+        else:
+            client = anthropic.Anthropic()
         model = model or MODEL
         self.stdout.write(f"labelling {len(needing)} events with {model}...")
         items = [
@@ -818,9 +843,8 @@ class Command(RecordedCommand, BaseCommand):
             }
             for target, data in needing
         ]
-        kinds, errors, (input_tokens, output_tokens) = classify(
-            anthropic.Anthropic(), items, model=model
-        )
+        posthog_options = {"posthog_properties": posthog_properties} if posthog_properties else {}
+        kinds, errors, (input_tokens, output_tokens) = classify(client, items, model=model, **posthog_options)
         for (_, data), kind in zip(needing, kinds):
             data["kind"] = kind
         for error in errors:
