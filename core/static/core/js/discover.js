@@ -173,6 +173,7 @@
   }
 
   function skip() {
+    if (window.siteAnalytics) window.siteAnalytics.capture("deck_act_passed");
     stopHint();
     moveOff(-1, advance);
   }
@@ -237,6 +238,9 @@
       const removals = boxes.filter(function (box) { return !box.checked && box.dataset.wasSaved; });
       if (!additions.length && !removals.length) {
         return;
+      }
+      if (window.siteAnalytics && additions.length) {
+        window.siteAnalytics.capture("deck_shows_saved", { count: additions.length });
       }
       window.SavedShows.apply(
         additions.map(function (box) { return box.value; }),

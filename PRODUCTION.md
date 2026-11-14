@@ -53,7 +53,7 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
   - Submission emails go out through Amazon SES, so this must be an address verified in SES.
   - They also need `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 - **`PROTOMAPS_API_KEY`:** the home page's maps. In your Protomaps account, restrict it to your domain: its CORS origins list each address the pages are served from (now `https://stagehopper.app`), and the day maps are blank anywhere else. `MAP_CENTER_LATITUDE`, `MAP_CENTER_LONGITUDE` and `MAP_ZOOM` set where the maps start.
-- **`GOOGLE_ANALYTICS_ID`, `GOATCOUNTER_CODE`:** analytics. Each one loads only when it is set.
+- **`GOOGLE_ANALYTICS_ID`, `GOATCOUNTER_CODE`, `POSTHOG_PROJECT_TOKEN` and `POSTHOG_HOST`:** analytics. Each loads only when it is set; see "Analytics" below.
 
 ## The web process
 
@@ -462,6 +462,21 @@ Small acts often keep all their links on one Linktree-style page. `read_artist_l
 - **What it takes:** a Bandcamp, Instagram or YouTube link recognised by its address, and a website only from a link the hub labels "website", "site", "homepage" or "official". A link for an empty field fills it, marked "link hub"; one that differs from the record's is saved as a finding, which an editor accepts or dismisses with the admin actions "Accept link-hub findings" and "Dismiss link-hub findings". The value an editor, the import, MusicBrainz or Wikidata set is never overwritten. A value the hub filled is replaced by a later read, by MusicBrainz or Wikidata, or by an import row or curated list.
 - **Politeness:** robots.txt is obeyed (and asked for once per hub a run), the request carries the user agent `venue-db-event-check/1.0`, there is at most one request a second, no JavaScript runs, and a redirect off the hub's host isn't followed. The links found are never requested, so nothing is requested from Bandcamp.
 - **Problems:** a blocked, gone or failed page is listed by act on the run's page at `/admin/core/jobrun/`.
+
+## Analytics
+
+The site measures its own use with PostHog and GoatCounter, both in the browser only.
+
+- **PostHog** (account `nate@stagehopper.app`, project 735651, US cloud) loads on every public page when `POSTHOG_PROJECT_TOKEN` (the project token, PostHog's public browser-side key) is set, sending to `POSTHOG_HOST` (`https://us.i.posthog.com`). It never loads in the admin. It records pageviews, autocaptured clicks, and these named events (`core/static/core/js/analytics.js`, called from the scripts that own each action):
+  - `search` (`query`) and `search_suggestion_chosen` (`kind`, `query`);
+  - `show_saved` / `show_unsaved` (`event_id`);
+  - `preview_played` (`service`: spotify, apple_music or youtube);
+  - `ticket_link_opened` (`event_id`), `show_added_to_calendar` (`how`: ics or google, `event_id`) and `calendar_feed_subscribed` (`how`), sent with the beacon so leaving the page doesn't lose them;
+  - `deck_act_passed` and `deck_shows_saved` (`count`).
+- **What it never gets:** names, email addresses, locations or distances, form fields other than the search words, session recordings, or person profiles (`person_profiles: "identified_only"`, and nothing is ever identified). In the PostHog project's settings, keep "Discard client IP data" on and session replay off. Its one first-party cookie recognises a returning browser; the privacy page says so and has a button that turns PostHog off in that browser (PostHog's own opt-out).
+- **The PostHog wizard** (`npx @posthog/wizard`) set up a server-side integration (the Python SDK, OpenTelemetry log export, identifying logged-in users by email, LLM analytics on the AI extraction); it was reverted (commits `8cc9e9b` and its revert) because it sends what the site mustn't. Don't re-run it on this codebase without reviewing its diff.
+- **GoatCounter** counts pages when `GOATCOUNTER_CODE` is set (`stagehopper`, for `https://stagehopper.goatcounter.com`), and sets no cookie.
+- **Tests** never reach either service: they read the rendered html, and a browser test stubs `window.posthog` in the page (`core/tests/test_site_analytics_browser.py`).
 
 ## Calendar feeds
 

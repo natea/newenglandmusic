@@ -6,6 +6,8 @@ def analytics(request):
     return {
         "google_analytics_id": settings.GOOGLE_ANALYTICS_ID,
         "goatcounter_code": settings.GOATCOUNTER_CODE,
+        "posthog_project_token": settings.POSTHOG_PROJECT_TOKEN,
+        "posthog_host": settings.POSTHOG_HOST,
     }
 
 

@@ -5,14 +5,14 @@ Lets the site's editors see how the site is used (what visitors search for, open
 ## ADDED Requirements
 
 ### Requirement: PostHog is switched on by its settings
-Every public page SHALL load PostHog when `POSTHOG_PROJECT_KEY` is set, sending to the PostHog host `POSTHOG_HOST` names. With no project key, no page SHALL load PostHog or contact PostHog's servers. The admin SHALL never load PostHog.
+Every public page SHALL load PostHog when `POSTHOG_PROJECT_TOKEN` is set, sending to the PostHog host `POSTHOG_HOST` names. With no project key, no page SHALL load PostHog or contact PostHog's servers. The admin SHALL never load PostHog.
 
 #### Scenario: Switched on
-- **WHEN** `POSTHOG_PROJECT_KEY` is set and a visitor opens any public page
+- **WHEN** `POSTHOG_PROJECT_TOKEN` is set and a visitor opens any public page
 - **THEN** the page loads PostHog with that key and host
 
 #### Scenario: Switched off
-- **WHEN** `POSTHOG_PROJECT_KEY` is empty
+- **WHEN** `POSTHOG_PROJECT_TOKEN` is empty
 - **THEN** no page includes PostHog
 
 #### Scenario: Not in the admin
