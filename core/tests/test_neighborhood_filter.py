@@ -13,7 +13,9 @@ def setup_boston():
     soon = get_current_new_york_datetime() + datetime.timedelta(hours=3)
     for title, town, neighborhood, county in (
         ("west end show", "Boston", "West End", "Suffolk"), ("beacon hill show", "Boston", "Beacon Hill", "Suffolk"),
-        ("fenway show", "Boston", "Fenway", "Suffolk"), ("cambridge show", "Cambridge", "East Cambridge", "Middlesex"),
+        ("fenway show", "Boston", "Fenway", "Suffolk"),
+        # roxbury is boston's, but in the boston neighborhoods sub-region, not downtown's
+        ("roxbury show", "Boston", "Roxbury", "Suffolk"), ("cambridge show", "Cambridge", "East Cambridge", "Middlesex"),
         ("somerville show", "Somerville", "Davis Square", "Middlesex"),
     ):
         venue = Venue.objects.create(name=f"{title} venue", state="MA", county=county, city_town=town, neighborhood=neighborhood)

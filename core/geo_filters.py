@@ -167,8 +167,11 @@ def neighborhood_label(neighborhood, town, state):
     return f"{neighborhood}, {town}, {state}"
 
 
-def town_neighborhoods(towns):
-    """the (neighborhood, town, state) of the venues in these (town, state) pairs, sorted"""
+def town_neighborhoods(towns, metro=None):
+    """
+    the (neighborhood, town, state) of the venues in these (town, state) pairs, sorted; only
+    the metro's venues, when one is given, since boston is split among several sub-regions
+    """
     from core.models import Venue
 
     if not towns:
@@ -177,7 +180,10 @@ def town_neighborhoods(towns):
     for town, state in towns:
         towns_q |= Q(city_town__iexact=town, state=state)
     found = {}
-    rows = Venue.objects.filter(towns_q).exclude(neighborhood="").values_list("neighborhood", "city_town", "state")
+    venues = Venue.objects.filter(towns_q)
+    if metro:
+        venues = venues.filter(area_q(metro))
+    rows = venues.exclude(neighborhood="").values_list("neighborhood", "city_town", "state")
     spelling = {(t.casefold(), s): t for t, s in towns}
     for neighborhood, town, state in rows:
         town = spelling.get((town.strip().casefold(), state), town.strip())
@@ -222,7 +228,8 @@ def parse_geo_filter(querydict, new_england_only=False):
     if geo_filter.neighborhood_towns and wanted:
         # only those towns' neighborhoods: one from another town, or a town dropped, drops it
         known = {
-            neighborhood_label(*triple).casefold(): triple for triple in town_neighborhoods(geo_filter.neighborhood_towns)
+            neighborhood_label(*triple).casefold(): triple
+            for triple in town_neighborhoods(geo_filter.neighborhood_towns, geo_filter.metro)
         }
         geo_filter.neighborhoods = [known[label.casefold()] for label in dict.fromkeys(wanted) if label.casefold() in known]
     return geo_filter
@@ -314,6 +321,6 @@ def geo_filter_context(geo_filter):
         "metro_groups": metro_groups(geo_filter.state),
         "metro_towns": metro_town_options(geo_filter.metro),
         "town_neighborhoods": [
-            neighborhood_label(*triple) for triple in town_neighborhoods(geo_filter.neighborhood_towns)
+            neighborhood_label(*triple) for triple in town_neighborhoods(geo_filter.neighborhood_towns, geo_filter.metro)
         ],
     }
