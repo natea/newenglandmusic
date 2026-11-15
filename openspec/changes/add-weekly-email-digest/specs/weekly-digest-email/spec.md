@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Choices select shows
-A subscriber's choices SHALL select an event when any one of them does. An **area** choice selects events at venues in that area, by the rules of `event-geo-filter`. A **followed town** selects events at venues in that town and state, ignoring case. A **followed venue** selects that venue's events. The "All of the Northeast" choice selects every area, and an area choice that no longer exists selects nothing.
+Like the listings, the weekly email SHALL hold only events at New England venues. A subscriber's choices SHALL select an event when any one of them does. An **area** choice selects events at venues in that area, by the rules of `event-geo-filter`. A **followed town** selects events at venues in that town and state, ignoring case. A **followed venue** selects that venue's events. The "All of the Northeast" choice selects every area, and an area choice that no longer exists selects nothing.
 
 #### Scenario: Area choice
 - **WHEN** a subscriber's only choice is the Vermont area
@@ -32,6 +32,10 @@ Only approved events SHALL be selected, and an event SHALL appear once however m
 #### Scenario: Unapproved event
 - **WHEN** an unapproved event is at a venue the choices select
 - **THEN** it is not selected
+
+#### Scenario: Only New England
+- **WHEN** a subscriber has chosen all of New England, and there are shows in Vermont and in Albany, New York
+- **THEN** the selection holds the Vermont show and not the Albany one
 
 ### Requirement: What the weekly email holds
 The email SHALL list the selected, uncancelled events that start from the start of the send day to the end of the seventh day after it, New York time, grouped by date in start order. Each SHALL show its title, artists, venue and town, start time, and a link to its event page at the site's own address (`/event/<id>`), never to the event's source. The email SHALL be plain text and HTML together, and SHALL carry the unsubscribe link and a link to sign in and change preferences.

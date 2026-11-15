@@ -1,4 +1,5 @@
-from django.test import Client
+from django.conf import settings
+from django.test import Client, override_settings
 from django.utils import timezone
 
 from core import digest_tokens
@@ -274,3 +275,23 @@ class ConfirmTestCase(DigestTestCase):
         response = Client(enforce_csrf_checks=True).post(self.url)
         self.assertEqual(response.status_code, 403)
         self.assertIsNone(Subscriber.objects.get().confirmed_at)
+
+
+class SignupFormOptionsTestCase(DigestTestCase):
+    def test_only_new_england_areas_are_offered(self):
+        html = self.client.get("/digest").content.decode()
+        self.assertIn('value="state:massachusetts"', html)
+        self.assertIn('value="region:new-england"', html)
+        for outside in ("region:chesapeake-bay", "region:mid-atlantic", "state:new-york", "region:tri-state"):
+            self.assertNotIn(f'value="{outside}"', html)
+
+    def test_an_area_outside_new_england_is_refused(self):
+        response = self.client.post("/digest", {"email": "a@example.com", "area": ["state:new-york"]})
+        self.assertContains(response, "isn&#x27;t offered")
+
+    @override_settings(TEMPLATES=[{**settings.TEMPLATES[0], "OPTIONS": {**settings.TEMPLATES[0]["OPTIONS"], "string_if_invalid": "MISSING! {{ %s }}"}}])
+    def test_a_fresh_form_has_a_blank_email(self):
+        # as the dev settings render it: every variable the template uses is supplied
+        html = self.client.get("/digest").content.decode()
+        self.assertIn('name="email" value=""', html)
+        self.assertNotIn("MISSING!", html)

@@ -149,3 +149,12 @@ class SelectionTestCase(TestCase):
     def test_week_is_the_monday_on_or_before(self):
         self.assertEqual(digest.week_of(datetime.date(2026, 11, 8)), datetime.date(2026, 11, 2))
         self.assertEqual(digest.week_of(datetime.date(2026, 11, 2)), datetime.date(2026, 11, 2))
+
+
+class NewEnglandOnlyTestCase(SelectionTestCase):
+    def test_all_areas_means_new_england(self):
+        # like the listings, the weekly email holds only new england's shows
+        self.choose("area", area_query=digest.ALL_AREAS)
+        self.event(self.vermont)
+        self.event(Venue.objects.create(name="Albany Hall", state="NY", city_town="Albany"))
+        self.assertEqual(self.selected(), {"show at Vermont Hall"})

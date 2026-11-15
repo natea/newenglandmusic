@@ -58,7 +58,7 @@ The confirmation link SHALL be signed and SHALL expire after 7 days. Opening it 
 
 ### Requirement: Choosing which shows
 The signup and preferences forms SHALL offer these choices, and a subscriber SHALL need at least one:
-- **Area:** a region, state or metro area offered by `event-geo-filter`, optionally narrowed to some of a metro's towns, or "All of the Northeast";
+- **Area:** a region, state or metro area offered by `event-geo-filter` (only New England's, as the listing offers), optionally narrowed to some of a metro's towns, or "All of the Northeast";
 - **Near a place:** a ZIP code or town, resolved with the location form's lookup, and a distance of 5, 10, 25, 50 or 100 miles;
 - **Follow:** one or more towns or venues.
 
@@ -74,8 +74,8 @@ The signup and preferences forms SHALL offer these choices, and a subscriber SHA
 - **WHEN** a visitor enters a ZIP code or town the lookup doesn't know
 - **THEN** the form shows an error and stores nothing
 
-#### Scenario: All of the Northeast
-- **WHEN** a visitor picks "All of the Northeast"
+#### Scenario: All of New England
+- **WHEN** a visitor picks "All of New England"
 - **THEN** that is stored as a choice that selects every area
 
 #### Scenario: No choice
