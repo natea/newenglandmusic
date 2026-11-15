@@ -132,6 +132,15 @@ class BuildSetupTestCase(SimpleTestCase):
         self.assertIn("git rev-parse HEAD > .intentable/start", script)
         self.assertRegex(setup.get("timeout", ""), r"^\d+m$")
 
+    def test_setup_keeps_the_agents_shell_in_the_foreground(self):
+        # an agent whose suite moved to the background ended its stage waiting for it
+        script = steps()["setup"]["script"]
+        for setting in ("'CLAUDE_CODE_DISABLE_BACKGROUND_TASKS': '1'", "'BASH_DEFAULT_TIMEOUT_MS'", "'BASH_MAX_TIMEOUT_MS'"):
+            self.assertIn(setting, script)
+        self.assertIn("Path.home() / '.claude' / 'settings.json'", script)
+        for name in AGENTS:
+            self.assertIn("in the foreground", prompt(name), name)
+
     def test_setup_checks_the_tree(self):
         script = steps()["setup"]["script"].rstrip()
         last = script.splitlines()[-1]
