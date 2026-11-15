@@ -1,0 +1,13 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+  <div id='maincontent' class='static_page digestPage'>
+    <h1 class="digestTab">Your shows</h1>
+    <form method="post" action="{% url 'digest_preferences' %}" class="digestCard">
+      {% csrf_token %}
+      <p>Signed in as {{ subscriber.email }}.</p>
+      {% include "core/digest_choices_fields.html" %}
+      <p><button type="submit">Save</button></p>
+    </form>
+  </div>
+{% endblock %}

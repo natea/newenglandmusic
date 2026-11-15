@@ -1,0 +1,23 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+  <div id='maincontent' class='static_page digestPage'>
+    <h1 class="digestTab">Sign in</h1>
+    <form method="post" action="{% url 'digest_sign_in' %}" class="digestCard">
+      {% csrf_token %}
+      {% if error %}<p class="digestErrors" role="alert">{{ error }}</p>{% endif %}
+      {% if sent %}
+        <p>If {{ email }} gets the weekly email, we sent it a 6-digit code. It works once, for 15 minutes.</p>
+        <input type="hidden" name="email" value="{{ email }}">
+        <p><label><b>Code</b><br><input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" size="8" maxlength="6" required></label></p>
+        <p><button type="submit">Sign in</button></p>
+        <p class="digestHint">No code? <a href="{% url 'digest_sign_in' %}">Send a new one</a></p>
+      {% else %}
+        <p>No password. We email you a code.</p>
+        <p><label><b>Email address</b><br><input type="email" name="email" placeholder="you@example.com" size="34" maxlength="254" required autocomplete="email"></label></p>
+        <p><button type="submit">Send me a code</button></p>
+        <p class="digestHint">New here? <a href="{% url 'digest_signup' %}">Sign up for the weekly email</a></p>
+      {% endif %}
+    </form>
+  </div>
+{% endblock %}

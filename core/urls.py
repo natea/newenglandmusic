@@ -7,6 +7,7 @@ from .views.search import suggest
 from .views.act_page import artist_page, band_page
 from .views.autocomplete import VenueAutocomplete
 from .views.calendar_feed import calendar_feed
+from .views import digest as digest_views
 from .views.email_subscribe import email_subscribe
 from .views.event_gcal import event_gcal_redirect
 from .views.event_ics_download import event_ics_download
@@ -33,6 +34,13 @@ urlpatterns = [
         name="past_month_archive",
     ),
     # other urls
+    path("digest", digest_views.signup, name="digest_signup"),
+    path("digest/check-email", digest_views.check_email, name="digest_check_email"),
+    path("digest/confirm/<str:token>", digest_views.confirm, name="digest_confirm"),
+    path("digest/sign-in", digest_views.sign_in_page, name="digest_sign_in"),
+    path("digest/preferences", digest_views.preferences, name="digest_preferences"),
+    path("digest/sign-out", digest_views.sign_out, name="digest_sign_out"),
+    path("digest/suggest", digest_views.suggest, name="digest_suggest"),
     path("submit-event", EventCreateView.as_view(), name="submit_event"),
     path("location", set_location, name="set_location"),
     path("location/suggest", suggest_locations, name="suggest_locations"),

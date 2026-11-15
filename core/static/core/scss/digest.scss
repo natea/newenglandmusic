@@ -1,0 +1,88 @@
+/* the weekly email's pages: index cards on the site's paper, as in the design sketch */
+.digestPage {
+  .digestTab {
+    display: inline-block;
+    margin: 0;
+    padding: 0.18em 0.45em 0.12em;
+    background: #8b5b8b;
+    color: #fff;
+    font: 800 clamp(2rem, 7vw, 2.5rem) / 1.02 Helvetica, Arial, sans-serif;
+    letter-spacing: -0.015em;
+  }
+
+  .digestCard {
+    max-width: 640px;
+    margin-bottom: 12px;
+    padding: 18px 24px 22px;
+    background-color: #f6f4ee;
+    background-image: linear-gradient(#c9d3e6 1px, transparent 1px);
+    background-size: 100% 28px;
+    background-position: 0 17px;
+    color: #1a1a1a;
+    line-height: 28px;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  .digestRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 10px;
+    align-items: baseline;
+  }
+
+  .digestKey {
+    flex: none;
+    width: 7.5em;
+    font-weight: 700;
+  }
+
+  .digestValue {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .digestPill {
+    display: inline-block;
+    margin-right: 4px;
+    padding: 0 8px;
+    border: 1px solid #000;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    line-height: 22px;
+  }
+
+  .digestErrors {
+    margin-bottom: 6px;
+    padding: 6px;
+    background: #eeeeff;
+    line-height: 22px;
+  }
+
+  .digestHint {
+    color: #4f4b44;
+    font-size: 0.85rem;
+    line-height: 20px;
+  }
+
+  .digestHoney {
+    position: absolute;
+    left: -10000px;
+  }
+
+  .digestTowns {
+    margin-top: 4px;
+    line-height: 22px;
+  }
+
+  button {
+    border: 1px solid #000;
+    border-radius: 14px;
+    background: #fff;
+    font-weight: 700;
+    line-height: 26px;
+    padding: 0 14px;
+  }
+}
