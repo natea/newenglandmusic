@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.sitemaps import Sitemap
 from django.db.models.functions import TruncMonth
 
+from .geo_filters import new_england_q
 from .models import Artist, Band, Event, StaticPage
 
 
@@ -16,7 +17,9 @@ class SiteSitemap(Sitemap):
         # all approved events, extracting the year-month only,
         # and getting a unique list of that
         for event_year_month in set(
-            Event.objects.annotate(m=TruncMonth("starttime")).values_list(
+            Event.objects.filter(new_england_q(prefix="venue__"))
+            .annotate(m=TruncMonth("starttime"))
+            .values_list(
                 "m", flat=True
             )
         ):

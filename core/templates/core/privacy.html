@@ -11,11 +11,19 @@
     <h1>Privacy</h1>
 
     <h2>What we keep</h2>
-    <p>{{ site_name }} has no passwords. Without signing up for anything, the only thing it keeps about you is the shows you save, in a cookie in your own browser (<code>saved_shows</code>). Clear it, or unsave the shows, to remove it.</p>
+    <p>{{ site_name }} has no passwords. Without signing up for anything, it keeps only the shows you save, in a cookie in your own browser (<code>saved_shows</code>); clear it, or unsave the shows, to remove it. It keeps an email address only if you give it one, as below.</p>
+
+    <h2>Your email address</h2>
+    <p>The site keeps an email address in two cases, and uses it only for that purpose:</p>
+    <ul>
+      <li><strong>If you submit an event</strong>, we keep your email with the submission, to ask about it if something's unclear. It isn't shown on the site.</li>
+      <li><strong>If you sign up for email</strong>, we keep your email to send you what you signed up for. Each email has a link to unsubscribe.</li>
+    </ul>
+    <p>Only the site's editors can see these addresses. We don't sell them or share them with anyone else. To have yours removed, {% if contact_email %}write to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% else %}write to us{% endif %} and we'll delete it.</p>
 
     <h2>The weekly email</h2>
     <p>If you sign up for the weekly email, the site keeps your email address and the choices you made (areas, towns, venues). For a "near a place" choice it also keeps the place's coordinates, rounded to about 100 metres, and not a street address. Amazon SES sends the email. Opens and clicks are not tracked.</p>
-    <p>Every email has a link to unsubscribe, which pauses it. To delete your address and everything stored with it, sign in with a code and choose "Delete my account". It's removed at once (backups age out on their own schedule).</p>
+    <p>Every email has a link to unsubscribe, which pauses it. To delete your address and everything stored with it yourself, sign in with a code and choose "Delete my account". It's removed at once (backups age out on their own schedule).</p>
 
     <h2>Your location</h2>
     <p>If you give a ZIP code or town, or press "Use my location", the site shows how far each show is from there. Your location is kept in a cookie in your browser (<code>near</code>), rounded to about 100 metres, with the name you gave. It's sent to our server only so the page can show the distances, and the server doesn't store it. "Use my location" asks your browser for your position only when you press it. Follow "clear" next to the location to remove the cookie.</p>
@@ -27,6 +35,14 @@
     <p>{{ site_name }} uses YouTube API Services to find artists' own videos for its YouTube buttons. By using the YouTube player you agree to be bound by the <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">YouTube Terms of Service</a>, and Google handles what it collects under the <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>. The YouTube player comes from youtube-nocookie.com, which sets no cookies until you play a video.</p>
 
     <h2>Analytics</h2>
-    <p>The site may count visits with an analytics service (GoatCounter or Google Analytics), which records the pages opened. Google Analytics' data is handled under the Google Privacy Policy linked above.</p>
+    {% if posthog_project_token %}
+    <p>{{ site_name }} uses PostHog to learn how the site is used: the pages you open, what you click, and a few actions: the words you search for, the shows you save, the play buttons you press, the ticket and calendar links you follow, and what you skip or save in the discovery deck. PostHog sets a cookie in your browser so it can tell when the same browser comes back. It works out your approximate city and region from your IP address, then discards the address, which it doesn't keep. It records no names, email addresses, IP addresses or recordings of your visit, and the site never sends it the location you give for distances.</p>
+    {# shown by core/js/analytics.js once posthog has loaded; without javascript posthog never loads #}
+    <p class="analytics-control" hidden>
+      <button type="button" id="analytics-toggle">Turn off analytics in this browser</button>
+      <span id="analytics-state" role="status"></span>
+    </p>
+    {% endif %}
+    <p>The site may also count visits with GoatCounter, which sets no cookie, or Google Analytics, which records the pages opened. Google Analytics' data is handled under the Google Privacy Policy linked above.</p>
   </div>
 {% endblock %}

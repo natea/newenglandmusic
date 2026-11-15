@@ -196,6 +196,13 @@ class FetchEventsTestCase(TestCase):
         self.assertFalse(Event.objects.filter(external_id="ical:abc").exists())
         self.assertIn("2 created", output)
 
+    def test_a_venue_outside_new_england_is_still_fetched(self):
+        # the public site hides its events, but they're kept for a later phase
+        Venue.objects.filter(sheet_id="V0001").update(state="NY")
+        self.events_for("V0001", [event("Show", external_id="ical:abc")], url="https://v0001.example/cal.ics")
+        self.fetch("--sheet-ids", "V0001")
+        self.assertFalse(Event.all_objects.get(external_id="ical:abc").is_approved)
+
     def test_past_events_are_not_saved(self):
         self.events_for("V0001", [event("Last month", days=-30), event("Next week")])
         self.fetch("--sheet-ids", "V0001")

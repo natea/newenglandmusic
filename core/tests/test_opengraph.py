@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from core.tests.test_utils import create_static_test_page
 
 # share links use SITE_URL from .env
@@ -7,19 +7,20 @@ expected_url = f"{settings.SITE_URL}/"
 expected_domain = settings.META_SITE_DOMAIN
 
 
+@override_settings(SITE_NAME="StageHopper")
 class OpengraphTagsTestCase(TestCase):
     def test_opengraph_tags_index(self):
         expected_description = (
             "Live music calendar for New England and the Northeast: concerts, DJ nights"
             " and open mics at venues across the region."
         )
-        expected_title = "New England Music"
+        expected_title = "StageHopper"
         expected_image = (
             f"{expected_url}static/core/images/share-preview.png"
         )
 
         response = self.client.get("/")
-        self.assertContains(response, "<title>New England Music</title>")
+        self.assertContains(response, "<title>StageHopper</title>")
         self.assertContains(
             response, f'<meta name="description" content="{expected_description}">'
         )

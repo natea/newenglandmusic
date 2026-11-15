@@ -4,12 +4,16 @@ from urllib.parse import unquote
 from datetime import date
 
 from dateutil import relativedelta
+from core import link_hubs
+from django.conf import settings
 from django.contrib import admin
 from django import forms
 from django.contrib import messages
 from django.contrib.admin import SimpleListFilter
+from django.contrib.admin.options import IncorrectLookupParameters
 from django.db.models import Q, URLField
-from django.http import Http404, HttpResponse
+from django.utils.functional import lazy
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.urls import path, reverse
 from django.utils import timezone
@@ -21,6 +25,8 @@ from tinymce.widgets import TinyMCE
 
 from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filter
 from . import act_sources, apple_music, youtube
+from .act_export import act_row, header as act_header, prefetch as prefetch_memberships
+from .venue_export import HEADER, csv_download, venue_row
 from .places import PlacesClient, PlacesError
 from .spotify import parse_artist_id
 from .wikipedia import LICENSE_URL, commons_file_page, commons_thumbnail
@@ -56,8 +62,9 @@ from .utils_datemath import (
     get_previous_current_next_month_start,
 )
 
-admin.site.site_title = "New England Music"
-admin.site.site_header = "New England Music"
+# read when the admin renders, so SITE_NAME (and a test's override) is the name it shows
+admin.site.site_title = lazy(lambda: settings.SITE_NAME, str)()
+admin.site.site_header = lazy(lambda: settings.SITE_NAME, str)()
 
 admin.site.register(IndexPageMessages, SingletonModelAdmin)
 
@@ -529,17 +536,36 @@ class PlaceReviewReasonFilter(SimpleListFilter):
         return queryset
 
 
+VENUE_ID = re.compile(r"^V(\d+)$")
+
+
+def next_venue_id():
+    """the venue ID after the highest, in the sheet's form: "V0731" after "V0730" """
+    numbers = [match.group(1) for sheet_id in Venue.objects.exclude(sheet_id=None).values_list("sheet_id", flat=True)
+               if (match := VENUE_ID.match(sheet_id))]
+    width = max([4, *(len(number) for number in numbers)])
+    return f"V{max([0, *map(int, numbers)]) + 1:0{width}d}"
+
+
 class VenueAdminForm(forms.ModelForm):
     no_neighborhood = forms.BooleanField(
         required=False,
         help_text="this venue isn't in a neighborhood worth naming: later lookups leave it blank",
     )
 
+    def clean_sheet_id(self):
+        sheet_id = (self.cleaned_data.get("sheet_id") or "").strip() or None
+        taken = Venue.objects.filter(sheet_id=sheet_id).exclude(pk=self.instance.pk).first() if sheet_id else None
+        if taken:
+            raise forms.ValidationError(f"the venue ID {sheet_id} is taken, by {taken.name}")
+        return sheet_id
+
     class Meta:
         model = Venue
         fields = "__all__"
         help_texts = {
             "neighborhood": "type one to set it by hand; later lookups keep an editor's neighborhood",
+            "sheet_id": "the venue ID, like V0042; leave it empty on a new venue for the next one",
         }
 
 
@@ -667,10 +693,29 @@ class VenueAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         name = f"{self.model._meta.app_label}_{self.model._meta.model_name}_google_name"
+        export_name = f"{self.model._meta.app_label}_{self.model._meta.model_name}_export_csv"
         return [
             path("<int:pk>/google-name/", self.admin_site.admin_view(self.google_name_view), name=name),
+            path("export-csv/", self.admin_site.admin_view(self.export_csv_view), name=export_name),
             *super().get_urls(),
         ]
+
+    def changelist_view(self, request, extra_context=None):
+        # the list's template shows the export button only to those who may view venues
+        context = {"can_export": self.has_view_permission(request), **(extra_context or {})}
+        return super().changelist_view(request, context)
+
+    def export_csv_view(self, request):
+        """the venues the list is showing (its search, filters and order, every page) as a csv file"""
+        if not self.has_view_permission(request):
+            return HttpResponse(status=403)
+        try:
+            venues = self.get_changelist_instance(request).get_queryset(request)
+        except IncorrectLookupParameters:
+            return HttpResponseBadRequest("the list's filters aren't valid")
+
+        rows = (venue_row(venue) for venue in venues.select_related("event_source").iterator())
+        return csv_download(HEADER, rows, "venues")
 
     def google_name_view(self, request, pk):
         """a review venue's place name on google, asked for when an admin clicks for it"""
@@ -685,7 +730,12 @@ class VenueAdmin(admin.ModelAdmin):
         return response
 
     def save_model(self, request, venue, form, change):
-        """a neighborhood typed here, or "no neighborhood", is the editor's: lookups keep it"""
+        """
+        a neighborhood typed here, or "no neighborhood", is the editor's: lookups keep it. a new
+        venue with no ID gets the next one, now that venues are added here, not in the sheet
+        """
+        if not change and not venue.sheet_id:
+            venue.sheet_id = next_venue_id()
         if form.cleaned_data.get("no_neighborhood"):
             venue.neighborhood = ""
             venue.neighborhood_source = Venue.NeighborhoodSource.EDITOR
@@ -999,25 +1049,26 @@ class JobRunAdmin(admin.ModelAdmin):
     def problems_table(self, run):
         if not run.problems:
             return "no problems"
+        # a venue links to its page; an act (artist and band records have no venue) is plain text
         rows = format_html_join(
             "",
-            '<tr><td style="white-space: nowrap; vertical-align: top">'
-            '<a href="{}">{} {}</a></td><td><ul style="margin: 0">{}</ul></td></tr>',
+            '<tr><td style="white-space: nowrap; vertical-align: top">{}</td><td><ul style="margin: 0">{}</ul></td></tr>',
             (
                 (
-                    reverse("admin:core_venue_change", args=[item["venue_id"]]),
-                    item["sheet_id"],
-                    item["name"],
+                    format_html('<a href="{}">{} {}</a>', reverse("admin:core_venue_change", args=[item["venue_id"]]), item["sheet_id"], item["name"])
+                    if item.get("venue_id") else item["name"],
                     format_html_join("", "<li>{}</li>", ((linked(p),) for p in item["problems"])),
                 )
                 for item in run.problems
             ),
         )
+        what = "records" if any(not item.get("venue_id") for item in run.problems) else "venues"
         return format_html(
             '<div style="border-left: 4px solid #cf222e; padding-left: 8px">'
-            '<strong style="color: #cf222e">{} venues with problems</strong>'
+            '<strong style="color: #cf222e">{} {} with problems</strong>'
             "<table>{}</table></div>",
             len(run.problems),
+            what,
             rows,
         )
 
@@ -1394,12 +1445,44 @@ class ActSourceFilter(SimpleListFilter):
         return queryset
 
 
+def open_findings(act):
+    return [f for f in act.link_hub_findings if not f.get("dismissed")]
+
+
+class LinkHubFindingsFilter(SimpleListFilter):
+    title = "link-hub findings"
+    parameter_name = "link_hub_findings"
+
+    def lookups(self, request, model_admin):
+        return [("1", "has link-hub findings")]
+
+    def queryset(self, request, queryset):
+        if self.value() != "1":
+            return queryset
+        with_findings = queryset.exclude(link_hub_findings=[])
+        return queryset.filter(pk__in=[a.pk for a in with_findings if open_findings(a)])
+
+
+class MusicActForm(forms.ModelForm):
+    def clean_link_hub_url(self):
+        url = self.cleaned_data["link_hub_url"]
+        if not url:
+            return ""
+        address = link_hubs.clean_hub_url(url)
+        if not address:
+            raise forms.ValidationError("a page on a supported link hub, like https://linktr.ee/name (not the hub's home page)")
+        return address
+
+
 class MusicActAdmin(admin.ModelAdmin):
-    list_display = ("name", "city_town", "state", "musicbrainz_status", "musicbrainz_page", "source_labels", "review", "act_id")
-    list_filter = ("needs_review", "state", "musicbrainz_status", ActSourceFilter)
+    form = MusicActForm
+    change_list_template = "admin/core/act_change_list.html"
+    list_display = ("name", "city_town", "state", "musicbrainz_status", "musicbrainz_page", "source_labels", "review", "link_hub_findings_count", "act_id")
+    list_filter = ("needs_review", "state", "musicbrainz_status", ActSourceFilter, LinkHubFindingsFilter)
     search_fields = ("name", "act_id", "musicbrainz_id")
-    actions = ["clear_musicbrainz_match", "mark_ready"]
+    actions = ["clear_musicbrainz_match", "mark_ready", "accept_link_hub_findings", "dismiss_link_hub_findings"]
     readonly_fields = (
+        "link_hub_status", "link_hub_checked_at", "link_hub_findings_table",
         "musicbrainz_status", "musicbrainz_checked_at", "musicbrainz_page", "genres_from_musicbrainz",
         *[f for f in MUSICBRAINZ_FIELDS if f != "genres"], "field_sources", "introduction_from_wikipedia",
         "photo_preview", "source_labels", "review",
@@ -1407,6 +1490,13 @@ class MusicActAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {"fields": ("name", "slug", "act_id", "source_labels", "review", "city_town", "state", "notes")}),
         ("Links", {"fields": ("website", "bandcamp_url", "instagram_url", "youtube_url")}),
+        (
+            "Link hub",
+            {
+                "description": "the act's Linktree-style page, read weekly: it fills empty links, and links that differ are listed here to accept or dismiss with the list's actions",
+                "fields": ("link_hub_url", "link_hub_status", "link_hub_checked_at", "link_hub_findings_table"),
+            },
+        ),
         (
             "Photo (Wikimedia Commons, free licence only)",
             {
@@ -1428,6 +1518,90 @@ class MusicActAdmin(admin.ModelAdmin):
         ("Introduction", {"fields": ("introduction_from_wikipedia",)}),
         ("Who set what", {"fields": ("field_sources",), "classes": ("collapse",)}),
     )
+
+    @admin.display(description="Link-hub findings")
+    def link_hub_findings_count(self, act):
+        return len(open_findings(act)) or ""
+
+    @admin.display(description="findings")
+    def link_hub_findings_table(self, act):
+        found = open_findings(act)
+        if not found:
+            return "-"
+        return format_html(
+            "<table>{}</table>",
+            format_html_join(
+                "", "<tr><td>{}</td><td>{}</td><td>{}</td></tr>",
+                (
+                    (f["field"], f"now: {f['current'] or 'empty'}", f"hub: {', '.join(f.get('options') or [f['hub']])}")
+                    for f in found
+                ),
+            ),
+        )
+
+    @admin.action(description="Accept link-hub findings (set the links to the hub's)")
+    def accept_link_hub_findings(self, request, queryset):
+        accepted = skipped = 0
+        for act in queryset:
+            fields, sources, kept = {}, dict(act.field_sources), []
+            for finding in act.link_hub_findings:
+                if finding.get("dismissed"):
+                    kept.append(finding)
+                elif finding.get("options"):
+                    # which of several is the act's own is for the editor to set by hand
+                    kept.append(finding)
+                    skipped += 1
+                else:
+                    fields[finding["field"]] = finding["hub"]
+                    sources[finding["field"]] = "editor"
+                    accepted += 1
+            if fields:
+                type(act).objects.filter(pk=act.pk).update(**fields, field_sources=sources, link_hub_findings=kept)
+        message = f"{accepted} findings accepted."
+        if skipped:
+            message += f" {skipped} with several candidates left open: set the link by hand, then dismiss them."
+        self.message_user(request, message)
+
+    @admin.action(description="Dismiss link-hub findings (they stay dismissed)")
+    def dismiss_link_hub_findings(self, request, queryset):
+        dismissed = 0
+        for act in queryset:
+            found = open_findings(act)
+            if found:
+                kept = [{**f, "dismissed": True} for f in act.link_hub_findings]
+                type(act).objects.filter(pk=act.pk).update(link_hub_findings=kept)
+                dismissed += len(found)
+        self.message_user(request, f"{dismissed} findings dismissed.")
+
+    def get_urls(self):
+        return [
+            path("export-csv/", self.admin_site.admin_view(self.export_csv_view), name=self.export_url_name),
+            *super().get_urls(),
+        ]
+
+    @property
+    def export_url_name(self):
+        return f"{self.model._meta.app_label}_{self.model._meta.model_name}_export_csv"
+
+    def changelist_view(self, request, extra_context=None):
+        # the list's template shows the export button only to those who may view this kind of act
+        context = {
+            "can_export": self.has_view_permission(request),
+            "export_url": reverse(f"admin:{self.export_url_name}"),
+            **(extra_context or {}),
+        }
+        return super().changelist_view(request, context)
+
+    def export_csv_view(self, request):
+        """the acts the list is showing (its search, filters and order, every page) as a csv file"""
+        if not self.has_view_permission(request):
+            return HttpResponse(status=403)
+        try:
+            acts = self.get_changelist_instance(request).get_queryset(request)
+        except IncorrectLookupParameters:
+            return HttpResponseBadRequest("the list's filters aren't valid")
+        rows = (act_row(act) for act in prefetch_memberships(acts).iterator(chunk_size=500))
+        return csv_download(act_header(self.model), rows, f"{self.model._meta.model_name}s")
 
     @admin.display(description="Review")
     def review(self, act):
@@ -1494,6 +1668,9 @@ class MusicActAdmin(admin.ModelAdmin):
         set is looked up by the next enrichment and never replaced"""
         for name in form.changed_data:
             act.field_sources[name] = "editor"
+        if "link_hub_url" in form.changed_data:
+            # a new address is read by the next run
+            act.link_hub_status, act.link_hub_checked_at = "", None
         if "musicbrainz_id" in form.changed_data:
             if act.musicbrainz_id:
                 act.musicbrainz_status = MusicAct.MusicBrainzStatus.EDITOR
@@ -1535,8 +1712,10 @@ def clear_musicbrainz(act):
     if act.field_sources.get("photo_file") != "editor":
         for name in ("photo_file", "photo_author", "photo_license", "photo_license_url"):
             setattr(act, name, "")
+    # the hub address stays marked as musicbrainz's: it outlives the match (add-artist-link-hub-links)
     act.field_sources = {
-        k: v for k, v in act.field_sources.items() if v not in ("musicbrainz", "wikidata") and k != "musicbrainz_id"
+        k: v for k, v in act.field_sources.items()
+        if (v not in ("musicbrainz", "wikidata") and k != "musicbrainz_id") or k == "link_hub_url"
     }
 
 

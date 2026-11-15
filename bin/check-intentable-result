@@ -14,6 +14,11 @@ issue-proposals rules. --draft checks the draft and any sketches' safety,
 writing nothing; --sketches also requires the sketches; with no flag it is the
 run's last step: it checks everything again, copies the review summary to
 .intentable/review.md, and writes .intentable/result.json.
+
+A draft with "revision": true revises a change that existed before the run
+(the bridge's revision run, on the change's draft branch). It may narrow the
+sketches to one, and with "scope": "sketches" it may change only the sketches
+and the design's "Sketches" section, compared with .intentable/base.
 """
 
 import json
@@ -169,6 +174,14 @@ def check_draft(draft):
     if not isinstance(labels, list) or not all(isinstance(label, str) for label in labels):
         raise Refused("labels must be a list of label names")
     state = draft.get("state")
+    revision = draft.get("revision", False)
+    if revision not in (True, False):
+        raise Refused("revision must be true when given")
+    scope = draft.get("scope")
+    if scope is not None and (not revision or scope != "sketches"):
+        raise Refused("scope may only be \"sketches\", in a revision")
+    if revision and state is not None:
+        raise Refused("a revision can't send the issue back; answer the feedback in the message instead")
     recorded = INTENTABLE / "route.json"
     if recorded.is_file():
         route = json.loads(recorded.read_text())
@@ -198,7 +211,13 @@ def check_draft(draft):
         raise Refused(f"{change!r} isn't a change name: lowercase letters, digits and single hyphens, at most {MAX_NAME}")
     if not (CHANGES / change).is_dir():
         raise Refused(f"the change folder is missing: no {CHANGES / change}")
-    if change in existing_changes():
+    if revision:
+        if change not in existing_changes():
+            raise Refused(f"a revision revises an existing change, but {change} didn't exist before the run")
+        stray = new_change_folders()
+        if stray:
+            raise Refused(f"a revision writes no new change, but {stray[0]} is new")
+    elif change in existing_changes():
         raise Refused(f"the change {change} already exists")
     return change, labels, state
 
@@ -241,7 +260,7 @@ SAFE_ELEMENTS = {
     "aside", "div", "span", "p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "dl", "dt", "dd", "table",
     "thead", "tbody", "tfoot", "tr", "th", "td", "caption", "colgroup", "col", "a", "img", "figure", "figcaption",
     "strong", "em", "b", "i", "u", "s", "small", "mark", "code", "pre", "blockquote", "br", "hr", "time", "abbr",
-    "sup", "sub", "button", "label",
+    "sup", "sub", "button", "label", "kbd", "samp", "var", "q", "cite", "dfn", "del", "ins", "wbr", "address",
 }
 SAFE_ATTRIBUTES = {
     "class", "id", "style", "title", "lang", "dir", "role", "alt", "width", "height", "colspan", "rowspan",
@@ -344,7 +363,7 @@ def sketch_problem(text):
     return checker.problem
 
 
-def check_options(path):
+def check_options(path, names=SKETCHES):
     """each sketch's entry in options.json, with the label, thesis and risk the issue comment shows"""
     try:
         options = json.loads(path.read_text())
@@ -353,7 +372,7 @@ def check_options(path):
     if not isinstance(options, list) or not all(isinstance(option, dict) for option in options):
         raise Refused("sketches/options.json must be a list of options")
     by_file = {option.get("file"): option for option in options}
-    for name in SKETCHES:
+    for name in names:
         if name not in by_file:
             raise Refused(f"sketches/options.json has no entry for {name}")
         for field in ("label", "thesis", "risk"):
@@ -362,16 +381,28 @@ def check_options(path):
                 raise Refused(f"sketches/options.json has no {field} for {name}")
 
 
-def check_sketches(change, required):
-    """the sketches' safety; with required, also that all three and options.json are there and linked"""
+def sketch_set(folder, revision):
+    """the sketches a draft must have: all three, or for a revision that narrowed to one, that one"""
+    present = [name for name in SKETCHES if (folder / name).is_file()]
+    if revision and len(present) == 1:
+        return tuple(present)
+    if present and len(present) < len(SKETCHES):
+        missing = next(name for name in SKETCHES if name not in present)
+        raise Refused(f"the sketch sketches/{missing} is missing: a new draft has three options and a narrowed revision one")
+    return SKETCHES
+
+
+def check_sketches(change, required, revision=False):
+    """the sketches' safety; with required, also that the set and options.json are there and linked"""
     folder = CHANGES / change / "sketches"
     if required:
-        for name in SKETCHES + ("options.json",):
+        names = sketch_set(folder, revision)
+        for name in names + ("options.json",):
             if not (folder / name).is_file():
                 raise Refused(f"the sketch sketches/{name} is missing")
-        check_options(folder / "options.json")
+        check_options(folder / "options.json", names)
         design = (CHANGES / change / "design.md").read_text() if (CHANGES / change / "design.md").is_file() else ""
-        for name in SKETCHES:
+        for name in names:
             if f"sketches/{name}" not in design:
                 raise Refused(f"design.md doesn't link sketches/{name}")
     if folder.is_dir():
@@ -381,14 +412,62 @@ def check_sketches(change, required):
                 raise Refused(f"sketches/{sketch.name} isn't safe to publish: {problem}")
 
 
+SKETCHES_HEADING = re.compile(r"^(#+)\s+Sketches\s*$", re.MULTILINE)
+
+
+def without_sketches_section(text):
+    """design.md with its "Sketches" section cut out, up to the next heading at its level or above"""
+    found = SKETCHES_HEADING.search(text)
+    if not found:
+        return text
+    level = len(found.group(1))
+    rest = text[found.end():]
+    after = re.search(rf"^#{{1,{level}}}\s", rest, re.MULTILINE)
+    return text[:found.start()] + (rest[after.start():] if after else "")
+
+
+def git(*args):
+    done = subprocess.run(["git", *args], capture_output=True, text=True, timeout=60)
+    if done.returncode != 0:
+        raise Refused(f"git {args[0]} failed: {(done.stderr or done.stdout).strip()[:200]}")
+    return done.stdout
+
+
+def check_scope(change):
+    """a sketches-only revision changes nothing but sketches/ and the design's "Sketches" section"""
+    base_file = INTENTABLE / "base"
+    if not base_file.is_file():
+        raise Refused("the record of the run's base commit is missing")
+    base = base_file.read_text().strip()
+    folder = f"{CHANGES.as_posix()}/{change}"
+    changed = set(git("diff", "--name-only", base, "--", folder).split())
+    changed |= set(git("ls-files", "--others", "--exclude-standard", "--", folder).split())
+    for path in sorted(changed):
+        relative = path[len(folder) + 1:]
+        if relative.startswith("sketches/"):
+            continue
+        if relative == "design.md":
+            before = git("show", f"{base}:{path}") if git("ls-tree", base, "--", path).strip() else ""
+            after = Path(path).read_text() if Path(path).is_file() else ""
+            if without_sketches_section(before) == without_sketches_section(after):
+                continue
+            raise Refused("a sketches-only revision changed design.md outside its \"Sketches\" section")
+        raise Refused(f"a sketches-only revision changed {relative}; after G2 only the sketches may change")
+
+
 def spec(mode):
     """the spec checks; with no mode, also writes the run's result and the summary"""
     change, labels, state = check_draft(read_json(INTENTABLE / "draft.json", "the draft"))
     draft = json.loads((INTENTABLE / "draft.json").read_text())
+    revision = draft.get("revision") is True
     if change is not None:
         files = change_files(change)
         validate(change)
-        check_sketches(change, required=mode == "--sketches" or (mode is None and "needs-design" in labels))
+        # a revision never passes the --sketches step, so its draft checks hold it to its sketch set
+        required = mode == "--sketches" or ((mode is None or revision) and "needs-design" in labels)
+        check_sketches(change, required=required, revision=revision)
+        if draft.get("scope") == "sketches":
+            check_scope(change)
     if mode is not None:
         return
     if change is None:
@@ -406,6 +485,8 @@ def spec(mode):
             "change": change, "labels": labels, "state": None, "message": draft["message"],
             "reviewed": outcome, "files": files,
         }
+        if revision:
+            result["revision"] = True
     (INTENTABLE / "result.json").write_text(json.dumps(result, indent=2) + "\n")
 
 

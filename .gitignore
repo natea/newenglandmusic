@@ -9,6 +9,8 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+# the intentable build workflow lives in a folder named build, which the line above would ignore
+!/.fabro/workflows/build/
 develop-eggs/
 dist/
 downloads/

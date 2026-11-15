@@ -23,7 +23,6 @@ fi
 """
 
 DAILY = [
-    "manage.py sync_venues_from_gsheets",
     "manage.py lookup_venue_places",
     "manage.py lookup_venue_places --refresh-stale",
     "manage.py fetch_events --all",
@@ -31,6 +30,7 @@ DAILY = [
     "manage.py match_apple_music_artists --limit 1000",
     "manage.py resolve_artists_with_lastfm --limit 300",
     "manage.py match_youtube_artists --limit 90",
+    "manage.py enrich_artists_from_musicbrainz --limit 100",
 ]
 WEEKLY = [
     "manage.py check_event_sources --workers 8",
@@ -38,6 +38,7 @@ WEEKLY = [
     "manage.py match_eventbrite_organizers",
     "manage.py match_seatgeek_venues",
     "manage.py lookup_venue_neighborhoods",
+    "manage.py read_artist_link_hubs",
 ]
 DIGEST = ["manage.py send_weekly_digests"]
 
@@ -69,6 +70,13 @@ class JobScriptsTestCase(SimpleTestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("=== every step succeeded", result.stdout)
 
+    def test_enrichment_fails(self):
+        result, calls = self.run_job("daily.sh", fail_step=DAILY[-1])
+        # it runs last, so every step before it has already run
+        self.assertEqual(calls, DAILY)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("=== 1 step(s) failed:\n  python manage.py enrich_artists_from_musicbrainz --limit 100", result.stdout)
+
     def test_memory_pools_are_capped(self):
         # threads on linux otherwise run the jobs out of memory
         self.run_job("weekly.sh")
@@ -98,12 +106,17 @@ class JobScriptsTestCase(SimpleTestCase):
     def test_digest_script_sources_the_shared_steps(self):
         self.assertIn('source "$(dirname "$0")/steps.sh"', (BIN / "digest.sh").read_text())
 
-    def test_sheet_sync_fails(self):
+    def test_places_lookup_fails(self):
         result, calls = self.run_job("daily.sh", fail_step=DAILY[0])
         # the later steps still run
         self.assertEqual(calls, DAILY)
         self.assertEqual(result.returncode, 1)
-        self.assertIn("=== 1 step(s) failed:\n  python manage.py sync_venues_from_gsheets", result.stdout)
+        self.assertIn("=== 1 step(s) failed:\n  python manage.py lookup_venue_places\n", result.stdout)
+
+    def test_the_sheet_sync_isnt_in_the_daily_job(self):
+        result, calls = self.run_job("daily.sh")
+        self.assertNotIn("manage.py sync_venues_from_gsheets", calls)
+        self.assertEqual(len(calls), 8)
 
     def test_scripts_name_real_commands(self):
         commands = get_commands()
@@ -155,13 +168,15 @@ class RenderConfigurationTestCase(SimpleTestCase):
                 "APPLE_MUSIC_PREVIEWS",
                 "YOUTUBE_API_KEY",
                 "API_CONTACT_EMAIL",
+                # the contact address in the api clients' user agent
+                "SITE_URL",
                 "YOUTUBE_PREVIEWS",
                 "LASTFM_API_KEY",
             },
         )
         self.assertEqual(
             self.keys_from_web(weekly),
-            {"DJANGO_SECRET_KEY", "TICKETMASTER_API_KEY", "EVENTBRITE_API_KEY", "SEATGEEK_CLIENT_ID", "API_CONTACT_EMAIL"},
+            {"DJANGO_SECRET_KEY", "TICKETMASTER_API_KEY", "EVENTBRITE_API_KEY", "SEATGEEK_CLIENT_ID", "API_CONTACT_EMAIL", "SITE_URL"},
         )
         digest = self.services["newenglandmusic-digest"]
         # thursdays at 13:00 utc, a script that reports failure like the others

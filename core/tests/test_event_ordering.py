@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from core.models import Event
+from core.tests.new_england_fixture import new_england_venue
 from dateutil import relativedelta, tz
 from django.test import TestCase
 
@@ -15,10 +16,10 @@ class EventOrderingTestCase(TestCase):
         event_moment = now_datetime.replace(second=0)
 
         event1_title = f"event {uuid.uuid4()}"
-        event1 = Event.objects.create(title=event1_title, starttime=event_moment)
+        event1 = Event.objects.create(venue=new_england_venue(), title=event1_title, starttime=event_moment)
 
         event2_title = f"event {uuid.uuid4()}"
-        event2 = Event.objects.create(title=event2_title, starttime=event_moment)
+        event2 = Event.objects.create(venue=new_england_venue(), title=event2_title, starttime=event_moment)
 
         # make event1 go before event2
         event1.same_time_order_override = -1
@@ -63,10 +64,11 @@ class EventOrderingTestCase(TestCase):
         event_moment = now_datetime.replace(second=0)
 
         event1_title = f"event {uuid.uuid4()}"
-        event1 = Event.objects.create(title=event1_title, starttime=event_moment)
+        event1 = Event.objects.create(venue=new_england_venue(), title=event1_title, starttime=event_moment)
 
         event2_title = f"event {uuid.uuid4()}"
         event2 = Event.objects.create(
+            venue=new_england_venue(),
             title=event2_title,
             starttime=event_moment + relativedelta.relativedelta(minutes=1),
         )

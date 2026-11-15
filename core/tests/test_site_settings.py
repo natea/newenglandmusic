@@ -94,10 +94,10 @@ class MapsTestCase(TestCase):
 
 
 class SiteNameTestCase(TestCase):
-    @override_settings(SITE_NAME="New England Music")
+    @override_settings(SITE_NAME="StageHopper")
     def test_install_banner_names_the_site(self):
         response = self.client.get("/")
-        self.assertContains(response, "<b>INSTALL NEW ENGLAND MUSIC</b>")
+        self.assertContains(response, "<b>INSTALL STAGEHOPPER</b>")
         self.assertNotContains(response, "NYC NOISE")
 
     @override_settings(SITE_NAME="Boston Shows")

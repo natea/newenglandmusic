@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from core.geo_filters import COOKIE_NAME as GEO_COOKIE
 from core.models import Event, Venue
+from core.tests.new_england_fixture import new_england_venue
 from core.saved_shows import COOKIE_NAME, MAX_SAVED, format_saved, parse_saved
 from core.tests.geo_fixture import load_geo_fixture
 from core.utils_datemath import beginning_of_day, get_current_new_york_datetime
@@ -141,6 +142,7 @@ class SavedPageTestCase(TestCase):
 class SaveLinkRenderTestCase(TestCase):
     def setUp(self):
         self.show = Event.objects.create(
+            venue=new_england_venue(),
             title="a show", starttime=beginning_of_day(get_current_new_york_datetime()) + timedelta(days=1, hours=20)
         )
 
@@ -164,15 +166,15 @@ class SaveLinkRenderTestCase(TestCase):
 class SavedMapRenderTestCase(TestCase):
     def setUp(self):
         self.tomorrow = beginning_of_day(get_current_new_york_datetime()) + timedelta(days=1, hours=20)
-        self.located = Venue.objects.create(name="Paradise Rock Club", latitude=42.3519, longitude=-71.1195)
-        self.unlocated = Venue.objects.create(name="Nowhere")
+        self.located = Venue.objects.create(name="Paradise Rock Club", latitude=42.3519, longitude=-71.1195, state="MA")
+        self.unlocated = Venue.objects.create(name="Nowhere", state="MA")
 
     def saved_page(self, *events):
         self.client.cookies[COOKIE_NAME] = format_saved([event.pk for event in events])
         return self.client.get("/saved")
 
     def show(self, **fields):
-        return Event.objects.create(title="a show", starttime=self.tomorrow, **fields)
+        return Event.objects.create(title="a show", starttime=self.tomorrow, **{"venue": new_england_venue(), **fields})
 
     def test_toggle_with_mappable_saved_shows(self):
         response = self.saved_page(self.show(venue=self.located))

@@ -14,9 +14,9 @@ HERE = Location("02144", 42.4, -71.123)
 class DistanceLabelTestCase(TestCase):
     def setUp(self):
         tomorrow = timezone.now() + datetime.timedelta(days=1)
-        self.near = Venue.objects.create(name="Near Hall", latitude=42.4068, longitude=-71.1224)
-        self.far = Venue.objects.create(name="Far Barn", latitude=44.2623, longitude=-72.5809)
-        self.nowhere = Venue.objects.create(name="Unplaced")
+        self.near = Venue.objects.create(name="Near Hall", latitude=42.4068, longitude=-71.1224, state="MA")
+        self.far = Venue.objects.create(name="Far Barn", latitude=44.2623, longitude=-72.5809, state="MA")
+        self.nowhere = Venue.objects.create(name="Unplaced", state="MA")
         self.near_show = Event.objects.create(title="near show", starttime=tomorrow, venue=self.near)
         self.far_show = Event.objects.create(title="far show", starttime=tomorrow + datetime.timedelta(hours=1), venue=self.far)
         self.unplaced_show = Event.objects.create(title="unplaced show", starttime=tomorrow + datetime.timedelta(hours=2), venue=self.nowhere)

@@ -19,6 +19,7 @@ from django.db.models import Case, IntegerField, Min, Q, Value, When
 from django.utils import timezone
 
 from core.artist_matching import normalize
+from core.geo_filters import new_england_q
 from core.models import Artist, Band, Event, Venue
 from core.utils_datemath import beginning_of_day, get_current_new_york_datetime
 from core.views.act_index import SHORT_AREAS, sort_name
@@ -64,6 +65,7 @@ def acts(query, limit):
         return []
     today = beginning_of_day(get_current_new_york_datetime())
     upcoming = Q(performances__event__is_approved=True, performances__event__starttime__gte=today)
+    upcoming &= new_england_q(prefix="performances__event__venue__")
     found = []
     for model, kind in ((Band, "band"), (Artist, "artist")):
         found.extend(
@@ -102,7 +104,9 @@ def shows(query, limit):
     today = beginning_of_day(get_current_new_york_datetime())
     found = (
         # Event.objects: approved events only
-        Event.objects.filter(Q(title__icontains=query) | Q(artists__icontains=query), starttime__gte=today)
+        Event.objects.filter(
+            Q(title__icontains=query) | Q(artists__icontains=query), new_england_q(prefix="venue__"), starttime__gte=today
+        )
         .select_related("venue").order_by("starttime")[:limit]
     )
     return [Match("show", event.title_and_artists, show_detail(event), f"/event/{event.pk}") for event in found]

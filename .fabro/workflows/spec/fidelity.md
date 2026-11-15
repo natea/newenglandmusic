@@ -25,6 +25,10 @@ Its comments, oldest first, as JSON (`[{author, body}]`):
 {{ inputs.issue_thread }}
 ```
 
+## A revision's feedback
+
+If `.intentable/draft.json` says `"revision": true`, the draft answers feedback: the comments in the thread after the last bridge comment that linked the proposal. Treat that feedback as the latest decisions. Check each point of it in the change's files, and each question it asks in the draft's `message`. A point not acted on, or a question not answered, is blocking unless the message gives the reason.
+
 ## What changed since the last round
 
 If `.intentable/reviews/revise.md` exists, this isn't the first round. It says what was fixed since the last round and what wasn't, with the reason. Check those claims against the files.

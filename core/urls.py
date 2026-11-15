@@ -2,17 +2,19 @@ from django.conf import settings
 from django.urls import include, path, re_path
 from django.views.generic import TemplateView
 
-from .views.act_index import act_index, artists_index, without_trailing_slash
+from .views.act_index import act_index, artists_index, plural_address, without_trailing_slash
 from .views.search import suggest
 from .views.act_page import artist_page, band_page
 from .views.autocomplete import VenueAutocomplete
 from .views.calendar_feed import calendar_feed
 from .views import digest as digest_views
+from .views.discover import discover
 from .views.email_subscribe import email_subscribe
 from .views.event_gcal import event_gcal_redirect
 from .views.event_ics_download import event_ics_download
 from .views.event_redirect import event_redirect
 from .views.event_submission import EventCreateView
+from .views.health import health
 from .views.index import index, past_month_archive
 from .views.internal_db_dump import internal_db_dump
 from .views.location import set_location, suggest_locations
@@ -47,9 +49,14 @@ urlpatterns = [
     path("location", set_location, name="set_location"),
     path("location/suggest", suggest_locations, name="suggest_locations"),
     path("privacy", TemplateView.as_view(template_name="core/privacy.html"), name="privacy"),
+    path("terms", TemplateView.as_view(template_name="core/terms.html"), name="terms"),
+    path("health", health, name="health"),
     path("saved", saved_shows, name="saved_shows"),
     path("bands", act_index, name="act_index"),
+    path("discover", discover, name="discover"),
+    path("discover/", without_trailing_slash),
     re_path(r"^(?:bands|artists)(?:/[-\w]+)?/$", without_trailing_slash),
+    re_path(r"^(?P<kind>band|artist)(?:/(?P<slug>[-\w]+))?/?$", plural_address),
     path("search/suggest", suggest, name="search_suggest"),
     path("artists", artists_index, name="artists_index"),
     path("bands/<slug:slug>", band_page, name="band_page"),

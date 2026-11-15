@@ -5,6 +5,11 @@
 // the full search. without javascript the box stays the plain form it is in base.html.
 
 (function () {
+  // named events go through core/js/analytics.js, which sends nothing without posthog
+  function track(name, properties, leaving) {
+    if (window.siteAnalytics) window.siteAnalytics.capture(name, properties, leaving);
+  }
+
   const KIND_LABELS = { band: "Band", artist: "Artist", venue: "Venue", show: "Show" };
   const WAIT_MS = 150;
 
@@ -103,7 +108,10 @@
         suggestion: suggestion,
       },
       onConfirm: function (item) {
-        if (item && item.url) window.location.assign(item.url);
+        if (item && item.url) {
+          track("search_suggestion_chosen", { kind: item.kind, query: typed }, true);
+          window.location.assign(item.url);
+        }
       },
     });
 
@@ -113,7 +121,11 @@
     box.setAttribute("aria-label", "Search bands, artists, venues and shows");
     box.addEventListener("keydown", function (event) {
       if (event.key === "Enter" && box.value.trim()) {
+        // ours alone: the browser's own enter-to-submit would send the form (and the search
+        // event, core/js/analytics.js) a second time
+        event.preventDefault();
         event.stopPropagation();
+        track("search", { query: box.value.trim() }, true);
         form.submit();
       }
     }, true);

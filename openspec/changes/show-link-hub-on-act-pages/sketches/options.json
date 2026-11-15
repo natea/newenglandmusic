@@ -1,0 +1,20 @@
+[
+  {
+    "file": "a.html",
+    "label": "Joined line",
+    "thesis": "One more line in the lavender next-show band, in the card's plain link style, so the hub reads as part of the show-and-links strip at the top.",
+    "risk": "Quiet: it looks like any other link and may be missed, and the band becomes a three-part stack on a phone."
+  },
+  {
+    "file": "b.html",
+    "label": "Bordered block",
+    "thesis": "A white, plum-bordered block under the strip with a headline-sized link and a note that it leaves the site, making the hub the clearest thing on the card after the next show.",
+    "risk": "Loud: it can outweigh the next show and the act's facts, and a heavy box for what may be only a few links."
+  },
+  {
+    "file": "c.html",
+    "label": "Corner tab",
+    "thesis": "A small outlined chip at the right of the meta line, above the show strip, kept apart from the Links row without taking a row of its own.",
+    "risk": "Sits above the next-show strip, not under it as the proposal says, and can wrap or crowd a long meta line on narrow screens."
+  }
+]

@@ -1,7 +1,7 @@
 # artist-records Specification
 
 ## Purpose
-TBD - created by archiving change add-artists-and-bands. Update Purpose after archive.
+Keep a record of every artist and band the site lists: their members, where they came from (an imported list, Sooz's curated lists or an event's artist names), and what MusicBrainz, Wikipedia, Wikidata and Commons add to them. Admins can check and correct the records, and acts held for review stay off the site until someone looks at them.
 
 ## Requirements
 
@@ -17,7 +17,7 @@ The site SHALL keep `Artist` records, for a person or solo act, and `Band` recor
 - **THEN** the band lists the artist as a former member
 
 ### Requirement: Import from a CSV file or a Google Sheet tab
-`import_artists` SHALL read rows from a CSV file (`--csv <path>`) or a Google Sheet tab (`--sheet <id> --tab <name>`), in one layout with the columns `Act_ID`, `Name`, `Kind` ("artist" or "band"), `Members`, `Town`, `State`, `Website`, `Bandcamp`, `MusicBrainz_ID` and `Notes`. Rows SHALL be keyed by `Act_ID`: a row with a new ID creates a record, and one with a known ID updates it. `Members`, for a band, SHALL list its members separated by semicolons (not counting one inside a role's parentheses), each optionally followed by a role in parentheses ("Kim Gordon (bass)"); an entry that isn't a name with an optional role SHALL be reported and skipped; a member SHALL be matched to an existing artist with that name, or created. An artist's own row SHALL take over the record made for them as a member, when exactly one artist has that name and no `Act_ID`. The import SHALL only set the fields its columns hold, SHALL NOT delete any record or membership, and SHALL NOT overwrite a field an editor or MusicBrainz set, nor remove a membership from MusicBrainz or an editor. A row it can't use (no ID, no name, an unknown kind) SHALL be reported and skipped. `--dry-run` SHALL report what it would do and save nothing. The sheet SHALL be read with the `gog` CLI locally and with the service account on a server, as the venue sheet is.
+`import_artists` SHALL read rows from a CSV file (`--csv <path>`) or a Google Sheet tab (`--sheet <id> --tab <name>`), in one layout with the columns `Act_ID`, `Name`, `Kind` ("artist" or "band"), `Members`, `Town`, `State`, `Website`, `Bandcamp`, `Instagram`, `YouTube`, `MusicBrainz_ID` and `Notes`; `Instagram` and `YouTube` SHALL fill the record's Instagram and YouTube links. Rows SHALL be keyed by `Act_ID`: a row with a new ID creates a record, and one with a known ID updates it. `Members`, for a band, SHALL list its members separated by semicolons (not counting one inside a role's parentheses), each optionally followed by a role in parentheses ("Kim Gordon (bass)"); an entry that isn't a name with an optional role SHALL be reported and skipped; a member SHALL be matched to an existing artist with that name, or created. An artist's own row SHALL take over the record made for them as a member, when exactly one artist has that name and no `Act_ID`. The import SHALL only set the fields its columns hold, SHALL NOT delete any record or membership, and SHALL NOT overwrite a field an editor or MusicBrainz set (a value filled from the record's link hub, see `artist-link-hubs`, counts as unset: the row's value replaces it and is marked "import"), nor remove a membership from MusicBrainz or an editor. A row it can't use (no ID, no name, an unknown kind) SHALL be reported and skipped. `--dry-run` SHALL report what it would do and save nothing. The sheet SHALL be read with the `gog` CLI locally and with the service account on a server, as the venue sheet is.
 
 #### Scenario: Importing a band with members
 - **WHEN** a row has `Act_ID` A0001, `Name` "Krill", `Kind` "band" and `Members` "Jonah Furman (bass, vocals); Aaron Mendelsohn (guitar)"
@@ -38,6 +38,14 @@ The site SHALL keep `Artist` records, for a person or solo act, and `Band` recor
 #### Scenario: A bad row
 - **WHEN** a row's `Kind` is "orchestra"
 - **THEN** the import reports that row and skips it, and imports the others
+
+#### Scenario: Instagram and YouTube columns
+- **WHEN** a row has `Instagram` "https://instagram.com/27theband/" and `YouTube` "https://www.youtube.com/27boston"
+- **THEN** the record's Instagram and YouTube links are those, unless an editor or MusicBrainz set them
+
+#### Scenario: A row replaces a hub fill
+- **WHEN** a band's Instagram link was filled from its link hub, and the sheet's row has a different `Instagram`
+- **THEN** the band's Instagram link is the row's, marked "import"
 
 ### Requirement: Enrichment from MusicBrainz
 `enrich_artists_from_musicbrainz` SHALL find each artist's and band's MusicBrainz artist and store its ID, and from it: its type, country, area, begin and end dates, genres, and links to its official website, Bandcamp, Wikidata and Discogs. A record SHALL keep its own website or Bandcamp URL where it already has one. For a band, it SHALL add the members MusicBrainz lists, with their roles and years, as memberships with the source "musicbrainz", matching each member to an artist with that MusicBrainz ID, then to one with that name and no MusicBrainz ID, and otherwise creating one. A record with a MusicBrainz ID from the import or an editor SHALL be looked up by that ID rather than searched for. A search SHALL be accepted only when exactly one candidate's name (or alias) matches the record's and it is the right kind (a person for an artist, a group for a band) and, for a record with a state, MusicBrainz doesn't place it only outside the US (by its area or its begin area), or when the evidence below picks one; otherwise the record SHALL be marked "ambiguous" or "not found", with the time it was checked. It SHALL make at most one MusicBrainz request a second, send the contact user agent, accept `--limit`, `--refresh` and `--dry-run`, and skip records checked before unless refreshing.
@@ -93,7 +101,7 @@ When a name matches several MusicBrainz candidates of the right kind, enrichment
 - **THEN** the Providence group is accepted
 
 ### Requirement: Bandcamp only as a link
-The site SHALL NOT request anything from Bandcamp. A record's Bandcamp URL SHALL come only from an editor, the import, or MusicBrainz's links, and SHALL be accepted only when it's an `https` URL on `bandcamp.com` or a subdomain of it.
+The site SHALL NOT request anything from Bandcamp. A record's Bandcamp URL SHALL come only from an editor, the import, MusicBrainz's links, or the record's link hub (see `artist-link-hubs`), and SHALL be accepted only when it's an `https` URL on `bandcamp.com` or a subdomain of it.
 
 #### Scenario: A Bandcamp link from MusicBrainz
 - **WHEN** MusicBrainz lists a band's Bandcamp page
@@ -104,7 +112,7 @@ The site SHALL NOT request anything from Bandcamp. A record's Bandcamp URL SHALL
 - **THEN** the row's Bandcamp URL is reported as invalid and not saved, and the rest of the row is imported
 
 ### Requirement: Admins manage the records
-The admin SHALL list artists and bands with their town, state and MusicBrainz status, filter them by state and by status, and search them by name. A band's page SHALL show its members inline, and an artist's page the bands they're in. An admin SHALL be able to set a record's MusicBrainz ID by hand, which marks it as the editor's and keeps later enrichment from replacing it, and to clear a match so the next run searches again. A field an admin edits SHALL be marked as the editor's, so the import doesn't overwrite it. MusicBrainz's genres SHALL be credited to MusicBrainz where they're shown.
+The admin SHALL list artists and bands with their town, state and MusicBrainz status, filter them by state, by status and by source, show each record's sources, and search them by name. A band's page SHALL show its members inline, and an artist's page the bands they're in. An admin SHALL be able to set a record's MusicBrainz ID by hand, which marks it as the editor's and keeps later enrichment from replacing it, and to clear a match so the next run searches again. A field an admin edits SHALL be marked as the editor's, so the import doesn't overwrite it. MusicBrainz's genres SHALL be credited to MusicBrainz where they're shown.
 
 #### Scenario: Setting the MusicBrainz ID by hand
 - **WHEN** an admin sets an "ambiguous" band's MusicBrainz ID and the enrichment runs with `--refresh`
@@ -113,6 +121,10 @@ The admin SHALL list artists and bands with their town, state and MusicBrainz st
 #### Scenario: Members inline
 - **WHEN** an admin opens a band
 - **THEN** its members are listed with their roles, years and sources, and can be added or removed
+
+#### Scenario: Filtering by source
+- **WHEN** an admin filters bands by the source "ohb"
+- **THEN** only bands from that list are shown, including ones that were also made from events
 
 ### Requirement: Records from the events' artist names
 `import_artists_from_events` SHALL read the title and Artists column of every approved event, past and upcoming, and split them into names as the Spotify matching does (`event_artist_names`: a title's tour and show words dropped), since every source puts the headliner in the title and leaves it out of the Artists column; it SHALL skip placeholders and names that are already an artist's or a band's (compared normalized). For each remaining name it SHALL search MusicBrainz for a person and for a group of that name, choosing among each kind's candidates by the rules enrichment uses (an exact name or alias; with several, a covered state, then Last.fm's MusicBrainz ID). A name matched as exactly one kind, with the other kind not found, SHALL become a record of that kind (an Artist for a person, a Band for a group) with its MusicBrainz ID, no `Act_ID`, and no other change. A duo billing (two names of two words or more joined by "&" or "and", as in "Louis Cole & Chiquita Magic") not on MusicBrainz as a whole SHALL have each of its acts looked up the same way instead, and only the acts not found SHALL go on the review list; when none is found, the billing SHALL go there whole, as it may be one band. Every other name SHALL NOT be saved, and SHALL be written to a review CSV in the import layout, with `Act_ID` and `Kind` blank, the reason ("both a person and a group", "several with this name", "not on MusicBrainz"), the number of events naming it, and one of them. It SHALL accept `--limit`, `--dry-run` and `--review-csv <path>`, pace MusicBrainz at one request a second, stop when MusicBrainz stays busy (keeping the records made), and be recorded as a job run.
@@ -189,7 +201,7 @@ An event SHALL have any number of performers, each an artist or a band (exactly 
 - **THEN** the event is linked to that band
 
 ### Requirement: Photos and social links from Wikidata, Commons and MusicBrainz
-For a matched record with a Wikidata ID, enrichment SHALL read the item's image (P18), Instagram username (P2003) and YouTube channel ID (P2397). For the image it SHALL fetch the file's licence and author from Wikimedia Commons and keep the file name, author, licence name and licence link only when the licence is free (public domain, CC0, CC BY or CC BY-SA); otherwise no photo. From MusicBrainz's links it SHALL also take an `instagram.com` link and a YouTube channel link. A record's Instagram and YouTube links SHALL be kept when an editor set them, and Wikidata's or MusicBrainz's otherwise. No image file SHALL be stored. Requests SHALL send the contact user agent and be paced.
+For a matched record with a Wikidata ID, enrichment SHALL read the item's image (P18), Instagram username (P2003) and YouTube channel ID (P2397). For the image it SHALL fetch the file's licence and author from Wikimedia Commons and keep the file name, author, licence name and licence link only when the licence is free (public domain, CC0, CC BY or CC BY-SA); otherwise no photo. From MusicBrainz's links it SHALL also take an `instagram.com` link and a YouTube channel link. A record's Instagram and YouTube links SHALL be kept when an editor set them, and Wikidata's or MusicBrainz's otherwise. A link filled from the record's link hub SHALL be kept when Wikidata and MusicBrainz have none, and replaced by theirs when they do. No image file SHALL be stored. Requests SHALL send the contact user agent and be paced.
 
 #### Scenario: A free photo
 - **WHEN** a band's Wikidata item has the image "Bonerama2006.jpg", which Commons lists under CC BY-SA 3.0 by a named author
@@ -206,3 +218,125 @@ For a matched record with a Wikidata ID, enrichment SHALL read the item's image 
 #### Scenario: An editor's link stays
 - **WHEN** an editor set a band's Instagram link and enrichment finds another
 - **THEN** the editor's link stays
+
+### Requirement: Records remember the lists that name them
+Each artist and band SHALL keep the set of sources that named it, as short keys (`ohb` for Sooz's Oh Hello Boston list). Importing a list SHALL add its key to every record it makes or finds, once, and SHALL NOT remove any key. A record made from events, or by hand, has no source keys unless a list later names it.
+
+#### Scenario: A list names an act made from events
+- **WHEN** the band "Dropkick Murphys", made from events, is on the list imported as "ohb"
+- **THEN** it is the same record, with the source "ohb", and no second Dropkick Murphys is made
+
+#### Scenario: Importing twice
+- **WHEN** the same list is imported twice
+- **THEN** every record it names has "ohb" once, and nothing new is made the second time
+
+### Requirement: Importing a curated list of names
+`import_act_list --source <key>` SHALL read a list from one or more CSV files (`--csv <path>`) or Google Sheet tabs (`--sheet <id> --tab <name>`, `--tab` repeatable) in the list's own columns: the act's name (`Artist` or `Name`), and optionally `City` or `Town`, `State` (a full state name or its two-letter code), `Website`, `Bandcamp`, `Instagram`, `YouTube`, `MusicBrainz ID` and `Kind`. For each name it SHALL decide the kind on MusicBrainz: with a MusicBrainz ID, a person SHALL make an artist and a group a band; without one, the name SHALL be searched as the events' names are, and exactly one group SHALL make a band and exactly one person an artist, with the list's `Kind` settling a name that is both. Rows naming the same act, within a tab or across tabs (the same name ignoring case, accents and punctuation, or the same MusicBrainz ID), SHALL be merged into one before any lookup, the first tab's values winning where they differ and each difference reported. An act already on the site, by its MusicBrainz ID or else by its name and kind, SHALL be found rather than made again. It SHALL fill only unset fields or its own, never an editor's or MusicBrainz's, and add its source; a value filled from the record's link hub (see `artist-link-hubs`) counts as unset, and the list's value replaces it. Every act on the list SHALL become a record, since the list is vetted. An act it can't settle cleanly SHALL be made held for review (see "Acts held for review stay off the site"), with each reason: not on MusicBrainz, several with the name, both kinds and no `Kind` (made as a band), an ID MusicBrainz doesn't have, an ID whose MusicBrainz act has a different name or is typed as neither a person nor a group (an act with no type takes the list's `Kind`), or a match MusicBrainz places only outside the states the site covers. Its kind SHALL be MusicBrainz's when known, else the list's `Kind`, else band. After importing, it SHALL link every approved event to the records its names are, as the events' import does, re-rendering each event whose links change. `--dry-run` SHALL report and save nothing, and `--limit` SHALL stop after that many names. The run SHALL be recorded as a job run.
+
+#### Scenario: A row with a MusicBrainz ID
+- **WHEN** a row is "'Til Tuesday" with MusicBrainz ID 8cf8869d-e066-4c94-b734-fe05749badf0, a group
+- **THEN** a band "'Til Tuesday" is made with that ID and the source "ohb"
+
+#### Scenario: A row found by name
+- **WHEN** a row is "28 Degrees Taurus" with no ID, and MusicBrainz has exactly one group of that name
+- **THEN** a band is made with that group's ID, its town, state and Bandcamp link from the row, and the source "ohb"
+
+#### Scenario: Both kinds, settled by the list
+- **WHEN** MusicBrainz has a person and a group named "Horse", and the row's Kind is "Band"
+- **THEN** a band "Horse" is made with the group's ID
+
+#### Scenario: Not on MusicBrainz
+- **WHEN** a row is "3 1/2 Girls" with no Kind, and MusicBrainz has no act of that name
+- **THEN** a band "3 1/2 Girls" is made with the source "ohb", held for review as "not on MusicBrainz", with its links from the row
+
+#### Scenario: Matched to an act from elsewhere
+- **WHEN** a row is "Sunburst" from Boston, MA, and the one MusicBrainz group named Sunburst is from Ohio
+- **THEN** the band is made with that ID but held for review as "placed outside the Northeast"
+
+#### Scenario: An ID for a different act
+- **WHEN** a row is "27" with a MusicBrainz ID whose act is named "Twenty Seven Strings"
+- **THEN** the band is made held for review as "MusicBrainz's name differs"
+
+#### Scenario: An act on both tabs
+- **WHEN** "Adam Sherman" is on "In Rotation" and on "2026 backlog", and the import reads both tabs
+- **THEN** he is looked up once, one artist is made with the source "ohb", and a field the two rows give differently takes "In Rotation"'s value and is reported
+
+#### Scenario: A name repeated on one tab
+- **WHEN** a tab lists the same act twice, once as "The Dresden Dolls" and once as "Dresden Dolls"
+- **THEN** one record is made
+
+#### Scenario: No type on MusicBrainz
+- **WHEN** a row is "Wire Lines" with Kind "Band" and a MusicBrainz ID whose act has no type recorded
+- **THEN** a live band is made with that ID, its kind from the row
+
+#### Scenario: State names
+- **WHEN** a row's State is "Massachusetts"
+- **THEN** the record's state is "MA"
+
+#### Scenario: Existing events are linked
+- **WHEN** an approved upcoming event's artists are "28 Degrees Taurus, Kim Deal", and the import makes the band "28 Degrees Taurus"
+- **THEN** the event is linked to 28 Degrees Taurus, in billing order with Kim Deal, and its listing is re-rendered
+
+#### Scenario: A dry run
+- **WHEN** the list is imported with `--dry-run`
+- **THEN** it reports what it would make, find and review, and saves nothing
+
+#### Scenario: A list replaces a hub fill
+- **WHEN** a band's Bandcamp link was filled from its link hub, and the list's row has a different `Bandcamp`
+- **THEN** the band's Bandcamp link is the list's, marked with the list's source
+
+### Requirement: Acts held for review stay off the site
+An artist or band held for review SHALL have no public page (its address answers 404), SHALL NOT be linked to any event, and SHALL NOT be listed in the sitemap, until an editor marks it ready. The admin SHALL filter artists and bands by whether they need review, show each one's reasons, and offer a "Mark ready" action, which SHALL clear the hold and its reasons and link the approved events that name the act. Only a curated list's import SHALL hold an act; a record made from events, by hand, or already live SHALL NOT be held by it.
+
+#### Scenario: Hidden while held
+- **WHEN** the band "3 1/2 Girls" is held for review and an approved event lists "3 1/2 Girls"
+- **THEN** `/bands/3-1-2-girls` answers 404 and the event isn't linked to it
+
+#### Scenario: Marked ready
+- **WHEN** an editor selects "3 1/2 Girls" in the admin's "Needs review" list and runs "Mark ready"
+- **THEN** it no longer needs review, its page loads, and the event that lists it is linked to it
+
+#### Scenario: A live act stays live
+- **WHEN** the list names "Dropkick Murphys", already live from events, and its MusicBrainz match would have been held
+- **THEN** Dropkick Murphys stays live, with the source "ohb" added
+
+### Requirement: New artists and bands are looked up on MusicBrainz every day
+The daily job SHALL look up on MusicBrainz at most 100 artists and bands per run, from those not yet looked up (bands first, then artists, each by name), and SHALL NOT refresh records looked up before. A lookup that finishes counts, whether matched, ambiguous or not found. A run MusicBrainz asks to wait SHALL stop and keep what it found, and the next day's run carries on.
+
+#### Scenario: More records than the limit
+- **WHEN** 130 records have not been looked up and the daily step runs with its limit of 100
+- **THEN** 100 are looked up, bands before artists, and 30 remain for the next day
+
+#### Scenario: A band's members
+- **WHEN** a band not yet looked up is found on MusicBrainz and its members are not yet records
+- **THEN** the members are added as artists not yet looked up, and a later daily run looks them up and fills in their bio, photo and links
+
+#### Scenario: Already looked up
+- **WHEN** the daily step runs and every record has been looked up before, whether matched, ambiguous or not found
+- **THEN** no MusicBrainz request is made for any of them
+
+#### Scenario: MusicBrainz asks to wait
+- **WHEN** MusicBrainz asks the run to wait partway through the step
+- **THEN** the run stops, the records already looked up keep what was found, and the rest are looked up on the next day's run
+
+#### Scenario: Unmatched records are not retried
+- **WHEN** a record was looked up and left ambiguous, and the daily step runs again
+- **THEN** it is not looked up again, and an editor can still settle or clear it in the admin
+
+#### Scenario: A record held for review
+- **WHEN** a record held for review has not been looked up
+- **THEN** the daily step looks it up, and it stays hidden from the public site until an editor marks it ready
+
+### Requirement: Link-hub address in enrichment
+Enrichment SHALL take a MusicBrainz link, of any type, on a supported link hub (see `artist-link-hubs`) as the record's link-hub address when the record has none or has one MusicBrainz set, and SHALL NOT replace an editor's. This is in addition to the links "Enrichment from MusicBrainz" takes (the hub link is none of its homepage, Bandcamp, Wikidata or Discogs links), so that requirement is not modified.
+
+#### Scenario: Hub link among several links
+- **WHEN** MusicBrainz lists a band's "social network" link on `linktr.ee` and one on `facebook.com`
+- **THEN** the band's hub address is the Linktree one
+
+### Requirement: Hub data survives clearing a match
+The hub fields and the links filled from a hub SHALL survive clearing a MusicBrainz match, and the address SHALL stay marked as MusicBrainz's.
+
+#### Scenario: Clearing a match
+- **WHEN** an admin clears a band's MusicBrainz match, and the band's Instagram link was filled from its hub
+- **THEN** the Instagram link and the hub's findings stay, and the hub address, if MusicBrainz's, stays marked as MusicBrainz's

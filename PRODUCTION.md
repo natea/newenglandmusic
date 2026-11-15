@@ -1,4 +1,4 @@
-# Deploying New England Music
+# Deploying StageHopper
 
 How to run this site in production. For running it locally, see `AGENTS.md`.
 
@@ -52,8 +52,8 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 - **`DEFAULT_FROM_EMAIL`:** the sender of outgoing email.
   - Submission emails go out through Amazon SES, so this must be an address verified in SES.
   - They also need `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
-- **`PROTOMAPS_API_KEY`:** the home page's maps. In your Protomaps account, restrict it to your domain. `MAP_CENTER_LATITUDE`, `MAP_CENTER_LONGITUDE` and `MAP_ZOOM` set where the maps start.
-- **`GOOGLE_ANALYTICS_ID`, `GOATCOUNTER_CODE`:** analytics. Each one loads only when it is set.
+- **`PROTOMAPS_API_KEY`:** the home page's maps. In your Protomaps account, restrict it to your domain: its CORS origins list each address the pages are served from (now `https://stagehopper.app`), and the day maps are blank anywhere else. `MAP_CENTER_LATITUDE`, `MAP_CENTER_LONGITUDE` and `MAP_ZOOM` set where the maps start.
+- **`GOOGLE_ANALYTICS_ID`, `GOATCOUNTER_CODE`, `POSTHOG_PROJECT_TOKEN` and `POSTHOG_HOST`:** analytics. Each loads only when it is set; see "Analytics" below.
 
 ## The web process
 
@@ -84,21 +84,18 @@ gunicorn nycnoise.wsgi:application
 `render.yaml` is a Render Blueprint for the web service and its Postgres database, in the Virginia region. It doesn't include the scheduled jobs yet; see [Before the jobs can run on a server](#before-the-jobs-can-run-on-a-server).
 
 - **What deploys:** Render deploys `main` from the GitHub repo [natea/newenglandmusic](https://github.com/natea/newenglandmusic), and only once CI has passed on that commit (`autoDeployTrigger: checksPass`). `origin` is the upstream nyc noise repo; never deploy from or push to it.
-- **Plans:** $7 a month for the web service; the database is still free.
+- **Plans:** $7 a month for the web service and $6 a month (plus storage) for the database.
   - **Web service:** `0.5c-512mb` ($7 a month), with two gunicorn workers.
     - It stays awake. The `free` plan slept after 15 minutes without visitors and took about a minute to wake.
     - It has a Shell tab for one-off commands, which can also run from your machine (see below).
-  - **Database:** `free`, with these limits:
-    - It expires 30 days after it's created, and Render deletes it 14 days after that.
-    - It has no backups and holds 1 GB (the data is about 20 MB).
-    - Only one free database is allowed per workspace.
-  - **Keeping the data:** before the 30 days are up, either upgrade the database to a paid plan in the dashboard (it keeps its data, and `0.1c-256mb` is $10.50 a month), or dump it and restore into a new one. Until then, take your own dumps: `pg_dump --format=custom "<External Database URL>" > prod-YYYY-MM-DD.dump`.
+  - **Database:** `0.1c-256mb` ($6 a month for compute, plus storage), upgraded from `free` on 11 November 2026, since free databases are deleted after 30 days and have no backups. `render.yaml`'s `plan` must stay the dashboard's name for it, or a blueprint sync tries to change it. The data is about 20 MB.
+  - **Backups:** the paid plan has point-in-time recovery for a limited window. Take your own dumps too, before any risky change, with a `pg_dump` of version 17 or newer (the database is Postgres 17; on a Mac with Homebrew, `/opt/homebrew/opt/postgresql@17/bin/pg_dump`): `pg_dump --format=custom "<External Database URL>" > prod-YYYY-MM-DD.dump`. Check a dump by restoring it into a local scratch database (`createdb nem_scratch && pg_restore --no-owner --dbname nem_scratch prod-YYYY-MM-DD.dump`), never into the External Database URL. Keep dumps out of the repository: they hold admin password hashes.
 - **Settings Render fills in:**
   - `DJANGO_SECRET_KEY` is generated.
   - `DATABASE_URL` comes from the database.
   - The service's `onrender.com` hostname is added to `ALLOWED_HOSTS` automatically.
   - Its URL is used as `SITE_URL` when that's blank.
-- **Settings you're asked for when creating the Blueprint:** `ALLOWED_HOSTS` and `SITE_URL` (leave both blank until there's a custom domain), `PROTOMAPS_API_KEY`, `CONTACT_EMAIL` and `GOATCOUNTER_CODE`. All are optional.
+- **Settings you're asked for when creating the Blueprint:** `ALLOWED_HOSTS`, `SITE_URL` and `CANONICAL_HOST` (blank until there's a custom domain; but `SITE_URL` must be set, to the onrender address if nothing else, because the scheduled jobs take it from the web service, see below), `PROTOMAPS_API_KEY`, `CONTACT_EMAIL` and `GOATCOUNTER_CODE`. All are optional.
 
 **First deploy:**
 1. In the Render dashboard, choose **New > Blueprint**, connect the GitHub repo and apply `render.yaml`.
@@ -138,7 +135,12 @@ DATABASE_URL="<External Database URL>" DJANGO_SETTINGS_MODULE=nycnoise.settings.
 
 **Staff accounts without superuser access.** Every `migrate` keeps a group named `admin` holding every permission on the site's own records (events, venues, artists, bands, job runs and the rest of `core`) and none on users, groups or sites (`core/admin_group.py`). To give someone an account, sign in as a superuser, add them at `/admin/auth/user/add/`, then tick **Staff status**, leave **Superuser status** off, and choose the `admin` group. They can edit the site's records but can't add accounts or change anyone's access, their own included.
 
-**A custom domain:** add it under the service's **Settings > Custom Domains**, then set `ALLOWED_HOSTS` to the domain and `SITE_URL` to `https://` plus the domain. The next deploy's `migrate` updates Django's Sites record to match (`core/site_record.py`); it's read-only in the admin, since it always follows `SITE_URL` and `SITE_NAME`.
+**The address: stagehopper.app.** The site is served at https://stagehopper.app, a custom domain on the web service (Render adds www and redirects it to the apex). `prod.py` already allows stagehopper.app and www.stagehopper.app, so `ALLOWED_HOSTS` needs only other domains. Two settings on the web service finish it:
+
+- `SITE_URL=https://stagehopper.app`: share links, the sitemap, the calendar feeds' links, and the contact address the API clients send. The scheduled jobs take it from the web service, so press **Manual Sync** on the blueprint after changing it.
+- `CANONICAL_HOST=stagehopper.app`: switches on `core/middleware.py`. Any other host (www, newenglandmusic.onrender.com) is redirected permanently to the same path at `SITE_URL` (301, or 308 for a form), except `/health`, Render's health check. The landing page's old paths at stagehopper.app (its `.html`, `.json` and `.geojson` files, `og*.png`, `/boston/`, `/nyc/`) go to the same path at https://info.stagehopper.app, where StageHopper's landing page now lives (natea/twag, `docs/`). Clearing `CANONICAL_HOST` turns all redirects off with one redeploy.
+
+DNS is in Cloudflare, DNS only: the apex's A records and www point at Render; `info` is a CNAME to natea.github.io; the MX and SPF records are Cloudflare's email routing; nola., nolajazzfest. and worldcup. are other sites. The steps of the move from newenglandmusic.onrender.com are in `openspec/changes/rename-to-stagehopper/design.md` (decision 7). Each deploy's `migrate` updates Django's Sites record to match `SITE_URL` and `SITE_NAME` (`core/site_record.py`).
 
 ## Scheduled jobs
 
@@ -165,7 +167,7 @@ These run in this order. Each one depends on the one before it:
 
 | Command | Suggested schedule | Cost per run |
 |---|---|---|
-| `sync_venues_from_gsheets` | daily | free |
+| `sync_venues_from_gsheets` | by hand only, `--dry-run` first: venues are kept in the admin, and it overwrites editors' changes | free |
 | `lookup_venue_places` | daily (it only looks up venues without a match yet, so most days it does nothing) | Places: about one call per new venue. 5,000 calls a month are free |
 | `lookup_venue_places --refresh-stale` | daily, after the lookup | Places: refreshes coordinates more than 25 days old by place ID, so each venue about every 25 days: roughly 880 Place Details Pro calls a month, inside the 5,000 free. Every run also deletes coordinates older than 30 days, as Google's terms require |
 | `check_event_sources` | weekly | free, but it crawls every venue's site, so don't run it more often |
@@ -173,10 +175,12 @@ These run in this order. Each one depends on the one before it:
 | `match_eventbrite_organizers` | weekly, after the source check | free (Eventbrite allows 2,000 requests an hour). It fetches the pages of venues that link Eventbrite, politely, and links only new venues unless given `--recheck` |
 | `match_seatgeek_venues` | weekly, after the Eventbrite matching | free (SeatGeek publishes no limit; the client waits half a second between requests). About 80 venues take two minutes. It links only new venues unless given `--recheck` |
 | `lookup_venue_neighborhoods` | weekly, after the SeatGeek matching | free. It finds venues on OpenStreetMap (Nominatim, one request a second) by their own name and town, and reads their neighborhood, with Overpass for New York and DC. Only venues never looked up, or looked up a year ago; up to 300 a run |
+| `read_artist_link_hubs` | weekly, last | free. It reads each artist's and band's link-hub page (Linktree and its rivals), one request each, a second apart, only those never read or read over seven days ago, up to 100 a run. See "Link hubs" |
 | `match_spotify_artists --limit 500` | daily, after `fetch_events` | free, but rate limited. It searches Spotify for artist names it hasn't seen, and for automatic matches more than 30 days old, half a second apart, taking about 4 minutes. Spotify doesn't publish its limits, but the number of searches is what counts, not their pace: about 650 half a second apart (2026-10-27) and about 680 two seconds apart (2026-10-28) each got the app blocked for about a day. The block applies to the whole developer account, so a dev app's runs use up production's allowance too. 500 a morning stays under it, and clears a first run's backlog of about 2,700 names in about six days. When blocked, a run stops at once and keeps what it found, and the next morning's carries on. After the backlog, each morning searches only new names |
 | `match_apple_music_artists --limit 1000` | daily, after the Spotify matching | free with the Developer Program membership. Like the Spotify matching, but also looks up each matched artist's top song. Requests go half a second apart, and a long rate-limit block stops the run the same way. It does nothing until the MusicKit key is set |
 | `resolve_artists_with_lastfm --limit 300` | daily, after the Apple Music matching | free. For names several Spotify or Apple Music artists share, it reads Last.fm (half a second apart) and MusicBrainz (a second apart), taking up to about 8 minutes. It does nothing until `LASTFM_API_KEY` is set |
 | `match_youtube_artists --limit 90` | daily, after the Last.fm resolving | free within YouTube Data API v3's 10,000 units a day. It matches only artists already matched on Spotify or Apple Music: first through Wikidata and MusicBrainz, then at most 90 searches for their Last.fm top track (101 units each). It does nothing until `YOUTUBE_API_KEY` is set |
+| `enrich_artists_from_musicbrainz --limit 100` | daily, last, after the YouTube matching | free. Looks up the bands, then the artists, not yet looked up on MusicBrainz (a second apart; about 2 to 4 seconds a record), so up to about 7 minutes. It never refreshes records looked up before, so a backlog clears over several mornings, and a band's new members are looked up the morning after. A MusicBrainz rate limit stops the run, which keeps what it found |
 | `fetch_events --all` | daily | Anthropic: about $0.30 per full run, so about $9 a month. Labelling new events adds a little more. Ticketmaster and Eventbrite: a few hundred requests each; SeatGeek: one per linked venue |
 
 ### How they run on Render
@@ -185,11 +189,11 @@ These run in this order. Each one depends on the one before it:
 
 | Job | Schedule (UTC) | Script | Runs |
 |---|---|---|---|
-| `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | sheet sync, Places lookup, coordinate refresh, `fetch_events --all`, Spotify and Apple Music matching |
-| `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster, Eventbrite and SeatGeek matching, neighborhoods |
+| `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | Places lookup, coordinate refresh, `fetch_events --all`, Spotify, Apple Music, Last.fm and YouTube matching, MusicBrainz enrichment |
+| `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster, Eventbrite and SeatGeek matching, neighborhoods, link hubs |
 | `newenglandmusic-digest` | `0 13 * * 4`: Thursdays, 8 or 9 am eastern | `bin/digest.sh` | `send_weekly_digests` (see "The weekly email") |
 
-- **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed sheet sync leaves the venues as they were, and they can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.
+- **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed Places lookup leaves the venues as they were, and their events can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.
 - **Builds:** the jobs build with `bin/build-job.sh`, which only installs the requirements. Only the web service migrates. Like the web service, they deploy a commit only once CI passes.
 - **Setting them up:** after `render.yaml` changes on `main`, run a blueprint sync in the Render dashboard (the blueprint's page, **Manual Sync**). It shows the services it will create and their cost for approval.
 - **New variables for the jobs: set them on the web service first.** A job's variable that copies the web service's (`fromService` with an `envVarKey`) makes the blueprint sync fail when the web service doesn't have that variable yet. The sync fails within a second, and Render doesn't say why. That happened on 2026-10-27, when the Apple Music variables were pushed before they were set on the web service, and on 2026-10-28 with `YOUTUBE_PREVIEWS`. So:
@@ -219,6 +223,8 @@ Google's terms allow storing a place ID indefinitely and its coordinates for up 
 - **Why a venue needs review:** for a match needing review, the lookup also records which of its checks the top result failed (name, state, more than 25 km away) and its distance from the sheet's town. These are our own judgments, not Places content, and the distance is deleted with the coordinates. The venue admin shows them in a "why review" column, such as "name differs · 0.4 km away", and filters by them. Venues marked for review before this existed show "not recorded": run `lookup_venue_places --review` once (one Places search per review venue, about 180, inside the free tier; try `--dry-run --limit 20` first) to fill them in.
 - **Venues with no single place:** festivals, Porchfests and other events spread across a town have no place for Google to find. Select them in the venue admin and choose "Don't look up on Google": their matched place is removed, they keep the sheet's town coordinates, and no lookup (daily, `--refresh`, `--review` or `--refresh-stale`, even with `--sheet-ids`) searches for them again. "Clear place lookup" alone isn't enough, since the daily run searches again for any venue with no lookup status. Filter by the status "Not looked up (no single place)" to see them; clearing their lookup undoes it.
 - **Google's name for a review venue:** the venue admin shows it live, since it can't be stored. A review venue's page looks it up when it opens, and the list has a "show Google's name" link per review venue, looked up only on a click. Each is one Place Details request for the name alone, counted in the same free 5,000 a month; loading the list costs nothing.
+- **Exporting venues:** the venue list at `/admin/core/venue/` has an **Export to CSV** button, for staff who may view venues. It downloads `venues-YYYY-MM-DD.csv`, one row per venue the list is showing (its search and filters carry over, every page is included), with a byte order mark so Excel reads accents. The columns are the sheet's fields (ID, name, active, type, size, state, town, county, the sheet's latitude and longitude, genres joined by `; `, notes, booking, access and safety details), the neighborhood and its source, the Ticketmaster, Eventbrite and SeatGeek IDs and ticket page, the Google place ID, lookup status and review reasons, and the last event-source check (best source, events page, calendar feed, ticketing platforms, when checked). Yes/no flags read "yes", "no" or blank when unknown, and text starting like a formula gets a leading apostrophe. **Left out:** Google's place coordinates, the distance worked out from them and when they were fetched, because the terms above keep them for 30 days and a file outlives that. A test fails when a new `Venue` field is neither exported nor named as left out in `core/venue_export.py`.
+- **Exporting artists and bands:** the Artist list at `/admin/core/artist/` and the Band list at `/admin/core/band/` each have an **Export to CSV** button, for staff who may view that kind of act (permission for artists doesn't allow exporting bands, nor the reverse). It downloads `artists-YYYY-MM-DD.csv` or `bands-YYYY-MM-DD.csv`, one row per act the list is showing (search and filters carry over, every page and acts held for review included), with a byte order mark so Excel reads accents. The columns are the import ID, name, town, state, links, notes, public page, review status and reasons, MusicBrainz's ID, status, type, country, area, dates and disambiguation, the Wikidata ID, sources, the photo and its credit, and last a band's members as `Name (role)` or an artist's bands, joined by `; `. **Left out:** the Wikipedia introduction and its details, and MusicBrainz's genre tags, because their licences need credit beside them; and who set each field and the created, updated and checked times. A test fails when a new act field is neither exported nor named as left out in `core/act_export.py`.
 
 ## Spotify play buttons
 
@@ -338,7 +344,16 @@ Nothing from Last.fm is displayed or stored, but its data decides which buttons 
 
 A visitor can give a ZIP code or town, or press "Use my location". Each event at a located venue then shows how far away it is, such as "(0.5 mi away)". Events stay in time order. The location is kept only in the visitor's `near` cookie, rounded to about 100 m.
 
-Once a metro area is chosen, the filter also offers a multi-select of the metro's towns that have venues: `?metro=…&town=Somerville, MA&town=Cambridge, MA`. Calendar feeds take the same `town` values.
+Once a metro area is chosen, the filter also offers a multi-select of the metro's towns that have venues: `?metro=…&town=Somerville, MA&town=Cambridge, MA`. Calendar feeds take the same `town` values. A metro with only one town (Downtown & Central Boston is all Boston) skips the towns and offers that town's neighborhoods.
+
+## Areas
+
+The regions, states and metro areas are defined in `core/geo_areas.py`, and every migrate (so every deploy) makes the stored areas match it. The filter offers State and Metro Area menus; a `region` in a link or feed still applies.
+
+- **Massachusetts's sub-regions:** 28, in seven groups that head the Metro Area options. Each venue is in exactly one: the sub-region listing its town; for Boston, the one listing its neighborhood; otherwise its county's default (`default_counties`).
+- **Changing an area:** edit its entry in `core/geo_areas.py` (add a town to `cities`, say), run the tests, and deploy. Keep an area's `key`; a new label changes its address.
+- **Checking the placement:** `python manage.py report_massachusetts_regions` counts each sub-region's venues and lists those only a county default placed, so the editors can add their towns where the default is wrong.
+- **Old addresses:** the metros Massachusetts had before (`ma-boston-metro-region`, `ma-cape-cod` and the rest, listed in `OLD_METRO_SLUGS`) now show all of Massachusetts, in links, saved filters and calendar feeds. `ma-north-shore` is the new North Shore's address.
 
 **Loading the ZIP and town data:**
 - **What:** the Census Bureau's Gazetteer files (public domain): ZIP Code Tabulation Areas, county subdivisions (New England's towns) and places.
@@ -435,6 +450,8 @@ Each name is searched on MusicBrainz as a person and as a group; one that's exac
 
 **The index and search.** `/bands` lists every live band and artist A to Z, set like a book's index in pages of 40 with guide words, under letters ("#" for digits and symbols; a leading "The" is ignored), with each act's kind, town and next show; `/artists` redirects there. Migration 0102 adds it to the header and footer menus as "Bands & artists" (edit or hide it under Menu items in the admin). Search (`/?s=`) lists matching bands and artists (with each one's next show), then venues, then the shows it finds (upcoming first, then past ones, as compact rows with their icons, matching words anywhere or part of a title or the artists), then pages. Names match ignoring case, accents and punctuation, and held acts and inactive venues are never listed. A venue links to a search for its shows until venues have pages. As you type two or more letters, the search box suggests up to five bands and artists, five venues and five upcoming shows from `/search/suggest`, each tagged with its kind. It uses GOV.UK's [accessible-autocomplete](https://github.com/alphagov/accessible-autocomplete) 3.0.2 (MIT), kept in `core/static/core/vendor/` with its licence rather than loaded from a CDN. Without JavaScript the box is the plain search form.
 
+**Discover bands.** `/discover` is a swipeable deck of cards, one for each live band or artist with an upcoming approved, uncancelled show and something to play (a YouTube, Apple Music or Spotify match; acts with none are left out, and cards show no photo), ordered by each act's next show, soonest first, with a random order only among acts playing the same New York day (so it is never cached). It takes the listing's Region, State and Metro Area filters and the same `geo_filter` cookie (a bare `/discover` redirects to the remembered filter), and a card and its picker list only the shows in the chosen areas. Swiping left, the Skip button or the left arrow passes an act and stores nothing; swiping right, Add or the right arrow opens a picker of the act's shows, and Save writes them into the same `saved_shows` cookie as the listings. The top card alone loads a player (YouTube, else Apple Music, else Spotify) from the links the listings use and the same switches, and the card's buttons run YouTube, Apple Music, Spotify. The first card waits for a Start press, laid over its video's thumbnail (an image request to YouTube's image address, for the top card only) or a plain box; after that each top card's player is loaded by the visitor's swipe, button or key, with YouTube's `autoplay=1`, while Apple Music and Spotify load ready, with their own play control (no Spotify iFrame API script). Nothing is called on the server. Without JavaScript the page is a list of cards, each with its shows and the save bookmark. **Deploy note:** migration 0103 adds a "Discover bands" item to the header and footer menus (edit or hide it under Menu items in the admin); no data command is needed.
+
 - **Photos** come only from Wikimedia Commons under a free licence (public domain, CC0, CC BY or CC BY-SA), found through the act's Wikidata image. Only the file name, author, licence and licence link are kept; the page loads Commons' own thumbnail and credits it. To set one by hand, give the Commons file name and its credit in the venue admin's "Photo" section, and enrichment keeps it.
 - **Instagram and YouTube** come from MusicBrainz's links, then Wikidata; an editor's link always stays.
 - After deploying this, run `enrich_artists_from_musicbrainz --refresh` (photos and links for existing records, about two more requests each for those with a Wikidata item) and `resave_all_events` (the listings' performer links).
@@ -446,6 +463,33 @@ Each name is searched on MusicBrainz as a person and as a group; one that's exac
 - **Wikimedia Commons photos:** only a freely licensed file's name and credit; the image stays on Commons and is credited wherever it's shown.
 - **Bandcamp:** only a link. It has no public API (only labels and merch partners get one), and its acceptable use policy forbids scraping, so nothing is ever requested from it, through a scraping service or otherwise.
 
+### Link hubs
+
+Small acts often keep all their links on one Linktree-style page. `read_artist_link_hubs` reads those pages and fills the links an artist's or band's record lacks.
+
+- **Where the address comes from:** a hub address in the record's website (the command copies it to the record's link-hub address, leaving the website alone), a link on a hub in MusicBrainz's URL relations (taken by enrichment), or an editor in the admin's "Link hub" section. Nothing searches for or guesses a hub page.
+- **Which hubs:** the `HUBS` list in `core/link_hubs.py`: Linktree, Beacons, Bio.link, Lnk.Bio, Linkin.bio, Solo.to, Hoo.be, AllMyLinks, Campsite and Taplink. A hub whose links are built by JavaScript is marked address-only: its address is kept and its page is never requested, and the record's status says "unreadable".
+- **What it takes:** a Bandcamp, Instagram or YouTube link recognised by its address, and a website only from a link the hub labels "website", "site", "homepage" or "official". A link for an empty field fills it, marked "link hub"; one that differs from the record's is saved as a finding, which an editor accepts or dismisses with the admin actions "Accept link-hub findings" and "Dismiss link-hub findings". The value an editor, the import, MusicBrainz or Wikidata set is never overwritten. A value the hub filled is replaced by a later read, by MusicBrainz or Wikidata, or by an import row or curated list.
+- **Politeness:** robots.txt is obeyed (and asked for once per hub a run), the request carries the user agent `venue-db-event-check/1.0`, there is at most one request a second, no JavaScript runs, and a redirect off the hub's host isn't followed. The links found are never requested, so nothing is requested from Bandcamp.
+- **Problems:** a blocked, gone or failed page is listed by act on the run's page at `/admin/core/jobrun/`.
+
+## Analytics
+
+The site measures its own use with PostHog and GoatCounter, both in the browser only.
+
+- **PostHog** (account `nate@stagehopper.app`, project 735651, US cloud) loads on every public page when `POSTHOG_PROJECT_TOKEN` (the project token, PostHog's public browser-side key) is set, sending to `POSTHOG_HOST` (`https://us.i.posthog.com`). It never loads in the admin. It records pageviews, autocaptured clicks, and these named events (`core/static/core/js/analytics.js`, called from the scripts that own each action):
+  - `search` (`query`) and `search_suggestion_chosen` (`kind`, `query`);
+  - `show_saved` / `show_unsaved` (`event_id`);
+  - `preview_played` (`service`: spotify, apple_music or youtube);
+  - `ticket_link_opened` (`event_id`), `show_added_to_calendar` (`how`: ics or google, `event_id`) and `calendar_feed_subscribed` (`how`), sent with the beacon so leaving the page doesn't lose them;
+  - `deck_act_passed` and `deck_shows_saved` (`count`).
+- **What it never gets:** names, email addresses, the location a visitor gives for distances (or the distances), form fields other than the search words, session recordings, surveys (`disable_surveys: true`: PostHog can run on-page surveys, switched off until we want one), or person profiles (`person_profiles: "identified_only"`, and nothing is ever identified). In the PostHog project's settings, keep "Discard client IP data" on and session replay off. Discarding IPs keeps the geography: PostHog's GeoIP transformation runs before the IP is dropped, so each event still has `$geoip_country_name`, `$geoip_subdivision_1_name` (the state) and `$geoip_city_name`, which show which parts of New England visitors come from. Its one first-party cookie recognises a returning browser; the privacy page says so and has a button that turns PostHog off in that browser (PostHog's own opt-out).
+- **The PostHog wizard** (`npx @posthog/wizard`) set up a server-side integration (the Python SDK, OpenTelemetry log export, identifying logged-in users by email, LLM analytics on the AI extraction); it was reverted (commits `8cc9e9b` and its revert) because it sends what the site mustn't. Don't re-run it on this codebase without reviewing its diff.
+- **The dashboard** "StageHopper: how the site is used" (seventeen charts: audience, search, acts, shows, the discovery deck) is defined in `core/analytics_dashboard.py`. To change a chart, edit it there and run `venv/bin/python manage.py sync_posthog_dashboard --dry-run`, then without `--dry-run`: it creates, updates or deletes only the charts it made (tagged `stagehopper-dashboard`, with a "chart key:" line), and deletes the wizard's empty dashboard. Changes made to those charts in PostHog are overwritten by the next run. It needs `POSTHOG_PERSONAL_API_KEY` in the local `.env`: a personal API key (PostHog → Settings → Personal API keys) scoped to project 735651 with insight and dashboard read and write only. Keep it out of Render and the scheduled jobs. `POSTHOG_PROJECT_ID` (735651) and `POSTHOG_APP_HOST` (`https://us.posthog.com`) have those defaults.
+- **Two page events** feed it: `search_results_viewed` (`query`, and how many `acts`, `venues`, `upcoming` and `past` shows and `pages` matched, with their `total`; 0 for a search that found nothing) and `act_page_viewed` (`name`, `kind`, `has_upcoming_show`). The show events carry the show's `show` name (its title and artists as listed) beside its `event_id`.
+- **GoatCounter** counts pages when `GOATCOUNTER_CODE` is set (`stagehopper`, for `https://stagehopper.goatcounter.com`), and sets no cookie.
+- **Tests** never reach either service: they read the rendered html, and a browser test stubs `window.posthog` in the page (`core/tests/test_site_analytics_browser.py`).
+
 ## Calendar feeds
 
 `/calendar.ics` is an iCalendar feed that people can subscribe to in Google Calendar, Apple Calendar or Outlook. It takes the listing's `region`, `state` and `metro` parameters (for example `/calendar.ics?state=vermont`), and with none it covers the whole Northeast. It never uses a visitor's remembered filter.
@@ -453,6 +497,12 @@ Each name is searched on MusicBrainz as a person and as a group; one that's exac
 - **Refreshing:** the feed asks apps to refresh every six hours. Apple honours that; Google refreshes on its own schedule, up to about a day.
 - **Caching:** responses carry an `ETag` and `Cache-Control: public, max-age=3600`, and an unchanged feed answers 304.
 - **Subscribing:** a "Subscribe to this calendar" panel under the area filter offers a `webcal://` link, a Google Calendar link and the plain URL, all built from `SITE_URL`. Apple Calendar fetches `webcal://` over HTTPS, so locally (plain HTTP) subscribe to the `http://localhost:8001/calendar.ics?...` address instead. Set `SITE_URL` to the public address once there's a custom domain, or the links keep pointing at the `onrender.com` one.
+
+## What the site lists
+
+The public site lists only events at venues in Massachusetts, Connecticut, Rhode Island, New Hampshire, Maine and Vermont, and offers only the regions, states and metro areas inside them. Events at other venues, and events with no venue, are hidden from the listings, search, calendar feeds, saved shows, act pages, the discover page and the sitemap, but nothing is deleted: the admin shows them all, `fetch_events` keeps fetching them, and the artist matching still reads them. An event opened by its own link still works.
+
+The states are one list, `NEW_ENGLAND_STATES` in `core/geo_filters.py`; widening the scope is a change to that list. A venue whose state is blank in the sheet is hidden too, so an editor should fix its state there.
 
 ## Saved shows and the event icons
 
@@ -462,17 +512,16 @@ The icon row is built when a page is rendered (`core/event_actions.py`), not sto
 
 ## Reading the sheet on a server
 
-Locally, `sync_venues_from_gsheets` reads the sheet with the `gog` CLI, which signs in to Google as you through a browser. A server can't do that, so there it reads the sheet with a **Google Cloud service account** instead. The account can only read, and only sheets shared with it, so the sheet stays private. Set it up once:
+The sheet sync now runs only by hand, for a one-off import; venues are kept in the admin. Locally, `sync_venues_from_gsheets` reads the sheet with the `gog` CLI, which signs in to Google as you through a browser. A server can't do that, so there it reads the sheet with a **Google Cloud service account** instead. The account can only read, and only sheets shared with it, so the sheet stays private. Set it up once:
 
 1. **Create the account.** In the Google Cloud console, pick or create a project and enable the **Google Sheets API** for it. Under **IAM & Admin > Service Accounts**, create a service account; it needs no roles.
 2. **Create its key.** On the account's **Keys** tab, add a key of type **JSON**. A file downloads; keep it out of the repo.
 3. **Share the sheet.** Share the venue sheet copy ("Northeastern US Music Venues - v3 (venue-db copy)") with the account's email address, which ends in `iam.gserviceaccount.com`, as a **Viewer**. Don't share the original sheet.
 4. **Give Render the key.** In the web service's **Environment** settings, set `GOOGLE_SERVICE_ACCOUNT_JSON` to the whole contents of the JSON file, then delete the downloaded file.
-5. **Check it.** In the service's **Shell** tab, run `python manage.py sync_venues_from_gsheets --dry-run`. It should report the venues and areas with no errors. An error names the tab and what to fix, such as sharing the sheet with the account's email.
+5. **Check it.** In the service's **Shell** tab, run `python manage.py sync_venues_from_gsheets --dry-run`. It should report the venues with no errors. An error names the tab and what to fix, such as sharing the sheet with the account's email.
 
 If the key ever leaks, delete it on the account's **Keys** tab and create a new one.
 
-**Still to do:** a Render Cron Job that runs the sync and the other daily jobs every day.
 
 ## The weekly email
 

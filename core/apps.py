@@ -10,6 +10,7 @@ class CoreConfig(AppConfig):
 
         from core.admin_group import sync_admin_group
         from core.event_performers import connect_signals
+        from core.geo_area_sync import sync_geo_areas
         from core.site_record import sync_site_record
 
         connect_signals()
@@ -17,3 +18,5 @@ class CoreConfig(AppConfig):
         post_migrate.connect(sync_admin_group, sender=self, dispatch_uid="sync-admin-group")
         # after the sites app has made its example.com record, which runs first (INSTALLED_APPS order)
         post_migrate.connect(sync_site_record, sender=self, dispatch_uid="sync-site-record")
+        # the areas live in core/geo_areas.py; every migrate (render's build included) loads them
+        post_migrate.connect(sync_geo_areas, sender=self, dispatch_uid="sync-geo-areas")

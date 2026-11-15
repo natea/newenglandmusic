@@ -96,7 +96,7 @@ class ShowRowsTestCase(TestCase):
 
     def test_an_acts_next_show(self):
         band = Band.objects.create(name="Belly")
-        venue = Venue.objects.create(sheet_id="V0001", name="Paradise Rock Club")
+        venue = Venue.objects.create(sheet_id="V0001", name="Paradise Rock Club", state="MA")
         when = timezone.now() + timedelta(days=4)
         event = Event.all_objects.create(title="", artists="Belly", starttime=when, venue=venue, is_approved=True)
         EventPerformer.objects.create(event=event, band=band, order=0)

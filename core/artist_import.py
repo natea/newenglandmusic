@@ -23,6 +23,7 @@ from django.db import transaction
 
 from core.artist_matching import normalize
 from core.artists import MBID_PATTERN, is_bandcamp_url
+from core.link_hubs import LINK_HUB
 from core.models import Artist, Band, BandMembership
 
 COLUMNS = (
@@ -144,7 +145,9 @@ def apply_values(record, values):
     """set the values the import may (unset or its own); returns whether anything changed"""
     changed = False
     for name, value in values.items():
-        if record.field_sources.get(name, IMPORT) != IMPORT:
+        owner = record.field_sources.get(name, IMPORT)
+        # a link filled from the record's link hub counts as unset, but a blank row doesn't blank it
+        if owner != IMPORT and not (owner == LINK_HUB and value):
             continue
         if name == "musicbrainz_id":
             value = value or None

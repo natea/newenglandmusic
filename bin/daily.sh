@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# the daily scheduled job (render.yaml's newenglandmusic-daily; see PRODUCTION.md): syncs
-# the venue sheet, looks up new venues on google places, refreshes coordinates before
-# google's 30 days run out, fetches every venue's events, then links the artists on
-# upcoming events to spotify, apple music and youtube for the listing's play buttons.
+# the daily scheduled job (render.yaml's newenglandmusic-daily; see PRODUCTION.md): looks up
+# new venues on google places, refreshes coordinates before google's 30 days run out,
+# fetches every venue's events, then links the artists on
+# upcoming events to spotify, apple music and youtube for the listing's play buttons, and
+# looks up artists and bands not yet looked up on musicbrainz.
+# venues are kept in the admin, so the venue sheet sync runs only by hand
 source "$(dirname "$0")/steps.sh"
 
-step python manage.py sync_venues_from_gsheets
 step python manage.py lookup_venue_places
 step python manage.py lookup_venue_places --refresh-stale
 step python manage.py fetch_events --all
@@ -23,4 +24,8 @@ step python manage.py resolve_artists_with_lastfm --limit 300
 # stay within youtube's 10,000 free daily units (101 each); does nothing until
 # YOUTUBE_API_KEY is set
 step python manage.py match_youtube_artists --limit 90
+# last, so a slow or blocked musicbrainz run delays no play-button matching. never --refresh:
+# only records not looked up yet. 100 at about 2 to 4 seconds each keeps the run short and
+# gentle on musicbrainz, and a backlog (or a band's new members) clears over several mornings
+step python manage.py enrich_artists_from_musicbrainz --limit 100
 finish

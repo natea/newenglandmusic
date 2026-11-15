@@ -1,20 +1,21 @@
 """
-filters venues and events by the regions, states and metro areas of the venue
-sheet's geo-filters_json tab (synced into GeoArea by sync_venues_from_gsheets).
+filters venues and events by the regions, states and metro areas of core/geo_areas.py
+(loaded into GeoArea on every migrate).
 
-a venue belongs to an area when its state is in the area's states and, if the
-area lists counties or cities, its county or its city is one of them:
+a venue belongs to an area when its state is in the area's states and, if the area lists
+counties or cities, its county or its city is one of them; massachusetts's sub-regions have
+their own rules (sub_region_q), which put each venue in exactly one:
 
     Event.objects.filter(area_q(area, prefix="venue__"))
 
 the listing pages and the admin both take the same url parameters:
 
-    /?region=new-england&state=massachusetts&metro=ma-boston-metro-region
+    /?region=new-england&state=massachusetts&metro=ma-north-of-the-charles
 
 a metro can be narrowed to some of its towns, by the venues' own town and state (not the
 sheet's metro city lists, so this keeps working if the areas move out of the sheet):
 
-    /?metro=ma-boston-metro-region&town=Somerville, MA&town=Cambridge, MA
+    /?metro=ma-north-of-the-charles&town=Somerville, MA&town=Cambridge, MA
 """
 
 from dataclasses import dataclass, field
@@ -23,28 +24,71 @@ from urllib.parse import urlencode
 from django.db.models import Q
 from django.http import QueryDict
 
+from core.geo_areas import OLD_METRO_SLUGS
 from core.models import GeoArea
 
 FILTER_PARAMS = ("region", "state", "metro")
 
+# the states whose venues' events the public site lists, and whose areas it offers; widen
+# the site's scope by changing this list alone
+NEW_ENGLAND_STATES = ["MA", "CT", "RI", "NH", "ME", "VT"]
+
+
+def new_england_q(prefix=""):
+    """the events (or venues, with no prefix) in New England; no venue, or no state, is out"""
+    return Q(**{f"{prefix}state__in": NEW_ENGLAND_STATES})
+
+
+def any_iexact(field, values):
+    """the field is one of values, whatever its case (venues' spelling and case vary)"""
+    q = Q(pk__in=[])
+    for value in values:
+        q |= Q(**{f"{field}__iexact": value})
+    return q
+
 
 def area_q(area, prefix=""):
     q = Q(**{f"{prefix}state__in": [state.upper() for state in area.states]})
+    if area.group:
+        return q & sub_region_q(area, prefix)
     if not area.counties and not area.cities:
         return q
-    # the sheet's spelling and case vary, so compare each value case-insensitively
-    place_q = Q()
-    for county in area.counties:
-        place_q |= Q(**{f"{prefix}county__iexact": county})
-    for city in area.cities:
-        place_q |= Q(**{f"{prefix}city_town__iexact": city})
-    return q & place_q
+    return q & (any_iexact(f"{prefix}county", area.counties) | any_iexact(f"{prefix}city_town", area.cities))
 
 
-def offered_areas(kind):
+def boston_neighborhood_q(neighborhoods, prefix=""):
+    return Q(**{f"{prefix}city_town__iexact": "boston"}) & any_iexact(f"{prefix}neighborhood", neighborhoods)
+
+
+def sub_region_q(area, prefix=""):
+    """
+    a massachusetts sub-region (core/geo_areas.py) holds the venues in its towns, the boston
+    venues in its neighborhoods, and, in its default counties, the venues no sub-region's town
+    or neighborhood placed, so each venue is in exactly one sub-region
+    """
+    q = any_iexact(f"{prefix}city_town", area.cities) | boston_neighborhood_q(area.neighborhoods, prefix)
+    if not area.default_counties:
+        return q
+    return q | (any_iexact(f"{prefix}county", area.default_counties) & ~placed_by_name_q(prefix))
+
+
+def placed_by_name_q(prefix=""):
+    """venues some sub-region lists by town or boston neighborhood, so no county default takes"""
+    sub_regions = GeoArea.objects.exclude(group="")
+    all_towns = [town for towns in sub_regions.values_list("cities", flat=True) for town in towns]
+    all_neighborhoods = [name for names in sub_regions.values_list("neighborhoods", flat=True) for name in names]
+    return any_iexact(f"{prefix}city_town", all_towns) | boston_neighborhood_q(all_neighborhoods, prefix)
+
+
+def offered_areas(kind, new_england_only=False):
     # an area with no states can't match anything (e.g. "Northeast Corridor"
     # before the sheet gives it states), so it isn't worth offering
-    return GeoArea.objects.filter(kind=kind).exclude(states=[])
+    areas = GeoArea.objects.filter(kind=kind).exclude(states=[])
+    if not new_england_only:
+        return areas
+    # the site offers only areas wholly inside New England; the sheet stores states lowercase
+    allowed = {state.lower() for state in NEW_ENGLAND_STATES}
+    return [area for area in areas if {state.lower() for state in area.states} <= allowed]
 
 
 @dataclass
@@ -56,6 +100,8 @@ class GeoFilter:
     towns: list = field(default_factory=list)
     # (neighborhood, town, state code) within the chosen towns (lookup_venue_neighborhoods)
     neighborhoods: list = field(default_factory=list)
+    # the towns whose neighborhoods are offered: the chosen ones, or a one-town metro's town
+    neighborhood_towns: list = field(default_factory=list)
 
     @property
     def areas(self):
@@ -125,8 +171,11 @@ def neighborhood_label(neighborhood, town, state):
     return f"{neighborhood}, {town}, {state}"
 
 
-def town_neighborhoods(towns):
-    """the (neighborhood, town, state) of the venues in these (town, state) pairs, sorted"""
+def town_neighborhoods(towns, metro=None):
+    """
+    the (neighborhood, town, state) of the venues in these (town, state) pairs, sorted; only
+    the metro's venues, when one is given, since boston is split among several sub-regions
+    """
     from core.models import Venue
 
     if not towns:
@@ -135,7 +184,10 @@ def town_neighborhoods(towns):
     for town, state in towns:
         towns_q |= Q(city_town__iexact=town, state=state)
     found = {}
-    rows = Venue.objects.filter(towns_q).exclude(neighborhood="").values_list("neighborhood", "city_town", "state")
+    venues = Venue.objects.filter(towns_q)
+    if metro:
+        venues = venues.filter(area_q(metro))
+    rows = venues.exclude(neighborhood="").values_list("neighborhood", "city_town", "state")
     spelling = {(t.casefold(), s): t for t, s in towns}
     for neighborhood, town, state in rows:
         town = spelling.get((town.strip().casefold(), state), town.strip())
@@ -147,28 +199,42 @@ def metro_fits_state(metro, state):
     return state is None or metro.home_state == state.home_state
 
 
-def parse_geo_filter(querydict):
+def parse_geo_filter(querydict, new_england_only=False):
     """
     resolves the region, state and metro slugs in querydict to offered areas.
     unknown slugs are dropped, as is a metro from a different state than the
-    chosen one, so a stale or hand-edited url just filters less.
+    chosen one, so a stale or hand-edited url just filters less. new_england_only is the
+    site's view: an area outside New England is unknown to it, though the admin resolves it.
     """
     geo_filter = GeoFilter()
     for param in FILTER_PARAMS:
         slug = querydict.get(param, "").strip()
         if slug:
-            setattr(geo_filter, param, offered_areas(param).filter(slug=slug).first())
+            areas = offered_areas(param, new_england_only)
+            setattr(geo_filter, param, next((area for area in areas if area.slug == slug), None))
+    old_metro = querydict.get("metro", "").strip() in OLD_METRO_SLUGS
+    if old_metro and not geo_filter.metro and not geo_filter.state:
+        # a link, cookie or feed from before massachusetts's sub-regions covers the whole state
+        states = offered_areas(GeoArea.Kind.STATE, new_england_only)
+        geo_filter.state = next((area for area in states if area.home_state == "MA"), None)
     if geo_filter.metro and not metro_fits_state(geo_filter.metro, geo_filter.state):
         geo_filter.metro = None
+    towns = metro_towns(geo_filter.metro) if geo_filter.metro else []
     wanted = [value.strip() for value in querydict.getlist("town") if value.strip()] if hasattr(querydict, "getlist") else []
-    if geo_filter.metro and wanted:
+    if len(towns) > 1 and wanted:
         # only the metro's own towns: a town from elsewhere, or a metro that changed, drops it
-        known = {town_label(town, state).casefold(): (town, state) for town, state in metro_towns(geo_filter.metro)}
+        known = {town_label(town, state).casefold(): (town, state) for town, state in towns}
         geo_filter.towns = [known[label.casefold()] for label in dict.fromkeys(wanted) if label.casefold() in known]
+    # a metro with one town (downtown & central boston is all boston) offers no town filter, so
+    # its neighborhoods come straight after it
+    geo_filter.neighborhood_towns = geo_filter.towns or (towns if len(towns) == 1 else [])
     wanted = [value.strip() for value in querydict.getlist("neighborhood") if value.strip()] if hasattr(querydict, "getlist") else []
-    if geo_filter.towns and wanted:
-        # only the chosen towns' neighborhoods: one from another town, or a town dropped, drops it
-        known = {neighborhood_label(*triple).casefold(): triple for triple in town_neighborhoods(geo_filter.towns)}
+    if geo_filter.neighborhood_towns and wanted:
+        # only those towns' neighborhoods: one from another town, or a town dropped, drops it
+        known = {
+            neighborhood_label(*triple).casefold(): triple
+            for triple in town_neighborhoods(geo_filter.neighborhood_towns, geo_filter.metro)
+        }
         geo_filter.neighborhoods = [known[label.casefold()] for label in dict.fromkeys(wanted) if label.casefold() in known]
     return geo_filter
 
@@ -199,13 +265,13 @@ def geo_filter_for_request(request):
     if "clear" in params or (given and not any(params[param].strip() for param in given)):
         return GeoFilter(), CookieAction.CLEAR
     if given:
-        geo_filter = parse_geo_filter(params)
+        geo_filter = parse_geo_filter(params, new_england_only=True)
         return geo_filter, CookieAction.SET if geo_filter else None
 
     cookie = request.COOKIES.get(COOKIE_NAME)
     if not cookie:
         return GeoFilter(), None
-    geo_filter = parse_geo_filter(QueryDict(cookie))
+    geo_filter = parse_geo_filter(QueryDict(cookie), new_england_only=True)
     # a cookie naming only areas that are gone from the sheet is just stale
     return geo_filter, CookieAction.REDIRECT if geo_filter else CookieAction.CLEAR
 
@@ -226,12 +292,39 @@ def apply_cookie_action(request, response, geo_filter, cookie_action):
 
 
 def metro_groups(state=None):
-    """offered metros as [(state label, [metros])], in sheet order, for <optgroup>s"""
-    state_labels = {area.home_state: area.label for area in offered_areas(GeoArea.Kind.STATE)}
+    """
+    offered metros as [(heading, [metros])], in the areas' order, for <optgroup>s: grouped by
+    state, except massachusetts's sub-regions, which are grouped by their own groups
+    """
+    state_labels = {area.home_state: area.label for area in offered_areas(GeoArea.Kind.STATE, new_england_only=True)}
     groups = {}
-    for metro in offered_areas(GeoArea.Kind.METRO):
+    for metro in offered_areas(GeoArea.Kind.METRO, new_england_only=True):
         if metro_fits_state(metro, state):
-            groups.setdefault(metro.home_state, []).append(metro)
-    return [
-        (state_labels.get(home_state, home_state), metros) for home_state, metros in groups.items()
-    ]
+            heading = metro.group or state_labels.get(metro.home_state, metro.home_state)
+            groups.setdefault(heading, []).append(metro)
+    return list(groups.items())
+
+
+def metro_town_options(metro):
+    """the town filter's options: none for a metro with one town, which there's no narrowing"""
+    towns = metro_towns(metro) if metro else []
+    return [town_label(town, state) for town, state in towns] if len(towns) > 1 else []
+
+
+def geo_filter_context(geo_filter):
+    """
+    what core/geo_filter_form.html needs, for the listing and the discovery deck alike: the
+    state options, the metros of the chosen state, and the chosen metro's towns
+    and the chosen towns' neighborhoods
+    """
+    return {
+        "geo_filter": geo_filter,
+        # the site lists new england only, so it offers only new england's areas; no regions,
+        # which are few, so a state is simpler to pick
+        "state_options": offered_areas(GeoArea.Kind.STATE, new_england_only=True),
+        "metro_groups": metro_groups(geo_filter.state),
+        "metro_towns": metro_town_options(geo_filter.metro),
+        "town_neighborhoods": [
+            neighborhood_label(*triple) for triple in town_neighborhoods(geo_filter.neighborhood_towns, geo_filter.metro)
+        ],
+    }
