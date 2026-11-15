@@ -1,5 +1,5 @@
 asgiref==3.9.1
-astroid==4.0.4
+astroid==4.3.4
 beautifulsoup4==4.13.4
 black==26.10.1
 boto3==1.40.6
