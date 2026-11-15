@@ -55,8 +55,15 @@ def venue_label(venue):
 
 
 def area_options():
-    """what the area select offers: [(value, label)] for regions, states and metros"""
-    options = [(f"{area.kind}:{area.slug}", area.label) for kind in ("region", "state") for area in offered_areas(kind)]
+    """
+    what the area select offers: [(value, label)] for regions, states and metros, only those in
+    new england, as the listing offers (the site lists nothing elsewhere)
+    """
+    options = [
+        (f"{area.kind}:{area.slug}", area.label)
+        for kind in ("region", "state")
+        for area in offered_areas(kind, new_england_only=True)
+    ]
     options += [(f"metro:{area.slug}", area.label) for _, metros in metro_groups() for area in metros]
     return options
 
@@ -80,7 +87,7 @@ def area_query_for(kind, slug, towns=()):
     query[kind] = slug
     if kind == "metro":
         query.setlist("town", list(towns))
-    geo_filter = parse_geo_filter(query)
+    geo_filter = parse_geo_filter(query, new_england_only=True)
     # an unknown area, or a town that isn't the metro's, is dropped by the parse: refuse it
     if not geo_filter or geo_filter.query_string != urlencode(
         [(kind, slug)] + ([("town", town) for town in towns] if kind == "metro" else [])
@@ -232,6 +239,8 @@ def form_context(*, ticked=(), metro_towns_ticked=(), near_label="", near_miles=
         "metro_town_groups": metro_town_options(),
         "ticked": set(ticked),
         "metro_towns_ticked": set(metro_towns_ticked),
+        # blank on a fresh form; the dev settings would otherwise print a missing-variable marker
+        "email": "",
         "near_label": near_label,
         "near_miles": near_miles,
         "miles_options": MILES,

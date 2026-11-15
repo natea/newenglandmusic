@@ -16,7 +16,7 @@ from django.db.models import Q
 from django.http import QueryDict
 
 from core import location
-from core.geo_filters import parse_geo_filter
+from core.geo_filters import new_england_q, parse_geo_filter
 from core.models import DigestChoice, Event, Venue
 
 NEW_YORK = ZoneInfo("America/New_York")
@@ -51,7 +51,7 @@ def located_venues():
 
 def area_filter(choice):
     """the GeoFilter an area choice stores, or None when it no longer holds in whole"""
-    geo_filter = parse_geo_filter(QueryDict(choice.area_query))
+    geo_filter = parse_geo_filter(QueryDict(choice.area_query), new_england_only=True)
     # an unknown slug is dropped by the parse, which would widen the choice, so a choice
     # that doesn't parse back to exactly what was stored is stale
     if not geo_filter or geo_filter.query_string != choice.area_query:
@@ -96,9 +96,10 @@ def events_for(subscriber, window, venues=None):
     if not selected:
         return Event.objects.none()
     start, end = window
-    # a null start time never passes the range
+    # a null start time never passes the range; like the listings, only new england's shows
     return (
         Event.objects.filter(selected, starttime__gte=start, starttime__lt=end, is_cancelled=False)
+        .filter(new_england_q("venue__"))
         .select_related("venue")
         .order_by("starttime", "pk")
     )

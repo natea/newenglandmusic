@@ -19,7 +19,7 @@
 <div class="digestRow">
   <span class="digestKey">Areas</span>
   <span class="digestValue">
-    <label class="digestPill"><input type="checkbox" name="area" value="all" {% if "all" in ticked %}checked{% endif %}> All of the Northeast</label>
+    <label class="digestPill"><input type="checkbox" name="area" value="all" {% if "all" in ticked %}checked{% endif %}> All of New England</label>
     {% for value, label in area_options %}
       <label class="digestPill"><input type="checkbox" name="area" value="{{ value }}" {% if value in ticked %}checked{% endif %}> {{ label }}</label>
     {% endfor %}

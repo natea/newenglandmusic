@@ -173,7 +173,7 @@ def choice_summary(subscriber):
     rows = []
     for choice in subscriber.choices.select_related("venue"):
         if choice.kind == choice.Kind.AREA and choice.area_query == ALL_AREAS:
-            rows.append(("All of the Northeast", False))
+            rows.append(("All of New England", False))
         elif choice.kind == choice.Kind.AREA:
             geo_filter = area_filter(choice)
             if geo_filter:
