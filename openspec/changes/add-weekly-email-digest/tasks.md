@@ -19,7 +19,7 @@ Issue: [#13 Visitors can signup to receive a weekly email of upcoming shows that
 
 ## 4. Choosing shows
 
-- [ ] 4.1 Add `core/digest.py`: `events_for(subscriber, window)` as a union of area, near, town and venue choices over approved, uncancelled events, plus a helper that loads located venues once for the distance choices. A choice is stale unless the parsed `GeoFilter.query_string` equals the stored string (apart from `all=1`). Verify with 4.2.
+- [x] 4.1 Add `core/digest.py`: `events_for(subscriber, window)` as a union of area, near, town and venue choices over approved, uncancelled events, plus a helper that loads located venues once for the distance choices. A choice is stale unless the parsed `GeoFilter.query_string` equals the stored string (apart from `all=1`). Verify with 4.2.
 - [ ] 4.2 Add `core/tests/test_digest_selection.py` covering every scenario in "Choices select shows": area, distance (6 and 14 miles), followed town and venue, union with no duplicates, unapproved events, a venue with no coordinates, an area choice that went stale selecting nothing, a partly vanished one (a dropped metro, a renamed town) selecting nothing, a null start time, "All of the Northeast", a metro narrowed to towns, and a remembered neighborhood narrowing stripped from the form (with 5.3).
 
 ## 5. Signup, confirmation and sign-in views
