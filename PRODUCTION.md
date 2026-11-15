@@ -185,12 +185,13 @@ These run in this order. Each one depends on the one before it:
 
 ### How they run on Render
 
-`render.yaml` defines two cron jobs, each running a script:
+`render.yaml` defines three cron jobs, each running a script:
 
 | Job | Schedule (UTC) | Script | Runs |
 |---|---|---|---|
 | `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | Places lookup, coordinate refresh, `fetch_events --all`, Spotify, Apple Music, Last.fm and YouTube matching, MusicBrainz enrichment |
 | `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster, Eventbrite and SeatGeek matching, neighborhoods, link hubs |
+| `newenglandmusic-digest` | `0 13 * * 4`: Thursdays, 8 or 9 am eastern | `bin/digest.sh` | `send_weekly_digests` (see "The weekly email") |
 
 - **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed Places lookup leaves the venues as they were, and their events can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.
 - **Builds:** the jobs build with `bin/build-job.sh`, which only installs the requirements. Only the web service migrates. Like the web service, they deploy a commit only once CI passes.
@@ -522,6 +523,22 @@ The sheet sync now runs only by hand, for a one-off import; venues are kept in t
 If the key ever leaks, delete it on the account's **Keys** tab and create a new one.
 
 
+## The weekly email
+
+Visitors sign up at `/digest` for one email a week of the next eight days' shows (the send day and the seven after) that match their choices (areas, a distance from a place, followed towns and venues). Signing up needs only an address, confirmed by a link and a Confirm button. Signing in later uses a 6-digit emailed code, never a password. Subscribers are not Django users.
+
+- **Amazon SES sends it.** Mail goes through the SES region `us-east-2`, with `DEFAULT_FROM_EMAIL` as the sender and an IAM user's keys in `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. Set all three on the web service (it sends the confirmation and code emails) and the digest job copies them. Nothing is sent from the placeholder sender `webmaster@localhost`, or while `SITE_URL` is blank, localhost or not `https://`: the job logs why and fails.
+- **`SITE_URL` must be set on the web service before the job is enabled.** Render sets `RENDER_EXTERNAL_URL` only on the web service, so a job that copied a blank value would email dead links.
+- **The command:** `python manage.py send_weekly_digests [--dry-run] [--limit N]`. It sends each confirmed, unpaused subscriber one email per week (the Monday on or before the send day, New York time), claims a subscriber before sending and releases the claim when the send fails, so a rerun the same week only retries failures. It sends nobody an empty email, and deletes sign-ups unconfirmed after 7 days and old sign-in codes. Try `--dry-run` first. Runs are listed at `/admin/core/jobrun/`; its logs name subscribers by id, never address.
+- **Rate limits:** at most 3 confirmation, already-subscribed or code emails an hour to one address, and 10 signup or sign-in requests an hour from one client, counted in `MailRequest` (deleted after a day). The client is the last `X-Forwarded-For` entry.
+- **Before launch:**
+  1. Verify the sender address or domain in SES, and take the SES account out of its sandbox (production access), or only verified addresses receive mail.
+  2. Set up SPF, DKIM (SES's Easy DKIM) and DMARC for the sender's domain, aligned with the From address.
+  3. Check SES's bounce and complaint rates in its console (SES suspends accounts with high rates). This version relies on SES's own suppression list; there is no bounce webhook.
+  4. Deploy with the cron job suspended, run `send_weekly_digests --dry-run` from the job's shell, then enable the job.
+  5. **Check the client address from two networks:** sign up once from each of two networks (a phone off wifi, and a computer) with different addresses, then in the shell compare `MailRequest.objects.filter(kind="request").values_list("client_hash", flat=True)`. The two hashes must differ. If they match, Render's proxy isn't adding the visitor's address as the last `X-Forwarded-For` entry, and the per-client limit would count everyone as one client; fix `client_address()` in `core/digest_tokens.py` before launch.
+- **Privacy:** the privacy page says what is kept (the address, the choices, a "near a place" choice's rounded coordinates), that SES sends the email and that opens and clicks aren't tracked. Delete-account removes it all. The old `EmailSubscriber` addresses are never emailed.
+
 ## Launch checklist
 
 - [ ] Postgres created, and `DATABASE_URL` set
@@ -537,6 +554,7 @@ If the key ever leaks, delete it on the account's **Keys** tab and create a new 
 - [x] the scheduled jobs added (the sheet's service account set up first): running on Render since 2026-10-26
 - [ ] Eventbrite's API terms checked for attribution and caching rules, since events imported from it are shown on the site
 - [ ] SeatGeek's API terms checked for attribution and caching rules; its developer docs say nothing about them. The ticket pages of SeatGeek-linked venues checked, and filled in where the venue's site doesn't link one
+- [ ] the weekly email set up (see "The weekly email"): sender verified in SES, SES out of its sandbox, SPF, DKIM and DMARC, `SITE_URL` set on the web service, and the client-address check from two networks done
 - [ ] the first `fetch_events` run checked in `/admin/core/alleventproxy/` before events are approved
 - [ ] **before announcing or sharing the site:** Google Places terms met. Until then, keep the site unshared. As of 2026-10-25 it was deployed but kept private for this reason.
   - **Stored content:** done. Only place IDs and coordinates are stored, and coordinates are refreshed or deleted within 30 days (see Google Places terms above). The daily `--refresh-stale` job has to be running for pins to stay exact.

@@ -1,0 +1,12 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+  <div id='maincontent' class='static_page digestPage'>
+    <h1 class="digestTab">Delete your account</h1>
+    <form method="post" action="{% url 'digest_delete' %}" class="digestCard">
+      {% csrf_token %}
+      <p>This deletes {{ subscriber.email }}, your choices and any sign-in codes, and stops the weekly email. It can't be undone.</p>
+      <p><button type="submit">Delete everything</button> <a href="{% url 'digest_preferences' %}">Keep my account</a></p>
+    </form>
+  </div>
+{% endblock %}

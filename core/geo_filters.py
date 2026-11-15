@@ -221,8 +221,10 @@ def parse_geo_filter(querydict, new_england_only=False):
         geo_filter.metro = None
     towns = metro_towns(geo_filter.metro) if geo_filter.metro else []
     wanted = [value.strip() for value in querydict.getlist("town") if value.strip()] if hasattr(querydict, "getlist") else []
-    if len(towns) > 1 and wanted:
-        # only the metro's own towns: a town from elsewhere, or a metro that changed, drops it
+    if towns and wanted:
+        # only the metro's own towns: a town from elsewhere, or a metro that changed, drops it.
+        # a one-town metro offers no town filter, but its town is kept when named (a saved
+        # weekly-email choice, say), so a metro left with one town doesn't drop it
         known = {town_label(town, state).casefold(): (town, state) for town, state in towns}
         geo_filter.towns = [known[label.casefold()] for label in dict.fromkeys(wanted) if label.casefold() in known]
     # a metro with one town (downtown & central boston is all boston) offers no town filter, so

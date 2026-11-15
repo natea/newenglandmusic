@@ -602,6 +602,77 @@ class EmailSubscriber(models.Model):
         return self.email
 
 
+class Subscriber(models.Model):
+    """
+    someone who gets the weekly email (add-weekly-email-digest). not a django user, so a
+    subscriber can never reach the admin. last_digest_week is the monday of the last week sent
+    """
+
+    email = models.EmailField(unique=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    paused = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_digest_week = models.DateField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        self.email = self.email.strip().lower()
+        super().save(*args, **kwargs)
+
+    @property
+    def confirmed(self):
+        return self.confirmed_at is not None
+
+    def __str__(self):
+        return self.email
+
+
+class SignInCode(models.Model):
+    """a keyed hash of a 6-digit sign-in code; it works once and expires (core/digest_tokens.py)"""
+
+    subscriber = models.ForeignKey(Subscriber, on_delete=models.CASCADE, related_name="codes")
+    code_hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+
+
+class DigestChoice(models.Model):
+    """
+    one way a subscriber chose shows; a show is emailed when any choice matches it.
+    area: area_query is a GeoFilter query string ("all=1" for the whole Northeast);
+    near: label, latitude and longitude (rounded) and miles; town: town and state; venue: venue
+    """
+
+    class Kind(models.TextChoices):
+        AREA = "area", "Area"
+        NEAR = "near", "Near a place"
+        TOWN = "town", "Town"
+        VENUE = "venue", "Venue"
+
+    subscriber = models.ForeignKey(Subscriber, on_delete=models.CASCADE, related_name="choices")
+    kind = models.CharField(max_length=8, choices=Kind.choices)
+    area_query = models.CharField(max_length=300, blank=True)
+    label = models.CharField(max_length=100, blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    miles = models.PositiveSmallIntegerField(null=True, blank=True)
+    town = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=2, blank=True)
+    venue = models.ForeignKey(Venue, on_delete=models.CASCADE, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ("pk",)
+
+
+class MailRequest(models.Model):
+    """an address (or a hash of a client address) and a time, kept a day for the sending limits"""
+
+    address = models.CharField(max_length=254, blank=True)
+    client_hash = models.CharField(max_length=64, blank=True)
+    kind = models.CharField(max_length=16)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+
 # 'IndexPageMessages' is a misnomer, as this
 # singleton Pre + Post cal messages appear on EVERY
 # archive page i.e. not only the / page, but also
