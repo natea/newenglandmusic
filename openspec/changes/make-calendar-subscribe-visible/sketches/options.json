@@ -1,0 +1,5 @@
+[
+{"file":"a.html","label":"Button at the heading","thesis":"A solid Subscribe button sits level with the page heading, top right on the listing and in the venue header, and opens a small card with the same links and address.","risk":"The panel is still one click away and the button is small beside a big heading, so it may be missed on a phone."},
+{"file":"b.html","label":"Always-open strip","thesis":"A full-width strip under the heading shows every way to subscribe at once, with no click to open, on the listing and on venue pages.","risk":"It takes a permanent band of height above the calendar and the area filter, pushing the shows down."},
+{"file":"c.html","label":"Side card","thesis":"A card in a right-hand rail explains what subscribing does and holds the button and links, beside the listing and the venue's shows.","risk":"The rail has no room on a phone, where it drops below the content, and it makes the page two-column."}
+]
