@@ -133,7 +133,15 @@ class SignupTestCase(DigestTestCase):
         response = self.post({"email": "b@example.com", "area": [], "town": ["Atlantis, ZZ"]})
         self.assertContains(response, "don&#x27;t list a town")
 
-    def test_metro_narrowed_to_towns(self):
+    def test_no_metro_town_box(self):
+        # towns are chosen in the town inputs; the metro-town box is gone
+        html = self.client.get("/digest").content.decode()
+        self.assertNotIn('name="metro_town"', html)
+        self.assertNotIn("Only some towns of a metro area", html)
+        self.assertIn('name="town"', html)
+
+    def test_a_form_opened_before_still_narrows_a_metro(self):
+        # a tab opened before the box went still posts metro_town, which is still read
         self.post({"area": [], "metro_town": ["ma-north-of-the-charles|Cambridge, MA"]})
         choice = Subscriber.objects.get().choices.get()
         self.assertEqual(choice.area_query, "metro=ma-north-of-the-charles&town=Cambridge%2C+MA")
@@ -163,10 +171,14 @@ class SignupTestCase(DigestTestCase):
         Venue.objects.create(name="Hall", state="MA", city_town="Somerville", neighborhood="Union Square")
         self.client.cookies[GEO_COOKIE] = "metro=ma-north-of-the-charles&town=Somerville%2C+MA&neighborhood=Union+Square%2C+Somerville%2C+MA"
         response = self.client.get("/digest")
-        self.assertContains(response, 'value="metro:ma-north-of-the-charles" checked')
+        # the remembered towns fill in the town inputs, and the metro isn't ticked (it'd widen them)
+        self.assertContains(response, 'name="town" value="Somerville, MA"')
+        self.assertNotContains(response, 'value="metro:ma-north-of-the-charles" checked')
         self.assertNotContains(response, "Union Square")
-        self.post({"area": ["metro:ma-north-of-the-charles"], "metro_town": ["ma-north-of-the-charles|Somerville, MA"]})
-        self.assertNotIn("neighborhood", Subscriber.objects.get().choices.get().area_query)
+
+    def test_a_remembered_metro_without_towns_is_ticked(self):
+        self.client.cookies[GEO_COOKIE] = "metro=ma-north-of-the-charles"
+        self.assertContains(self.client.get("/digest"), 'value="metro:ma-north-of-the-charles" checked')
 
     def test_address_limit(self):
         for _ in range(4):

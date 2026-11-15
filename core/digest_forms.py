@@ -3,7 +3,8 @@ reads and saves the choices form shared by the signup and preferences pages
 (add-weekly-email-digest). the form has:
 
     area         any of "region:slug", "state:slug", "metro:slug", or "all"
-    metro_town   "metro-slug|Town, ST": narrows that metro (ticked or not) to these towns
+    metro_town   "metro-slug|Town, ST": narrows that metro to these towns. no longer offered (the
+                 town inputs cover it), but still read from a form opened before it went
     near_q       a zip code or town, with near_miles; near_pick is one of its candidates
     town         followed towns, "Town, ST", one input each
     venue        followed venues, "Name (Town, ST)" or just the name, one input each
@@ -21,7 +22,7 @@ from django.http import QueryDict
 
 from core import location
 from core.digest import ALL_AREAS, MAX_CHOICES, area_filter
-from core.geo_filters import GeoFilter, metro_groups, metro_towns, offered_areas, parse_geo_filter, town_label
+from core.geo_filters import GeoFilter, metro_groups, offered_areas, parse_geo_filter, town_label
 from core.models import DigestChoice, GeoArea, Venue
 
 MILES = (5, 10, 25, 50, 100)
@@ -66,17 +67,6 @@ def area_options():
     ]
     options += [(f"metro:{area.slug}", area.label) for _, metros in metro_groups() for area in metros]
     return options
-
-
-def metro_town_options():
-    """[(metro label, [(value, town label)])] for the towns that narrow a metro"""
-    groups = []
-    for _, metros in metro_groups():
-        for metro in metros:
-            towns = [(f"{metro.slug}|{town_label(town, state)}", town_label(town, state)) for town, state in metro_towns(metro)]
-            if towns:
-                groups.append((metro.label, towns))
-    return groups
 
 
 def area_query_for(kind, slug, towns=()):
@@ -221,10 +211,15 @@ def save_choices(subscriber, specs):
 
 
 def initial_from_filter(geo_filter):
-    """the area boxes a remembered listing filter ticks; neighborhoods are dropped (not offered here)"""
+    """
+    (area boxes ticked, towns filled in) from a remembered listing filter: a metro narrowed to
+    towns fills in those towns, as the form's town inputs; neighborhoods are dropped (not offered)
+    """
+    if geo_filter.metro and geo_filter.towns:
+        return set(), geo_filter.town_labels
     if geo_filter.metro:
         # a metro is narrower than the state or region it sits in
-        return {f"metro:{geo_filter.metro.slug}"}, [f"{geo_filter.metro.slug}|{label}" for label in geo_filter.town_labels]
+        return {f"metro:{geo_filter.metro.slug}"}, []
     if geo_filter.state:
         return {f"state:{geo_filter.state.slug}"}, []
     if geo_filter.region:
@@ -232,13 +227,11 @@ def initial_from_filter(geo_filter):
     return set(), []
 
 
-def form_context(*, ticked=(), metro_towns_ticked=(), near_label="", near_miles=DEFAULT_MILES, towns=(), venues=()):
+def form_context(*, ticked=(), near_label="", near_miles=DEFAULT_MILES, towns=(), venues=()):
     """what the template needs to draw the form, with these things ticked or filled in"""
     return {
         "area_options": area_options(),
-        "metro_town_groups": metro_town_options(),
         "ticked": set(ticked),
-        "metro_towns_ticked": set(metro_towns_ticked),
         # blank on a fresh form; the dev settings would otherwise print a missing-variable marker
         "email": "",
         "near_label": near_label,
@@ -246,13 +239,13 @@ def form_context(*, ticked=(), metro_towns_ticked=(), near_label="", near_miles=
         "miles_options": MILES,
         "towns": list(towns) + [""] * BLANK_INPUTS,
         "venues": list(venues) + [""] * BLANK_INPUTS,
+        "max_choices": MAX_CHOICES,
     }
 
 
 def context_from_post(data):
     return form_context(
         ticked=set(data.getlist("area")),
-        metro_towns_ticked=data.getlist("metro_town"),
         near_label=(data.get("near_pick") or data.get("near_q") or "").strip()[:MAX_LABEL],
         near_miles=_int(data.get("near_miles"), DEFAULT_MILES),
         towns=[v.strip() for v in data.getlist("town") if v.strip()],
@@ -269,16 +262,19 @@ def _int(value, default):
 
 def context_from_choices(subscriber):
     """the form as the subscriber's stored choices fill it in"""
-    ticked, narrowed, near, towns, venues = set(), [], None, [], []
+    ticked, near, towns, venues = set(), None, [], []
     for choice in subscriber.choices.select_related("venue"):
         if choice.kind == KIND.AREA and choice.area_query == ALL_AREAS:
             ticked.add("all")
         elif choice.kind == KIND.AREA:
             geo_filter = area_filter(choice)
-            if geo_filter:
+            if geo_filter and geo_filter.towns:
+                # a metro narrowed to towns (saved before the form offered only town inputs) shows
+                # as those towns, which select the same shows
+                towns += geo_filter.town_labels
+            elif geo_filter:
                 for area in geo_filter.areas:
                     ticked.add(f"{area.kind}:{area.slug}")
-                narrowed += [f"{geo_filter.metro.slug}|{label}" for label in geo_filter.town_labels]
         elif choice.kind == KIND.NEAR:
             near = choice
         elif choice.kind == KIND.TOWN:
@@ -287,7 +283,6 @@ def context_from_choices(subscriber):
             venues.append(venue_label(choice.venue))
     return form_context(
         ticked=ticked,
-        metro_towns_ticked=narrowed,
         near_label=near.label if near else "",
         near_miles=near.miles if near else DEFAULT_MILES,
         towns=towns,

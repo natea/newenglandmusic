@@ -29,6 +29,17 @@ class PreferencesTestCase(DigestTestCase):
     def post(self, data, client=None, **extra):
         return (client or self.client).post("/digest/preferences", data, **extra)
 
+    def test_a_saved_metro_narrowed_to_towns_shows_as_towns(self):
+        # saved before the form offered only town inputs; it shows as the towns, which select the same shows
+        Venue.objects.create(name="Once", state="MA", county="Middlesex", city_town="Somerville")
+        Venue.objects.create(name="The Sinclair 2", state="MA", county="Middlesex", city_town="Cambridge")
+        DigestChoice.objects.create(
+            subscriber=self.subscriber, kind="area", area_query="metro=ma-north-of-the-charles&town=Somerville%2C+MA"
+        )
+        html = self.client.get("/digest/preferences").content.decode()
+        self.assertIn('name="town" value="Somerville, MA"', html)
+        self.assertNotIn('value="metro:ma-north-of-the-charles" checked', html)
+
     def test_preferences_page_and_signing_in_lands_there(self):
         response = self.client.get("/digest/preferences")
         self.assertContains(response, ADDRESS)
