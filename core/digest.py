@@ -102,3 +102,71 @@ def events_for(subscriber, window, venues=None):
         .select_related("venue")
         .order_by("starttime", "pk")
     )
+
+
+# the weekly email
+
+MAX_SHOWN = 50
+SUBJECT = "Your weekly shows"
+
+
+def one_line(text):
+    return " ".join((text or "").split())
+
+
+def format_time(moment):
+    local = moment.astimezone(NEW_YORK)
+    hour = local.hour % 12 or 12
+    suffix = "pm" if local.hour >= 12 else "am"
+    return f"{hour}{suffix}" if local.minute == 0 else f"{hour}:{local.minute:02d}{suffix}"
+
+
+def see_all_query(subscriber):
+    """the listing's filter for the first area choice that still holds, or "" for the whole listing"""
+    for choice in subscriber.choices.filter(kind=DigestChoice.Kind.AREA):
+        if choice.area_query != ALL_AREAS and area_filter(choice):
+            return choice.area_query
+    return ""
+
+
+def build_weekly(subscriber, events, site_url):
+    """
+    (subject, text, html, headers) for the subscriber's selected events, at most MAX_SHOWN of them
+    in start order, by date. site_url turns a path into the site's own address: events link to
+    their page here, never to the event's source
+    """
+    from django.template.loader import render_to_string
+    from django.urls import reverse
+
+    from core import digest_tokens
+
+    events = list(events)
+    days = []
+    for event in events[:MAX_SHOWN]:
+        local = event.starttime.astimezone(NEW_YORK)
+        if not days or days[-1]["date"] != local.date():
+            days.append({"date": local.date(), "label": f"{local:%a %b} {local.day}", "events": []})
+        venue = event.venue
+        days[-1]["events"].append(
+            {
+                "title": one_line(event.title) or one_line(event.artists) or "Untitled show",
+                "artists": one_line(event.artists) if event.title else "",
+                "venue": one_line(venue.name) if venue else "",
+                "town": one_line(venue.city_town) if venue else "",
+                "time": format_time(event.starttime),
+                "url": site_url(reverse("event_redirect", args=[event.pk])),
+            }
+        )
+    unsubscribe = site_url(reverse("digest_unsubscribe", args=[digest_tokens.unsubscribe_token(subscriber)]))
+    query = see_all_query(subscriber)
+    context = {
+        "days": days,
+        "total": len(events),
+        "see_all": site_url("/" + (f"?{query}" if query else "")) if len(events) > MAX_SHOWN else "",
+        "unsubscribe": unsubscribe,
+        "sign_in": site_url(reverse("digest_sign_in")),
+    }
+    text = render_to_string("core/email/weekly_digest.txt", context)
+    html = render_to_string("core/email/weekly_digest.html", context)
+    headers = {"List-Unsubscribe": f"<{unsubscribe}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"}
+    return SUBJECT, text, html, headers

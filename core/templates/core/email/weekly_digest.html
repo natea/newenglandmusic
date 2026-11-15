@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Your weekly shows</title></head>
+<body style="margin:0;background:#d4d0c7;font:15px/1.45 Georgia,serif;color:#000">
+<div style="max-width:600px;margin:0 auto;background:#fff;padding:16px 20px">
+<h1 style="font:800 20px Helvetica,Arial,sans-serif;margin:0 0 6px">Shows this week</h1>
+<p>{{ total }} show{{ total|pluralize }} match{{ total|pluralize:"es," }} your choices.</p>
+{% for day in days %}
+<div style="background:#d4d0c7;font:700 15px Helvetica,Arial,sans-serif;padding:3px 8px;margin:10px 0 4px">{{ day.label }}</div>
+{% for event in day.events %}<div style="margin:0 0 6px"><a href="{{ event.url }}" style="color:#000080"><b>{{ event.title }}</b></a>{% if event.artists %} · {{ event.artists }}{% endif %}{% if event.venue %} · {{ event.venue }}{% if event.town %}, {{ event.town }}{% endif %}{% endif %} · {{ event.time }}</div>
+{% endfor %}{% endfor %}
+{% if see_all %}<p><a href="{{ see_all }}" style="color:#000080">See all {{ total }} on the site</a></p>{% endif %}
+<p style="font-size:12.5px;color:#4f4b44;border-top:1px solid #b9b4a8;margin-top:10px;padding-top:6px">You get this because you signed up for the weekly email. <a href="{{ sign_in }}" style="color:#000080">Change your shows</a> · <a href="{{ unsubscribe }}" style="color:#000080">Unsubscribe</a> (one click)</p>
+</div>
+</body></html>
