@@ -6,7 +6,7 @@ import requests
 from django.test import SimpleTestCase
 
 from core import bandcamp_embeds
-from core.bandcamp_embeds import Result, find_candidates, lookup
+from core.bandcamp_embeds import Result, find_candidates, is_playable, lookup
 
 FIXTURES = Path(__file__).parent / "fixtures" / "bandcamp"
 FRONT = "https://krill.bandcamp.com/"
@@ -178,3 +178,29 @@ class PoliteSessionTestCase(SimpleTestCase):
         self.assertFalse(fake.trust_env)
         self.assertEqual(fake.headers["User-Agent"], "agent")
         self.assertEqual(fake.requested.count(ROBOTS), 1)
+
+
+class PlayableTestCase(SimpleTestCase):
+    """a release plays when the player page's track data has a streamable track"""
+
+    def test_a_streamable_release(self):
+        self.assertTrue(is_playable(page("player_available.html")))
+
+    def test_the_hidden_message_alone_doesnt_count(self):
+        # every player page has "not available" in it, hidden until its script shows it
+        html = page("player_available.html")
+        self.assertIn("not available", html)
+        self.assertTrue(is_playable(html))
+
+    def test_no_streamable_track(self):
+        self.assertFalse(is_playable(page("player_unavailable.html")))
+
+    def test_a_withdrawn_or_private_release(self):
+        html = page("player_available.html")
+        for flag in ("killed", "album_private", "subscriber_only"):
+            with self.subTest(flag):
+                self.assertFalse(is_playable(html.replace(f"&quot;{flag}&quot;: false", f"&quot;{flag}&quot;: true")))
+
+    def test_no_track_data(self):
+        self.assertFalse(is_playable("<html><body><p>Sorry, this track or album is not available.</p></body></html>"))
+        self.assertFalse(is_playable('<script data-player-data="not json"></script>'))

@@ -65,7 +65,7 @@ The command SHALL skip merchandise tiles, and when the front page has no music t
 - **THEN** the act is saved as kind `track`, ID 444
 
 ### Requirement: A release that can't be played is skipped
-Before saving an ID the command SHALL check that Bandcamp's player for it is available, by requesting the player's address once. When the player says the release is not available, the command SHALL go on to the next music release in the page, trying at most three in all. When none plays, the act SHALL be saved with status `no_playable`, no ID, and the time checked.
+Before saving an ID the command SHALL check that Bandcamp's player for it can play, by requesting the player's address once and reading its track data: a release is playable when at least one track has an audio file and the release isn't withdrawn, private or for subscribers only. The player page's "not available" message SHALL NOT be the test, as it is always in the page, hidden until its script shows it. When the release can't be played, the command SHALL go on to the next music release in the page, trying at most three in all. When none plays, the act SHALL be saved with status `no_playable`, no ID, and the time checked.
 
 #### Scenario: Physical-only first release
 - **WHEN** an act's first release (`album-555`) has no playable player and its second (`album-556`) does
