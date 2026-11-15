@@ -43,5 +43,5 @@ Issue: [#13 Visitors can signup to receive a weekly email of upcoming shows that
 
 ## 8. Check the whole
 
-- [ ] 8.1 Run `venv/bin/python manage.py test` with the network blocked and confirm every spec scenario has a passing test.
-- [ ] 8.2 Run `openspec validate add-weekly-email-digest --strict`.
+- [x] 8.1 Run `venv/bin/python manage.py test` with the network blocked and confirm every spec scenario has a passing test.
+- [x] 8.2 Run `openspec validate add-weekly-email-digest --strict`.
