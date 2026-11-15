@@ -243,7 +243,8 @@ article {
 
   .spotify-play,
   .apple-play,
-  .youtube-play {
+  .youtube-play,
+  .bandcamp-play {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -313,6 +314,58 @@ article {
 
     .youtube-more {
       font-size: 0.85rem;
+    }
+  }
+
+  .bandcamp-mark {
+    width: 12px;
+    height: 12px;
+    fill: #1da0c3;
+  }
+
+  .bandcamp-play:hover {
+    border-color: #1da0c3;
+  }
+
+  // the open button is filled, as the sketch draws it (aria-expanded is set by artist_preview.js)
+  .bandcamp-play[aria-expanded="true"] {
+    background: black;
+    color: white;
+    font-weight: 700;
+
+    .bandcamp-mark {
+      fill: white;
+    }
+  }
+
+  // bandcamp's large player, a fixed height with its artwork and track list; as wide as the
+  // column down to 320px, and on a narrow screen the whole width, past the time column
+  .bandcamp-player {
+    iframe {
+      border: 0;
+      border-radius: 10px;
+      display: block;
+      height: 300px;
+      margin-top: 6px;
+      max-width: 100%;
+      min-width: #{"min(320px, 100%)"};
+      width: 100%;
+    }
+
+    .bandcamp-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+      align-items: center;
+      font-size: 0.85rem;
+      margin: 4px 0 0;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .artist-player {
+      margin-left: 0;
+      max-width: 100%;
     }
   }
 

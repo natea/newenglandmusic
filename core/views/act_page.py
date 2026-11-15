@@ -81,6 +81,16 @@ def links_of(act):
     ]
 
 
+def bandcamp_player_of(act):
+    """the act's usable Bandcamp player for its page (the kind, the number and where to link), or None"""
+    if not act.bandcamp_player_usable:
+        return None
+    return {
+        "kind": act.bandcamp_embed_kind, "id": act.bandcamp_embed_id, "page": act.bandcamp_url,
+        "link": act.bandcamp_url or act.bandcamp_player_url,
+    }
+
+
 def members_of(band):
     """(current, former): each (artist, role, years, headshot), current members first"""
     current, former = [], []
@@ -153,6 +163,7 @@ def act_page(request, act):
             "members_have_headshots": any(entry[3] for entry in current + former),
             "bands": [] if is_band else bands_of(act),
             "links": links_of(act),
+            "bandcamp_player": bandcamp_player_of(act),
             "photo": photo_of(act, PHOTO_WIDTH),
             "wikipedia_title": wikipedia_title(act) if act.wikipedia_url else "",
             "invitation": invitation(request, act),

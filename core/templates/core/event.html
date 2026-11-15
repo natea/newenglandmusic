@@ -137,10 +137,11 @@
   <!--event-actions-->
   {% comment %}
     play buttons get a row of their own, below the text and the link icons' row: spotify's,
-    apple music's and youtube's, for each artist matched on them.
+    apple music's, youtube's and bandcamp's, for each artist matched on them (bandcamp's from
+    the event's linked acts that have a usable player, even when no other service is on).
     each is a plain link to the artist's page; with javascript, core/js/artist_preview.js
     opens the service's player below the row instead, and only then does anything load
-    from spotify, apple or youtube
+    from spotify, apple, youtube or bandcamp
   {% endcomment %}
   {% if artist_previews %}
     <div class="artist-previews">
@@ -161,6 +162,12 @@
           <a class="youtube-play" href="{% if preview.youtube.video %}https://www.youtube.com/watch?v={{ preview.youtube.video }}{% else %}https://www.youtube.com/channel/{{ preview.youtube.channel }}{% endif %}" data-youtube-video="{{ preview.youtube.video }}" data-youtube-channel="{{ preview.youtube.channel }}" data-artist-name="{{ preview.label }}" target="_blank" rel="noopener" title="Listen to {{ preview.label }} on YouTube">
             <svg class="youtube-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.6 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
             ▶ {{ preview.label }}
+          </a>
+        {% endif %}
+        {% if preview.bandcamp %}
+          <a class="bandcamp-play" href="{{ preview.bandcamp.link }}" data-bandcamp-kind="{{ preview.bandcamp.kind }}" data-bandcamp-id="{{ preview.bandcamp.id }}" data-bandcamp-page="{{ preview.bandcamp.page }}" data-artist-name="{{ preview.label }}" target="_blank" rel="noopener" title="Listen to {{ preview.label }} on Bandcamp">
+            <svg class="bandcamp-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M0 18.75l7.437-13.5H24l-7.438 13.5H0z"/></svg>
+            ▶ {{ preview.label }} on Bandcamp
           </a>
         {% endif %}
       {% endfor %}

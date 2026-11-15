@@ -72,7 +72,7 @@ The 25-act experiment (11 redirecting to a release, 14 grids, 25 found) is the s
 - **Player size on listings.** The owner chose sketch B on the issue, with its large player (about 300px), as most consistent with the other players; the height mismatch with Spotify and Apple Music is raised in "Player size and settings" above. If the owner picks one player with two settings, the build uses one player with a setting for listings and another for pages.
 - **CSV export.** Which of the kind, ID and status belong in the export (decision 11).
 - **Privacy.** A Bandcamp frame loaded after a click sets Bandcamp's cookies in the visitor's browser. The privacy page may need a line, as it may for Spotify and YouTube.
-- **Content-security policy.** Whether the site sets one that would block `bandcamp.com` frames (task 4.3 checks).
+- **Content-security policy.** Checked in task 4.4: the site sets no content-security policy, `frame-src` or `frame-ancestors` (only a referrer policy), so nothing blocks `bandcamp.com` frames and none needs opening; a test says so. If a policy is added later it must allow `https://bandcamp.com` frames. The privacy page now names Bandcamp's player and its cookies.
 
 ## Risks / Trade-offs
 
