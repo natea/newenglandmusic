@@ -3,7 +3,7 @@ Issue: [#47 Embedded Bandcamp player on event listings, artist and band pages, a
 ## 1. Research and data
 
 - [ ] 1.1 Fetch a fresh sample of about 25 acts' Bandcamp pages (read-only, robots.txt obeyed, two seconds apart) and confirm the shapes in the design: the JSON-LD `albumRelease` `item_id`, a track's page properties, grid tile markup and merch tiles' prefix, the `/music` path, and the player page's "not available" marker. Save sanitised pages in `core/tests/fixtures/bandcamp/` and update the design if they differ.
-- [ ] 1.2 Add `bandcamp_embed_kind`, `bandcamp_embed_id` (digits only), `bandcamp_embed_status`, `bandcamp_embed_checked_at` and `bandcamp_embed_for` to `MusicAct`, with a migration and the player-address helper. Write the automated tests for "Player address from an album ID", "The URL a player was read from", "Stale player is not usable" and "An ID that is not a number", and check `makemigrations --check` is clean.
+- [x] 1.2 Add `bandcamp_embed_kind`, `bandcamp_embed_id` (digits only), `bandcamp_embed_status`, `bandcamp_embed_checked_at` and `bandcamp_embed_for` to `MusicAct`, with a migration and the player-address helper. Write the automated tests for "Player address from an album ID", "The URL a player was read from", "Stale player is not usable" and "An ID that is not a number", and check `makemigrations --check` is clean.
 
 ## 2. The lookup
 

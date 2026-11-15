@@ -31,6 +31,12 @@ NOT_EXPORTED = {
     "updated_at",
     "musicbrainz_checked_at",
     "link_hub_checked_at",
+    # the bandcamp player's fields, until the export decides on them
+    "bandcamp_embed_kind",
+    "bandcamp_embed_id",
+    "bandcamp_embed_status",
+    "bandcamp_embed_checked_at",
+    "bandcamp_embed_for",
     # the link-hub check's open suggestions, which an editor accepts or dismisses in the admin
     "link_hub_findings",
     # cc by-sa 4.0, which must be credited wherever the text is shown

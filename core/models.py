@@ -12,7 +12,7 @@ from solo.models import SingletonModel
 from tinymce import models as tinymce_models
 
 from core.artist_matching import normalize
-from core.artists import MBID_PATTERN, validate_bandcamp_url
+from core.artists import MBID_PATTERN, bandcamp_player_url, validate_bandcamp_embed_id, validate_bandcamp_url
 from core.utils_event_caching import bake_event_html
 from core.utils_static_page import refresh_searchable_static_page_bits
 
@@ -925,12 +925,61 @@ class MusicAct(models.Model):
     link_hub_checked_at = models.DateTimeField(null=True, blank=True)
     link_hub_findings = models.JSONField(blank=True, default=list)
 
+    class BandcampEmbedKind(models.TextChoices):
+        ALBUM = "album", "Album"
+        TRACK = "track", "Track"
+
+    class BandcampEmbedStatus(models.TextChoices):
+        FOUND = "found", "Found"
+        NO_PLAYABLE = "no_playable", "No playable release"
+        BLOCKED = "blocked", "Blocked"
+        GONE = "gone", "Page gone"
+        UNREADABLE = "unreadable", "Page not readable"
+        FAILED = "failed", "Failed"
+        # an editor turned the player off for the act: the lookup never requests or refills it
+        DECLINED = "declined", "Declined"
+
+    # the act's bandcamp player (find_bandcamp_embeds, core/bandcamp_embeds.py): the kind and
+    # numeric id are all that's kept from bandcamp. an editor's value is marked "editor" in
+    # field_sources["bandcamp_embed"] and never overwritten. bandcamp_embed_for is the
+    # bandcamp_url last looked up, set on every outcome, so a changed url is noticed and a
+    # failed look-up isn't repeated before its time
+    bandcamp_embed_kind = models.CharField(max_length=8, choices=BandcampEmbedKind.choices, blank=True, default="")
+    bandcamp_embed_id = models.CharField(max_length=20, blank=True, default="", validators=[validate_bandcamp_embed_id])
+    bandcamp_embed_status = models.CharField(
+        max_length=16, choices=BandcampEmbedStatus.choices, blank=True, default=""
+    )
+    bandcamp_embed_checked_at = models.DateTimeField(null=True, blank=True)
+    bandcamp_embed_for = models.URLField(max_length=300, blank=True, default="")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True
         ordering = ("name",)
+
+    @property
+    def bandcamp_player_usable(self):
+        """
+        whether the player may be shown: kind and id set, and either an editor set them or
+        the lookup found them at the act's current bandcamp address. every display rule
+        asks this, never the status alone
+        """
+        if not (self.bandcamp_embed_kind and self.bandcamp_embed_id):
+            return False
+        if self.bandcamp_embed_status == self.BandcampEmbedStatus.DECLINED:
+            return False
+        if self.field_sources.get("bandcamp_embed") == "editor":
+            return True
+        return (
+            self.bandcamp_embed_status == self.BandcampEmbedStatus.FOUND
+            and self.bandcamp_embed_for == self.bandcamp_url
+        )
+
+    @property
+    def bandcamp_player_url(self):
+        return bandcamp_player_url(self.bandcamp_embed_kind, self.bandcamp_embed_id)
 
     def save(self, *args, **kwargs):
         self.name_key = normalize(self.name)
