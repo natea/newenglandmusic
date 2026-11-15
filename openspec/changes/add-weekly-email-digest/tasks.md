@@ -14,8 +14,8 @@ Issue: [#13 Visitors can signup to receive a weekly email of upcoming shows that
 
 ## 3. Signed links and sign-in codes
 
-- [ ] 3.1 Add `core/digest_tokens.py`: purpose-salted signed tokens for confirmation (7 days) and unsubscribe (no expiry), and the sign-in code helpers (generate with `secrets`, keyed hash, constant-time check, 15 minutes, single use, newer code cancels older, 5 tries per code and 10 an hour per address, the 3-an-hour address limit and the 10-an-hour client limit).
-- [ ] 3.2 Add `core/tests/test_digest_tokens.py` covering the scenarios for valid and altered links, the expired and used code, the lockouts, the address and client limits, and that the reply doesn't wait for the mail service (the fake sender is only called after the response is returned).
+- [x] 3.1 Add `core/digest_tokens.py`: purpose-salted signed tokens for confirmation (7 days) and unsubscribe (no expiry), and the sign-in code helpers (generate with `secrets`, keyed hash, constant-time check, 15 minutes, single use, newer code cancels older, 5 tries per code and 10 an hour per address, the 3-an-hour address limit and the 10-an-hour client limit).
+- [x] 3.2 Add `core/tests/test_digest_tokens.py` covering the scenarios for valid and altered links, the expired and used code, the lockouts, the address and client limits, and that the reply doesn't wait for the mail service (the fake sender is only called after the response is returned).
 
 ## 4. Choosing shows
 
