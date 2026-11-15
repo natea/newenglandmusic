@@ -65,10 +65,14 @@ def unsubscribe_token(subscriber):
     return sign(subscriber, UNSUBSCRIBE_SALT)
 
 
-def code_hash(subscriber, code):
-    # keyed, so a leaked table can't be reversed by trying all million codes
+def keyed_hash(purpose, value):
+    # keyed, so a leaked table can't be reversed by trying every code or address
     key = settings.SECRET_KEY.encode()
-    return hmac.new(key, f"digest-code:{subscriber.pk}:{code}".encode(), hashlib.sha256).hexdigest()
+    return hmac.new(key, f"{purpose}:{value}".encode(), hashlib.sha256).hexdigest()
+
+
+def code_hash(subscriber, code):
+    return keyed_hash("digest-code", f"{subscriber.pk}:{code}")
 
 
 def issue_code(subscriber):
@@ -132,8 +136,7 @@ def client_address(request):
 
 
 def client_hash(request):
-    key = settings.SECRET_KEY.encode()
-    return hmac.new(key, f"digest-client:{client_address(request)}".encode(), hashlib.sha256).hexdigest()
+    return keyed_hash("digest-client", client_address(request))
 
 
 def client_limited(request):
