@@ -108,7 +108,7 @@ class PreferencesTestCase(DigestTestCase):
             response = self.client.get(url)
             self.assertIn("noindex", response["X-Robots-Tag"])
             self.assertIn("no-store", response["Cache-Control"])
-            self.assertEqual(response["Referrer-Policy"], "no-referrer")
+            self.assertEqual(response["Referrer-Policy"], "same-origin")
 
     def test_area_no_longer_listed(self):
         self.subscriber.choices.update(area_query="state=atlantis")

@@ -33,13 +33,17 @@ MAX_EMAIL = 254
 
 
 def guarded(view):
-    """pages holding tokens or choices: never indexed, cached or sent on in a referrer"""
+    """
+    pages holding tokens or choices: never indexed, cached or sent to another site in a
+    referrer. same-origin, not no-referrer: under no-referrer, safari sends the page's own form
+    posts with "Origin: null", which django's csrf check refuses
+    """
 
     def wrapped(request, *args, **kwargs):
         response = view(request, *args, **kwargs)
         add_never_cache_headers(response)
         response["X-Robots-Tag"] = "noindex, nofollow"
-        response["Referrer-Policy"] = "no-referrer"
+        response["Referrer-Policy"] = "same-origin"
         return response
 
     wrapped.__name__ = view.__name__
