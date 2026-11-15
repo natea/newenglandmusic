@@ -1,0 +1,5 @@
+[
+{"file":"a.html","label":"Plain line under the player","thesis":"One quiet line beneath the player says one tap is needed, shown only after the wait, and nothing else on the card changes.","risk":"Easy to miss under a dark player on a small screen, and it says nothing about sound if a muted start is chosen."},
+{"file":"b.html","label":"Muted start, then an unmute prompt","thesis":"The video starts silent, which iPhones allow, and a line below tells the visitor how to turn sound on; the tap-play line is the fallback if the phone still refuses.","risk":"A silent start on a music tool is a weak result, and it is not certain iOS permits it from this iframe."},
+{"file":"c.html","label":"Callout above the player that points down","thesis":"A louder card-stock callout with a plum edge sits above the player and points at it, and the Start note warns iPhone visitors beforehand.","risk":"Pushes the player down the card, and the louder note may feel like an error rather than a normal step."}
+]
