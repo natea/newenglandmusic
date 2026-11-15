@@ -2,6 +2,7 @@ import random
 import uuid
 
 from core.models import Event, StaticPage
+from core.tests.new_england_fixture import new_england_venue
 from core.utils_datemath import get_current_new_york_datetime
 from django.test import TestCase
 
@@ -118,6 +119,7 @@ class SearchTestCase(TestCase):
         event_title = " ".join(random.sample(RANDOM_WORDS, 10))
         event_description = str(uuid.uuid4())
         event = Event.objects.create(
+            venue=new_england_venue(),
             title=event_title,
             description=event_description,
             starttime=get_current_new_york_datetime(),
@@ -140,6 +142,7 @@ class SearchTestCase(TestCase):
         event_title = " ".join(random.sample(RANDOM_WORDS, 10))
         event_description = str(uuid.uuid4())
         event = Event.objects.create(
+            venue=new_england_venue(),
             title=event_title,
             description=event_description,
             starttime=get_current_new_york_datetime(),

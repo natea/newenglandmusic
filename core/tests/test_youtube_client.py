@@ -105,8 +105,8 @@ class MusicIdsTestCase(SimpleTestCase):
         with mock.patch.dict("os.environ", {"API_CONTACT_EMAIL": "someone@example.org"}):
             web.music_ids().musicbrainz_channels(DINOSAUR_SPOTIFY)
         self.assertTrue(all(r.headers["User-Agent"].endswith("; someone@example.org )") for r in web.requests))
-        with mock.patch.dict("os.environ", {"API_CONTACT_EMAIL": ""}):
-            self.assertEqual(user_agent(), "venue-db-event-check/1.0 ( https://newenglandmusic.onrender.com )")
+        with mock.patch.dict("os.environ", {"API_CONTACT_EMAIL": ""}), self.settings(SITE_URL="https://stagehopper.app"):
+            self.assertEqual(user_agent(), "venue-db-event-check/1.0 ( https://stagehopper.app )")
 
     def test_musicbrainz_no_link(self):
         web = FakeWeb()

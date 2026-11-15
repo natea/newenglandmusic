@@ -11,6 +11,7 @@ import datetime
 from unittest import mock
 
 from core.models import AppleMusicArtistLink, Event, SpotifyArtistLink
+from core.tests.new_england_fixture import new_england_venue
 from core.tests.apple_music_fixture import SWITCHED_ON
 from core.tests.browser import BrowserTestCase
 from core.tests.spotify_fixture import CREDENTIALS
@@ -41,8 +42,8 @@ class PreviewBrowserTestCase(BrowserTestCase):
         apple_matched("psymon spine", "100000051", "964625539", "964625535")
         matched("lake street dive", "fakeLSD")
         tomorrow = timezone.now() + datetime.timedelta(days=1)
-        Event.objects.create(artists="SHEBAD, Psymon Spine", starttime=tomorrow)
-        Event.objects.create(artists="Lake Street Dive", starttime=tomorrow + datetime.timedelta(hours=1))
+        Event.objects.create(venue=new_england_venue(), artists="SHEBAD, Psymon Spine", starttime=tomorrow)
+        Event.objects.create(venue=new_england_venue(), artists="Lake Street Dive", starttime=tomorrow + datetime.timedelta(hours=1))
 
     def open_homepage(self, javascript=True):
         return self.open_page("/", javascript=javascript)

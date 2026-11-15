@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0103_act_link_hubs'),
+        ('core', '0105_geoarea_groups_and_defaults'),
     ]
 
     operations = [

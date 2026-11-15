@@ -2,7 +2,8 @@ Issue: [#29 When adding pages for new artists, or when augmenting pages for exis
 
 ## 1. Research and data
 
-- [ ] 1.1 Check the live pages of Linktree and the candidate hubs in the design (read-only, robots.txt obeyed, one page each): which give their links without JavaScript, and what their robots.txt says. Note in particular whether Linktree's robots.txt and page answer a plain client or are always "blocked"; if always, stop and ask the owner about scope. Record the final `HUBS` list in the design, and save sanitised page fixtures in `core/tests/fixtures/link_hubs/`.
+- [x] 1.1 Check the live pages of Linktree and the candidate hubs in the design (read-only, robots.txt obeyed, one page each): which give their links without JavaScript, and what their robots.txt says. Note in particular whether Linktree's robots.txt and page answer a plain client or are always "blocked"; if always, stop and ask the owner about scope. Record the final `HUBS` list in the design, and save sanitised page fixtures in `core/tests/fixtures/link_hubs/`.
+  - 11 November 2026: Linktree only, by Nate's scope; the other hubs wait until an act uses one. Linktree's robots.txt forbids unlisted crawlers, so the page is always "blocked"; Nate chose hand copying and #52 (design, decision 3a). `HUBS` is unchanged. The fixtures in `core/tests/fixtures/link_hubs/` stay as recorded.
 - [x] 1.2 Add `link_hub_url`, `link_hub_status`, `link_hub_checked_at` and `link_hub_findings` to `MusicAct`, with a migration. Verify with model tests and that `makemigrations --check` is clean.
 - [x] 1.3 Write `core/link_hubs.py`: `HUBS`, `hub_for`, `links_on`, `classify`, address comparison and `apply`. Write the automated tests for the scenarios "Not a page on a hub", "Filling an empty field", "Several candidates", "A video is not a channel", "The hub's own label names the website", "Protected values stay", "Not a Bandcamp address", "A link on another site", "A page with no links", "A hub address in the website field", "A hub address too long for its field", "A conflicting YouTube link", "The same address written differently", "A finding goes away" "A dismissed finding" and "A changed hub replaces its own fill".
 
@@ -23,4 +24,5 @@ Issue: [#29 When adding pages for new artists, or when augmenting pages for exis
 
 ## 5. Finish
 
-- [ ] 5.1 Run the whole suite with outbound network blocked, and a real `read_artist_link_hubs --limit 5 --dry-run` against records with hub addresses, logging to `logs/read_artist_link_hubs-YYYY-MM-DD.log`. Update the design if the live pages contradict it. Verify that every scenario has a passing test.
+- [x] 5.1 Run the whole suite with outbound network blocked, and a real `read_artist_link_hubs --limit 5 --dry-run` against records with hub addresses, logging to `logs/read_artist_link_hubs-YYYY-MM-DD.log`. Update the design if the live pages contradict it. Verify that every scenario has a passing test.
+  - 12 November 2026: the whole suite ran with outbound connections refused except loopback: 1755 tests, one failure, `test_youtube_preview_browser`'s player-height check, which fails the same way on `main` on that machine and passes in CI. Nate's production dry run of 11 November read 4 hubs due, all Linktree, all "blocked (robots.txt forbids it)", which the design now records. Each of the 61 scenarios has a test by name or content.

@@ -42,12 +42,13 @@ class ProdSettingsTestCase(SimpleTestCase):
     def test_renders_hostname_is_allowed(self):
         prod = self.prod_settings(RENDER_EXTERNAL_HOSTNAME="newenglandmusic.onrender.com")
         self.assertEqual(
-            prod["allowed_hosts"], ["newenglandmusic.example", "newenglandmusic.onrender.com"]
+            prod["allowed_hosts"],
+            ["newenglandmusic.example", "newenglandmusic.onrender.com", "stagehopper.app", "www.stagehopper.app"],
         )
 
     def test_without_render_only_the_configured_hosts(self):
         prod = self.prod_settings()
-        self.assertEqual(prod["allowed_hosts"], ["newenglandmusic.example"])
+        self.assertEqual(prod["allowed_hosts"], ["newenglandmusic.example", "stagehopper.app", "www.stagehopper.app"])
 
     def test_https_behind_the_proxy(self):
         prod = self.prod_settings()
@@ -59,7 +60,7 @@ class ProdSettingsTestCase(SimpleTestCase):
         prod = self.prod_settings(
             allowed_hosts="", RENDER_EXTERNAL_HOSTNAME="newenglandmusic.onrender.com"
         )
-        self.assertEqual(prod["allowed_hosts"], ["newenglandmusic.onrender.com"])
+        self.assertEqual(prod["allowed_hosts"], ["newenglandmusic.onrender.com", "stagehopper.app", "www.stagehopper.app"])
 
     def test_site_url_falls_back_to_the_render_address(self):
         prod = self.prod_settings(RENDER_EXTERNAL_URL="https://newenglandmusic.onrender.com")

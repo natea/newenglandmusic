@@ -49,8 +49,14 @@ class FilterListingTestCase(GeoFilterPageTestCase):
         self.assertContains(response, '<option value="vermont" selected>Vermont</option>', html=True)
 
     def test_filter_by_metro_area(self):
-        response = self.client.get("/?metro=ma-cape-cod")
+        response = self.client.get("/?metro=ma-mid-cape")
         self.assertEqual(self.titles(response), {"cape cod show"})
+
+    def test_no_region_menu(self):
+        response = self.client.get("/")
+        self.assertContains(response, '<select name="state">')
+        self.assertContains(response, '<select name="metro">')
+        self.assertNotContains(response, 'name="region"')
 
     def test_filter_by_region(self):
         response = self.client.get("/?region=new-england-south")
@@ -60,7 +66,7 @@ class FilterListingTestCase(GeoFilterPageTestCase):
         )
 
     def test_region_and_state_together(self):
-        response = self.client.get("/?region=tri-state&state=vermont")
+        response = self.client.get("/?region=new-england-south&state=vermont")
         self.assertEqual(self.titles(response), set())
         self.assertContains(response, "no events match these filters")
         self.assertContains(response, 'href="/?clear=1"')
@@ -79,13 +85,19 @@ class FilterListingTestCase(GeoFilterPageTestCase):
 
     def test_no_filter(self):
         response = self.client.get("/")
-        self.assertEqual(len(self.titles(response)), 7)
+        self.assertEqual(len(self.titles(response)), 6)
         self.assertNotContains(response, "no events match these filters")
 
     def test_no_areas_synced_shows_no_form(self):
         GeoArea.objects.all().delete()
         response = self.client.get("/")
         self.assertNotContains(response, 'class="geoFilter"')
+
+
+MASSACHUSETTS_GROUPS = [
+    "Western Massachusetts", "Central Massachusetts", "MetroWest", "Greater Boston", "Northeast Massachusetts",
+    "South of Boston & Southeast", "Cape Cod & the Islands",
+]
 
 
 class MetroOptionsTestCase(GeoFilterPageTestCase):
@@ -97,21 +109,25 @@ class MetroOptionsTestCase(GeoFilterPageTestCase):
 
     def test_all_metros_grouped_by_state(self):
         response = self.client.get("/")
+        labels = self.metro_labels(response)
         self.assertEqual(
-            self.metro_labels(response),
-            [
-                ("Massachusetts", ["Boston", "Boston Metro Region", "Cape Cod", "Central"]),
-                ("Vermont", ["North", "South"]),
-            ],
+            [heading for heading, _ in labels],
+            ["Connecticut", *MASSACHUSETTS_GROUPS, "Maine", "New Hampshire", "Vermont"],
         )
+        self.assertIn(("Vermont", ["North", "South"]), labels)
         self.assertContains(response, '<optgroup label="Vermont">')
+        self.assertContains(response, '<optgroup label="Western Massachusetts">')
 
     def test_metros_narrowed_to_the_state(self):
         response = self.client.get("/?state=massachusetts")
+        labels = dict(self.metro_labels(response))
+        self.assertEqual(list(labels), MASSACHUSETTS_GROUPS)
         self.assertEqual(
-            self.metro_labels(response),
-            [("Massachusetts", ["Boston", "Boston Metro Region", "Cape Cod", "Central"])],
+            labels["Western Massachusetts"],
+            ["The Berkshires", "The Hilltowns", "Pioneer Valley / Connecticut River Valley", "Quabbin / Swift River Valley"],
         )
+        self.assertIn("North of the Charles", labels["Greater Boston"])
+        self.assertIn("Outer Cape", labels["Cape Cod & the Islands"])
         self.assertNotContains(response, "vt-north")
 
     def test_metro_from_another_state(self):
@@ -138,7 +154,7 @@ class NavigationAndBadInputTestCase(GeoFilterPageTestCase):
 
     def test_unknown_value(self):
         response = self.client.get("/?state=atlantis")
-        self.assertEqual(len(self.titles(response)), 7)
+        self.assertEqual(len(self.titles(response)), 6)
 
 
 class RememberedFilterTestCase(GeoFilterPageTestCase):
@@ -157,10 +173,10 @@ class RememberedFilterTestCase(GeoFilterPageTestCase):
         self.assertRedirects(response, "/?state=vermont", fetch_redirect_response=False)
 
     def test_remembered_filter_with_a_metro(self):
-        self.client.get("/?state=massachusetts&metro=ma-cape-cod")
+        self.client.get("/?state=massachusetts&metro=ma-mid-cape")
         response = self.client.get("/")
         self.assertRedirects(
-            response, "/?state=massachusetts&metro=ma-cape-cod", fetch_redirect_response=False
+            response, "/?state=massachusetts&metro=ma-mid-cape", fetch_redirect_response=False
         )
 
     def test_remembered_filter_on_a_month_archive(self):
@@ -170,14 +186,14 @@ class RememberedFilterTestCase(GeoFilterPageTestCase):
 
     def test_a_shared_link_wins_over_the_cookie(self):
         self.remember("state=vermont")
-        response = self.client.get("/?metro=ma-cape-cod")
+        response = self.client.get("/?metro=ma-mid-cape")
         self.assertEqual(self.titles(response), {"cape cod show"})
-        self.assertEqual(response.cookies[COOKIE_NAME].value, "metro=ma-cape-cod")
+        self.assertEqual(response.cookies[COOKIE_NAME].value, "metro=ma-mid-cape")
 
     def test_clearing_by_choosing_all(self):
         self.remember("state=vermont")
         response = self.client.get("/?region=&state=&metro=")
-        self.assertEqual(len(self.titles(response)), 7)
+        self.assertEqual(len(self.titles(response)), 6)
         self.assertEqual(response.cookies[COOKIE_NAME].value, "")
         self.assertEqual(response.cookies[COOKIE_NAME]["max-age"], 0)
         self.assertEqual(self.client.get("/").status_code, 200)
@@ -185,14 +201,14 @@ class RememberedFilterTestCase(GeoFilterPageTestCase):
     def test_clearing_by_the_show_all_link(self):
         self.remember("state=vermont")
         response = self.client.get("/?clear=1")
-        self.assertEqual(len(self.titles(response)), 7)
+        self.assertEqual(len(self.titles(response)), 6)
         self.assertEqual(response.cookies[COOKIE_NAME]["max-age"], 0)
         self.assertEqual(self.client.get("/").status_code, 200)
 
     def test_stale_cookie(self):
         self.remember("metro=ma-somewhere-removed")
         response = self.client.get("/")
-        self.assertEqual(len(self.titles(response)), 7)
+        self.assertEqual(len(self.titles(response)), 6)
         self.assertEqual(response.cookies[COOKIE_NAME]["max-age"], 0)
 
     def test_no_filter_chosen(self):
@@ -203,7 +219,7 @@ class RememberedFilterTestCase(GeoFilterPageTestCase):
     def test_unknown_value_leaves_the_cookie_alone(self):
         self.remember("state=vermont")
         response = self.client.get("/?state=atlantis")
-        self.assertEqual(len(self.titles(response)), 7)
+        self.assertEqual(len(self.titles(response)), 6)
         self.assertNotIn(COOKIE_NAME, response.cookies)
 
     def test_search_ignores_the_cookie(self):
@@ -212,3 +228,37 @@ class RememberedFilterTestCase(GeoFilterPageTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "core/search.html")
         self.assertNotIn(COOKIE_NAME, response.cookies)
+
+
+class OldMassachusettsMetrosTestCase(GeoFilterPageTestCase):
+    """the metros massachusetts had before its sub-regions cover the whole state"""
+
+    def test_an_old_listing_link(self):
+        response = self.client.get("/?metro=ma-boston-metro-region")
+        self.assertEqual(self.titles(response), {"boston show", "cape cod show"})
+        self.assertEqual(response.context["geo_filter"].state.label, "Massachusetts")
+        self.assertIsNone(response.context["geo_filter"].metro)
+
+    def test_a_subscribed_feed(self):
+        body = self.client.get("/calendar.ics?metro=ma-cape-cod").content.decode()
+        self.assertIn("cape cod show", body)
+        self.assertIn("boston show", body)
+        self.assertNotIn("burlington show", body)
+
+    def test_a_remembered_old_metro_redirects_to_massachusetts(self):
+        self.client.cookies[COOKIE_NAME] = "metro=ma-central"
+        response = self.client.get("/")
+        self.assertRedirects(response, "/?state=massachusetts", fetch_redirect_response=False)
+
+    def test_the_north_shore_address_kept(self):
+        Event.objects.create(
+            title="salem show", starttime=Event.objects.get(title="boston show").starttime,
+            venue=Venue.objects.create(name="Salem venue", state="MA", county="Essex", city_town="Salem"),
+        )
+        response = self.client.get("/?metro=ma-north-shore")
+        self.assertEqual(self.titles(response), {"salem show"})
+        self.assertEqual(response.context["geo_filter"].metro.label, "MA: North Shore")
+
+    def test_an_old_metro_with_another_state_keeps_that_state(self):
+        response = self.client.get("/?state=vermont&metro=ma-cape-cod")
+        self.assertEqual(self.titles(response), {"burlington show", "brattleboro show"})

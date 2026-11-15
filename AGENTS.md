@@ -4,7 +4,7 @@ Guidance for coding agents working in this repository. `CLAUDE.md` is a symlink 
 
 ## What this is
 
-This checkout started as [nyc noise](https://nyc-noise.com/), a Django NYC music calendar. On `main` (which grew out of the `venue-db` branch) it is being turned into a **Northeast US music venue database and event calendar**. Venues come from a Google Sheet; their events are fetched from venue websites, ticketing platforms and APIs.
+This checkout started as [nyc noise](https://nyc-noise.com/), a Django NYC music calendar. On `main` (which grew out of the `venue-db` branch) it is being turned into a **Northeast US music venue database and event calendar**. Venues are kept in the admin (they first came from a Google Sheet); their events are fetched from venue websites, ticketing platforms and APIs.
 
 - **Two remotes, and only one to push to:**
   - **`origin`:** the upstream `nycnoise/nycnoise` repo. Never push or open pull requests there.
@@ -31,12 +31,15 @@ API keys live in `.env`, which is git-ignored:
 - `LASTFM_API_KEY` (a Last.fm API account's key; the secret isn't needed). Last.fm takes it only as a URL parameter, so never print or log a Last.fm request URL
 - `YOUTUBE_API_KEY` (a Google Cloud key restricted to YouTube Data API v3, the only Google API to enable for it), plus the non-secret switch `YOUTUBE_PREVIEWS`
 - `GOOGLE_PLACES_API_KEY` (restricted to the Places API (New))
+- `POSTHOG_PROJECT_TOKEN` and `POSTHOG_HOST` (PostHog's project token, its public browser-side key, and the account's host): analytics in the browser only, never server-side (see PRODUCTION.md, "Analytics"); leave the token blank when running tests
+- `POSTHOG_PERSONAL_API_KEY` (a PostHog personal API key scoped to project 735651 with insight and dashboard read and write), for `sync_posthog_dashboard`, run by hand: local `.env` only, never on Render; `POSTHOG_PROJECT_ID` and `POSTHOG_APP_HOST` default to 735651 and `https://us.posthog.com`
 
 `.env.example` lists them. Never print, log or commit a key; check only whether one is set. Pass keys in headers rather than URLs where the API allows it, and keep them out of error messages and test fixtures.
 
 ## Data sources
 
-- **Venues come from the Google Sheet copy** "Northeastern US Music Venues - v3 (venue-db copy)" (`1QBzKHOUWOR0Fw0ODrwEep5eGfZg4SmTUq4PsaCbbnGQ`, tab "V3 - Flattened"). Rows are keyed by its `Venue_ID` column. Don't modify the original sheet (`14s8oWNJbRNWn7jys675u_t8B9A8nXyuAVkBhzyE4l2M`).
+- **Venues are kept in the admin.** They were imported from the Google Sheet copy "Northeastern US Music Venues - v3 (venue-db copy)" (`1QBzKHOUWOR0Fw0ODrwEep5eGfZg4SmTUq4PsaCbbnGQ`, tab "V3 - Flattened"), keyed by its `Venue_ID` column, which is `Venue.sheet_id`. `sync_venues_from_gsheets` no longer runs on a schedule, and overwrites editors' changes to matching venues, so run it only by hand, `--dry-run` first. A venue added in the admin with no ID gets the next `V` number. Don't modify the original sheet (`14s8oWNJbRNWn7jys675u_t8B9A8nXyuAVkBhzyE4l2M`).
+- **Regions, states and metro areas are in `core/geo_areas.py`,** loaded into `GeoArea` by every migrate (`core/geo_area_sync.py`). Massachusetts's 28 sub-regions put each venue in exactly one: by its town, by Boston plus its neighborhood, else by its county's default. `report_massachusetts_regions` lists the venues a county default placed, for the editors.
 - **Read Google Sheets with the `gog` CLI,** not an MCP server. If it reports `invalid_grant`, the user must re-authorize: `gog auth add <your-google-account> --services calendar,drive,gmail,sheets`.
 - **On a server, the sheet sync reads the sheet with a service account** instead, when `GOOGLE_SERVICE_ACCOUNT_JSON` is set (`core/google_sheets.py`; setup in `PRODUCTION.md`). Never print or log that variable.
 - **The sheet's coordinates are town centres,** not venue locations. Use `Venue.exact_location`, which is the Google Places location when that match is confident.
@@ -57,7 +60,7 @@ API keys live in `.env`, which is git-ignored:
 
 These are management commands, run in this order:
 
-1. **`sync_venues_from_gsheets`:** reads the sheet into `Venue`. It never deletes venues, and it never touches fields that don't come from the sheet (`place_*`, `ticketmaster_venue_id`, `eventbrite_organizer_id`, `seatgeek_venue_id`, `ticket_page_url`).
+1. **`sync_venues_from_gsheets`** (by hand only, not scheduled): reads the sheet into `Venue`. It never deletes venues, and it never touches fields that don't come from the sheet (`place_*`, `ticketmaster_venue_id`, `eventbrite_organizer_id`, `seatgeek_venue_id`, `ticket_page_url`), but it does overwrite editors' changes to the sheet's fields.
 2. **`lookup_venue_places`:** finds each venue on Google Places and records its place ID and exact coordinates. Google's terms allow storing nothing else, and the coordinates for only 30 days: `--refresh-stale` refreshes them by place ID, and every run deletes any older than 30 days.
 3. **`check_event_sources`:** works out how each venue's events can be fetched (iCal, JSON-LD, ticketing pages, AI extraction) and saves the answer per venue in the database (`VenueEventSource`), which the next two commands read. `--csv <path>` also writes a file to read; `import_event_sources <path>` loads an old one.
 4. **`match_ticketmaster_venues`**, **`match_eventbrite_organizers`** and **`match_seatgeek_venues`:** link venues to Ticketmaster venues, to their Eventbrite organizers (found from the Eventbrite links on their own pages), and to SeatGeek venues. **`match_spotify_artists`** links the artist names on upcoming events to Spotify artists (`SpotifyArtistLink`), for the listing's play buttons. It keeps only the IDs, and deletes them 30 days after no event names the artist; editors correct matches in the admin. **`match_apple_music_artists`** does the same for Apple Music (`AppleMusicArtistLink`), also storing each artist's top song. **`resolve_artists_with_lastfm`** settles names that several Spotify or Apple Music artists share, on Last.fm and MusicBrainz evidence (marking them with the source "evidence", which the matching then keeps like an editor's). **`match_youtube_artists`** then links artists already matched on either to their own YouTube channel or video (`YouTubeArtistLink`), only on evidence: Wikidata or MusicBrainz linking the IDs, or the Last.fm top track on the artist's own or Topic channel (never Apple's or Spotify's songs, which their terms rule out for finding music elsewhere).

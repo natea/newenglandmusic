@@ -1,0 +1,5 @@
+[
+{"file":"a.html","label":"Index card and side picker","thesis":"One act-tab index card, the site's own idiom, with the show picker opening beside it so the card stays in view while you tick shows.","risk":"The card and picker side by side need width; on phones the picker must cover the card, so the desktop view is not the mobile view."},
+{"file":"b.html","label":"Split view, shows always visible","thesis":"The act's shows sit beside the card with all ticked, so a right swipe is one step and no picker dialog is needed.","risk":"Shows are visible before the visitor commits, so it feels more like a list than a swipe game; pre-ticking could save shows by accident."},
+{"file":"c.html","label":"Photo stack with bottom sheet","thesis":"A big-photo card stack with peeking cards feels like a swipe game, and a bottom sheet holds the picker.","risk":"Leans on photos many acts lack, departs from the text-first look, and gives the embedded player little room."}
+]

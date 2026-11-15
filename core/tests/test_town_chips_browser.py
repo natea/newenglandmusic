@@ -17,10 +17,10 @@ class TownChipsBrowserTestCase(BrowserTestCase):
         super().setUp()
         load_geo_fixture()
         soon = timezone.now() + datetime.timedelta(days=1)
-        for town in ("Somerville", "Cambridge", "Boston"):
+        for town in ("Somerville", "Cambridge", "Medford"):
             venue = Venue.objects.create(name=f"{town} venue", state="MA", county="Middlesex", city_town=town)
             Event.objects.create(title=f"{town.lower()} show", starttime=soon, venue=venue)
-        self.metro = GeoArea.objects.get(label__endswith="Boston Metro Region").slug
+        self.metro = GeoArea.objects.get(label="MA: North of the Charles").slug
 
     def titles(self, page):
         return sorted(page.locator("div.event .title-only").all_inner_texts())
@@ -31,7 +31,7 @@ class TownChipsBrowserTestCase(BrowserTestCase):
     def test_adding_and_removing_towns(self):
         _, page = self.open_page(f"/?metro={self.metro}")
         self.assertFalse(page.locator('select[name="town"]').is_visible())
-        self.assertEqual(self.titles(page), ["boston show", "cambridge show", "somerville show"])
+        self.assertEqual(self.titles(page), ["cambridge show", "medford show", "somerville show"])
 
         with page.expect_navigation():
             page.select_option("select.town-add", "Somerville, MA")
@@ -54,7 +54,7 @@ class TownChipsBrowserTestCase(BrowserTestCase):
         with page.expect_navigation():
             page.click(".town-chip .town-remove")
         self.assertEqual(self.chips(page), [])
-        self.assertEqual(self.titles(page), ["boston show", "cambridge show", "somerville show"])
+        self.assertEqual(self.titles(page), ["cambridge show", "medford show", "somerville show"])
 
     def test_without_javascript_the_plain_multi_select(self):
         _, page = self.open_page(f"/?metro={self.metro}", javascript=False)

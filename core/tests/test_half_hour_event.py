@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from core.models import Event
+from core.tests.new_england_fixture import new_england_venue
 from dateutil import tz
 from django.test import TestCase
 
@@ -16,7 +17,7 @@ class EventOrderingTestCase(TestCase):
         event_moment = now_datetime.replace(hour=19, minute=0, second=0)
 
         event_title = f"event {uuid.uuid4()}"
-        Event.objects.create(title=event_title, starttime=event_moment)
+        Event.objects.create(venue=new_england_venue(), title=event_title, starttime=event_moment)
 
         # getting the homepage i.e. the current/now month
         response = self.client.get("/")
@@ -40,7 +41,7 @@ class EventOrderingTestCase(TestCase):
         event_moment = now_datetime.replace(hour=19, minute=30, second=0)
 
         event_title = f"event {uuid.uuid4()}"
-        Event.objects.create(title=event_title, starttime=event_moment)
+        Event.objects.create(venue=new_england_venue(), title=event_title, starttime=event_moment)
 
         response = self.client.get("/")
 

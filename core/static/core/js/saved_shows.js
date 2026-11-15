@@ -54,6 +54,26 @@
     });
   }
 
+  // a change to the current cookie, for the discovery deck's picker (core/js/discover.js):
+  // the ids to add (newest first, ahead of what's saved) and the ids to remove, in one write.
+  // what else is saved stays, up to the same limit as the bookmarks'
+  function apply(add, remove) {
+    const gone = new Set((remove || []).map(String));
+    const kept = readSaved().filter(function (id) { return !gone.has(id); });
+    const fresh = [];
+    (add || []).map(String).forEach(function (id) {
+      if (!gone.has(id) && !kept.includes(id) && !fresh.includes(id)) {
+        fresh.push(id);
+      }
+    });
+    const ids = fresh.concat(kept).slice(0, MAX_SAVED);
+    writeSaved(ids);
+    render(ids);
+    return ids;
+  }
+
+  window.SavedShows = { apply: apply, ids: readSaved };
+
   document.addEventListener("click", function (e) {
     const button = e.target.closest && e.target.closest(".save[data-event-id]");
     if (!button) {
@@ -63,7 +83,11 @@
     e.preventDefault();
     const id = button.dataset.eventId;
     let ids = readSaved();
-    if (ids.includes(id)) {
+    const wasSaved = ids.includes(id);
+    if (window.siteAnalytics) {
+      window.siteAnalytics.capture(wasSaved ? "show_unsaved" : "show_saved", { event_id: id, show: window.siteAnalytics.showName(button) });
+    }
+    if (wasSaved) {
       ids = ids.filter(function (saved) { return saved !== id; });
     } else {
       // newest first; past the limit, the oldest saved goes

@@ -1,0 +1,31 @@
+{% extends 'core/base.html' %}
+
+{% comment %}
+  plain-language terms for the site, approved by nate before they went live (openspec
+  change rename-to-stagehopper, task 3.4); not reviewed by a lawyer
+{% endcomment %}
+
+{% block content %}
+  <div id='maincontent' class='static_page'>
+    <h1>Terms</h1>
+
+    <h2>What this site is</h2>
+    <p>{{ site_name }} is a free calendar of live music in New England and the wider Northeast: shows, venues, bands and artists. It's run by Jazkarta, Inc. d/b/a StageHopper. By using the site you agree to these terms.</p>
+
+    <h2>Using it</h2>
+    <p>You're welcome to browse, save shows, subscribe to calendars and share links. Please don't copy the listings in bulk, republish them as your own, or scrape the site with automated tools.</p>
+
+    <h2>The listings</h2>
+    <p>Listings come from venues' own websites, ticketing services and other sources, and from people who submit events. They can be wrong or out of date, and shows can change or be cancelled. Check with the venue before you go. {{ site_name }} isn't responsible for events, tickets or venues.</p>
+    <p>If you submit an event, you confirm it's accurate as far as you know, and let us publish it and edit it for the listings.</p>
+
+    <h2>Other sites</h2>
+    <p>Links, play buttons and ticket links go to other sites and services, which have their own terms and privacy policies. How we handle your information is in our <a href="{% url 'privacy' %}">privacy page</a>.</p>
+
+    <h2>Changes</h2>
+    <p>We may change these terms. The current version is always on this page.</p>
+
+    <h2>Contact</h2>
+    <p>Questions, corrections or requests: {% if contact_email %}write to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% else %}use the <a href="{% url 'submit_event' %}">event submission page</a>{% endif %}.</p>
+  </div>
+{% endblock %}

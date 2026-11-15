@@ -2,6 +2,7 @@ import datetime
 from unittest import mock
 
 from core.models import AppleMusicArtistLink, Event, SpotifyArtistLink
+from core.tests.new_england_fixture import new_england_venue
 from core.tests.apple_music_fixture import CREDENTIALS, SWITCHED_ON, TEST_PRIVATE_KEY, FakeAppleMusic
 from core.tests.spotify_fixture import CREDENTIALS as SPOTIFY_CREDENTIALS
 from django.test import TestCase
@@ -31,7 +32,7 @@ class ApplePreviewRenderTestCase(TestCase):
         spotify_link("ballroom thieves", "fakeBallroomThieves01")
 
     def event(self, **fields):
-        event = Event.objects.create(starttime=timezone.now() + datetime.timedelta(days=1), **fields)
+        event = Event.objects.create(venue=new_england_venue(), starttime=timezone.now() + datetime.timedelta(days=1), **fields)
         return Event.objects.get(pk=event.pk).baked_html_template
 
     def test_apple_button_beside_the_spotify_button(self):

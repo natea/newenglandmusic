@@ -7,6 +7,7 @@
 {% endblock head %}
 
 {% block content %}
+{% if search_counts %}{{ search_counts|json_script:"search-counts" }}{% endif %}
 <article class="act act-search" aria-labelledby="search-name">
   <h1 class="act-tab" id="search-name">Search{% if query %}: {{ query }}{% endif %}</h1>
   <div class="act-card">

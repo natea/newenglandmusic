@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVectorField
@@ -252,7 +253,7 @@ class Event(models.Model):
     @property
     def calendar_name(self):
         """the event name to show on calendars"""
-        return f"{self.title_and_artists} [New England Music]"
+        return f"{self.title_and_artists} [{settings.SITE_NAME}]"
 
     def __str__(self):
         return self.title_and_artists
@@ -518,6 +519,12 @@ class GeoArea(models.Model):
     states = ArrayField(models.CharField(max_length=2), blank=True, default=list)
     counties = ArrayField(models.CharField(max_length=255), blank=True, default=list)
     cities = ArrayField(models.CharField(max_length=255), blank=True, default=list)
+    # massachusetts's sub-regions (core/geo_areas.py): the heading they're grouped under in the
+    # metro options, the boston neighborhoods they list, and the counties whose unlisted towns
+    # they take by default
+    group = models.CharField(max_length=255, blank=True, default="")
+    neighborhoods = ArrayField(models.CharField(max_length=255), blank=True, default=list)
+    default_counties = ArrayField(models.CharField(max_length=255), blank=True, default=list)
 
     @property
     def short_label(self):
@@ -1054,7 +1061,8 @@ class EventPerformer(models.Model):
     """
     an artist or band on an event's bill, in billing order (add-artists-from-events).
     links from the event's Artists text are rebuilt when it changes (see
-    core/event_performers.py); an editor's stay. nothing visitors see reads these yet
+    core/event_performers.py); an editor's stay. visitors see them as the performer links in
+    the listings, an act's upcoming shows on its page, and the discovery deck's cards
     """
 
     class Source(models.TextChoices):

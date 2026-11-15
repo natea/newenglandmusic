@@ -6,6 +6,7 @@
 {% endblock head %}
 
 {% block content %}
+{{ act_view|json_script:"act-view" }}
 <article class="act" aria-labelledby="act-name">
   <h1 class="act-tab" id="act-name">{{ act.name }}</h1>
   <div class="act-card">
@@ -17,9 +18,13 @@
         <span><a href="{% url 'event_redirect' next_show.pk %}">{{ next_show.venue.name }}</a>{% if next_show.venue.location %}, {{ next_show.venue.location }}{% endif %}</span>
         {% if more_shows %}<a class="act-next-more" href="#shows">{{ more_shows }} more show{{ more_shows|pluralize }}</a>{% endif %}
       </p>
-      <div class="act-next-actions" id="event-{{ next_show.pk }}">{{ next_show.actions }}</div>
+      <div class="act-next-actions" id="event-{{ next_show.pk }}" data-title-and-artists="{{ next_show.title_and_artists }}">{{ next_show.actions }}</div>
     {% else %}
       <p class="act-next act-next-none">No upcoming shows listed.</p>
+    {% endif %}
+
+    {% if link_hub %}
+      <p class="act-hub"><a href="{{ link_hub.1 }}" rel="noopener" target="_blank">{{ link_hub.0 }}</a> &rarr;</p>
     {% endif %}
 
     {% if current_members or former_members or bands or links %}
@@ -113,7 +118,7 @@
       <h2 id="shows">Upcoming shows</h2>
       <ol class="act-shows">
         {% for event in shows %}
-          <li id="event-{{ event.pk }}">
+          <li id="event-{{ event.pk }}" data-title-and-artists="{{ event.title_and_artists }}">
             <time datetime="{{ event.starttime|date:'c' }}">{{ event.starttime|date:'D, M j' }}{% if not event.starttime_override %}<span class="act-show-time">{{ event.starttime|time:'g:i a' }}</span>{% endif %}</time>
             <span><a href="{% url 'event_redirect' event.pk %}">{{ event.venue.name }}</a>{% if event.venue.location %}, {{ event.venue.location }}{% endif %}{% if event.is_cancelled %} <strong>(cancelled)</strong>{% endif %}{{ event.actions }}</span>
           </li>
@@ -123,7 +128,7 @@
 
     {% if invitation or act.genres %}
       <footer class="act-foot">
-        {% if invitation %}<p>Is this you? <a href="{{ invitation }}">Send us a photo, bio or links</a>.</p>{% endif %}
+        {% if invitation %}<p>Is this you? <a href="{{ invitation }}">Send us a {{ invitation_asks }}</a>.</p>{% endif %}
         {% if act.genres %}<p>Genres from <a href="https://musicbrainz.org/artist/{{ act.musicbrainz_id }}" rel="noopener" target="_blank">MusicBrainz</a> (<a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="noopener license" target="_blank">CC BY-NC-SA</a>).</p>{% endif %}
       </footer>
     {% endif %}

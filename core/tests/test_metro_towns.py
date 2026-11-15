@@ -14,7 +14,7 @@ class MetroTownsTestCase(GeoFilterPageTestCase):
         for title, city in (("somerville show", "Somerville"), ("cambridge show", "Cambridge"), ("cambridge late show", "cambridge")):
             venue = Venue.objects.create(name=f"{title} venue", state="MA", county="Middlesex", city_town=city)
             Event.objects.create(title=title, starttime=soon, venue=venue)
-        self.metro = GeoArea.objects.get(label__endswith="Boston Metro Region").slug
+        self.metro = GeoArea.objects.get(label="MA: North of the Charles").slug
 
     def get(self, *towns, metro=True, **extra):
         params = [("metro", self.metro)] if metro else []
@@ -29,7 +29,7 @@ class MetroTownsTestCase(GeoFilterPageTestCase):
 
     def test_towns_offered(self):
         response = self.get()
-        self.assertEqual(response.context["metro_towns"], ["Boston, MA", "Cambridge, MA", "Somerville, MA"])
+        self.assertEqual(response.context["metro_towns"], ["Cambridge, MA", "Somerville, MA"])
         self.assertIn('name="town" multiple', response.content.decode())
 
     def test_no_towns_without_a_metro(self):
@@ -37,7 +37,7 @@ class MetroTownsTestCase(GeoFilterPageTestCase):
 
     def test_town_outside_the_metro(self):
         response = self.get("Burlington, VT")
-        self.assertEqual(self.titles(response), {"boston show", "somerville show", "cambridge show", "cambridge late show"})
+        self.assertEqual(self.titles(response), {"somerville show", "cambridge show", "cambridge late show"})
         self.assertNotIn(" selected>Burlington", response.content.decode())
 
     def test_town_without_a_metro(self):
@@ -62,7 +62,7 @@ class MetroTownsTestCase(GeoFilterPageTestCase):
         self.assertNotIn("boston show", body)
 
     def test_changing_the_metro_drops_other_towns(self):
-        cape = GeoArea.objects.get(label__endswith="Cape Cod").slug
+        cape = GeoArea.objects.get(label="MA: Mid-Cape").slug
         response = self.client.get("/", [("metro", cape), ("town", "Somerville, MA")])
         self.assertEqual(response.context["geo_filter"].towns, [])
         self.assertEqual(self.titles(response), {"cape cod show"})

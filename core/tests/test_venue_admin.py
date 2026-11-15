@@ -340,3 +340,52 @@ class VenueAdminFetchStatusTestCase(TestCase):
     def test_never_fetched_venue_page(self):
         page = self.client.get(f"/admin/core/venue/{self.never.pk}/change/")
         self.assertContains(page, "never fetched")
+
+
+class VenueIdTestCase(TestCase):
+    """venues are added in the admin now, each with the next venue ID (venue-records)"""
+
+    def setUp(self):
+        self.admin = VenueAdmin(Venue, AdminSite())
+        self.request = RequestFactory().post("/admin/core/venue/add/")
+        self.request.user = User.objects.create_superuser("admin", "a@example.com", "pw")
+        Venue.objects.create(name="Old", sheet_id="V0729")
+        Venue.objects.create(name="Newest", sheet_id="V0730")
+        Venue.objects.create(name="Odd", sheet_id="X-test")
+
+    def add(self, **fields):
+        """adds a venue through the admin's form and save_model; returns (venue, form)"""
+        form = self.admin.get_form(self.request)({"name": "New Hall", "state": "MA", "genres": "", **fields})
+        if not form.is_valid():
+            return None, form
+        venue = form.save(commit=False)
+        self.admin.save_model(self.request, venue, form, change=False)
+        return venue, form
+
+    def test_the_next_id(self):
+        venue, _ = self.add(sheet_id="")
+        self.assertEqual(Venue.objects.get(pk=venue.pk).sheet_id, "V0731")
+
+    def test_a_typed_id_is_kept(self):
+        venue, _ = self.add(sheet_id="V0900")
+        self.assertEqual(Venue.objects.get(pk=venue.pk).sheet_id, "V0900")
+
+    def test_a_duplicate_id(self):
+        venue, form = self.add(sheet_id="V0730")
+        self.assertIsNone(venue)
+        self.assertEqual(form.errors["sheet_id"], ["the venue ID V0730 is taken, by Newest"])
+
+    def test_an_edit_stays(self):
+        # the daily job no longer syncs the sheet, so nothing scheduled rewrites an editor's town
+        from pathlib import Path
+
+        venue = Venue.objects.get(sheet_id="V0730")
+        form = self.admin.get_form(self.request, venue)(
+            {**{k: v for k, v in model_to_dict(venue).items() if v is not None}, "genres": "", "city_town": "Woburn"},
+            instance=venue,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.admin.save_model(self.request, form.save(commit=False), form, change=True)
+        self.assertEqual(Venue.objects.get(sheet_id="V0730").city_town, "Woburn")
+        daily = (Path(__file__).resolve().parents[2] / "bin" / "daily.sh").read_text()
+        self.assertNotIn("sync_venues_from_gsheets", daily.split("source", 1)[1])

@@ -23,7 +23,6 @@ fi
 """
 
 DAILY = [
-    "manage.py sync_venues_from_gsheets",
     "manage.py lookup_venue_places",
     "manage.py lookup_venue_places --refresh-stale",
     "manage.py fetch_events --all",
@@ -102,12 +101,17 @@ class JobScriptsTestCase(SimpleTestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("=== 1 step(s) failed:\n  python manage.py find_bandcamp_embeds", result.stdout)
 
-    def test_sheet_sync_fails(self):
+    def test_places_lookup_fails(self):
         result, calls = self.run_job("daily.sh", fail_step=DAILY[0])
         # the later steps still run
         self.assertEqual(calls, DAILY)
         self.assertEqual(result.returncode, 1)
-        self.assertIn("=== 1 step(s) failed:\n  python manage.py sync_venues_from_gsheets", result.stdout)
+        self.assertIn("=== 1 step(s) failed:\n  python manage.py lookup_venue_places\n", result.stdout)
+
+    def test_the_sheet_sync_isnt_in_the_daily_job(self):
+        result, calls = self.run_job("daily.sh")
+        self.assertNotIn("manage.py sync_venues_from_gsheets", calls)
+        self.assertEqual(len(calls), 8)
 
     def test_scripts_name_real_commands(self):
         commands = get_commands()
@@ -159,13 +163,15 @@ class RenderConfigurationTestCase(SimpleTestCase):
                 "APPLE_MUSIC_PREVIEWS",
                 "YOUTUBE_API_KEY",
                 "API_CONTACT_EMAIL",
+                # the contact address in the api clients' user agent
+                "SITE_URL",
                 "YOUTUBE_PREVIEWS",
                 "LASTFM_API_KEY",
             },
         )
         self.assertEqual(
             self.keys_from_web(weekly),
-            {"DJANGO_SECRET_KEY", "TICKETMASTER_API_KEY", "EVENTBRITE_API_KEY", "SEATGEEK_CLIENT_ID", "API_CONTACT_EMAIL"},
+            {"DJANGO_SECRET_KEY", "TICKETMASTER_API_KEY", "EVENTBRITE_API_KEY", "SEATGEEK_CLIENT_ID", "API_CONTACT_EMAIL", "SITE_URL"},
         )
         for job in (daily, weekly):
             database = next(var for var in job["envVars"] if var["key"] == "DATABASE_URL")
