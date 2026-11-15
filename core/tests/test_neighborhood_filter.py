@@ -69,6 +69,12 @@ class NeighborhoodFilterTestCase(TestCase):
         )
         self.assertIn('name="neighborhood"', html)
 
+    def test_a_one_town_metro_keeps_its_town_when_named(self):
+        # a saved weekly-email choice names the town; dropping it would empty the choice
+        response = self.get(["Boston, MA"])
+        self.assertEqual(response.context["geo_filter"].towns, [("Boston", "MA")])
+        self.assertEqual(response.context["metro_towns"], [])
+
     def test_calendar_feed(self):
         body = self.client.get(
             "/calendar.ics", [("metro", self.metro), ("neighborhood", "Beacon Hill, Boston, MA")]

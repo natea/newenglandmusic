@@ -107,7 +107,7 @@ class SelectionTestCase(TestCase):
         self.event(self.vermont)
         for query in (
             "state=massachusetts&metro=ma-gone-metro",
-            "metro=ma-boston-metro-region&town=Somerville, MA&town=Renamedville, MA",
+            "metro=ma-north-of-the-charles&town=Somerville, MA&town=Renamedville, MA",
         ):
             DigestChoice.objects.all().delete()
             choice = self.choose("area", area_query=query)
@@ -115,7 +115,7 @@ class SelectionTestCase(TestCase):
             self.assertEqual(self.selected(), set(), query)
 
     def test_metro_narrowed_to_towns(self):
-        query = urlencode([("metro", "ma-boston-metro-region"), ("town", "Somerville, MA")])
+        query = urlencode([("metro", "ma-north-of-the-charles"), ("town", "Somerville, MA")])
         self.choose("area", area_query=query)
         self.near6.county = "Middlesex"
         self.near6.save()

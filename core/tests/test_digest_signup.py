@@ -133,9 +133,9 @@ class SignupTestCase(DigestTestCase):
         self.assertContains(response, "don&#x27;t list a town")
 
     def test_metro_narrowed_to_towns(self):
-        self.post({"area": [], "metro_town": ["ma-boston-metro-region|Cambridge, MA"]})
+        self.post({"area": [], "metro_town": ["ma-north-of-the-charles|Cambridge, MA"]})
         choice = Subscriber.objects.get().choices.get()
-        self.assertEqual(choice.area_query, "metro=ma-boston-metro-region&town=Cambridge%2C+MA")
+        self.assertEqual(choice.area_query, "metro=ma-north-of-the-charles&town=Cambridge%2C+MA")
 
     def test_an_unoffered_area_is_refused(self):
         response = self.post({"area": ["state:atlantis"]})
@@ -160,11 +160,11 @@ class SignupTestCase(DigestTestCase):
 
     def test_remembered_neighborhood_narrowing_is_dropped(self):
         Venue.objects.create(name="Hall", state="MA", city_town="Somerville", neighborhood="Union Square")
-        self.client.cookies[GEO_COOKIE] = "metro=ma-boston-metro-region&town=Somerville%2C+MA&neighborhood=Union+Square%2C+Somerville%2C+MA"
+        self.client.cookies[GEO_COOKIE] = "metro=ma-north-of-the-charles&town=Somerville%2C+MA&neighborhood=Union+Square%2C+Somerville%2C+MA"
         response = self.client.get("/digest")
-        self.assertContains(response, 'value="metro:ma-boston-metro-region" checked')
+        self.assertContains(response, 'value="metro:ma-north-of-the-charles" checked')
         self.assertNotContains(response, "Union Square")
-        self.post({"area": ["metro:ma-boston-metro-region"], "metro_town": ["ma-boston-metro-region|Somerville, MA"]})
+        self.post({"area": ["metro:ma-north-of-the-charles"], "metro_town": ["ma-north-of-the-charles|Somerville, MA"]})
         self.assertNotIn("neighborhood", Subscriber.objects.get().choices.get().area_query)
 
     def test_address_limit(self):
