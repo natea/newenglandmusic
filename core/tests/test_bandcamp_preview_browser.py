@@ -13,6 +13,7 @@ from django.utils import timezone
 from core.models import Band, Event, EventPerformer
 from core.tests.browser import BrowserTestCase
 from core.tests.test_bandcamp_preview_render import SERVICE_SETTINGS
+from core.tests.new_england_fixture import new_england_venue
 
 KRILL = "https://krill.bandcamp.com/"
 PILE = "https://pile.bandcamp.com/"
@@ -37,7 +38,7 @@ class BandcampBrowserTestCase(BrowserTestCase):
         )
 
     def make_event(self, artists, band, starttime):
-        event = Event.objects.create(artists=artists, starttime=starttime)
+        event = Event.objects.create(artists=artists, venue=new_england_venue(), starttime=starttime)
         EventPerformer.objects.create(event=event, band=band)
         event.save()
 

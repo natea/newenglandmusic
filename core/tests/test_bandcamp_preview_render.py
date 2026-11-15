@@ -17,6 +17,7 @@ from core.tests.test_apple_music_preview_render import apple_link, spotify_link
 from core.tests.test_bandcamp_embeds import FakeSession, page, player
 from core.tests.youtube_fixture import SWITCHED_ON as YOUTUBE_ON
 from core.tests.test_youtube_preview_render import youtube_link
+from core.tests.new_england_fixture import new_england_venue
 
 KRILL = "https://krill.bandcamp.com/"
 SERVICE_SETTINGS = ("SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET", "APPLE_MUSIC_PREVIEWS", "YOUTUBE_PREVIEWS", "YOUTUBE_API_KEY")
@@ -32,7 +33,7 @@ def found_band(name="Krill", url=KRILL, **fields):
 
 def listed(artists="Krill", *acts, hours=24):
     """an event with its performers linked, baked again so it shows them; returns its stored html"""
-    event = Event.objects.create(artists=artists, starttime=timezone.now() + datetime.timedelta(hours=hours))
+    event = Event.objects.create(artists=artists, venue=new_england_venue(), starttime=timezone.now() + datetime.timedelta(hours=hours))
     for order, act in enumerate(acts):
         EventPerformer.objects.create(event=event, order=order, **{"band" if isinstance(act, Band) else "artist": act})
     event.save()
@@ -180,7 +181,7 @@ class BandcampEventsReRenderedTestCase(TestCase):
 
     def test_performer_links_rebuilt_to_include_a_band_with_a_player(self):
         found_band()
-        event = Event.objects.create(artists="Krill", starttime=timezone.now() + datetime.timedelta(days=1))
+        event = Event.objects.create(artists="Krill", venue=new_england_venue(), starttime=timezone.now() + datetime.timedelta(days=1))
         self.assertNotIn("bandcamp-play", self.stored(event))
         link_from_names(event)
         self.assertIn("bandcamp-play", self.stored(event))
