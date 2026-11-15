@@ -129,3 +129,21 @@ Nothing SHALL be sent from the placeholder `webmaster@localhost` sender, nor whi
 - **WHEN** `SITE_URL` is blank, falls back to localhost, or is not an `https://` address
 - **THEN** nothing is sent, the failure is logged and the command's run is marked failed
 
+### Requirement: One subscriber's email can be sent as a test
+`send_weekly_digests --to <address>` SHALL send that one confirmed, unpaused subscriber their email for this week now, whether or not they've had it, without counting it as the week's, so the scheduled run still sends theirs. It SHALL send nobody else and delete nothing. It SHALL refuse an address with no confirmed subscriber, a paused subscriber, or choices that select no shows, sending nothing; with `--dry-run` it SHALL only say what it would send. Its output SHALL name the subscriber by id, never by address.
+
+#### Scenario: A test before the week's run
+- **WHEN** an editor runs `send_weekly_digests --to fan@example.com` and fan@example.com and other@example.com are confirmed subscribers with shows
+- **THEN** only fan@example.com gets an email, and the next scheduled run still sends both of them theirs
+
+#### Scenario: A test after the week's email
+- **WHEN** the subscriber already had this week's email
+- **THEN** the test is sent anyway
+
+#### Scenario: Nobody to send to
+- **WHEN** the address has no confirmed subscriber, or the subscriber has paused the email, or their choices select no shows
+- **THEN** the command fails saying why, and nothing is sent
+
+#### Scenario: Test dry run
+- **WHEN** the editor adds `--dry-run`
+- **THEN** it says it would send the subscriber's email, by id, and sends nothing

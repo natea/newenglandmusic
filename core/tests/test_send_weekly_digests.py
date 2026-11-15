@@ -252,3 +252,54 @@ class CleanUpTestCase(SendTestCase):
         self.assertFalse(SignInCode.objects.exists())
         self.assertFalse(MailRequest.objects.filter(pk=request.pk).exists())
         self.assertIn(["deleted unconfirmed", 1], JobRun.objects.get().summary)
+
+
+class SendOneTestCase(SendTestCase):
+    """--to: one subscriber's email now, as a test, leaving the week's run alone"""
+
+    def test_sends_only_that_subscriber_and_keeps_their_week(self):
+        fan = self.subscriber()
+        self.subscriber("other@example.com")
+        self.run_command("--to", "FAN@example.com")
+        self.assertEqual(self.addresses(), ["fan@example.com"])
+        fan.refresh_from_db()
+        self.assertIsNone(fan.last_digest_week)
+        self.assertNotIn("fan@example.com", self.output)
+        # the scheduled run still sends both their emails this week
+        self.run_command()
+        self.assertEqual(sorted(self.addresses()), ["fan@example.com", "fan@example.com", "other@example.com"])
+
+    def test_after_this_weeks_email(self):
+        self.subscriber(last_digest_week=MONDAY)
+        self.run_command("--to", "fan@example.com")
+        self.assertEqual(self.addresses(), ["fan@example.com"])
+
+    def test_unknown_unconfirmed_or_paused(self):
+        self.subscriber("new@example.com", confirmed_at=None)
+        self.subscriber("away@example.com", paused=True)
+        for address, message in (
+            ("nobody@example.com", "no confirmed subscriber"), ("new@example.com", "no confirmed subscriber"),
+            ("away@example.com", "paused"),
+        ):
+            with self.subTest(address), self.assertRaisesMessage(CommandError, message):
+                self.run_command("--to", address)
+        self.assertEqual(self.addresses(), [])
+
+    def test_no_shows(self):
+        Event.objects.all().delete()
+        self.subscriber()
+        with self.assertRaisesMessage(CommandError, "select no shows this week"):
+            self.run_command("--to", "fan@example.com")
+
+    def test_dry_run(self):
+        self.subscriber()
+        self.run_command("--to", "fan@example.com", "--dry-run")
+        self.assertEqual(self.addresses(), [])
+        self.assertIn("would send subscriber", self.output)
+
+    def test_cleans_up_nobody(self):
+        stale = Subscriber.objects.create(email="old@example.com", created_at=self.now - datetime.timedelta(days=30))
+        Subscriber.objects.filter(pk=stale.pk).update(created_at=self.now - datetime.timedelta(days=30))
+        self.subscriber()
+        self.run_command("--to", "fan@example.com")
+        self.assertTrue(Subscriber.objects.filter(pk=stale.pk).exists())

@@ -18,6 +18,7 @@ today through the seventh day after, once a week.
 run as:
 
 python manage.py send_weekly_digests [--dry-run] [--limit 100]
+python manage.py send_weekly_digests --to fan@example.com    # one subscriber's email now, as a test
 
 a subscriber is claimed for the week (Subscriber.last_digest_week, the monday on or before today,
 New York time) before their email is sent, so overlapping runs can't both send, and released if
@@ -37,11 +38,18 @@ class Command(RecordedCommand, BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--dry-run", action="store_true", help="build every email, send none and record nothing")
         parser.add_argument("--limit", type=int, help="look at at most this many subscribers")
+        parser.add_argument(
+            "--to", metavar="ADDRESS",
+            help="send this one confirmed subscriber their email now, as a test: it doesn't count as the week's, "
+            "and nobody else is sent anything or cleaned up",
+        )
 
     def handle(self, *args, **options):
         self.dry_run = options["dry_run"]
         now = timezone.now()
         today = now.astimezone(digest.NEW_YORK).date()
+        if options["to"]:
+            return self.send_test(options["to"], today)
         week = digest.week_of(today)
         counts = {"sent": 0, "skipped (no shows)": 0, "skipped (already sent or claimed)": 0, "failed": 0, "deleted unconfirmed": 0}
         self.job_summary = list(counts.items())
@@ -99,6 +107,35 @@ class Command(RecordedCommand, BaseCommand):
         else:
             counts["sent"] += 1
             time.sleep(PAUSE)
+
+    def send_test(self, address, today):
+        """
+        one confirmed, unpaused subscriber's email for this week, sent now. the week isn't
+        claimed, so the scheduled run still sends theirs
+        """
+        self.job_summary = [("sent", 0)]
+        subscriber = Subscriber.objects.filter(email__iexact=address.strip(), confirmed_at__isnull=False).first()
+        # the address isn't echoed back: errors and logs name subscribers by id
+        if subscriber is None:
+            raise CommandError("no confirmed subscriber has that address")
+        if subscriber.paused:
+            raise CommandError(f"subscriber {subscriber.pk} has paused the weekly email; nothing sent")
+        events = list(digest.events_for(subscriber, digest.send_window(today)))
+        if not events:
+            raise CommandError(f"subscriber {subscriber.pk}'s choices select no shows this week; nothing sent")
+        subject, text, html, headers = digest.build_weekly(subscriber, events, digest_mail.site_url)
+        if self.dry_run:
+            self.stdout.write(f"would send subscriber {subscriber.pk} a test: {len(events)} shows")
+            return
+        try:
+            digest_mail.check_ready()
+            digest_mail.send(subscriber.email, subject, text, html, headers=headers)
+        except digest_mail.MailNotReady as error:
+            raise CommandError(f"nothing sent: {error}")
+        except (ClientError, BotoCoreError, ValueError) as error:
+            raise CommandError(f"the test to subscriber {subscriber.pk} failed: {type(error).__name__}")
+        self.job_summary = [("sent", 1)]
+        self.stdout.write(self.style.SUCCESS(f"sent subscriber {subscriber.pk} a test: {len(events)} shows"))
 
     def clean_up(self, now):
         """deletes sign-ups never confirmed after a week, and old codes and mail request rows"""
