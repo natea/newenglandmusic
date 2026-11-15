@@ -4,7 +4,7 @@ the act pages' embedded player (find_bandcamp_embeds):
 
     session = PoliteSession(USER_AGENT)
     result = lookup(session, record.bandcamp_url)      # Result(status, kind, embed_id, why)
-    fields = apply(record, result, record.bandcamp_url, now)
+    fields = apply(record, result, now)
 
 only the kind (album or track) and the numeric id are taken from a page, by its structure
 (json-ld and page properties for a release the page redirects to, the first music tile of a
@@ -37,7 +37,6 @@ MAX_PLAYERS_TRIED = 3
 UNAVAILABLE_MARKER = "not available"
 REFRESH_FOUND_AFTER = datetime.timedelta(days=365)
 RETRY_OTHERS_AFTER = datetime.timedelta(days=90)
-EDITOR = "editor"
 TILE_RE = re.compile(r"(album|track)-(\d+)")
 PAGE_KINDS = {"a": "album", "t": "track"}
 
@@ -205,10 +204,6 @@ def lookup(session, url):
     return Result(Status.NO_PLAYABLE, why="no release the player can play")
 
 
-def editors(record):
-    return record.field_sources.get("bandcamp_embed") == EDITOR
-
-
 def keeps_found_player(record):
     """whether the record's found player is worth keeping: read from its current address"""
     return (
@@ -225,7 +220,7 @@ def due(record, now, refresh=False):
     its address was never looked up or has changed (recorded on every outcome), or its last
     look-up is old: a year for a found player, 90 days for the rest
     """
-    if not record.bandcamp_url or record.bandcamp_embed_status == Status.DECLINED or editors(record):
+    if not record.bandcamp_url or record.bandcamp_embed_status == Status.DECLINED or record.bandcamp_player_by_editor:
         return False
     if refresh or record.bandcamp_embed_for != record.bandcamp_url or record.bandcamp_embed_checked_at is None:
         return True

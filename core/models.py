@@ -960,6 +960,10 @@ class MusicAct(models.Model):
         ordering = ("name",)
 
     @property
+    def bandcamp_player_by_editor(self):
+        return self.field_sources.get("bandcamp_embed") == "editor"
+
+    @property
     def bandcamp_player_usable(self):
         """
         whether the player may be shown: kind and id set, and either an editor set them or
@@ -970,7 +974,7 @@ class MusicAct(models.Model):
             return False
         if self.bandcamp_embed_status == self.BandcampEmbedStatus.DECLINED:
             return False
-        if self.field_sources.get("bandcamp_embed") == "editor":
+        if self.bandcamp_player_by_editor:
             return True
         return (
             self.bandcamp_embed_status == self.BandcampEmbedStatus.FOUND
