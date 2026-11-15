@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # the weekly scheduled job (render.yaml's newenglandmusic-weekly; see PRODUCTION.md):
 # re-checks how each venue's events can be fetched, then links venues to ticketmaster, to
-# their eventbrite organizers and to seatgeek, and reads artists' link-hub pages. weekly, because the check crawls every venue's site.
+# their eventbrite organizers and to seatgeek, reads artists' link-hub pages, and last reads
+# acts' bandcamp player ids from their own pages. weekly, because the check crawls every venue's site.
 source "$(dirname "$0")/steps.sh"
 
 # 8 crawl workers, not 16, to stay inside the job's 512mb

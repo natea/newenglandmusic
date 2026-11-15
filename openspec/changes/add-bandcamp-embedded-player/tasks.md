@@ -27,5 +27,5 @@ Issue: [#47 Embedded Bandcamp player on event listings, artist and band pages, a
 
 ## 5. The rule and the finish
 
-- [ ] 5.1 Reword the Bandcamp rule in `core/artists.py`, AGENTS.md (including the `read_artist_link_hubs` pipeline entry's "weekly, last" and "never Bandcamp") and PRODUCT.md as the design says, and document the command and its pacing in PRODUCTION.md (with the `bin/weekly.sh` header comment and PRODUCTION.md's weekly job description) and AGENTS.md's pipeline section.
+- [x] 5.1 Reword the Bandcamp rule in `core/artists.py`, AGENTS.md (including the `read_artist_link_hubs` pipeline entry's "weekly, last" and "never Bandcamp") and PRODUCT.md as the design says, and document the command and its pacing in PRODUCTION.md (with the `bin/weekly.sh` header comment and PRODUCTION.md's weekly job description) and AGENTS.md's pipeline section.
 - [ ] 5.2 Run the suite with outbound network blocked, then a real `find_bandcamp_embeds --limit 25 --dry-run` and a real run, logged to `logs/find_bandcamp_embeds-YYYY-MM-DD.log`. Update the design if the live pages contradict it, and verify that every scenario has a passing test.
