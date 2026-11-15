@@ -393,15 +393,17 @@ class MenuTestCase(TestCase):
 class SiteHeaderTestCase(TestCase):
     def parts(self, path):
         html = self.client.get(path).content.decode()
-        header = re.search(r"<div class='header'>.*?id='burgerMenuContents'>.*?</div>", html, re.S).group(0)
+        # the header's markup runs on through the nav, which closes the menu
+        header = re.search(r"<div class='header'>.*?<nav id='siteMenu'.*?</nav>", html, re.S).group(0)
+        search = re.search(r"<form class='site-search'.*?</form>", html, re.S).group(0)
         footer = re.search(r"<div id='footer'>.*?</div>", html, re.S).group(0)
-        return [re.sub(r"\s+", " ", part) for part in (header, footer)]
+        return [re.sub(r"\s+", " ", part) for part in (header, search, footer)]
 
     def test_the_masthead_search_and_menus_are_the_home_pages(self):
         home, discover = self.parts("/"), self.parts("/discover")
         self.assertIn("Saved shows", home[0])
         self.assertIn("Discover bands", home[0])
-        self.assertIn("site-search", home[0])
+        self.assertIn("site-search", home[1])
         self.assertEqual(home, discover)
         # and the page has no header of its own
         self.assertEqual(self.client.get("/discover").content.decode().count("<header"), 0)

@@ -8,30 +8,15 @@ div.header {
     width: 100%;
   }
 
-  .leftColumn,
-  .rightColumn {
+  .leftColumn {
     display: flex;
     flex-direction: column;
-    flex-basis: 100%;
     flex: 10;
-  }
-
-  .burgerColumn {
-    display: flex;
-    flex-direction: column;
-    flex-basis: 100%;
-    flex: 1;
-    font-size: 2rem;
 
     a {
       color: black;
       text-decoration: none;
     }
-  }
-
-  .leftColumn a {
-    color: black;
-    text-decoration: none;
   }
 
   // the tagline under the masthead's name (SITE_TAGLINE), in DESIGN.md's small text
@@ -41,19 +26,70 @@ div.header {
     color: #555;
   }
 
-  .rightColumn {
-    text-align: right;
+  // the one menu: a row of links on wide screens, a stacked column behind the button on narrow
+  // ones. without javascript (no .js on the page) the links are always shown and the button isn't
+  #siteMenu {
+    display: flex;
+    flex: 10;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-content: flex-start;
+    gap: 4px 20px;
+    margin-top: 6px;
 
-    :first-child {
-      margin-top: 6px;
+    a {
+      color: black;
+      font-weight: bold;
+      text-decoration: none;
+      white-space: nowrap;
     }
+  }
+
+  .menu-button {
+    display: none;
+    flex: none;
+    align-self: flex-start;
+    font-size: 2rem;
+    line-height: 1;
+    padding: 2px 10px;
+    border: 2px solid black;
+    background: #f6f4ee;
+    color: black;
+    cursor: pointer;
   }
 }
 
-#burgerMenuContents {
-  margin-bottom: 50px;
+@media (max-width: 600px) {
+  div.header {
+    #siteMenu {
+      flex-basis: 100%;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      order: 3;
+      gap: 0;
+      margin-top: 10px;
+      background: #f6f4ee;
 
-  a {
-    font-weight: bold;
+      a {
+        display: block;
+        padding: 12px 4px;
+        border-top: 1px solid #b9b4a8;
+      }
+    }
+  }
+
+  .js div.header {
+    .menu-button {
+      display: block;
+    }
+
+    #siteMenu {
+      display: none;
+    }
+
+    .menu-button[aria-expanded="true"] + #siteMenu {
+      display: flex;
+    }
   }
 }

@@ -12,6 +12,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="msapplication-TileColor" content="#000000">
     <meta name="theme-color" content="#000000">
+    {# before first paint, so a phone never flashes the full link list: the menu's narrow-screen styles only apply under .js #}
+    <script>document.documentElement.className += ' js'</script>
     
     {% include "meta/meta.html" %}
     
@@ -20,6 +22,7 @@
     <link href="{% sass_src 'scss/core.scss' %}" rel="stylesheet" type="text/css" />
     <script src="{% static 'core/js/artist_preview.js' %}" defer></script>
     <script src="{% static 'core/js/saved_shows.js' %}" defer></script>
+    <script src="{% static 'core/js/site_menu.js' %}" defer></script>
     <script src="{% static 'core/js/location.js' %}" defer></script>
     <script src="{% static 'core/js/town_chips.js' %}" defer></script>
     <script src="{% static 'core/vendor/accessible-autocomplete/3.0.2/accessible-autocomplete.min.js' %}" defer></script>
@@ -66,21 +69,6 @@
     {% endif %}
 
     <script type="text/javascript">
-      function toggleBurgerMenuContents() {
-        const el = document.querySelector('#burgerMenuContents')
-        const burgerMenuIcon = document.querySelector('.burgerColumn a')
-
-        if (el.style.display === 'none') {
-          el.style.display = 'block'
-          burgerMenuIcon.style.rotate = '90deg'
-          burgerMenuIcon.style.marginTop = '3px'
-        } else {
-          el.style.display = 'none'
-          burgerMenuIcon.style.rotate = '0deg'
-          burgerMenuIcon.style.marginTop = '0px'
-        }
-      }
-
       document.addEventListener("DOMContentLoaded", function() {
         const iOSCanInstall = 'standalone' in window.navigator;
         const iOSIsInstalled = window.navigator.standalone === true;
@@ -166,29 +154,22 @@
       <main>
           <div class='header'>
               <div class='row'>
-                  <div class='burgerColumn'>
-                      <a href="javascript:;" onclick="toggleBurgerMenuContents()">☰</a>
-                  </div>
                   <div class='leftColumn'>
                       <a href="/"><h1>{{ site_name }}</h1></a>
                       {% if site_tagline %}<p class="tagline">{{ site_tagline }}</p>{% endif %}
                   </div>
-                  <div class='rightColumn'>
-                      <div>
-                          {% comment %}
-                            the count comes from core/js/saved_shows.js, from the visitor's cookie
-                          {% endcomment %}
-                          <a href="{% url 'saved_shows' %}" class="saved-count">Saved shows</a>
-                          {% get_header_menu_items as header_menu_items %}
-                          {% for menu_item in header_menu_items %}
-                            {% if menu_item.show_in_header %}
-                              {% if forloop.first %}|{% endif %}
-                              <a href="{{ menu_item.url }}">{{ menu_item.name }}</a>
-                              {% if not forloop.last %}|{% endif %}
-                            {% endif %}
-                          {% endfor %}
-                      </div>
-                  </div>
+                  {# the one menu: links in a row on wide screens, behind this button on narrow ones (core/js/site_menu.js); without javascript the button is hidden and the links shown #}
+                  <button type="button" class="menu-button" aria-expanded="false" aria-controls="siteMenu" aria-label="Menu">☰</button>
+                  <nav id='siteMenu' aria-label="Site menu">
+                      {% get_header_menu_items as header_menu_items %}
+                      {% for menu_item in header_menu_items %}
+                        <a href="{{ menu_item.url }}">{{ menu_item.name }}</a>
+                      {% endfor %}
+                      {% comment %}
+                        the count comes from core/js/saved_shows.js, from the visitor's cookie
+                      {% endcomment %}
+                      <a href="{% url 'saved_shows' %}" class="saved-count">Saved shows</a>
+                  </nav>
               </div>
               {# search, at the top of every page: suggestions as you type (core/js/search-suggest.js), a plain get form without javascript #}
               <form class='site-search' method='GET' action='/' role='search'>
@@ -196,13 +177,6 @@
                   <input type='submit' value='search'>
               </form>
           </div>
-          <div style="display:none;" id='burgerMenuContents'>
-            {% get_all_menu_items as all_menu_items %}
-            {% for menu_item in all_menu_items %}
-              <a href="{{ menu_item.url }}">{{ menu_item.name }}</a><br/>
-            {% endfor %}
-          </div>
-
           {% block month_year_header %}{% endblock month_year_header %}
 
           {% if messages %}
