@@ -206,7 +206,7 @@ A page SHALL change something only on a POST with a CSRF token, apart from the o
 
 #### Scenario: Page headers
 - **WHEN** the preferences page is fetched
-- **THEN** it carries `noindex`, `no-store` and no-referrer headers
+- **THEN** it carries `noindex`, `no-store` and `Referrer-Policy: same-origin` headers (not `no-referrer`, under which Safari posts the page's own forms with `Origin: null`, which the CSRF check refuses)
 
 ### Requirement: One-click unsubscribe
 Every email SHALL carry an unsubscribe link signed by the site, which never expires, and the `List-Unsubscribe` and `List-Unsubscribe-Post` headers for the same address. Opening the link SHALL show a page with an unsubscribe button and a masked address, and change nothing; submitting it, or a mail client's one-click post (which carries no CSRF token), SHALL pause the email at once without signing in. A link with an altered signature SHALL change nothing. The page SHALL say how to resume.

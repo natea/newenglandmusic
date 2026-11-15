@@ -215,7 +215,23 @@ class SignupTestCase(DigestTestCase):
             response = self.client.get(url)
             self.assertIn("noindex", response["X-Robots-Tag"], url)
             self.assertIn("no-store", response["Cache-Control"], url)
-            self.assertEqual(response["Referrer-Policy"], "no-referrer", url)
+            self.assertEqual(response["Referrer-Policy"], "same-origin", url)
+
+    def test_the_form_posts_past_the_csrf_check(self):
+        # as a browser does: the page's own token, and the Origin a same-origin policy lets it send
+        client = Client(enforce_csrf_checks=True)
+        client.get("/digest")
+        token = client.cookies["csrftoken"].value
+        response = self.post({"csrfmiddlewaretoken": token}, client=client, HTTP_ORIGIN="http://testserver")
+        self.assertRedirects(response, "/digest/check-email", fetch_redirect_response=False)
+
+    def test_a_null_origin_is_refused(self):
+        # what safari sent under the old no-referrer policy, and why the policy is same-origin
+        client = Client(enforce_csrf_checks=True)
+        client.get("/digest")
+        token = client.cookies["csrftoken"].value
+        response = self.post({"csrfmiddlewaretoken": token}, client=client, HTTP_ORIGIN="null")
+        self.assertEqual(response.status_code, 403)
 
 
 class ConfirmTestCase(DigestTestCase):
