@@ -71,7 +71,22 @@
           });
       });
     }
-    document.querySelectorAll('input[name="town"]').forEach(function (input) { fill(input, 'town'); });
-    document.querySelectorAll('input[name="venue"]').forEach(function (input) { fill(input, 'venue'); });
+    // typing in the last empty input adds another, so any number can be followed (up to the
+    // form's limit); without javascript the form has two empty inputs at a time
+    var MAX = {{ max_choices }};
+    function grow(input, kind) {
+      input.addEventListener('input', function () {
+        var inputs = document.querySelectorAll('input[name="' + kind + '"]');
+        if (!input.value || input !== inputs[inputs.length - 1] || inputs.length >= MAX) { return; }
+        var next = input.cloneNode();
+        next.value = '';
+        input.after(' ', next);
+        fill(next, kind);
+        grow(next, kind);
+      });
+    }
+    ['town', 'venue'].forEach(function (kind) {
+      document.querySelectorAll('input[name="' + kind + '"]').forEach(function (input) { fill(input, kind); grow(input, kind); });
+    });
   })();
 </script>

@@ -239,6 +239,7 @@ def form_context(*, ticked=(), near_label="", near_miles=DEFAULT_MILES, towns=()
         "miles_options": MILES,
         "towns": list(towns) + [""] * BLANK_INPUTS,
         "venues": list(venues) + [""] * BLANK_INPUTS,
+        "max_choices": MAX_CHOICES,
     }
 
 

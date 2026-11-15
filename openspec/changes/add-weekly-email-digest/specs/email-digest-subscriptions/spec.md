@@ -60,7 +60,7 @@ The confirmation link SHALL be signed and SHALL expire after 7 days. Opening it 
 The signup and preferences forms SHALL offer these choices, and a subscriber SHALL need at least one:
 - **Area:** a region, state or metro area offered by `event-geo-filter` (only New England's, as the listing offers), or "All of New England";
 - **Near a place:** a ZIP code or town, resolved with the location form's lookup, and a distance of 5, 10, 25, 50 or 100 miles;
-- **Follow:** one or more towns or venues, typed with suggestions. Towns are chosen only here: the form doesn't offer a metro narrowed to some of its towns, and a choice saved that way (or posted by a form opened before) is still honoured, and shown in the town inputs.
+- **Follow:** one or more towns or venues, typed with suggestions. Towns are chosen only here: the form doesn't offer a metro narrowed to some of its towns, and a choice saved that way (or posted by a form opened before) is still honoured, and shown in the town inputs. With JavaScript, filling the last empty town or venue input adds another, up to the choices limit; without it, two empty inputs are shown at a time.
 
 #### Scenario: Several kinds together
 - **WHEN** a visitor ticks the Vermont area, enters "02143" with 10 miles, and follows one venue
@@ -69,6 +69,10 @@ The signup and preferences forms SHALL offer these choices, and a subscriber SHA
 #### Scenario: A saved metro narrowed to towns
 - **WHEN** a subscriber whose saved choice is North of the Charles narrowed to Somerville opens their preferences
 - **THEN** Somerville is shown in the town inputs, and North of the Charles isn't ticked
+
+#### Scenario: Following more than two towns
+- **WHEN** a visitor fills both empty town inputs on the signup form
+- **THEN** a third empty town input appears, and so on as each new last one is filled
 
 #### Scenario: Too many choices
 - **WHEN** a form holds 21 choices
