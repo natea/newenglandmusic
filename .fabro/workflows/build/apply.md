@@ -17,7 +17,7 @@ Work through the change's `tasks.md` one `## N.` group at a time, in order. For 
 1. Read the group's tasks and the parts of the proposal, design and specs they rely on, and the code they touch.
 2. Make the group's changes, with the automated tests its tasks ask for.
 3. Tick the box of each task you did, and only those.
-4. Run the whole suite: `set -a; . ./.intentable/test.env; set +a; venv/bin/python manage.py test`.
+4. Run the whole suite in the foreground, and wait for it to finish: `set -a; . ./.intentable/test.env; set +a; venv/bin/python manage.py test`.
 5. Only when the suite passes, commit the group's work and its ticks together, as one commit. The subject says what the group did, in the repository's style (a short plain sentence, such as "Add the venue export to the admin"), and the body says why when that isn't obvious.
 
 Never commit on a failing suite. One group is one commit: don't split a group, and don't fold two together.
