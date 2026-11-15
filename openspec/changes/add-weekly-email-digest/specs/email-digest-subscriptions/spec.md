@@ -20,8 +20,8 @@
 - **THEN** the Vermont area choice is already ticked
 
 #### Scenario: Remembered neighborhood narrowing
-- **WHEN** a visitor whose remembered filter narrows an area to a neighborhood opens `/digest`
-- **THEN** the area choice is ticked without the neighborhood, and the stored choice holds no neighborhood
+- **WHEN** a visitor whose remembered filter narrows North of the Charles to Somerville and a neighborhood in it opens `/digest`
+- **THEN** Somerville is filled in as a followed town, North of the Charles isn't ticked (it would widen the choice), and no neighborhood is offered or stored
 
 ### Requirement: Signing up again before confirming
 A second signup for an address still unconfirmed SHALL send a fresh confirmation and SHALL NOT change the stored choices.
@@ -58,13 +58,17 @@ The confirmation link SHALL be signed and SHALL expire after 7 days. Opening it 
 
 ### Requirement: Choosing which shows
 The signup and preferences forms SHALL offer these choices, and a subscriber SHALL need at least one:
-- **Area:** a region, state or metro area offered by `event-geo-filter` (only New England's, as the listing offers), optionally narrowed to some of a metro's towns, or "All of the Northeast";
+- **Area:** a region, state or metro area offered by `event-geo-filter` (only New England's, as the listing offers), or "All of New England";
 - **Near a place:** a ZIP code or town, resolved with the location form's lookup, and a distance of 5, 10, 25, 50 or 100 miles;
-- **Follow:** one or more towns or venues.
+- **Follow:** one or more towns or venues, typed with suggestions. Towns are chosen only here: the form doesn't offer a metro narrowed to some of its towns, and a choice saved that way (or posted by a form opened before) is still honoured, and shown in the town inputs.
 
 #### Scenario: Several kinds together
 - **WHEN** a visitor ticks the Vermont area, enters "02143" with 10 miles, and follows one venue
 - **THEN** three choices are stored for the subscriber
+
+#### Scenario: A saved metro narrowed to towns
+- **WHEN** a subscriber whose saved choice is North of the Charles narrowed to Somerville opens their preferences
+- **THEN** Somerville is shown in the town inputs, and North of the Charles isn't ticked
 
 #### Scenario: Too many choices
 - **WHEN** a form holds 21 choices

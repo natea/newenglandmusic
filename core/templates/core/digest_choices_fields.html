@@ -23,20 +23,6 @@
     {% for value, label in area_options %}
       <label class="digestPill"><input type="checkbox" name="area" value="{{ value }}" {% if value in ticked %}checked{% endif %}> {{ label }}</label>
     {% endfor %}
-    {% if metro_town_groups %}
-      <details class="digestTowns" {% if metro_towns_ticked %}open{% endif %}>
-        <summary>Only some towns of a metro area</summary>
-        <select name="metro_town" multiple size="8" aria-label="Towns of a metro area">
-          {% for metro_label, towns in metro_town_groups %}
-            <optgroup label="{{ metro_label }}">
-              {% for value, label in towns %}
-                <option value="{{ value }}" {% if value in metro_towns_ticked %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </optgroup>
-          {% endfor %}
-        </select>
-      </details>
-    {% endif %}
   </span>
 </div>
 <div class="digestRow">

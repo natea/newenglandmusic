@@ -82,10 +82,10 @@ def sign_in(request, subscriber):
 def remembered_form(request):
     """the signup form, filled in from the visitor's remembered area and location"""
     cookie = request.COOKIES.get(GEO_COOKIE)
-    ticked, narrowed = digest_forms.initial_from_filter(parse_geo_filter(QueryDict(cookie or "")))
+    ticked, towns = digest_forms.initial_from_filter(parse_geo_filter(QueryDict(cookie or "")))
     here = location_from_request(request)
     label = here.label if here and here.label != DEVICE_LABEL else ""
-    return digest_forms.form_context(ticked=ticked, metro_towns_ticked=narrowed, near_label=label)
+    return digest_forms.form_context(ticked=ticked, towns=towns, near_label=label)
 
 
 def send_later(response, subscriber, what, send_one):
