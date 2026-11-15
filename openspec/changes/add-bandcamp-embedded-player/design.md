@@ -80,7 +80,7 @@ The 25-act experiment (11 redirecting to a release, 14 grids, 25 found) is the s
 - **[Browser test]** The Playwright test intercepts Bandcamp; its fixture must also block all other outbound network.
 
 - **[Bandcamp changes its pages]** Structured data or tile markup may change. → Status `unreadable` is recorded, visible in the admin and the run's problems; fixtures document the shapes.
-- **[Bandcamp blocks us]** → A three-in-a-row block stops the run; `blocked` is kept and retried after 90 days; the pace is well below browsing.
+- **[Bandcamp blocks us]** → A three-in-a-row block stops the run; `blocked` is kept and retried after 90 days; the pace is well below browsing. *Seen on 2026-11-15:* Bandcamp answers requests from Render's servers with a "Client Challenge" page (a script-run bot check, status 200), so the weekly job finds nothing there; the first production run marked 150 acts `unreadable` before the challenge was counted as `blocked`. The owner chose to copy in the 146 players a run from their own machine had found, and to have editors set players by hand from then on; the weekly step now stops after three challenged acts.
 - **[A wrong player]** The first release may not be the act's best. → An editor can set or clear it.
 - **[Removed releases]** A stored ID can stop being playable. → The player shows Bandcamp's own message; refresh yearly.
 - **[Event HTML staleness]** The button is baked in. → The command re-renders the events of acts that changed.

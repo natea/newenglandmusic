@@ -137,6 +137,17 @@ class FindBandcampEmbedsTestCase(TestCase):
         run = JobRun.objects.get(command="find_bandcamp_embeds")
         self.assertTrue(any("stopped" in p["name"] for p in run.problems))
 
+    def test_challenged_from_a_server_stops_the_run(self):
+        # bandcamp sends servers its bot challenge with a 200: three in a row stop the run, and
+        # nothing is marked unreadable
+        names = ["A", "B", "C", "D", "E"]
+        for name in names:
+            Band.objects.create(name=name, bandcamp_url=f"https://{name.lower()}.bandcamp.com/")
+        out = self.run_command({f"https://{n.lower()}.bandcamp.com/": page("challenge.html") for n in names})
+        self.assertIn("stopped", out)
+        self.assertEqual(Band.objects.filter(bandcamp_embed_status="blocked").count(), 3)
+        self.assertFalse(Band.objects.filter(bandcamp_embed_status="unreadable").exists())
+
     def test_a_block_does_not_count_when_something_between_succeeded(self):
         for name in "ABCD":
             Band.objects.create(name=name, bandcamp_url=f"https://{name.lower()}.bandcamp.com/")
