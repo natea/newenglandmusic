@@ -290,6 +290,71 @@ $quiet: #4f4b44;
   }
 }
 
+// the Listen on Bandcamp section: a plum rule, a play button, and bandcamp's own player in
+// the box once the button is pressed (core/static/core/js/artist_preview.js)
+.act-listen {
+  border-top: 2px solid $tab;
+  margin-top: 18px;
+  padding-top: 10px;
+
+  h2 {
+    font: 700 1.25rem Helvetica, Arial, sans-serif;
+    margin: 0 0 8px;
+  }
+
+  .act-listen-box {
+    background: #fff;
+    border: 1px solid #999;
+    border-radius: 10px;
+    box-sizing: border-box;
+    padding: 14px;
+  }
+
+  .bandcamp-play {
+    display: inline-block;
+    background: #fff;
+    border: 1px solid #000;
+    border-radius: 12px;
+    color: $ink;
+    padding: 6px 14px;
+    text-decoration: none;
+  }
+
+  .bandcamp-play[aria-expanded="true"] {
+    background: #000;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .bandcamp-player {
+    iframe {
+      border: 0;
+      border-radius: 10px;
+      display: block;
+      height: 300px;
+      margin-top: 10px;
+      max-width: 100%;
+      min-width: #{"min(320px, 100%)"};
+      width: 100%;
+    }
+
+    .bandcamp-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+      align-items: center;
+      font-size: 0.85rem;
+      margin: 6px 0 0;
+    }
+  }
+
+  .act-listen-note {
+    color: $quiet;
+    font-size: 0.85rem;
+    margin: 4px 0 0;
+  }
+}
+
 @media (max-width: 600px) {
   .act-card {
     padding: 14px 14px 18px;

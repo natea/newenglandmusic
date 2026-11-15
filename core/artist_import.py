@@ -23,6 +23,7 @@ from django.db import transaction
 
 from core.artist_matching import normalize
 from core.artists import MBID_PATTERN, is_bandcamp_url
+from core.event_performers import rebake_events_of
 from core.link_hubs import LINK_HUB
 from core.models import Artist, Band, BandMembership
 
@@ -230,9 +231,13 @@ def import_row(number, row, report):
         # a member made from a band's list, now with its own row
         record.act_id = act_id
         record.save(update_fields=["act_id"])
+    bandcamp_before = record.bandcamp_url
     changed = apply_values(record, values)
     if created or changed:
         record.save()
+    if not created and record.bandcamp_url != bandcamp_before:
+        # a new address makes a found player stale, and listings bake in its button
+        rebake_events_of([record])
     label = f"{act_id} {record.name}"
     (report.created if created else report.updated if changed else report.unchanged).append(label)
 

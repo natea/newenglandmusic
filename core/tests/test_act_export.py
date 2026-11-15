@@ -34,6 +34,18 @@ class ActRowTestCase(TestCase):
         self.assertEqual(row["page"], "/artists/kim")
         self.assertEqual(len(act_row(artist)), len(ARTIST_HEADER))
 
+    def test_the_bandcamp_player_is_exported_after_the_link_without_its_bookkeeping(self):
+        band = Band.objects.create(
+            name="Krill", bandcamp_url="https://krill.bandcamp.com/", bandcamp_embed_kind="album",
+            bandcamp_embed_id="111", bandcamp_embed_status="found", bandcamp_embed_for="https://krill.bandcamp.com/",
+        )
+        row = row_dict(band)
+        self.assertEqual((row["bandcamp_embed_kind"], row["bandcamp_embed_id"], row["bandcamp_embed_status"]), ("album", "111", "found"))
+        header_row = list(BAND_HEADER)
+        self.assertEqual(header_row.index("bandcamp_embed_kind"), header_row.index("bandcamp_url") + 1)
+        self.assertNotIn("bandcamp_embed_for", header_row)
+        self.assertNotIn("bandcamp_embed_checked_at", header_row)
+
     def test_band_members(self):
         band = Band.objects.create(name="Krill")
         bass = Artist.objects.create(name="Jonah Furman")

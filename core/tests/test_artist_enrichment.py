@@ -271,6 +271,25 @@ class EnrichCommandTestCase(TestCase):
         request.assert_not_called()
         self.assertEqual(Band.objects.get().bandcamp_url, "https://speedyortiz.bandcamp.com/")
 
+    def test_events_are_re_rendered_when_the_bandcamp_address_is_replaced(self):
+        Band.objects.create(name="Speedy Ortiz", bandcamp_url="https://old.bandcamp.com/", field_sources={"bandcamp_url": "musicbrainz"})
+        with mock.patch("core.artist_enrichment.rebake_events_of") as rebake:
+            self.run_command()
+        rebake.assert_called_once()
+        self.assertEqual([act.name for act in rebake.call_args.args[0]], ["Speedy Ortiz"])
+        self.assertEqual(Band.objects.get().bandcamp_url, "https://speedyortiz.bandcamp.com/")
+
+    def test_enrichment_leaves_the_player_and_the_events_alone_when_the_address_is_the_same(self):
+        Band.objects.create(
+            name="Speedy Ortiz", bandcamp_url="https://speedyortiz.bandcamp.com/", bandcamp_embed_kind="track",
+            bandcamp_embed_id="8", bandcamp_embed_status="found", bandcamp_embed_for="https://speedyortiz.bandcamp.com/",
+        )
+        with mock.patch("core.artist_enrichment.rebake_events_of") as rebake:
+            self.run_command()
+        rebake.assert_not_called()
+        band = Band.objects.get()
+        self.assertEqual((band.bandcamp_embed_kind, band.bandcamp_embed_id, band.bandcamp_embed_status), ("track", "8", "found"))
+
     def test_musicbrainz_busy_stops_the_run_and_keeps_what_was_saved(self):
         from core.music_ids import MusicBrainzBusy
 

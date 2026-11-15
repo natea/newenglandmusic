@@ -76,6 +76,21 @@
     </dl>
     {% endif %}
 
+    {% if bandcamp_player %}
+      {% comment %}
+        nothing loads from bandcamp until the visitor presses play: core/static/core/js/artist_preview.js
+        puts bandcamp's player in the box then, and without javascript the button is a link to
+        the act's bandcamp page. an act with no usable player gets no section
+      {% endcomment %}
+      <section class="act-listen" aria-labelledby="act-listen-title">
+        <h2 id="act-listen-title">Listen on Bandcamp</h2>
+        <div class="act-listen-box">
+          <a class="bandcamp-play" href="{{ bandcamp_player.link }}" data-bandcamp-kind="{{ bandcamp_player.kind }}" data-bandcamp-id="{{ bandcamp_player.id }}" data-bandcamp-page="{{ bandcamp_player.page }}" data-artist-name="{{ act.name }}" target="_blank" rel="noopener" title="Listen to {{ act.name }} on Bandcamp">▶ Play {{ act.name }} on Bandcamp</a>
+        </div>
+        <p class="act-listen-note">Plays from Bandcamp. Nothing loads until you press play. Press again to close.</p>
+      </section>
+    {% endif %}
+
     {% if act.wikipedia_extract %}
       <div class="act-bio">
         <div class="act-ruled"><p>{{ act.wikipedia_extract }}</p></div>

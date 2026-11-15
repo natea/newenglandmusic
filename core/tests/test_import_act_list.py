@@ -4,6 +4,7 @@ import tempfile
 from io import StringIO
 from unittest import mock
 
+from core import act_list as core_act_list
 from core.act_list import state_code
 from core.management.commands import import_act_list as command
 from core.models import Artist, Band, Event, JobRun, Venue
@@ -201,6 +202,28 @@ class ImportActListTestCase(TestCase):
         dropkick.refresh_from_db()
         self.assertEqual((dropkick.needs_review, dropkick.sources), (False, ["ohb"]))
 
+    def test_events_are_re_rendered_when_the_list_replaces_the_address(self):
+        Band.objects.create(
+            name="28 Degrees Taurus", bandcamp_url="https://hubfill.bandcamp.com", musicbrainz_id=TAURUS,
+            field_sources={"bandcamp_url": "link hub"},
+        )
+        with mock.patch.object(core_act_list, "rebake_events_of") as rebake:
+            self.run_command(self.tab("rotation", row("28 Degrees Taurus", "Boston", "MA", bandcamp="https://taurus.bandcamp.com")))
+        rebake.assert_called_once()
+        self.assertEqual([act.name for act in rebake.call_args.args[0]], ["28 Degrees Taurus"])
+
+    def test_the_import_asks_bandcamp_for_nothing_and_leaves_the_player(self):
+        Band.objects.create(
+            name="28 Degrees Taurus", bandcamp_url="https://taurus.bandcamp.com", musicbrainz_id=TAURUS,
+            bandcamp_embed_kind="album", bandcamp_embed_id="5", bandcamp_embed_status="found",
+            bandcamp_embed_for="https://taurus.bandcamp.com",
+        )
+        with mock.patch("requests.Session.request", side_effect=AssertionError("no requests")) as request:
+            self.run_command(self.tab("rotation", row("28 Degrees Taurus", "Boston", "MA", bandcamp="https://taurus.bandcamp.com")))
+        request.assert_not_called()
+        band = Band.objects.get(name="28 Degrees Taurus")
+        self.assertEqual((band.bandcamp_embed_kind, band.bandcamp_embed_id, band.bandcamp_embed_status), ("album", "5", "found"))
+
 
 class HeldForReviewTestCase(TestCase):
     """an act held for review stays off the site until an editor marks it ready"""
@@ -240,3 +263,4 @@ class HeldForReviewTestCase(TestCase):
         response = self.client.get("/admin/core/band/?needs_review__exact=1")
         self.assertEqual([b.name for b in response.context["cl"].result_list], ["3 1/2 Girls"])
         self.assertContains(response, "needs review: not on MusicBrainz")
+

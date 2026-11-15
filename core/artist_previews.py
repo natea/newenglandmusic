@@ -8,11 +8,14 @@ AppleMusicArtistLink, for the event's names as written, and only when APPLE_MUSI
 is on; youtube buttons likewise from YouTubeArtistLink, when YOUTUBE_PREVIEWS is on. an
 artist matched on several gets their buttons side by side.
 
+bandcamp buttons come from the performers an event is linked to (EventPerformer) that have a
+usable Bandcamp player (MusicAct.bandcamp_player_usable), whether or not any other service is
+switched on. the buttons' order on each screen is in ORDERS, through players_in_order.
+
 act_previews is the same for acts' own names, for the discovery deck's cards.
 """
 
 from core.apple_music import previews_enabled
-from core import youtube
 from core.artist_matching import normalize
 from core.artist_names import event_artist_names
 from core.spotify import credentials as spotify_credentials
@@ -37,20 +40,57 @@ def event_apple_music_artists(event, names):
     return {key: {"artist": artist, "song": song, "album": album} for key, artist, song, album in rows}
 
 
+# each screen's order of players: the event row keeps its own, and the discovery deck's puts
+# bandcamp last in the order the deck's issue gives. nothing draws the deck yet
+ORDERS = {
+    "event": ("spotify", "apple", "youtube", "bandcamp"),
+    "deck": ("youtube", "apple", "spotify", "bandcamp"),
+}
+
+
+def players_in_order(entry, screen):
+    """[(service, its data)] for the players an entry (see event_artist_previews) has, in the screen's order"""
+    return [(service, entry[service]) for service in ORDERS[screen] if entry.get(service)]
+
+
+def event_bandcamp_players(event):
+    """
+    {normalized name: {"name", "kind", "id", "page"}} for the event's linked artists and bands
+    with a usable Bandcamp player. "page" is the act's own Bandcamp address, or the player's
+    own when an editor set a player without one
+    """
+    if not event.pk:
+        return {}
+    players = {}
+    for performer in event.performers.select_related("artist", "band").order_by("order", "pk"):
+        act = performer.act
+        if act.needs_review or not act.bandcamp_player_usable:
+            continue
+        players.setdefault(
+            act.name_key,
+            {
+                "name": act.name, "kind": act.bandcamp_embed_kind, "id": act.bandcamp_embed_id,
+                "page": act.bandcamp_url, "link": act.bandcamp_url or act.bandcamp_player_url,
+            },
+        )
+    return players
+
+
 def event_artist_previews(event):
     """
-    [{"label", "spotify" (an id or None), "apple" (ids or None), "youtube" (ids or None)}],
-    in the event's order
+    [{"label", "spotify" (an id or None), "apple" (ids or None), "youtube" (ids or None),
+    "bandcamp" (kind, id and page or None)}], in the event's order
     """
-    if not spotify_credentials() and not previews_enabled() and not youtube.previews_enabled():
-        return []
     names = event_artist_names(event)
     apple = event_apple_music_artists(event, names)
     on_youtube = event_youtube_artists(names)
+    on_bandcamp = event_bandcamp_players(event)
     entries = {}
 
     def entry(key, label):
-        return entries.setdefault(key, {"label": label, "spotify": None, "apple": None, "youtube": None})
+        return entries.setdefault(
+            key, {"label": label, "spotify": None, "apple": None, "youtube": None, "bandcamp": None}
+        )
 
     for label, spotify_id in event_spotify_artists(event):
         entry(normalize(label), label)["spotify"] = spotify_id
@@ -60,6 +100,8 @@ def event_artist_previews(event):
             entry(key, name)["apple"] = apple[key]
         if key in on_youtube:
             entry(key, name)["youtube"] = on_youtube[key]
+    for key, player in on_bandcamp.items():
+        entry(key, player["name"])["bandcamp"] = player
     # the event's own order: spotify's labels can be part of a name ("Built to Spill" from
     # "Built to Spill Fall 2026 Tour", "Boulder Canyon" from a duo), so each label goes where
     # the first name containing it is

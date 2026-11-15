@@ -151,6 +151,28 @@ def rebake(event):
     Event.all_objects.filter(pk=event.pk).update(baked_html_template=bake_event_html(event))
 
 
+def rebake_events_of(acts):
+    """
+    re-renders the upcoming events these artists and bands perform in, whose listings bake in
+    the act's play buttons: after an act's Bandcamp player or address changes, or it's held
+    or marked ready. one place for every change that alters a button. returns how many
+    """
+    from django.utils import timezone
+
+    artists = [act.pk for act in acts if isinstance(act, Artist)]
+    bands = [act.pk for act in acts if isinstance(act, Band)]
+    if not artists and not bands:
+        return 0
+    events = Event.all_objects.filter(starttime__gte=timezone.now()).filter(
+        Q(performers__artist__in=artists) | Q(performers__band__in=bands)
+    ).distinct()
+    count = 0
+    for event in events:
+        rebake(event)
+        count += 1
+    return count
+
+
 def link_from_names(event, records=None):
     """
     replaces the event's links from names, re-rendering its listing when they change;
