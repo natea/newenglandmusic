@@ -9,7 +9,7 @@ the act pages' embedded player (find_bandcamp_embeds):
 only the kind (album or track) and the numeric id are taken from a page, by its structure
 (json-ld and page properties for a release the page redirects to, the first music tile of a
 discography grid), with no script run. merchandise tiles are skipped. a release whose
-player says it isn't available (a physical-only one) is skipped for the next, three tried.
+player has no streamable track (a physical-only one) is skipped for the next, three tried.
 the page is requested politely: robots.txt, the event checks' honest user agent, two seconds
 between requests, no proxy, and no redirect off bandcamp.com. nothing else is requested.
 """
@@ -33,8 +33,10 @@ SECONDS_BETWEEN_REQUESTS = 2
 MAX_REDIRECTS = 5
 # releases tried on one page, each costing a request for its player
 MAX_PLAYERS_TRIED = 3
-# what the player's page says of a release that can't be played
-UNAVAILABLE_MARKER = "not available"
+# the player page's track data, where a streamable track has an audio "file". its "not
+# available" message is always in the page, hidden until its script shows it, so the text
+# can't tell a playable release from one that isn't
+PLAYER_DATA_ATTRIBUTE = "data-player-data"
 REFRESH_FOUND_AFTER = datetime.timedelta(days=365)
 RETRY_OTHERS_AFTER = datetime.timedelta(days=90)
 TILE_RE = re.compile(r"(album|track)-(\d+)")
@@ -175,10 +177,22 @@ def player_available(session, kind, embed_id):
         return "", False
     if problem:
         return problem, False
-    soup = BeautifulSoup(html, "html.parser")
-    for script in soup(["script", "style"]):
-        script.decompose()
-    return "", UNAVAILABLE_MARKER not in soup.get_text(" ").lower()
+    return "", is_playable(html)
+
+
+def is_playable(html):
+    """whether a player page's track data has a streamable track, in a release not withdrawn"""
+    element = BeautifulSoup(html, "html.parser").find(attrs={PLAYER_DATA_ATTRIBUTE: True})
+    if element is None:
+        return False
+    try:
+        data = json.loads(element[PLAYER_DATA_ATTRIBUTE])
+    except ValueError:
+        return False
+    if not isinstance(data, dict) or data.get("killed") or data.get("album_private") or data.get("subscriber_only"):
+        return False
+    tracks = data.get("tracks")
+    return isinstance(tracks, list) and any(isinstance(track, dict) and track.get("file") for track in tracks)
 
 
 def lookup(session, url):
