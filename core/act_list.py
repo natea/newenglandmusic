@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from core.artist_enrichment import BOTH_KINDS, NOT_ON_MUSICBRAINZ, SEVERAL, choose_kind
 from core.artist_import import FIELD_COLUMNS, clean_values
 from core.artist_matching import normalize
+from core.event_performers import rebake_events_of
 from core.link_hubs import LINK_HUB
 from core.models import Artist, Band
 
@@ -247,8 +248,12 @@ def import_act(act, model, mbid, reasons, source, report):
     if record.musicbrainz_id and mbid and record.musicbrainz_id != mbid:
         values.pop("musicbrainz_id")
         report.problems.append(f"{act.name}: already has MusicBrainz ID {record.musicbrainz_id}; the list's {mbid} not used")
+    bandcamp_before = record.bandcamp_url
     if fill(record, values, source):
         record.save()
+        if record.bandcamp_url != bandcamp_before:
+            # a new address makes a found player stale, and listings bake in its button
+            rebake_events_of([record])
     report.found.append(record)
     return record
 
