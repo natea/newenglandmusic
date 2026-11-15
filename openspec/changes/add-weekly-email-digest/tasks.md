@@ -2,10 +2,10 @@ Issue: [#13 Visitors can signup to receive a weekly email of upcoming shows that
 
 ## 1. Models and migration
 
-- [ ] 1.1 Add `Subscriber`, `SignInCode` and `DigestChoice` (kinds `area`, `near`, `town`, `venue`) to `core/models.py`, with a migration. Venue choices cascade on venue deletion; emails are stored lowercase and unique.
-- [ ] 1.1a Add `MailRequest` (address, client hash, kind, time), used by the sending limits, to the same migration.
-- [ ] 1.2 Register `Subscriber` in the admin (address, confirmed, paused, created; deletable; choices shown inline).
-- [ ] 1.3 Add `core/tests/test_digest_models.py` covering lowercase uniqueness, cascades on venue and subscriber deletion, and the admin list columns.
+- [x] 1.1 Add `Subscriber`, `SignInCode` and `DigestChoice` (kinds `area`, `near`, `town`, `venue`) to `core/models.py`, with a migration. Venue choices cascade on venue deletion; emails are stored lowercase and unique.
+- [x] 1.1a Add `MailRequest` (address, client hash, kind, time), used by the sending limits, to the same migration.
+- [x] 1.2 Register `Subscriber` in the admin (address, confirmed, paused, created; deletable; choices shown inline).
+- [x] 1.3 Add `core/tests/test_digest_models.py` covering lowercase uniqueness, cascades on venue and subscriber deletion, and the admin list columns.
 
 ## 2. Mail sender
 
