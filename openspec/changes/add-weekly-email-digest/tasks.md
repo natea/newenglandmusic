@@ -45,3 +45,12 @@ Issue: [#13 Visitors can signup to receive a weekly email of upcoming shows that
 
 - [x] 8.1 Run `venv/bin/python manage.py test` with the network blocked and confirm every spec scenario has a passing test.
 - [x] 8.2 Run `openspec validate add-weekly-email-digest --strict`.
+
+## 9. Launch
+
+- [ ] 9.1 Create the SES domain identity `stagehopper.app` in us-east-2 with Easy DKIM, and add its three DKIM CNAMEs and a DMARC record in Cloudflare; verify SES reports the domain verified and DKIM successful. (Identity created 2026-11-15; DNS records pending.)
+- [ ] 9.2 Give `hello@stagehopper.app` a way to receive replies (it has no MX record): forward it with Cloudflare Email Routing, or a mailbox.
+- [x] 9.3 Create the send-only IAM user `stagehopper-ses-sender` (SendRawEmail and SendEmail on the `stagehopper.app` identity, from `hello@stagehopper.app` only) and its access key, kept out of the repository.
+- [ ] 9.4 Request SES production access with an approved description of the site's mail; record AWS's answer here.
+- [ ] 9.5 Set `DEFAULT_FROM_EMAIL`, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (and `SITE_URL`, if missing) on the web service, then run a blueprint sync and verify it creates `newenglandmusic-digest`.
+- [ ] 9.6 With the job suspended, sign up from two networks and check the confirmation and sign-in code emails arrive and the CSRF check passes (PR #115), run `send_weekly_digests --dry-run` from the job's shell, then enable the job and check the first Thursday run's summary at `/admin/core/jobrun/`.
