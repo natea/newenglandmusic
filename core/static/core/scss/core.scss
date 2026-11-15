@@ -419,8 +419,6 @@ article {
 // layout is below
 .event-actions {
   display: flex;
-  // on the narrowest phones (320px) the last icon would stick out and scroll the page sideways
-  flex-wrap: wrap;
   align-items: center;
   gap: 2px 10px;
 
