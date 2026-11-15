@@ -28,7 +28,7 @@ The list parses place parameters with `geo_filter_for_request` and applies `geo_
 *Alternative:* a separate cookie for venues. Rejected: it would make "my area" two settings.
 
 ### 4. Genre filter and the "ALL" genre
-`?genre=Jazz` matches venues whose `genres` contains the value or contains `"ALL"`, ignoring case. `genres` is an `ArrayField`, whose `contains` is case-sensitive, so the match is made in Python over the place-filtered venues (about 730 rows, as in decision 6), comparing case-folded values. Choices are the distinct genres across non-inactive venues, case-folded to one choice each (shown in the first spelling met), sorted, without "ALL". An unknown value is ignored. The genre is a URL parameter only, not remembered.
+`?genre=Jazz` matches venues whose `genres` contains the value or contains `"ALL"`, ignoring case. `genres` is an `ArrayField`, whose `contains` is case-sensitive, so the match is made in Python over the place-filtered venues (about 730 rows, as in decision 6), comparing case-folded values. The genre list is not a fixed list kept in code, and nothing new is collected for it: it comes from the venue spreadsheet's genre column (`Venue_Genre_Search`, semicolon-separated, read by `sync_venues_from_gsheets` into `Venue.genres`). Choices are the distinct genres across non-inactive venues, case-folded to one choice each (shown in the first spelling met), sorted, without "ALL". An unknown value is ignored. The genre is a URL parameter only, not remembered.
 
 ### 5. Open booking means `open_booking is True`
 `?open_booking=1` keeps venues with `open_booking=True`. Unknown (null) is not included: the filter exists so an artist finds rooms that want them, and a false positive wastes their time. The list shows, under that filter, the booking type's label on each entry so an artist can skim (the spec requires it). Entries link to `/venues/<slug>/booking` under this filter; that is this change's reading of the thread, not something it asked for.
@@ -75,12 +75,11 @@ No outside service is called. Tests build `Venue` and `GeoArea` rows directly an
 - Should the artist view also list the venue's recent past shows, as a sign of what the room books? Left out here; adding it later changes only the artist view.
 - The artist view shows `booking_notes`, which come straight from the sheet and may hold contact details; `improve-sitemap` keeps them off public pages. Is the owner content to show them (they are the "notes" the thread asked for), or should they wait until the sheet's notes are checked?
 - The "Venues" menu item, the homepage cookie shared with `/venues` (decision 3) and the genre not being remembered (decision 4) are this change's readings; the thread said only "similar to how you can filter the events on the homepage". Does the owner agree with each?
+- The genre choices are only as tidy as what the sheet's editors typed (spelling, near-duplicates such as "R&B" and "R and B"). The list folds case only. Does the owner want a curated genre list or a clean-up of the sheet's values before launch, or is the sheet's own vocabulary fine for now? Until then the choices follow the sheet.
 - Does an editor want a "Last checked" date on booking details? The sheet has none, so none is shown.
 
 ## Sketches
 
-Three static sketches of the list and the artist view (1440×900):
+The owner chose option A. One static sketch of the list and the artist view (1440×900):
 
 - [Option A: Index-card A–Z](sketches/a.html): extend the act index's letter rail and index-card look, with fan filters in one strip, a separate "For artists" row, and the artist view as a plain facts card.
-- [Option B: Filter sidebar and table](sketches/b.html): a dense table with a filter sidebar where "For artists" is its own group, and a booking-type column linking to the artist view.
-- [Option C: Audience switch](sketches/c.html): one list with an "I'm going out / I'm playing" switch that turns on the open-booking filter, and an apply-first artist page.
