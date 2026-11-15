@@ -44,6 +44,7 @@ from .models import (
     MusicAct,
     YouTubeArtistLink,
     DateMessage,
+    DigestChoice,
     EmailSubscriber,
     Event,
     GeoArea,
@@ -52,6 +53,7 @@ from .models import (
     MenuItem,
     SpotifyArtistLink,
     StaticPage,
+    Subscriber,
     Venue,
     VenueFetchStatus,
 )
@@ -920,6 +922,29 @@ class EmailSubscriberAdmin(admin.ModelAdmin):
 
 
 admin.site.register(EmailSubscriber, EmailSubscriberAdmin)
+
+
+class DigestChoiceInline(admin.TabularInline):
+    model = DigestChoice
+    extra = 0
+    raw_id_fields = ("venue",)
+
+
+class SubscriberAdmin(admin.ModelAdmin):
+    # editors see every address but can't export or send from here
+    list_display = ("email", "is_confirmed", "paused", "created_at")
+    list_filter = ("paused",)
+    search_fields = ("email",)
+    ordering = ("-created_at",)
+    readonly_fields = ("confirmed_at", "created_at", "last_digest_week")
+    inlines = [DigestChoiceInline]
+
+    @admin.display(boolean=True, description="Confirmed")
+    def is_confirmed(self, obj):
+        return obj.confirmed
+
+
+admin.site.register(Subscriber, SubscriberAdmin)
 
 
 class MenuItemAdmin(OrderedModelAdmin):

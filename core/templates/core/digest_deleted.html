@@ -1,0 +1,10 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+  <div id='maincontent' class='static_page digestPage'>
+    <h1 class="digestTab">Account deleted</h1>
+    <div class="digestCard">
+      <p>Your address, choices and sign-in codes are gone, and you're signed out. You can <a href="{% url 'digest_signup' %}">sign up again</a> any time.</p>
+    </div>
+  </div>
+{% endblock %}

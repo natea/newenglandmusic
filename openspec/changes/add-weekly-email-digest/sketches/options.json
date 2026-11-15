@@ -1,0 +1,5 @@
+[
+{"file":"a.html","label":"Index cards","thesis":"Keep to the site's paper look: a plain sign-up card, a ruled preferences card with four labelled rows (areas, near, towns, venues) shown as pills, and a text-first email grouped by day.","risk":"Four separate rows with pills can feel like a settings form, and it gives no clue how many shows a choice brings in until it's saved."},
+{"file":"b.html","label":"Sentence builder","thesis":"Choices read as one sentence ('Email me shows in Greater Boston, within 25 miles of 02139...') so the any-of-these rule is obvious and sign-up is a single short page.","risk":"Sentence slots are a less familiar control, are harder to make accessible and to use on a phone, and the 20-choice limit may make the sentence long."},
+{"file":"c.html","label":"Live preview","thesis":"A preferences page with checkbox lists on the left and a preview of next week's email on the right, with match counts beside each choice, so people see what they'll get.","risk":"Needs counts and a preview computed per request, and the two-pane layout must collapse to one column on phones."}
+]

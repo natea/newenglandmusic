@@ -1,4 +1,5 @@
 import logging
+from email.message import EmailMessage
 
 import boto3
 from botocore.exceptions import ClientError
@@ -58,6 +59,33 @@ class SesMailSender:
             )
         else:
             return message_id
+
+    def send_raw_email(self, source, destination, subject, text, html, headers=None):
+        """
+        Sends a text and HTML email as a raw MIME message, so it can carry extra headers
+        (List-Unsubscribe). Unlike send_email(), failures raise (ClientError for a rejection
+        or a throttling reply, BotoCoreError for missing credentials), so the caller decides.
+        EmailMessage refuses line breaks in headers, so an address can't inject one.
+
+        :param headers: extra header names and values, such as List-Unsubscribe.
+        :return: The ID of the message, assigned by Amazon SES.
+        """
+        message = EmailMessage()
+        message["Subject"] = subject
+        message["From"] = source
+        message["To"] = destination
+        for name, value in (headers or {}).items():
+            message[name] = value
+        message.set_content(text)
+        message.add_alternative(html, subtype="html")
+        response = self.ses_client.send_raw_email(
+            Source=source,
+            Destinations=[destination],
+            RawMessage={"Data": message.as_bytes()},
+        )
+        message_id = response["MessageId"]
+        logger.info("Sent raw mail %s.", message_id)
+        return message_id
 
 
 # we are in us-east-2 for some reason

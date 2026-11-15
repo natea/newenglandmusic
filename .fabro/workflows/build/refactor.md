@@ -10,7 +10,7 @@ Review the code this change added or touched, as `git diff $(cat .intentable/sta
 ## What you may change
 
 - **No change in behaviour.** Nothing a spec describes may change, and no test may change what it checks.
-- **The suite passes afterwards, and no test that passed before fails.** Run it before and after: `set -a; . ./.intentable/test.env; set +a; venv/bin/python manage.py test`.
+- **The suite passes afterwards, and no test that passed before fails.** Run it before and after, in the foreground, waiting for it to finish: `set -a; . ./.intentable/test.env; set +a; venv/bin/python manage.py test`.
 - **Renames go through the whole project:** code, tests, templates and the change's own artifacts.
 - **Break up a long function** that does several non-trivial things into named steps.
 - **Extract logic expressed more than once** into one place that both call.

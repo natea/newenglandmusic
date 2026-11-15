@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0105_geoarea_groups_and_defaults'),
+        ('core', '0107_weekly_email_menu_item'),
     ]
 
     operations = [
