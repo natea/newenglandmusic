@@ -40,6 +40,7 @@ WEEKLY = [
     "manage.py match_seatgeek_venues",
     "manage.py lookup_venue_neighborhoods",
     "manage.py read_artist_link_hubs",
+    "manage.py find_bandcamp_embeds",
 ]
 
 
@@ -92,6 +93,14 @@ class JobScriptsTestCase(SimpleTestCase):
         result, calls = self.run_job("weekly.sh")
         self.assertEqual(calls, WEEKLY)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_bandcamp_step_fails(self):
+        result, calls = self.run_job("weekly.sh", fail_step=WEEKLY[-1])
+        # it runs last, so every step before it has already run
+        self.assertEqual(calls, WEEKLY)
+        self.assertEqual(WEEKLY[-1], "manage.py find_bandcamp_embeds")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("=== 1 step(s) failed:\n  python manage.py find_bandcamp_embeds", result.stdout)
 
     def test_sheet_sync_fails(self):
         result, calls = self.run_job("daily.sh", fail_step=DAILY[0])

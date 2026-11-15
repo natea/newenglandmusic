@@ -13,4 +13,6 @@ step python manage.py match_seatgeek_venues
 step python manage.py lookup_venue_neighborhoods
 # artists' and bands' link-hub pages (linktr.ee and its rivals), one request each, at most weekly
 step python manage.py read_artist_link_hubs
+# acts' bandcamp player ids, read from their own pages: last, so a link a hub just filled is looked up now
+step python manage.py find_bandcamp_embeds
 finish
