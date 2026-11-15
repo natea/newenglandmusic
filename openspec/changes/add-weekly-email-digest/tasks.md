@@ -9,8 +9,8 @@ Issue: [#13 Visitors can signup to receive a weekly email of upcoming shows that
 
 ## 2. Mail sender
 
-- [ ] 2.1 Add `send_raw_email()` to `core/utils_aws.py`: a text and HTML `multipart/alternative` message with optional extra headers, sent with SES `send_raw_email`, leaving `send_email()` unchanged.
-- [ ] 2.2 Add `core/tests/test_mail_sender.py` with a fake SES client: both parts and the headers appear in the recorded message, a client error, a credentials error and a throttling reply are raised to the caller, a line break in an address is refused, and `send_email()` still behaves as before.
+- [x] 2.1 Add `send_raw_email()` to `core/utils_aws.py`: a text and HTML `multipart/alternative` message with optional extra headers, sent with SES `send_raw_email`, leaving `send_email()` unchanged.
+- [x] 2.2 Add `core/tests/test_mail_sender.py` with a fake SES client: both parts and the headers appear in the recorded message, a client error, a credentials error and a throttling reply are raised to the caller, a line break in an address is refused, and `send_email()` still behaves as before.
 
 ## 3. Signed links and sign-in codes
 
