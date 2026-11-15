@@ -1,0 +1,20 @@
+[
+  {
+    "file": "a.html",
+    "label": "Quiet bars",
+    "thesis": "Keep the masthead as is, with the links in one row beside the name. Fold the filters and location into one closed bar, with the subscribe box in a second closed bar below it. Each bar has a summary line. This is the smallest change and keeps the existing folding sections.",
+    "risk": "Two stacked bars still take two lines before the first show, and the summary line can get long when many filters apply."
+  },
+  {
+    "label": "Chips and plum nav strip",
+    "thesis": "Put the links in their own plum strip under the name and search box. On the listing, show the applied filters as visible chips with two buttons, Change filters and Subscribe, so what is filtering is readable at a glance.",
+    "risk": "A taller masthead pushes the listing down, and the chip row adds new markup and a new open-and-close pattern beyond details elements.",
+    "file": "b.html"
+  },
+  {
+    "label": "Centered nav, one Refine bar",
+    "thesis": "Centre the name with the links beneath it. Fold filters, location and subscribe into one Refine bar whose summary names what applies, with two buttons that open each panel.",
+    "risk": "It departs most from the current masthead and needs two panels in one bar, so it needs script, and without JavaScript the panels must stay open.",
+    "file": "c.html"
+  }
+]
