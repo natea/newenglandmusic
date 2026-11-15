@@ -1,0 +1,24 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+  <div id='maincontent' class='static_page digestPage'>
+    {% if bad %}
+      <h1 class="digestTab">That link didn't work</h1>
+      <div class="digestCard">
+        <p>It may have been changed, or the account is gone. To stop the email, <a href="{% url 'digest_sign_in' %}">sign in with a code</a>.</p>
+      </div>
+    {% elif done %}
+      <h1 class="digestTab">Unsubscribed</h1>
+      <div class="digestCard">
+        <p>The weekly email to {{ address }} is paused. To start it again, <a href="{% url 'digest_sign_in' %}">sign in with a code</a> and press Resume.</p>
+      </div>
+    {% else %}
+      <h1 class="digestTab">Unsubscribe</h1>
+      <form method="post" action="{% url 'digest_unsubscribe' token %}" class="digestCard">
+        <p>Stop the weekly email to {{ address }}?</p>
+        <p><button type="submit">Unsubscribe</button></p>
+        <p class="digestHint">You can resume it later by signing in with a code.</p>
+      </form>
+    {% endif %}
+  </div>
+{% endblock %}

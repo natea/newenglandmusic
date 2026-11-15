@@ -30,8 +30,8 @@ Issue: [#13 Visitors can signup to receive a weekly email of upcoming shows that
 
 ## 6. Preferences, unsubscribe and privacy
 
-- [ ] 6.1 Add the preferences view (change choices, pause and resume, delete account with confirmation), the unsubscribe page and one-click post endpoint, the footer menu item, the `noindex` and `no-store` headers, and the privacy page text (including the sentence saying nothing is stored about visitors).
-- [ ] 6.2 Add `core/tests/test_digest_preferences.py` covering every scenario of "Managing a subscription", "One-click unsubscribe" and "Privacy page and admin", including the "Area no longer listed" and "Area partly gone" marks on the preferences page, the sessions-and-pages-guarded requirement, that opening the unsubscribe link alone changes nothing, the one-click post without a CSRF token, an altered link, sign-out, a deleted subscriber's session, and resume.
+- [x] 6.1 Add the preferences view (change choices, pause and resume, delete account with confirmation), the unsubscribe page and one-click post endpoint, the footer menu item, the `noindex` and `no-store` headers, and the privacy page text (including the sentence saying nothing is stored about visitors).
+- [x] 6.2 Add `core/tests/test_digest_preferences.py` covering every scenario of "Managing a subscription", "One-click unsubscribe" and "Privacy page and admin", including the "Area no longer listed" and "Area partly gone" marks on the preferences page, the sessions-and-pages-guarded requirement, that opening the unsubscribe link alone changes nothing, the one-click post without a CSRF token, an altered link, sign-out, a deleted subscriber's session, and resume.
 
 ## 7. The weekly email and its command
 

@@ -9,21 +9,22 @@ request; nobody is logged in as a django user.
 """
 
 import datetime
+from urllib.parse import parse_qsl
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.http import HttpResponseRedirect, JsonResponse
-from django.http import QueryDict
+from django.http import HttpResponseBadRequest, JsonResponse, QueryDict
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.cache import add_never_cache_headers
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .. import digest_forms, digest_mail, digest_tokens
-from ..digest import is_stale
+from ..digest import ALL_AREAS, area_filter, is_stale
 from ..geo_filters import COOKIE_NAME as GEO_COOKIE, parse_geo_filter
 from ..location import DEVICE_LABEL, location_from_request
-from ..models import DigestChoice, Subscriber
+from ..models import Subscriber
 
 SESSION_KEY = "subscriber_id"
 SESSION_AGE = int(datetime.timedelta(days=30).total_seconds())
@@ -163,14 +164,88 @@ def sign_in_page(request):
     return render(request, "core/digest_sign_in.html", context)
 
 
+def choice_summary(subscriber):
+    """[(text, no longer listed)] for the choices on the preferences page"""
+    rows = []
+    for choice in subscriber.choices.select_related("venue"):
+        if choice.kind == choice.Kind.AREA and choice.area_query == ALL_AREAS:
+            rows.append(("All of the Northeast", False))
+        elif choice.kind == choice.Kind.AREA:
+            geo_filter = area_filter(choice)
+            if geo_filter:
+                text = ", ".join(area.label for area in geo_filter.areas)
+                rows.append((f"{text} ({', '.join(geo_filter.town_labels)})" if geo_filter.towns else text, False))
+            else:
+                rows.append((", ".join(value for _, value in parse_qsl(choice.area_query)) or "An area", True))
+        elif choice.kind == choice.Kind.NEAR:
+            rows.append((f"Within {choice.miles} miles of {choice.label}", False))
+        elif choice.kind == choice.Kind.TOWN:
+            rows.append((f"{choice.town}, {choice.state}", False))
+        elif choice.venue:
+            rows.append((choice.venue.name, False))
+    return rows
+
+
+def preferences_page(request, subscriber, context=None):
+    context = context or digest_forms.context_from_choices(subscriber)
+    context.update(subscriber=subscriber, summary=choice_summary(subscriber))
+    return render(request, "core/digest_preferences.html", context)
+
+
 @guarded
 def preferences(request):
     subscriber = current_subscriber(request)
     if subscriber is None:
         return redirect("digest_sign_in")
+    if request.method != "POST":
+        return preferences_page(request, subscriber)
+    action = request.POST.get("action", "save")
+    if action in ("pause", "resume"):
+        Subscriber.objects.filter(pk=subscriber.pk).update(paused=action == "pause")
+        subscriber.refresh_from_db()
+        return preferences_page(request, subscriber, None)
+    result = digest_forms.read_choices(request.POST)
+    if not result.ok:
+        context = digest_forms.context_from_post(request.POST)
+        context.update(errors=result.errors, candidates=result.candidates)
+        return preferences_page(request, subscriber, context)
+    digest_forms.save_choices(subscriber, result.specs)
     context = digest_forms.context_from_choices(subscriber)
-    context.update(subscriber=subscriber)
-    return render(request, "core/digest_preferences.html", context)
+    context["saved"] = True
+    return preferences_page(request, subscriber, context)
+
+
+@guarded
+def delete_account(request):
+    subscriber = current_subscriber(request)
+    if subscriber is None:
+        return redirect("digest_sign_in")
+    if request.method == "POST":
+        subscriber.delete()
+        request.session.flush()
+        return render(request, "core/digest_deleted.html")
+    return render(request, "core/digest_delete.html", {"subscriber": subscriber})
+
+
+def masked(address):
+    name, _, domain = address.partition("@")
+    return f"{name[:1]}***@{domain}"
+
+
+@csrf_exempt
+@guarded
+def unsubscribe(request, token):
+    """
+    opening the link only shows a button; the button's post, or a mail client's one-click post
+    (which has no csrf token: the signed link is the proof), pauses the email without signing in
+    """
+    subscriber = digest_tokens.subscriber_from(token, digest_tokens.UNSUBSCRIBE_SALT)
+    if subscriber is None:
+        return HttpResponseBadRequest(render(request, "core/digest_unsubscribe.html", {"bad": True}).content)
+    if request.method == "POST":
+        Subscriber.objects.filter(pk=subscriber.pk).update(paused=True)
+        return render(request, "core/digest_unsubscribe.html", {"done": True, "address": masked(subscriber.email)})
+    return render(request, "core/digest_unsubscribe.html", {"token": token, "address": masked(subscriber.email)})
 
 
 @require_POST

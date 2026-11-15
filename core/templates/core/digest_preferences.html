@@ -6,8 +6,28 @@
     <form method="post" action="{% url 'digest_preferences' %}" class="digestCard">
       {% csrf_token %}
       <p>Signed in as {{ subscriber.email }}.</p>
+      {% if saved %}<p class="digestErrors" role="status">Saved.</p>{% endif %}
+      {% if subscriber.paused %}
+        <p class="digestErrors">The weekly email is paused. <button type="submit" name="action" value="resume">Resume the email</button></p>
+      {% endif %}
+      {% if summary %}
+        <p><b>What you get now</b></p>
+        <ul class="digestSummary">
+          {% for text, gone in summary %}
+            <li>{{ text }}{% if gone %} <b>(no longer listed)</b>{% endif %}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
       {% include "core/digest_choices_fields.html" %}
-      <p><button type="submit">Save</button></p>
+      <p>
+        <button type="submit" name="action" value="save">Save</button>
+        {% if not subscriber.paused %}<button type="submit" name="action" value="pause">Pause the email</button>{% endif %}
+      </p>
+      <p><a href="{% url 'digest_delete' %}">Delete my account and everything stored</a></p>
+    </form>
+    <form method="post" action="{% url 'digest_sign_out' %}">
+      {% csrf_token %}
+      <button type="submit">Sign out</button>
     </form>
   </div>
 {% endblock %}
