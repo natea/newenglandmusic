@@ -1,0 +1,66 @@
+{% extends 'core/base.html' %}
+{% load sass_tags %}
+
+{% block head %}
+  <link href="{% sass_src 'scss/venue_list.scss' %}" rel="stylesheet" type="text/css" />
+  <link rel="canonical" href="{{ canonical }}">
+{% endblock head %}
+
+{% block content %}
+{% comment %}
+  the venue list (add-venue-list, core/views/venue_list.py): the index card A to Z, as the act
+  index is, with the place form, a genre filter, and "for artists", the open-bookings filter
+{% endcomment %}
+<article class="act venue-list" aria-labelledby="venues-name">
+  <h1 class="act-tab" id="venues-name">Venues</h1>
+  <div class="act-card">
+    <div class="venue-list-filters">
+      {% include 'core/geo_filter_form.html' %}
+      <form class="venue-list-genre" method="get" action="{{ request.path }}">
+        {% for name, value in place_params %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+        {% if open_booking %}<input type="hidden" name="open_booking" value="1">{% endif %}
+        <label>genre
+          <select name="genre" onchange="this.form.submit()">
+            <option value="">Any genre</option>
+            {% for g in genres %}<option value="{{ g }}"{% if g == genre %} selected{% endif %}>{{ g }}</option>{% endfor %}
+          </select>
+        </label>
+        <noscript><button type="submit">filter</button></noscript>
+      </form>
+      <form class="venue-list-artists" method="get" action="{{ request.path }}">
+        <p class="venue-list-artists-head">For artists</p>
+        {% for name, value in place_params %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+        {% if genre %}<input type="hidden" name="genre" value="{{ genre }}">{% endif %}
+        <label><input type="checkbox" name="open_booking" value="1"{% if open_booking %} checked{% endif %} onchange="this.form.submit()"> Takes open bookings</label>
+        <noscript><button type="submit">filter</button></noscript>
+      </form>
+    </div>
+
+    <p class="act-meta">{{ count }} venue{{ count|pluralize }}{% if open_booking %} that take open bookings{% endif %}, A to Z</p>
+
+    {% if no_match %}
+      <p class="venue-none">No venues match{% if open_booking %} (only venues marked as taking open bookings are listed){% endif %}. <a href="{{ request.path }}?clear=1">show all</a></p>
+    {% else %}
+      <nav class="index-rail" aria-label="Jump to a letter">
+        {% for letter, has in rail %}{% if has %}<a href="#letter-{% if letter == '#' %}0{% else %}{{ letter }}{% endif %}">{{ letter }}</a>{% else %}<span aria-hidden="true">{{ letter }}</span>{% endif %}{% endfor %}
+      </nav>
+      {% for letter, entries in groups %}
+        {% with anchor=letter|cut:"#"|default:"0" %}
+        <section class="venue-letter" id="letter-{{ anchor }}" aria-labelledby="letter-{{ anchor }}-head">
+          <h2 class="venue-initial" id="letter-{{ anchor }}-head">{{ letter }}</h2>
+          <ul class="venue-entries">
+            {% for venue in entries %}
+              <li class="venue-entry">
+                <a class="venue-entry-name" href="{% if open_booking %}{% url 'venue_booking' venue.slug %}{% else %}{% url 'venue_page' venue.slug %}{% endif %}">{{ venue.name }}</a>
+                <span class="venue-entry-detail">{{ venue.location }}{% if venue.room %} · {{ venue.room }}{% endif %}{% if venue.genre_line %} · {{ venue.genre_line }}{% endif %}</span>
+                {% if open_booking and venue.booking_label %}<span class="venue-entry-booking">{{ venue.booking_label }}</span>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+        {% endwith %}
+      {% endfor %}
+    {% endif %}
+  </div>
+</article>
+{% endblock content %}

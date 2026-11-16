@@ -537,6 +537,12 @@ Each New England venue that isn't marked inactive has a page at `/venues/<slug>`
 
 `Venue.slug` was filled from each venue's name by the migration (the town added when two venues share a name) and is set when a venue is first saved. It never changes on a rename, so links keep working; an editor can change it in the admin, and the sheet import leaves it alone. No map is drawn: the location is text plus a link out to Google Maps, as the Google Places display terms aren't settled. Nothing to run after deploying beyond the migration.
 
+## The venue list and the artist views
+
+`/venues` (`core/views/venue_list.py`) lists every New England venue not marked inactive, A to Z (a leading "The" ignored), with its town, kind and size of room and genres. It narrows by place with the homepage's own form and remembered cookie (so a visitor's area is the same on both), by genre (a venue listing "ALL" matches every genre; the choices are the sheet's own genres, case folded), and, under "For artists", to venues marked as taking open bookings, whose entries then link to their artist views. Genre and open booking live only in the address. Migration 0111 adds "Venues" to the header and footer menus. The list is open to search engines; it isn't in the sitemap yet.
+
+Each venue's artist view, `/venues/<slug>/booking` (`core/views/venue_booking.py`), says whether it takes open bookings, its booking type with a plain-words meaning (`BOOKING_MEANINGS`), how to apply (the booking link, else the website), the booking notes as the sheet has them, and open mic, size and genres. The fan page and the artist view share "For fans / For artists" tabs; booking details are only on the artist view. Artist views ask search engines not to index them. To keep a contact detail off the site, edit the venue's booking notes in the admin.
+
 ## Reading the sheet on a server
 
 The sheet sync now runs only by hand, for a one-off import; venues are kept in the admin. Locally, `sync_venues_from_gsheets` reads the sheet with the `gog` CLI, which signs in to Google as you through a browser. A server can't do that, so there it reads the sheet with a **Google Cloud service account** instead. The account can only read, and only sheets shared with it, so the sheet stays private. Set it up once:

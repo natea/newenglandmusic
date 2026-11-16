@@ -1,0 +1,5 @@
+[
+{"file":"a.html","label":"Index-card A–Z","thesis":"Extend the act index's letter rail and index-card look: fan filters in one strip, a separate yellow 'For artists' checkbox row, and a tabbed artist page as a plain facts card.","risk":"Cards waste space for 730 venues and the artist filter is easy to overlook."},
+{"file":"b.html","label":"Filter sidebar and table","thesis":"A dense scannable table with a filter sidebar where 'For artists' is its own boxed group; under it the table gains a booking-type column that links to the artist view.","risk":"Looks like a database, not the site's card style, and the sidebar needs a narrow-screen collapse."},
+{"file":"c.html","label":"Audience switch","thesis":"One list with an 'I'm going out / I'm playing' switch that turns on the open-booking filter, and an apply-first artist page leading with booking type and one apply button.","risk":"The switch hides the artist filter's meaning behind a mode, and the apply button implies the site takes applications when it only links out."}
+]

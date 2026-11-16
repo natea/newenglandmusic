@@ -310,6 +310,11 @@ The act card's sibling for one venue, at `/venues/<slug>`, set as a gig-poster c
 - **Playing here / Getting here:** field lists under plum-ruled headings, each field only when known; yes-or-no facts only when known.
 - No map is drawn; the location is text and a link out to Google Maps.
 
+### Venue list and artist view
+- **List (`/venues`):** the index card with "Venues" on the tab; the place form and a genre select in the lavender strip, with "For artists: Takes open bookings" in a row of its own under a ruled line; the letter rail; letters as plum-ruled headings over two columns of entries (bold name, then town · room · genres in quiet grey, and the booking type under the open-bookings filter).
+- **Tabs:** "For fans" and "For artists" as two folder tabs on a venue card's top edge, the current one in card stock and bold.
+- **Artist view:** one statement in display type ("Takes open bookings" on a lavender band), then the booking facts (type with its meaning in quiet grey, how to apply, notes) and "The room".
+
 ### Act index (`/bands`) and search results
 Set as the index at the back of a reference book, on the act card.
 - **Tab and meta:** "Bands & artists" (or "Search: <words>") on the plum tab; the count, "A to Z", as the meta line.

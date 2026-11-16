@@ -126,18 +126,22 @@ class TheBillTestCase(VenuePageTestCase):
 
 class FactLineTestCase(VenuePageTestCase):
     def test_open_booking(self):
+        # booking is on the artist view (add-venue-list): the fan page links there, not to the booking link
         html = self.page(self.obriens).content.decode()
-        self.assertIn('<a class="venue-book" href="https://obriens.example/booking" target="_blank" rel="noopener">Open booking ›</a>', html)
+        self.assertIn('<a class="venue-book" href="/venues/obriens/booking">Open booking ›</a>', html)
+        self.assertNotIn("https://obriens.example/booking", html)
         self.assertIn("<b>Small bar</b> · Allston, Boston, MA", html)
         self.assertIn('<span class="venue-books">Rock, punk, metal</span>', html)
 
     def test_open_booking_without_a_link(self):
         Venue.objects.filter(pk=self.obriens.pk).update(booking_url="")
-        self.assertContains(self.page(self.obriens), '<a class="venue-book" href="#playing-here">Open booking ›</a>')
+        self.assertContains(self.page(self.obriens), '<a class="venue-book" href="/venues/obriens/booking">Open booking ›</a>')
 
     def test_closed_booking(self):
         Venue.objects.filter(pk=self.obriens.pk).update(open_booking=False)
-        self.assertNotContains(self.page(self.obriens), 'class="venue-book"')
+        html = self.page(self.obriens).content.decode()
+        self.assertNotIn('class="venue-book"', html)
+        self.assertIn('<a href="/venues/obriens/booking">For artists</a>', html)
 
     def test_the_sub_region(self):
         somerville = Venue.objects.create(sheet_id="V5", name="ONCE Ballroom", city_town="Somerville", state="MA")
@@ -152,7 +156,7 @@ class SectionsTestCase(VenuePageTestCase):
     def test_playing_and_getting_here(self):
         html = self.page(self.obriens).content.decode()
         self.assertIn('<h2 id="playing-here">Playing here</h2>', html)
-        self.assertIn("<dt>Booking</dt><dd>Submit a Show</dd>", html)
+        self.assertNotIn("<dt>Booking</dt>", html)
         self.assertIn("<dt>Size</dt><dd>Small (&lt;100)</dd>", html)
         self.assertIn('<h2 id="getting-here">Getting here</h2>', html)
         self.assertIn("<dt>Ages</dt><dd>21+</dd>", html)
