@@ -19,5 +19,5 @@ Issue: [#57 Remove inactive bands from the public-facing Bands & Artists page](h
 
 ## 4. Docs and rollout
 
-- [ ] 4.1 Describe the inactive mark in `AGENTS.md`'s artists section
+- [x] 4.1 Describe the inactive mark in `AGENTS.md`'s artists section
 - [ ] 4.2 After deploy, run `mark_inactive_acts --dry-run` and then for real with `--file inactive-acts.txt` (copied from this change; its addresses carry the kind, since some are artists), and mark any it reports missing in the admin
