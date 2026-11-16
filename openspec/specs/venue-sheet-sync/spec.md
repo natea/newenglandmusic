@@ -58,11 +58,11 @@ The sync SHALL map Y/Yes and N/No to true and false and any other value to unkno
 - **THEN** the venue's booking type is left blank and the sync prints a warning naming the row
 
 ### Requirement: A sync is all or nothing and can be previewed
-The sync SHALL apply all venue and area changes in one transaction. With `--dry-run` it SHALL report how many venues it would create and update, and how many areas it would add, update and remove, and save nothing.
+The sync SHALL apply all venue changes in one transaction. With `--dry-run` it SHALL report how many venues it would create and update, and save nothing.
 
 #### Scenario: Dry run
 - **WHEN** the sync runs with `--dry-run`
-- **THEN** it reports the venue counts (created, updated) and the area counts (added, updated, removed), and the database is unchanged
+- **THEN** it reports the venue counts (created, updated), and the database is unchanged
 
 ### Requirement: Fields not in the sheet are preserved
 The sync SHALL only write fields that come from sheet columns. Other venue fields SHALL keep their values.
@@ -78,42 +78,23 @@ Venues the sheet marks inactive SHALL NOT be offered in venue search or the even
 - **WHEN** a user searches venues by the name of a venue marked inactive
 - **THEN** it does not appear in the results
 
-### Requirement: Regions, states and metro areas are synced from the sheet
-The sync SHALL read the sheet's `geo-filters_json` tab. Each row of the tab gives an area's filter type (`region`, `state` or `metro`), ID, label and home state, and one rule. A rule's match type is `state`, `county`, `city` or `any`, and its value is a comma-separated list. Rows with the same ID SHALL make up one area. After a sync, the stored areas SHALL be exactly those in the tab: areas that are new are added, areas that have changed are updated, and areas that are gone are removed. Areas SHALL be ordered by their first row in the tab. The `ALL` row (match type `any`) SHALL NOT be stored as an area.
-
-#### Scenario: Metro with several rules
-- **WHEN** the tab has three rows with ID `metro_MA_Boston`: a `state` rule "MA", a `city` rule "Brookline, Cambridge, Somerville" and a `county` rule "Suffolk"
-- **THEN** one metro area "MA: Boston" is stored, with those states, cities and counties
-
-#### Scenario: Area removed from the sheet
-- **WHEN** an area that was stored by an earlier sync is no longer in the tab
-- **THEN** the sync removes it, and it no longer appears as a filter option
-
-#### Scenario: Unknown filter type or match type
-- **WHEN** a row has a filter type or match type the sync doesn't recognize
-- **THEN** the sync skips that row and prints a warning naming its ID
-
-#### Scenario: Missing tab
-- **WHEN** the `geo-filters_json` tab can't be read
-- **THEN** the sync fails with an error naming the tab, and neither venues nor areas change
-
 ### Requirement: The sheet can be read with a Google service account
-When the `GOOGLE_SERVICE_ACCOUNT_JSON` environment variable is set, the sync SHALL read the venue tab and the `geo-filters_json` tab through the Google Sheets API, signed in as the service account whose JSON key the variable holds, with read-only access. When the variable is not set, the sync SHALL read the sheet with the gog CLI, as before.
+When the `GOOGLE_SERVICE_ACCOUNT_JSON` environment variable is set, the sync SHALL read the venue tab through the Google Sheets API, signed in as the service account whose JSON key the variable holds, with read-only access. When the variable is not set, the sync SHALL read the sheet with the gog CLI, as before.
 
 #### Scenario: Service account configured
 - **WHEN** the sync runs with `GOOGLE_SERVICE_ACCOUNT_JSON` set to a valid key
-- **THEN** it reads both tabs through the Sheets API, signed in with the read-only scope, and gog is not run
+- **THEN** it reads the venue tab through the Sheets API, signed in with the read-only scope, and gog is not run
 
 #### Scenario: No service account
 - **WHEN** the sync runs without `GOOGLE_SERVICE_ACCOUNT_JSON`
-- **THEN** it reads both tabs with gog, as before
+- **THEN** it reads the venue tab with gog, as before
 
 ### Requirement: Both ways of reading give the same rows
 Reading with the service account and reading with gog SHALL produce the same rows from the same sheet: the header row gives the keys, and short rows are padded with blanks. Parsing, the dry run and the all-or-nothing transaction SHALL behave the same either way.
 
 #### Scenario: Same rows either way
 - **WHEN** the Sheets API returns a tab whose trailing empty cells are dropped, as gog's output does
-- **THEN** the rows are padded to the header exactly as gog's are, and the venues and areas saved are the same
+- **THEN** the rows are padded to the header exactly as gog's are, and the venues saved are the same
 
 ### Requirement: Sheet read errors say what to fix
 When the sheet can't be read with the service account, the sync SHALL stop and change nothing, with an error saying what to fix: an invalid key, the Sheets API being disabled in the account's project, the sheet not being shared with the account (naming its email), or a missing tab (naming it).
@@ -131,8 +112,8 @@ When the sheet can't be read with the service account, the sync SHALL stop and c
 - **THEN** the sync fails saying to enable the Google Sheets API, rather than to share the sheet, and nothing changes
 
 #### Scenario: Missing tab
-- **WHEN** the Sheets API reports that the `geo-filters_json` range doesn't exist
-- **THEN** the sync fails with an error naming `geo-filters_json`, and neither venues nor areas change
+- **WHEN** the Sheets API reports that the venue tab's range doesn't exist
+- **THEN** the sync fails with an error naming the tab, and no venue changes
 
 ### Requirement: Sheet read errors never expose credentials
 No error, warning or log line from reading the sheet SHALL contain the private key, an access token or the raw key JSON.
@@ -140,3 +121,10 @@ No error, warning or log line from reading the sheet SHALL contain the private k
 #### Scenario: Nothing secret in the output
 - **WHEN** any of these errors happens
 - **THEN** neither the command's output nor its error contains the private key, the access token or the key JSON
+
+### Requirement: The sync runs only by hand
+The sync SHALL NOT run on a schedule; it SHALL run only when someone runs it, for a one-off import. Run without `--dry-run`, it SHALL still update matching venues from the sheet as before, so it SHALL be run with `--dry-run` first to see what would change.
+
+#### Scenario: Not in the daily job
+- **WHEN** the daily job runs
+- **THEN** it doesn't run the sync, and no venue changes from the sheet
