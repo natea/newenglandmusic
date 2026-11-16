@@ -6,7 +6,7 @@ Issue: [#57 Remove inactive bands from the public-facing Bands & Artists page](h
 
 ## Goals / Non-Goals
 
-**Goals:** leave inactive acts off the index only; let editors manage the mark; mark the 23 acts Sooz named.
+**Goals:** leave inactive acts off the index only; let editors manage the mark; mark the 165 acts Sooz has named so far.
 
 **Non-Goals:** hiding acts from pages, show links, search, sitemap or the discovery deck; handling acts from outside New England; any new screen.
 
@@ -16,7 +16,7 @@ Issue: [#57 Remove inactive bands from the public-facing Bands & Artists page](h
 - **Only `live_acts()` changes:** it adds `is_inactive=False`. Everything else reads `needs_review` and is left alone, which is exactly Sooz's option 2.
 - **Admin:** the checkbox in the act's form, `is_inactive` in `list_filter` (not a list column), and two bulk actions. Because editors own the mark, imports (`import_artists`, `import_act_list`) and enrichment don't write it, so they can't clear it.
 - **CSV export:** `is_inactive` joins `ACT_COLUMNS` so the sheet shows what editors set. Reading an exported file back in is not changed: imports ignore the column on purpose, because editors own the mark in the admin; a test checks that an exported file with the column still imports.
-- **`mark_inactive_acts`:** takes slugs as arguments (or `--file` with one per line), a `--dry-run`, and `--active` to reverse. Slugs are used because names repeat across bands and artists; a bare slug is looked up among both bands and artists, and one that matches both (slugs are unique only within a kind) is reported as ambiguous and changes nothing; `bands/orbit` or `artists/orbit` names the kind. It marks acts held for review too (harmless, they're off the index already). It prints the acts it changed, the ambiguous addresses and the addresses it didn't find, and records a `JobRun` as a `RecordedCommand`. It is run by hand, not scheduled. Sooz's list gives the slugs in the thread's links (for example `aerosmith`, `til-tuesday`); the kind (band or artist) follows the link's path and is passed as the qualified form, and a slug that doesn't exist here is reported, not guessed at.
+- **`mark_inactive_acts`:** takes slugs as arguments (or `--file` with one per line; blank lines and lines starting with `#` are ignored), a `--dry-run`, and `--active` to reverse. Slugs are used because names repeat across bands and artists; a bare slug is looked up among both bands and artists, and one that matches both (slugs are unique only within a kind) is reported as ambiguous and changes nothing; `bands/orbit` or `artists/orbit` names the kind. It marks acts held for review too (harmless, they're off the index already). It prints the acts it changed, the ambiguous addresses and the addresses it didn't find, and records a `JobRun` as a `RecordedCommand`. It is run by hand, not scheduled. Sooz's lists give the slugs in the thread's links (for example `aerosmith`, `til-tuesday`); the kind (band or artist) follows the link's path and is passed as the qualified form, all 165 in `inactive-acts.txt` (110 bands, 55 artists), and a slug that doesn't exist here is reported, not guessed at.
 - **Search, sitemap, discovery deck and the act pages** keep including inactive acts, since links to them must work. An inactive act with an upcoming show still shows in the deck.
 
 ## Risks / Trade-offs
@@ -31,7 +31,8 @@ No outside service is involved; tests use Django's `TestCase` and call the comma
 ## Open Questions
 
 - Should inactive acts also drop out of the discovery deck and search? The thread only asks about the Bands & artists page, so this proposal keeps them in both; Sooz or Nate can say otherwise.
-- The further inactive acts Sooz will share (without a MusicBrainz profile) are not yet listed; they are marked with the same command or the admin once she sends them.
+- The second batch (142 acts) was judged by Sooz from a helper's activity checks; this proposal takes her final call as given and does not re-check it. Further acts she sends are marked with the same command or the admin.
+- The Model Sons has an artist page though it sounds like a band; the file follows its link's path (`artists/`), and a miss is reported.
 
 ## Wording note
 

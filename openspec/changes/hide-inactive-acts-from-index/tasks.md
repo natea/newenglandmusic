@@ -15,9 +15,9 @@ Issue: [#57 Remove inactive bands from the public-facing Bands & Artists page](h
 ## 3. Command
 
 - [ ] 3.1 Write `mark_inactive_acts` as a `RecordedCommand` with slugs, saving with `queryset.update()` (optionally `bands/` or `artists/` qualified), `--file`, `--dry-run` and `--active`
-- [ ] 3.2 Tests: marking by slug, dry run, unknown address, a slug in both kinds (ambiguous, nothing changed), a kind-qualified address, `--file`, the job run, a held act, reversing
+- [ ] 3.2 Tests: marking by slug, comments and blank lines in the file, dry run, unknown address, a slug in both kinds (ambiguous, nothing changed), a kind-qualified address, `--file`, the job run, a held act, reversing
 
 ## 4. Docs and rollout
 
 - [ ] 4.1 Describe the inactive mark in `AGENTS.md`'s artists section
-- [ ] 4.2 After deploy, run `mark_inactive_acts --dry-run` and then for real with the 23 slugs (Greg Humphreys, Mick Goodrick and Peter Eldridge are artists, so use the `artists/` form), and mark any it reports missing in the admin
+- [ ] 4.2 After deploy, run `mark_inactive_acts --dry-run` and then for real with `--file inactive-acts.txt` (copied from this change; its addresses carry the kind, since some are artists), and mark any it reports missing in the admin

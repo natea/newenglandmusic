@@ -33,7 +33,7 @@ Each band and artist SHALL carry an inactive mark, off by default, that editors 
 - **THEN** the import succeeds and no act's mark changes
 
 ### Requirement: A command marks acts inactive by address
-`mark_inactive_acts` SHALL mark the bands and artists whose slugs it is given, as arguments or from `--file`, inactive (active with `--active`), and with `--dry-run` change nothing. A bare slug matching both a band and an artist SHALL mark neither and be reported as ambiguous; `bands/slug` names the kind. It SHALL report the acts it changed and the addresses it didn't find, and record a job run.
+`mark_inactive_acts` SHALL mark the bands and artists whose slugs it is given, as arguments or from `--file` (one per line, blank lines and lines starting with `#` ignored), inactive (active with `--active`), and with `--dry-run` change nothing. A bare slug matching both a band and an artist SHALL mark neither and be reported as ambiguous; `bands/slug` names the kind. It SHALL report the acts it changed and the addresses it didn't find, and record a job run.
 
 #### Scenario: Marking by slug
 - **WHEN** it is run with `the-cars` and `greg-humphreys`, a band and an artist
@@ -58,6 +58,10 @@ Each band and artist SHALL carry an inactive mark, off by default, that editors 
 #### Scenario: Addresses from a file
 - **WHEN** it is run with `--file` naming a file that lists `the-cars` and `greg-humphreys`
 - **THEN** both are marked, as if given as arguments
+
+#### Scenario: Comments in the file
+- **WHEN** the file has a `#` comment line, a blank line and `bands/the-cars`
+- **THEN** only The Cars is marked and no address is reported as not found
 
 #### Scenario: A job run
 - **WHEN** it is run
