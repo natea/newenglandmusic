@@ -39,7 +39,6 @@ WEEKLY = [
     "manage.py match_seatgeek_venues",
     "manage.py lookup_venue_neighborhoods",
     "manage.py read_artist_link_hubs",
-    "manage.py find_bandcamp_embeds",
 ]
 DIGEST = ["manage.py send_weekly_digests"]
 
@@ -94,13 +93,11 @@ class JobScriptsTestCase(SimpleTestCase):
         self.assertEqual(calls, WEEKLY)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_bandcamp_step_fails(self):
-        result, calls = self.run_job("weekly.sh", fail_step=WEEKLY[-1])
-        # it runs last, so every step before it has already run
-        self.assertEqual(calls, WEEKLY)
-        self.assertEqual(WEEKLY[-1], "manage.py find_bandcamp_embeds")
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("=== 1 step(s) failed:\n  python manage.py find_bandcamp_embeds", result.stdout)
+    def test_the_bandcamp_finder_isnt_scheduled(self):
+        # bandcamp challenges requests from render's servers, so it runs by hand
+        for script in ("daily.sh", "weekly.sh", "digest.sh"):
+            _, calls = self.run_job(script)
+            self.assertNotIn("manage.py find_bandcamp_embeds", calls, script)
 
     def test_digest_run(self):
         result, calls = self.run_job("digest.sh")
