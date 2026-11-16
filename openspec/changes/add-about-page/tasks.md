@@ -4,12 +4,12 @@ Issue: [#11 Let's make an About page](https://github.com/natea/newenglandmusic/i
 
 ## 1. The page
 
-- [ ] 1.1 Add `core/templates/core/about.html` extending the base template, with the who, why, features and help-out sections and the contact link shown only when `contact_email` is set. Route `/about` in `core/urls.py` as a named route, ahead of the static-page catch-all. Draft neutral wording for the owners to edit. Verify: `core/tests/test_about_page.py` covers the "Page loads", "Page has its own title", "Features link to their pages", "Email link with a contact email" and "No contact email" scenarios.
+- [ ] 1.1 Add `core/templates/core/about.html` extending the base template, in the layout chosen from the sketches, with the who, why, features and help-out sections and the contact link shown only when `contact_email` is set. Route `/about` in `core/urls.py` as a named route, ahead of the static-page catch-all. Draft neutral wording for the owners to edit. Verify: `core/tests/test_about_page.py` covers the "Page loads", "Page has its own title", "Features link to their pages", "Email link with a contact email" and "No contact email" scenarios.
 
 ## 2. Finding it
 
 - [ ] 2.1 Add the About link to the footer in `base.html` beside Privacy. Verify: a test for the "Footer link" scenario over the home, saved shows, event submission and privacy pages. The existing privacy page tests still pass.
-- [ ] 2.2 Add the page's address to the sitemap in `core/sitemap.py`. Verify: a test for the "Sitemap" scenario.
+- [ ] 2.2 Add the page's address to the sitemap in `core/sitemap.py` (into the static section if `improve-sitemap` has landed). Verify: a test for the "Sitemap" scenario.
 
 ## 3. Release
 

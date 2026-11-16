@@ -19,13 +19,13 @@ The privacy page (`/privacy`) is the model: a template in the repo, served by a 
 
 **1. A repo template, not a `StaticPage` row or a menu item.** The text is reviewed in the pull request, tested, and the same on every deploy. A `StaticPage` would need a manual step in the live admin and would be empty on a fresh database, so the footer link could 404. Alternative rejected: a `StaticPage` plus a `MenuItem`, which lets the owners edit the text without a deploy, but loses the tests and the guarantee that the link works. The privacy page made the same choice.
 
-**2. The contact route is a `mailto:` link, not a form.** It needs no model, no spam protection and no review screen, and the invitation is open-ended ("any other ideas"), which a fixed form would not fit. The link's subject line is "Suggestion for New England Music" so suggestions are easy to spot (the site name comes from `site_name`). Alternative rejected: reusing the venue-suggestion form, which doesn't exist yet and covers venues only.
+**2. The contact route is a `mailto:` link, not a form.** It needs no model, no spam protection and no review screen, and the invitation is open-ended ("any other ideas"), which a fixed form would not fit. The link's subject line is "Suggestion for New England Music" so suggestions are easy to spot (the site name comes from `site_name`; the subject is URL-encoded with the `urlencode` filter). Bands and artists have no form either, so email is their only route for now. Alternative rejected: reusing the venue-suggestion form, which doesn't exist yet and covers venues only.
 
 **3. The link is left out when `CONTACT_EMAIL` is empty.** `CONTACT_EMAIL` defaults to empty, and a `mailto:` with no address looks broken. The page then shows only the invitation text and the event form link.
 
-**4. Feature list is plain HTML, written to match the pages that exist.** Links use `{% url %}` where a name exists (`saved_shows`, `act_index`, `submit_event`, `calendar_feed`) so a renamed route fails the tests instead of breaking the page. The list only names features in the shipped specs.
+**4. Feature list is plain HTML, written to match the pages that exist.** The map, search and "near me" live on the home page and have no route name, so they link to `/` (or `/?s=`) and can go stale without a test failing. The calendar feed link is the unfiltered `calendar_feed`, since a bare `.ics` link downloads a file. Links use `{% url %}` where a name exists (`saved_shows`, `act_index`, `submit_event`, `calendar_feed`) so a renamed route fails the tests instead of breaking the page. The list only names features in the shipped specs.
 
-**5. The footer link is hard-coded beside Privacy,** as the privacy link is, so it shows on every page even with an empty menu table. The sitemap gets the address added to its list of fixed pages.
+**5. The footer link is hard-coded beside Privacy,** as the privacy link is, so it shows on every page even with an empty menu table. The sitemap gets the address added to its list of fixed pages. If `improve-sitemap` (which splits the sitemap into sections) lands first, the address goes in its static section. The new link needs the same " |" separator as the menu items, and the Privacy anchor stays byte-for-byte unchanged, since its test asserts it. A `StaticPage` at `/about/` (with a slash) would still be served by the catch-all; that is low risk and accepted.
 
 ## Risks / Trade-offs
 
@@ -40,6 +40,7 @@ No outside service is touched, so nothing needs mocking. The tests use Django's 
 ## Open Questions
 
 - **The text.** What Nate, Sooz and Mark each want said about themselves (roles, a line each, links to their own sites), and the motivation in the owners' own words. The proposal's implementation drafts neutral placeholder wording that the owners edit at review; the specs only require that the three names and a "why" section appear.
+- **How Mark wants to be represented.** Nate has asked Mark to think about it. Still undecided: the wording of Mark's line, any role, whether to show a photo, and whether to link to Mark's own site or profiles. Until Mark answers, Mark gets the same neutral placeholder as the others, and the specs don't depend on the answer.
 - **Which address receives suggestions.** The existing `CONTACT_EMAIL`, or a separate one for the About page? It doesn't change the tasks: the page reads `contact_email` either way.
 - **Whether to link `/suggest-venue`** once `add-venue-suggestions` is built. It can be added then without changing these specs.
 

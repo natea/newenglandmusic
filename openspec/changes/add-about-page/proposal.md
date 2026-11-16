@@ -16,7 +16,7 @@ The site has no page saying who makes it or why. A visitor can browse venues, sh
 - **How people send suggestions:** a "write to us" link using the site's contact email, with the subject line suggesting what it's about. The page also links to the existing event submission form for people who want to add a show. If no contact email is configured, the page still loads and shows the invitation without the email link.
 - **A footer link** to the page on every page, beside the Privacy link.
 - **The sitemap** lists the page.
-- **Not in this change:** a suggestion form or any new place to store suggestions (the separate `add-venue-suggestions` change covers suggesting venues); accounts; editing the page's text from the admin; photos of the team.
+- **Not in this change:** a suggestion form or any new place to store suggestions (the separate `add-venue-suggestions` change covers suggesting venues); accounts; editing the page's text from the admin. The first version shows no photos; whether to add one for Mark is an open question in the design.
 
 ## Capabilities
 
@@ -26,7 +26,7 @@ The site has no page saying who makes it or why. A visitor can browse venues, sh
 
 ### Modified Capabilities
 
-None. No existing spec describes the footer or the sitemap's page list.
+None. No existing spec describes an About link or the About page (other specs mention only the Privacy and OpenStreetMap footer links).
 
 ## Impact
 
