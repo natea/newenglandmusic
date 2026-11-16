@@ -16,11 +16,15 @@ The calendar listing (the home page and the month pages) and the bands and artis
 - **THEN** "Mariachi" is not offered on the calendar's picker
 
 ### Requirement: A main genre includes its sub-genres
-Picking a main genre SHALL show everything tagged with that genre or any of its sub-genres. Picking a sub-genre SHALL show only what is tagged with that sub-genre.
+Picking a main genre SHALL show everything tagged with that genre or any of its non-retired sub-genres. Picking a sub-genre SHALL show only what is tagged with that sub-genre.
 
 #### Scenario: Main genre
 - **WHEN** a visitor picks "Jazz" and one show's venue is tagged "Big Band" and another's is tagged "Blues"
 - **THEN** the Big Band show is listed and the Blues show is not
+
+#### Scenario: Retired sub-genre
+- **WHEN** a visitor picks "Jazz" and a show's venue is tagged only with a retired sub-genre of Jazz
+- **THEN** the show is not listed, and the picker does not offer the retired sub-genre
 
 #### Scenario: Sub-genre
 - **WHEN** a visitor picks "Big Band" and one show's venue is tagged "Big Band" and another's "Swing"
@@ -60,6 +64,10 @@ The picked genre SHALL be the `genre` value in the page's address, as the genre'
 - **WHEN** a visitor on `?genre=jazz` follows the next-month link
 - **THEN** the next month's page also lists only jazz shows
 
+#### Scenario: Old address kept
+- **WHEN** a visitor opens `/artists?genre=folk`
+- **THEN** they are redirected to `/bands?genre=folk`
+
 #### Scenario: Unknown genre
 - **WHEN** the address has `?genre=not-a-genre`
 - **THEN** all shows are listed
@@ -67,10 +75,6 @@ The picked genre SHALL be the `genre` value in the page's address, as the genre'
 #### Scenario: Retired genre
 - **WHEN** the address has the slug of a retired genre
 - **THEN** all shows are listed
-
-#### Scenario: Genre kept through the cookie redirect
-- **WHEN** a visitor whose remembered filter is Vermont opens `?genre=jazz`
-- **THEN** they are redirected to an address with both `state=vermont` and `genre=jazz`, and the page lists only jazz shows in Vermont
 
 #### Scenario: Clearing the state keeps the genre
 - **WHEN** a visitor with a remembered Vermont filter and `genre=jazz` picked sets the state to "All"
@@ -82,7 +86,7 @@ The picked genre SHALL be the `genre` value in the page's address, as the genre'
 
 #### Scenario: Not offered on discover
 - **WHEN** a visitor opens the discover page
-- **THEN** it has no genre picker and ignores a `genre` value in the address
+- **THEN** it has no genre picker and ignores a `genre` value in the address (it lists as if none were given)
 
 ### Requirement: No matches is said plainly
 When the picked genre leaves nothing to list, the page SHALL say no shows match, and offer to clear the genre.

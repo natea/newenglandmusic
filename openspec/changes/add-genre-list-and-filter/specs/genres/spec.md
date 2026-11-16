@@ -1,7 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: The official genre list
-The site SHALL keep one official list of genres in two levels: the 20 main genres and the sub-genres under each, exactly as supplied in issue #133. Every sub-genre SHALL belong to exactly one main genre. The list SHALL exist after every deploy without manual steps, and editors SHALL be able to add, rename and retire entries in the admin.
+The site SHALL keep one official list of genres in two levels: the 20 main genres and the sub-genres under each, exactly as supplied in issue #133. Every sub-genre SHALL belong to exactly one main genre. The list SHALL exist after every deploy without manual steps, and editors SHALL be able to add, rename and retire entries in the admin. Each list entry SHALL have a stable key that renaming does not change, by which the deploy step recognises it.
+
+#### Scenario: Two levels only
+- **WHEN** an editor tries to make a sub-genre the main genre of another entry
+- **THEN** it is refused
 
 #### Scenario: The list is loaded
 - **WHEN** the database is migrated
@@ -10,6 +14,10 @@ The site SHALL keep one official list of genres in two levels: the 20 main genre
 #### Scenario: Migrating again changes nothing
 - **WHEN** the database is migrated a second time
 - **THEN** no genre is duplicated, and a genre an editor renamed or retired keeps that change
+
+#### Scenario: A renamed genre is not recreated
+- **WHEN** an editor renames "Big Band" to "Big Bands" and the database is migrated
+- **THEN** there is still one entry under Jazz, named "Big Bands"
 
 #### Scenario: A genre with a main genre
 - **WHEN** an editor opens the sub-genre "Celtic" in the admin
@@ -30,16 +38,20 @@ An editor SHALL be able to tag a venue, a band or an artist with any number of g
 A `match_genres` command SHALL map each venue's sheet genre words and each act's MusicBrainz genre tags to list entries, by exact match on a name (ignoring case, spacing and punctuation) or by an alias table kept in the repository. It SHALL support `--dry-run`. It SHALL NOT guess: a word with no exact or alias match SHALL be left unmatched. The word `ALL` SHALL add no tags.
 
 #### Scenario: Exact and alias matches
-- **WHEN** a venue's genre words are "Jazz" and "Hip Hop", and the alias table maps "Hip Hop" to the sub-genre "Hip Hop"
+- **WHEN** a venue's genre words are "Jazz" and "Hip Hop", and an alias table (supplied by the test) maps "Hip Hop" to the sub-genre "Hip Hop"
 - **THEN** the venue is tagged "Jazz" and "Hip Hop"
 
 #### Scenario: A word that fits nothing
 - **WHEN** an act's MusicBrainz tags are "jangle pop" and "indie rock", and only "indie rock" matches the list
-- **THEN** the act is tagged "Indie Rock", and "jangle pop" is recorded as unmatched for that act
+- **THEN** the act is tagged "Indie Rock", and "jangle pop" is listed as unmatched for that act (worked out by matching the act's words, not stored)
 
 #### Scenario: An editor's tags are kept
 - **WHEN** an editor has tagged a venue by hand and the command runs on a venue whose words suggest other genres
 - **THEN** the editor's tags are unchanged and no tags are added or removed
+
+#### Scenario: Hand-tagged record
+- **WHEN** an editor tagged an act by hand and its words include "jangle pop", which matches nothing
+- **THEN** the admin still lists "jangle pop" as unmatched for that act
 
 #### Scenario: Dry run
 - **WHEN** the command runs with `--dry-run`
