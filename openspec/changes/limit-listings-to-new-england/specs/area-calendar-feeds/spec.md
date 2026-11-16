@@ -1,17 +1,17 @@
 ## MODIFIED Requirements
 
 ### Requirement: A calendar feed for any area
-`/calendar.ics` SHALL return an iCalendar document (`text/calendar; charset=utf-8`) of approved events at New England venues. It SHALL take the `region`, `state` and `metro` parameters with the same values and matching rules as the events listing, and filters given together SHALL all apply. With no parameters, it SHALL include events in every New England area.
+`/calendar.ics` SHALL return an iCalendar document (`text/calendar; charset=utf-8`) of approved events at New England venues. It SHALL take the `region`, `state` and `metro` parameters with the same values and matching rules as the events listing, and filters given together SHALL all apply. With no parameters, it SHALL include events in every area.
 
-The feed SHALL use only its own parameters, never the remembered filter cookie, and SHALL NOT set or change that cookie. Unknown or mismatched values SHALL be dropped as the listing drops them, so a stale URL covers a wider area rather than failing.
+The feed SHALL use only its own parameters, never the remembered filter cookie, and SHALL NOT set or change that cookie. Unknown or mismatched values SHALL be dropped as the listing drops them, so a stale URL covers a wider area rather than failing; an old Massachusetts metro SHALL be read as Massachusetts, as the listing reads it.
 
 #### Scenario: State feed
 - **WHEN** a calendar app fetches `/calendar.ics?state=vermont`
 - **THEN** the feed holds the upcoming approved events at Vermont venues, and no others
 
 #### Scenario: Metro feed
-- **WHEN** a calendar app fetches `/calendar.ics?metro=ma-boston`
-- **THEN** the feed holds events at venues in the Boston metro area's counties and cities
+- **WHEN** a calendar app fetches `/calendar.ics?metro=ma-north-of-the-charles`
+- **THEN** the feed holds events at venues in the North of the Charles sub-region
 
 #### Scenario: Whole Northeast
 - **WHEN** a calendar app fetches `/calendar.ics`

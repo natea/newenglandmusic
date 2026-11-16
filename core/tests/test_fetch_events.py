@@ -599,6 +599,18 @@ class FetchEventsTicketmasterTestCase(TestCase):
         self.assertNotIn("V0001", self.sources(None, True))
         self.assertIn("V0001", self.sources({"V0001"}, False))
 
+    def test_a_venue_outside_new_england_is_skipped(self):
+        Venue.objects.filter(sheet_id="V0001").update(state="NY")
+        self.assertNotIn("V0001", self.sources(None, True))
+
+    def test_a_venue_with_no_state_is_fetched(self):
+        Venue.objects.filter(sheet_id="V0001").update(state="")
+        self.assertIn("V0001", self.sources(None, True))
+
+    def test_named_on_purpose(self):
+        Venue.objects.filter(sheet_id="V0001").update(state="NY")
+        self.assertIn("V0001", self.sources({"V0001"}, False))
+
     def test_skip_ticketmaster_uses_the_report_sources(self):
         targets = fetch_events.select_targets(3, None, True, use_ticketmaster=False)
         self.assertEqual(

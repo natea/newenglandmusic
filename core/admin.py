@@ -23,7 +23,7 @@ from ordered_model.admin import OrderedModelAdmin
 from solo.admin import SingletonModelAdmin
 from tinymce.widgets import TinyMCE
 
-from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filter
+from .geo_filters import area_q, metro_fits_state, new_england_q, offered_areas, parse_geo_filter
 from . import act_sources, apple_music, youtube
 from .act_export import act_row, header as act_header, prefetch as prefetch_memberships
 from .venue_export import HEADER, csv_download, venue_row
@@ -98,6 +98,45 @@ class GeoAreaListFilter(SimpleListFilter):
         if area is None:
             return queryset
         return queryset.filter(area_q(area, prefix=self.field_prefix))
+
+
+class ScopeListFilter(SimpleListFilter):
+    """
+    the admin opens on new england (limit-listings-to-new-england), as the site does, with
+    "all areas" a click away. a chosen region, state or metro steps it aside, so picking new
+    york shows new york's venues without also choosing "all areas"
+    """
+
+    title = "area"
+    parameter_name = "scope"
+    ALL = "all"
+    # how the filtered model reaches the venue: "venue__" for events, "" for venues
+    field_prefix = ""
+
+    def lookups(self, request, model_admin):
+        return [(self.ALL, "All areas")]
+
+    def choices(self, changelist):
+        for value, label in ((None, "New England"), (self.ALL, "All areas")):
+            yield {
+                "selected": self.value() == value,
+                "query_string": changelist.get_query_string(
+                    {self.parameter_name: value} if value else {}, [self.parameter_name]
+                ),
+                "display": label,
+            }
+
+    def queryset(self, request, queryset):
+        if self.value() == self.ALL or any(request.GET.get(kind.value) for kind in GeoArea.Kind):
+            return queryset
+        # hides only what's somewhere else: a venue with no state, or an event with no venue
+        # (a submission, say), is something an editor needs to see
+        elsewhere = Q(**{f"{self.field_prefix}state__gt": ""}) & ~new_england_q(self.field_prefix)
+        return queryset.exclude(elsewhere)
+
+
+def scope_list_filter(field_prefix):
+    return type("ScopeListFilter", (ScopeListFilter,), {"field_prefix": field_prefix})
 
 
 def geo_area_list_filters(field_prefix):
@@ -301,6 +340,7 @@ class EventAdmin(admin.ModelAdmin):
     list_filter = [
         StartTimeListFilter,
         KindListFilter,
+        scope_list_filter("venue__"),
         *geo_area_list_filters(field_prefix="venue__"),
         "is_approved",
         "user_submitted",
@@ -591,6 +631,7 @@ class VenueAdmin(admin.ModelAdmin):
     list_display_links = ("name",)
     list_filter = (
         "is_active",
+        scope_list_filter(""),
         *geo_area_list_filters(field_prefix=""),
         "size",
         "open_booking",
