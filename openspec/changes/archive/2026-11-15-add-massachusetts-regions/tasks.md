@@ -23,7 +23,7 @@
 ## 4. Check it on real data
 
 - [x] 4.1 Run the whole suite with the network blocked and verify it passes, with every scenario in this change's specs covered by a test.
-- [ ] 4.2 Add a `report_massachusetts_regions` command (each sub-region's venue count, and the venues placed by a county default or by none), run it against a copy of production's venues locally, and send the editors its list of default-placed and unplaced venues; verify every active Massachusetts venue with a county is in exactly one sub-region.
+- [x] 4.2 Add a `report_massachusetts_regions` command (each sub-region's venue count, and the venues placed by a county default or by none), run it against a copy of production's venues locally, and send the editors its list of default-placed and unplaced venues; verify every active Massachusetts venue with a county is in exactly one sub-region. (Done: the report ran against production's venues on 2026-11-14, placing all 226 active Massachusetts venues; its 38 default-placed venues went to the editors as an email drafted on 2026-11-15.)
 - [x] 4.3 Check the filter on the local site at 1440px and 390px: the grouped Metro Area options, choosing North of the Charles then Somerville, and Downtown & Central Boston then a neighborhood.
 
 ## 5. Finish
