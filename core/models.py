@@ -305,6 +305,10 @@ class Venue(models.Model):
     # the sheet's Venue_ID column (e.g. V0042). this is what the sync matches on,
     # as venue names (and even name + city + state) are not unique in the sheet
     sheet_id = models.CharField(max_length=32, unique=True, null=True, blank=True)
+    # the venue page's address, /venues/<slug> (add-venue-pages): made from the name once,
+    # when the venue is first saved, and never rewritten, so a rename keeps the address.
+    # editors may change it in the admin; the sheet import never touches it
+    slug = models.SlugField(max_length=140, unique=True, null=True, blank=True)
 
     # not from the sheet: set by the match_ticketmaster_venues command or by hand, so
     # the venue's events can be fetched from the ticketmaster discovery api
@@ -409,11 +413,16 @@ class Venue(models.Model):
     safety_notes = models.TextField(blank=True, default="")
 
     def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = venue_slug(self.name, self.city_town, exclude_pk=self.pk)
         # actually save data to db
         super().save(*args, **kwargs)
         # for all related events, refresh their baked html
         for event in self.event_set.all():
             event.rebake_html()
+
+    def get_absolute_url(self):
+        return reverse("venue_page", kwargs={"slug": self.slug})
 
     @property
     def location(self):
@@ -1081,6 +1090,23 @@ class MusicAct(models.Model):
 
     def __str__(self):
         return self.name
+
+
+def venue_slug(name, town="", exclude_pk=None, taken=None):
+    """
+    a venue's slug: its name ("obriens"), or with its town when another venue has that name
+    ("the-bar-portland"), or a number after that. taken: slugs already used, when filling
+    many at once (the migration)
+    """
+    if taken is None:
+        taken = set(Venue.objects.exclude(pk=exclude_pk).exclude(slug=None).values_list("slug", flat=True))
+    for base in [(slugify(name) or "venue")[:120], (slugify(f"{name} {town}") or "venue")[:130]]:
+        if base not in taken:
+            return base
+    slug, n = f"{base}-2", 3
+    while slug in taken:
+        slug, n = f"{base}-{n}", n + 1
+    return slug
 
 
 def unique_slug(model, name, exclude_pk=None):

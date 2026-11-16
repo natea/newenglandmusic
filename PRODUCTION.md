@@ -531,6 +531,12 @@ Each approved event has its own page at `/event/<id>` (`core/views/event_page.py
 
 A listing row has one link, its headline, to that page (the tix badge still goes straight to tickets); act names in a listing aren't links. `core/artist_names.billing` reads the headliner, openers and the title line for both. The listing is stored HTML, so **after deploying run `resave_all_events` on Render** (a one-off job; about 5,200 events, half a minute). Until it runs, old rows keep their old links.
 
+## Venue pages
+
+Each New England venue that isn't marked inactive has a page at `/venues/<slug>` (`core/views/venue_page.py`): its fact line, every upcoming approved show as "The bill", then "Playing here" for musicians and "Getting here" for fans. Venues elsewhere and inactive venues answer 404. The event page links its venue's name there, and the venue admin has "View on site".
+
+`Venue.slug` was filled from each venue's name by the migration (the town added when two venues share a name) and is set when a venue is first saved. It never changes on a rename, so links keep working; an editor can change it in the admin, and the sheet import leaves it alone. No map is drawn: the location is text plus a link out to Google Maps, as the Google Places display terms aren't settled. Nothing to run after deploying beyond the migration.
+
 ## Reading the sheet on a server
 
 The sheet sync now runs only by hand, for a one-off import; venues are kept in the admin. Locally, `sync_venues_from_gsheets` reads the sheet with the `gog` CLI, which signs in to Google as you through a browser. A server can't do that, so there it reads the sheet with a **Google Cloud service account** instead. The account can only read, and only sheets shared with it, so the sheet stays private. Set it up once:

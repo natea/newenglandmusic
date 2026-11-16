@@ -14,6 +14,7 @@ from django.template.defaultfilters import date as django_date_format
 from core.artist_previews import event_artist_previews
 from core.event_actions import actions_html
 from core.event_performers import linked_billing
+from core.geo_filters import NEW_ENGLAND_STATES
 from core.location import location_from_request
 from core.models import Event
 from core.opengraph import get_meta
@@ -51,6 +52,13 @@ def outbound_links(event):
     return [(label, url) for label, url in (("Tickets", tickets), ("Venue's page", page)) if url]
 
 
+def venue_page_url(venue):
+    """the venue's page, when it has one: an active-or-unknown new england venue (add-venue-pages)"""
+    if venue is None or not venue.slug or venue.is_active is False or venue.state.upper() not in NEW_ENGLAND_STATES:
+        return ""
+    return venue.get_absolute_url()
+
+
 def event_page(request, event_id):
     # Event.objects holds approved events only, so an unapproved one is a 404
     event = get_object_or_404(Event.objects.select_related("venue"), pk=event_id)
@@ -72,6 +80,7 @@ def event_page(request, event_id):
         {
             "event": event,
             "venue": venue,
+            "venue_url": venue_page_url(venue),
             "title_line": title_line,
             "headliner": headliner,
             "openers": openers,

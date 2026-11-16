@@ -69,7 +69,7 @@ class WhatThePageShowsTestCase(EventPageTestCase):
         self.assertIn('<p class="event-page-title-line">Halloween Show</p>', html)
         self.assertIn(">Disko Lunatics</h1>", html)
         self.assertIn("with Miss Chief", html)
-        self.assertIn("<b>AS220</b>, Providence (Downcity), RI", html)
+        self.assertIn('<b><a href="/venues/as220">AS220</a></b>, Providence (Downcity), RI', html)
         self.assertIn("Step-free entrance", html)
         self.assertIn("<dd>$15</dd>", html)
         self.assertIn("<dd>21+</dd>", html)

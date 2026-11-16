@@ -665,7 +665,7 @@ class VenueAdmin(admin.ModelAdmin):
         "skip_place_lookup",
     ]
     fieldsets = (
-        (None, {"fields": ("sheet_id", "name", "is_active", "venue_type", "size")}),
+        (None, {"fields": ("sheet_id", "name", "slug", "is_active", "venue_type", "size")}),
         (
             "Location",
             {"fields": ("state", "city_town", "county", "latitude", "longitude")},
