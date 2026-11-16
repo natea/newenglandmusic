@@ -1,8 +1,8 @@
 """
-the a–z index of bands and artists at /bands (add-act-index-and-search): every live act (not held for review, not marked inactive),
+the a–z index of bands and artists at /bands (add-act-index-and-search): every live act,
 bands and artists together, grouped by first letter ("#" for digits and symbols, a leading
 "The" ignored), each with its kind, home town and next upcoming show. acts held for review
-aren't listed, nor are inactive ones, which keep their pages; /artists redirects here.
+aren't listed, nor are acts marked inactive, which keep their pages; /artists redirects here.
 """
 
 import unicodedata

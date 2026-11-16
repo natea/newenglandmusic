@@ -43,15 +43,7 @@ class Command(RecordedCommand, BaseCommand):
         if not addresses:
             raise CommandError("give at least one address, or --file")
         inactive = not options["active"]
-        found, ambiguous, missing = [], [], []
-        for address in addresses:
-            matches = self.matches(address)
-            if len(matches) > 1:
-                ambiguous.append(address)
-            elif matches:
-                found.append(matches[0])
-            else:
-                missing.append(address)
+        found, ambiguous, missing = self.resolve(addresses)
 
         verb = "would mark" if options["dry_run"] else "marked"
         state = "inactive" if inactive else "active"
@@ -70,6 +62,19 @@ class Command(RecordedCommand, BaseCommand):
             self.stdout.write(self.style.WARNING(f"not found: {address}"))
         self.stdout.write(f"{changed} {'would be ' if options['dry_run'] else ''}changed, {len(found) - changed} already {state}")
         self.job_summary = [("changed", 0 if options["dry_run"] else changed)]
+
+    def resolve(self, addresses):
+        """the acts the addresses name, plus the addresses that were ambiguous or matched nothing"""
+        found, ambiguous, missing = [], [], []
+        for address in addresses:
+            matches = self.matches(address)
+            if len(matches) > 1:
+                ambiguous.append(address)
+            elif matches:
+                found.append(matches[0])
+            else:
+                missing.append(address)
+        return found, ambiguous, missing
 
     def matches(self, address):
         """the acts at an address, from either kind, or the named kind"""
