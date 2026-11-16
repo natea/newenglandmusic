@@ -168,16 +168,19 @@ class LinksFromTheCalendarTestCase(TestCase):
                                          hyperlink="https://venue.example/show")
         link_from_names(event)
         html = Event.all_objects.get(pk=event.pk).baked_html_template
-        self.assertIn('<a class="performer" href="/bands/pixies">Pixies</a>, Dana and Alden', html)
-        # the event's own page is the info link after the venue; no name links there
-        self.assertIn('<a class="event-info" href="https://venue.example/show" target="_blank" rel="noopener">info ↗</a>', html)
-        self.assertNotIn('<a href="https://venue.example/show" target="_blank"><span', html)
+        # in the listing no name is a link and there's no info link: the headline goes to the
+        # event's page, which links Pixies (core/tests/test_event_page.py)
+        self.assertNotIn('href="/bands/pixies"', html)
+        self.assertNotIn("info ↗", html)
+        self.assertIn(f'<a class="event-headline" href="/event/{event.pk}">', html)
+        page = self.client.get(f"/event/{event.pk}").content.decode()
+        self.assertIn('<a href="/bands/pixies">Pixies</a>', page)
 
     def test_names_that_arent_performers_stay_plain(self):
         event = Event.all_objects.create(title="show", artists="Dana and Alden", starttime=days(3), venue=self.venue)
-        html = Event.all_objects.get(pk=event.pk).baked_html_template
-        self.assertNotIn('class="performer"', html)
-        self.assertIn('<span class="artists">Dana and Alden</span>', html)
+        page = self.client.get(f"/event/{event.pk}").content.decode()
+        self.assertIn("Dana and Alden", page)
+        self.assertNotIn('href="/bands/', page)
 
     def test_unlinking_rerenders(self):
         from core.event_performers import link_from_names
@@ -186,7 +189,7 @@ class LinksFromTheCalendarTestCase(TestCase):
         link_from_names(event)
         self.pixies.delete()
         link_from_names(event)
-        self.assertNotIn('class="performer"', Event.all_objects.get(pk=event.pk).baked_html_template)
+        self.assertNotIn('href="/bands/pixies"', self.client.get(f"/event/{event.pk}").content.decode())
 
     def test_sitemap_lists_every_live_act(self):
         from core.event_performers import link_from_names
@@ -280,42 +283,35 @@ class ShowTimesTestCase(TestCase):
 
 
 class TitleLinksTestCase(TestCase):
+    """titles with performers: the event page links them, the listing doesn't"""
+
     def setUp(self):
         self.venue = Venue.objects.create(sheet_id="V1", name="AS220", city_town="Providence", state="RI")
         for name in ("Axe Collector", "Phantom Rider", "Zipper", "Built To Spill"):
             Band.objects.create(name=name)
 
-    def listing(self, **fields):
+    def pages(self, **fields):
         from core.event_performers import link_from_names
 
         event = Event.all_objects.create(starttime=days(3), venue=self.venue, **fields)
         link_from_names(event)
-        return Event.all_objects.get(pk=event.pk).baked_html_template
+        return Event.all_objects.get(pk=event.pk).baked_html_template, self.client.get(f"/event/{event.pk}").content.decode()
 
     def test_the_headliner_in_the_title_links_to_its_page(self):
-        html = self.listing(title="Axe Collector", artists="Phantom Rider, Zipper, Anthropocene", hyperlink="https://as220.org/x")
-        self.assertIn('<a class="performer" href="/bands/axe-collector">Axe Collector</a>:&nbsp;', html)
-        self.assertIn('<a class="performer" href="/bands/phantom-rider">Phantom Rider</a>, <a class="performer" href="/bands/zipper">Zipper</a>, Anthropocene', html)
-        self.assertIn('class="event-info" href="https://as220.org/x"', html)
-
-    def test_a_name_at_the_start_of_a_longer_title(self):
-        html = self.listing(title="Built to Spill Fall 2026 Tour (SOLD OUT)")
-        self.assertIn('<a class="performer" href="/bands/built-to-spill">Built to Spill</a> Fall 2026 Tour (SOLD OUT)', html)
+        listing, page = self.pages(title="Axe Collector", artists="Phantom Rider, Zipper, Anthropocene", hyperlink="https://as220.org/x")
+        self.assertIn('<a href="/bands/axe-collector">Axe Collector</a>', page)
+        self.assertIn('<a href="/bands/phantom-rider">Phantom Rider</a>, <a href="/bands/zipper">Zipper</a>, Anthropocene', page)
+        self.assertNotIn('href="/bands/', listing)
+        self.assertIn('class="event-headline"', listing)
 
     def test_each_act_of_a_duo_billing_links(self):
-        html = self.listing(title="Axe Collector & Phantom Rider")
-        self.assertIn(
-            '<a class="performer" href="/bands/axe-collector">Axe Collector</a> &amp; <a class="performer" href="/bands/phantom-rider">Phantom Rider</a>', html
-        )
+        _, page = self.pages(title="Axe Collector & Phantom Rider")
+        self.assertIn('<a href="/bands/axe-collector">Axe Collector</a> &amp; <a href="/bands/phantom-rider">Phantom Rider</a>', page)
 
-    def test_a_presenters_prefix_stays_plain(self):
-        html = self.listing(title="AS220 Presents: Zipper")
-        self.assertIn('AS220 Presents: <a class="performer" href="/bands/zipper">Zipper</a>', html)
-
-    def test_no_performers_no_info_link(self):
-        html = self.listing(title="Some Night", artists="Nobody Here", hyperlink="https://as220.org/y")
-        self.assertNotIn("event-info", html)
-        self.assertIn('<a href="https://as220.org/y" target="_blank">', html)
+    def test_no_performers_no_link_out(self):
+        listing, _ = self.pages(title="Some Night", artists="Nobody Here", hyperlink="https://as220.org/y")
+        self.assertNotIn('href="https://as220.org/y"', listing)
+        self.assertIn('class="event-headline"', listing)
 
 
 class LinkHubTestCase(BandPageTestCase):

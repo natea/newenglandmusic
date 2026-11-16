@@ -119,7 +119,9 @@ def robots_allows(session, url):
     if r.status_code != 200:
         return True
     parser = RobotFileParser()
-    parser.parse(r.text.splitlines())
+    # a byte-order mark before the first line hides it from python's parser: boynton yards'
+    # "user-agent: *" / "disallow: /" was read as allowing everything (2026-11-15)
+    parser.parse(r.text.lstrip("\ufeff").splitlines())
     return parser.can_fetch(USER_AGENT, url)
 
 

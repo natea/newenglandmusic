@@ -36,7 +36,7 @@ def event_to_ical(event):
     entry.add("SUMMARY", event.calendar_name)
     entry.add("LOCATION", event.venue_name_and_address)
     entry.add("DESCRIPTION", strip_tags(event.description or ""))
-    entry.add("URL", settings.SITE_URL.rstrip("/") + reverse("event_redirect", args=[event.pk]))
+    entry.add("URL", settings.SITE_URL.rstrip("/") + reverse("event_page", args=[event.pk]))
     if event.is_cancelled:
         entry.add("STATUS", "CANCELLED")
     return entry

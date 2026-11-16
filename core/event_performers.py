@@ -14,10 +14,8 @@ from collections import defaultdict
 from django.db import transaction
 from django.db.models import Q
 
-import re
-
 from core.artist_matching import normalize
-from core.artist_names import SEPARATOR_RE, TITLE_PREFIX_RE, clean_name, event_artist_names, name_parts, occasion_prefix
+from core.artist_names import billing, clean_name, event_artist_names, name_parts, occasion_prefix
 from core.models import Artist, Band, Event, EventPerformer
 
 Source = EventPerformer.Source
@@ -107,41 +105,31 @@ def duo_parts(piece, clean, start, pages):
     return [part for part in [(piece[:start], None), *parts, (piece[cursor:], None)] if part[0]]
 
 
-def linked_parts(text, pages, title=False):
-    """text as [(text, url or None)], separators and all, each performer's name linked"""
-    text, parts = str(text or ""), []
-    if title:
-        # "State Theatre Presents: The Ballroom Thieves": the presenter isn't a name
-        prefix = TITLE_PREFIX_RE.match(text)
-        if prefix:
-            parts.append((prefix.group(0), None))
-            text = text[prefix.end():]
-    for piece in re.split(f"({SEPARATOR_RE.pattern})", text, flags=re.IGNORECASE):
-        if not piece:
-            continue
-        if not piece.strip() or SEPARATOR_RE.fullmatch(piece):
-            parts.append((piece, None))
-        else:
-            parts.extend(link_piece(piece, pages))
-    return parts
-
-
 def performer_pages(event):
-    """{name_key: page} for the event's performers, or {} for an unsaved event"""
+    """
+    {name_key: page} for the event's performers that have a page: an act awaiting an editor's
+    review has none. {} for an unsaved event
+    """
     if not event.pk:
         return {}
-    return {p.act.name_key: p.act.get_absolute_url() for p in event.performers.select_related("artist", "band")}
+    pages = {}
+    for performer in event.performers.select_related("artist", "band"):
+        if not performer.act.needs_review:
+            pages[performer.act.name_key] = performer.act.get_absolute_url()
+    return pages
 
 
-def listing_parts(event):
+def linked_billing(event):
     """
-    (title parts, artists parts) for the event's listing (core/event.html), each performer's
-    name linked to its page; ([], []) when it has no performers, and its listing is as before
+    (title line, headliner parts, [opener parts]) for the event's page, each a list of
+    (text, url or None): the billing the listing shows (core/artist_names.billing), with each
+    name that is a performer's, or starts with one ("Built to Spill Fall 2026 Tour"), linked
     """
+    title_line, headliner, openers = billing(event)
     pages = performer_pages(event)
     if not pages:
-        return [], []
-    return linked_parts(event.title, pages, title=True), linked_parts(event.artists, pages)
+        return title_line, [(headliner, None)], [[(name, None)] for name in openers]
+    return title_line, link_piece(headliner, pages), [link_piece(name, pages) for name in openers]
 
 
 def rebake(event):

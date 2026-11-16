@@ -104,6 +104,24 @@ class ArtistAdminTestCase(TestCase):
         self.assertEqual(names("?musicbrainz_status__exact=ambiguous"), {"Speedy Ortiz"})
         self.assertEqual(names("?q=kri"), {"Krill"})
 
+    def test_marking_acts_inactive_and_active_in_bulk(self):
+        horse = Band.objects.create(name="Horse")
+        url = reverse("admin:core_band_changelist")
+        names = lambda query: {b.name for b in self.client.get(url + query).context["cl"].result_list}
+        self.client.post(url, {"action": "mark_inactive", "_selected_action": [self.band.pk, horse.pk]})
+        self.assertEqual(names("?is_inactive__exact=1"), {"Krill", "Horse"})
+        self.assertEqual(names("?is_inactive__exact=0"), set())
+        self.client.post(url, {"action": "mark_active", "_selected_action": [horse.pk]})
+        self.assertEqual(names("?is_inactive__exact=1"), {"Krill"})
+        self.assertFalse(Band.objects.get(pk=horse.pk).is_inactive)
+
+    def test_the_checkbox_on_the_form(self):
+        self.assertContains(self.change(self.band), 'name="is_inactive"')
+        self.client.post(
+            reverse("admin:core_band_change", args=[self.band.pk]), form_data(self.band, is_inactive="on")
+        )
+        self.assertTrue(Band.objects.get(pk=self.band.pk).is_inactive)
+
     def test_filtering_by_source(self):
         Band.objects.create(name="'Til Tuesday", sources=["ohb"])
         Band.objects.create(name="Dropkick Murphys", musicbrainz_status=Status.MATCHED, sources=["ohb"])

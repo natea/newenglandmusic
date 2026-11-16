@@ -175,8 +175,8 @@ These run in this order. Each one depends on the one before it:
 | `match_eventbrite_organizers` | weekly, after the source check | free (Eventbrite allows 2,000 requests an hour). It fetches the pages of venues that link Eventbrite, politely, and links only new venues unless given `--recheck` |
 | `match_seatgeek_venues` | weekly, after the Eventbrite matching | free (SeatGeek publishes no limit; the client waits half a second between requests). About 80 venues take two minutes. It links only new venues unless given `--recheck` |
 | `lookup_venue_neighborhoods` | weekly, after the SeatGeek matching | free. It finds venues on OpenStreetMap (Nominatim, one request a second) by their own name and town, and reads their neighborhood, with Overpass for New York and DC. Only venues never looked up, or looked up a year ago; up to 300 a run |
-| `read_artist_link_hubs` | weekly, after the neighborhoods | free. It reads each artist's and band's link-hub page (Linktree and its rivals), one request each, a second apart, only those never read or read over seven days ago, up to 100 a run. See "Link hubs" |
-| `find_bandcamp_embeds` | weekly, last | free. It reads each artist's and band's Bandcamp player ID from the act's own Bandcamp page, up to five requests an act, two seconds apart, only acts never looked up, whose address changed, or last looked up a year (found) or 90 days (anything else) ago, up to 100 a run. See "Bandcamp players" |
+| `read_artist_link_hubs` | by hand only: the hubs' robots.txt forbids it (every page the weekly runs of 2026-11-11 and 15 tried was refused), so it isn't in any job | free. It reads each artist's and band's link-hub page (Linktree and its rivals), one request each, a second apart, only those never read or read over seven days ago, up to 100 a run. See "Link hubs" |
+| `find_bandcamp_embeds` | by hand only, from a home connection: Bandcamp answers Render's servers with a bot challenge (2026-11-15), so it isn't in any job | free. It reads each artist's and band's Bandcamp player ID from the act's own Bandcamp page, up to five requests an act, two seconds apart, only acts never looked up, whose address changed, or last looked up a year (found) or 90 days (anything else) ago, up to 100 a run. See "Bandcamp players" |
 | `match_spotify_artists --limit 500` | daily, after `fetch_events` | free, but rate limited. It searches Spotify for artist names it hasn't seen, and for automatic matches more than 30 days old, half a second apart, taking about 4 minutes. Spotify doesn't publish its limits, but the number of searches is what counts, not their pace: about 650 half a second apart (2026-10-27) and about 680 two seconds apart (2026-10-28) each got the app blocked for about a day. The block applies to the whole developer account, so a dev app's runs use up production's allowance too. 500 a morning stays under it, and clears a first run's backlog of about 2,700 names in about six days. When blocked, a run stops at once and keeps what it found, and the next morning's carries on. After the backlog, each morning searches only new names |
 | `match_apple_music_artists --limit 1000` | daily, after the Spotify matching | free with the Developer Program membership. Like the Spotify matching, but also looks up each matched artist's top song. Requests go half a second apart, and a long rate-limit block stops the run the same way. It does nothing until the MusicKit key is set |
 | `resolve_artists_with_lastfm --limit 300` | daily, after the Apple Music matching | free. For names several Spotify or Apple Music artists share, it reads Last.fm (half a second apart) and MusicBrainz (a second apart), taking up to about 8 minutes. It does nothing until `LASTFM_API_KEY` is set |
@@ -191,7 +191,7 @@ These run in this order. Each one depends on the one before it:
 | Job | Schedule (UTC) | Script | Runs |
 |---|---|---|---|
 | `newenglandmusic-daily` | `0 10 * * *`: 5 or 6 am eastern | `bin/daily.sh` | Places lookup, coordinate refresh, `fetch_events --all`, Spotify, Apple Music, Last.fm and YouTube matching, MusicBrainz enrichment |
-| `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster, Eventbrite and SeatGeek matching, neighborhoods, link hubs, Bandcamp players |
+| `newenglandmusic-weekly` | `0 7 * * 0`: Sundays, before that day's daily run | `bin/weekly.sh` | source check, Ticketmaster, Eventbrite and SeatGeek matching, neighborhoods |
 | `newenglandmusic-digest` | `0 13 * * 4`: Thursdays, 8 or 9 am eastern | `bin/digest.sh` | `send_weekly_digests` (see "The weekly email") |
 
 - **A failed step doesn't stop the job.** None of the steps needs the one before it to have succeeded: a failed Places lookup leaves the venues as they were, and their events can still be fetched. The script runs every step, then exits with an error naming the failed ones, so Render marks the run failed and emails the workspace.
@@ -468,7 +468,7 @@ Each name is searched on MusicBrainz as a person and as a group; one that's exac
 
 Acts with a Bandcamp page get a Bandcamp button beside the play buttons on listings, and a "Listen on Bandcamp" section on their page, which open Bandcamp's own embedded player only when pressed. The player needs a numeric album or track ID, which `find_bandcamp_embeds` reads from the act's page.
 
-- **Run it:** `venv/bin/python manage.py find_bandcamp_embeds [--limit 100] [--refresh] [--dry-run]`, logged to `logs/find_bandcamp_embeds-YYYY-MM-DD.log`. Try `--limit 25 --dry-run` first. The weekly job runs it last, so a Bandcamp link a link hub just filled is looked up in the same run.
+- **Run it:** `venv/bin/python manage.py find_bandcamp_embeds [--limit 100] [--refresh] [--dry-run]`, logged to `logs/find_bandcamp_embeds-YYYY-MM-DD.log`. Try `--limit 25 --dry-run` first. It isn't scheduled: Bandcamp answers requests from Render's servers with a "Client Challenge" page, which the command counts as blocked (three in a row stop it). On 2026-11-15 it was run from the owner's machine against a copy of production, and the 773 players it found were copied in; editors set players by hand in the admin for acts added since.
 - **What is requested:** an act's Bandcamp page; its `/music` page when the front page shows no music tile; and Bandcamp's player page for up to three releases, to skip one that isn't available (a physical-only release). Up to five requests an act.
 - **Pacing and politeness:** two seconds between requests, robots.txt obeyed (asked for once per host a run), the user agent `venue-db-event-check/1.0`, no proxy, no JavaScript, and a redirect off bandcamp.com is refused. Three acts in a row answered "blocked" (403, 406 or 429) stop the run.
 - **When an act is looked up:** never looked up, or its address changed; a found player after a year; any other result after 90 days. Acts an editor set a player for or declined are skipped. A failed refresh keeps a found player and is listed on the run's page at `/admin/core/jobrun/`.
@@ -477,7 +477,7 @@ Acts with a Bandcamp page get a Bandcamp button beside the play buttons on listi
 
 ### Link hubs
 
-Small acts often keep all their links on one Linktree-style page. `read_artist_link_hubs` reads those pages and fills the links an artist's or band's record lacks.
+Small acts often keep all their links on one Linktree-style page. `read_artist_link_hubs` reads those pages and fills the links an artist's or band's record lacks. **It isn't scheduled:** the hubs' robots.txt forbids it, and the command obeys robots.txt wherever it runs, so on 2026-11-11 and 15 the weekly job read no page at all. Editors fill links by hand from a hub page meanwhile.
 
 - **Where the address comes from:** a hub address in the record's website (the command copies it to the record's link-hub address, leaving the website alone), a link on a hub in MusicBrainz's URL relations (taken by enrichment), or an editor in the admin's "Link hub" section. Nothing searches for or guesses a hub page.
 - **Which hubs:** the `HUBS` list in `core/link_hubs.py`: Linktree, Beacons, Bio.link, Lnk.Bio, Linkin.bio, Solo.to, Hoo.be, AllMyLinks, Campsite and Taplink. A hub whose links are built by JavaScript is marked address-only: its address is kept and its page is never requested, and the record's status says "unreadable".
@@ -512,7 +512,10 @@ The site measures its own use with PostHog and GoatCounter, both in the browser 
 
 ## What the site lists
 
-The public site lists only events at venues in Massachusetts, Connecticut, Rhode Island, New Hampshire, Maine and Vermont, and offers only the regions, states and metro areas inside them. Events at other venues, and events with no venue, are hidden from the listings, search, calendar feeds, saved shows, act pages, the discover page and the sitemap, but nothing is deleted: the admin shows them all, `fetch_events` keeps fetching them, and the artist matching still reads them. An event opened by its own link still works.
+The public site lists only events at venues in Massachusetts, Connecticut, Rhode Island, New Hampshire, Maine and Vermont, and offers only the regions, states and metro areas inside them. Events at other venues, and events with no venue, are hidden from the listings, search, calendar feeds, saved shows, act pages, the discover page and the sitemap, but nothing is deleted: the admin shows them under "All areas", and the artist matching still reads them. An event opened by its own link still works.
+
+- **The admin opens on New England.** The event list, the review queue and the venue list leave out what's at a venue whose state is set to somewhere else; venues with no state and events with no venue stay in. The sidebar's "Area" filter has "All areas" for the rest, and choosing a Region, State or Metro shows that area wherever it is.
+- **The daily fetch skips venues outside New England** (and inactive venues): on 2026-11-16 that took it from 568 venues to 435. A venue with no state is still fetched, and `fetch_events --sheet-ids` fetches any venue it names. Widening `NEW_ENGLAND_STATES` brings both back.
 
 The states are one list, `NEW_ENGLAND_STATES` in `core/geo_filters.py`; widening the scope is a change to that list. A venue whose state is blank in the sheet is hidden too, so an editor should fix its state there.
 
@@ -521,6 +524,12 @@ The states are one list, `NEW_ENGLAND_STATES` in `core/geo_filters.py`; widening
 Each event has a row of link icons below its text: calendar file, Google Calendar, map, share, and a bookmark to save the show. `/saved` lists a visitor's upcoming saved shows by date. Saved shows live only in the visitor's browser, in a `saved_shows` cookie of event IDs, so there are no accounts and nothing is stored on the server. The bookmark works without JavaScript too: it posts to `/saved/toggle/<id>`, which updates the cookie and goes back to the event.
 
 The icon row is built when a page is rendered (`core/event_actions.py`), not stored with the event, so changing it needs no re-render. The stored HTML only holds a placeholder for it. After the deploy that introduced the placeholder (2026-10-27), run `resave_all_events` once on Render. Until then, stored events show no icon row.
+
+## Event pages
+
+Each approved event has its own page at `/event/<id>` (`core/views/event_page.py`): the date, the headliner and openers linked to their band and artist pages, the venue, price, ages and access, the ticket and venue links, the description and the play buttons. The address used to redirect into the month's listing, so every share link, calendar feed entry, weekly email and act page link now opens the page. An unapproved event's address answers 404; a past event's page stays, asks search engines not to index it, and says the show has passed.
+
+A listing row has one link, its headline, to that page (the tix badge still goes straight to tickets); act names in a listing aren't links. `core/artist_names.billing` reads the headliner, openers and the title line for both. The listing is stored HTML, so **after deploying run `resave_all_events` on Render** (a one-off job; about 5,200 events, half a minute). Until it runs, old rows keep their old links.
 
 ## Reading the sheet on a server
 

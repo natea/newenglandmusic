@@ -278,7 +278,7 @@ The calendar's one icon language, reused on the act page.
 - **Month bar:** plum, with the previous, current and next months as three equal white links.
 
 ### Listing row
-- **Structure:** time column (tabular), bold names, venue in bold with its town, a small description after "//", then the wrapped rows of icons and pills. A row that is the URL target flashes orange (#ffa600 fading over 2s, ease-out). A cancelled row is struck through and greyed (#666).
+- **Structure:** time column (tabular); the show's own title as a small quiet line when it says more than the names; the headline, the row's one link (navy, to the event's page), with the headliner bold and one step larger; the openers after "with" in the row's weight, not links; the venue in bold with its town; a small description after "//"; then the wrapped rows of icons and pills. A row that is the URL target flashes orange (#ffa600 fading over 2s, ease-out). A cancelled row is struck through and greyed (#666).
 
 ### Act card (signature component)
 A record-store divider and index card for one band or artist.
@@ -292,6 +292,15 @@ A record-store divider and index card for one band or artist.
 - **Show list:** a Title heading, then a grid of rows with a bold tabular date (the time below it in quiet grey) and the venue with its icon row, separated by 1px ruled-blue rules.
 - **Foot:** the invitation to send a photo, bio or links, and the genres' source, in small quiet type.
 - Empty fields are left out entirely, so a sparse act's card is short and nothing on it is filler.
+
+### Event card
+The act card's sibling for one show, at `/event/<id>` (the card styles are shared, `_card.scss`).
+- **Tab:** the date and start time in display type, smaller than an act's name ("Mon Nov 16 · 7:00 p.m.").
+- **Title line:** the show's own title in quiet grey above the bill, only when it says more than the names.
+- **Bill:** the lavender strip holds the headliner as the page's heading (display type) and the openers after "with", each a link when it's a band or artist with a page, then the show's action icons.
+- **Links:** "Tickets ↗" and "Venue's page ↗" in bold under the strip; one "Tickets ↗" when they're the same page.
+- **Fields:** Venue (with its neighborhood and town), Price, Ages, Access; the description on ruled card stock; the play buttons under a plum rule.
+- A cancelled show says so in red above the bill and strikes the bill through; a past show says it has passed.
 
 ### Act index (`/bands`) and search results
 Set as the index at the back of a reference book, on the act card.

@@ -172,8 +172,9 @@ def occasion_prefix(key, artist_keys):
 
 
 def is_placeholder(name):
+    # "Presented by Ripple Effect Realty": a sponsor's credit in the artists text, not an act
     key = normalize(name)
-    return len(key) <= 1 or key in PLACEHOLDERS
+    return len(key) <= 1 or key in PLACEHOLDERS or key.startswith("presented by ")
 
 
 def event_artist_names(event):
@@ -188,3 +189,38 @@ def event_artist_names(event):
         seen.add(key)
         names.append(name)
     return names
+
+
+# what's left of a title once its acts are taken out that doesn't make it say more:
+# "Dev Lemons, Venus & the Flytraps" is only names, "Halloween Show" isn't. compared normalized
+TITLE_JOINERS = {
+    "with", "w", "and", "presents", "present", "special", "guest", "guests", "feat", "ft",
+    "featuring", "x", "plus", "an", "evening",
+} | PLACEHOLDERS
+
+
+def title_line(title, names):
+    """
+    the title, when it says something its act names don't (an occasion, a tour, a kind of
+    night); "" when it's only the names, a presenter and joining words
+    """
+    rest = TITLE_PREFIX_RE.sub("", str(title or "").strip())
+    for name in sorted(names, key=len, reverse=True):
+        rest = re.sub(re.escape(name), " ", rest, flags=re.IGNORECASE)
+    words = [word for word in normalize(rest).split() if word not in TITLE_JOINERS]
+    return str(title).strip() if words else ""
+
+
+def billing(event):
+    """
+    (title line, headliner, openers) for an event's listing and page: the acts in billing
+    order as event_artist_names reads them, the first the headliner; the title as a line of
+    its own only when it adds something. a title that names no act (a kind of night, "Jazz
+    Jam") is the headline itself, so every event has one. where the names cover a title
+    poorly ("20 Years of Nekrogoblikon"), the title line keeps its wording in view
+    """
+    names = event_artist_names(event)
+    title, artists = str(event.title or "").strip(), str(event.artists or "").strip()
+    if not names:
+        return "", title or artists, []
+    return title_line(title, names), names[0], names[1:]
