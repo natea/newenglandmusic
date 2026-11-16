@@ -13,6 +13,7 @@ import datetime
 from django.conf import settings
 from django.http import Http404
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 
 from core.artist_names import billing
 from core.geo_filters import area_q, new_england_q
@@ -49,12 +50,11 @@ def yes_no(value):
 
 
 def playing_here(venue):
-    """[(label, value, url)] for musicians: only the fields the venue has"""
+    """
+    [(label, value, url)] for musicians: only the fields the venue has. how to book it is on
+    its artist view (core/views/venue_booking.py, add-venue-list), not here
+    """
     fields = [
-        ("Booking", venue.get_booking_type_display() if venue.booking_type and venue.booking_type != Venue.BookingType.UNKNOWN else "", ""),
-        ("Open booking", yes_no(venue.open_booking), ""),
-        ("Ask at", "Booking page" if venue.booking_url else "", venue.booking_url),
-        ("Booking notes", venue.booking_notes, ""),
         ("Open mic", yes_no(venue.open_mic), ""),
         ("Books", venue.genre_notes, ""),
         ("Niche", venue.niche_notes, ""),
@@ -76,22 +76,30 @@ def getting_here(venue):
     return [field for field in fields if field[1]]
 
 
-def venue_page(request, slug):
+def venue_with_a_page(slug):
+    """the venue at this slug, or 404: only new england's, and not one marked inactive"""
     venue = get_object_or_404(Venue.objects.filter(new_england_q()), slug=slug)
     # a venue marked inactive (closed, or not a music room) has no page; unknown status does
     if venue.is_active is False:
         raise Http404("no such venue")
+    return venue
+
+
+def venue_page(request, slug):
+    venue = venue_with_a_page(slug)
     bill = nights(venue)
     area = sub_region(venue)
     place = ", ".join(bit for bit in (venue.neighborhood, venue.city_town, venue.state) if bit)
     playing = playing_here(venue)
-    booking_link = (venue.booking_url or ("#playing-here" if playing else "")) if venue.open_booking else ""
+    # booking itself is on the artist view, one tab away
+    booking_link = reverse("venue_booking", kwargs={"slug": venue.slug}) if venue.open_booking else ""
     description = f"{venue.name}, {place}: upcoming shows" + (", and how to book it." if venue.open_booking else ".")
     return render(
         request,
         "core/venue.html",
         {
             "venue": venue,
+            "tab": "fans",
             "room": " ".join(bit for bit in (venue.get_size_display().split(" (")[0] if venue.size else "", venue.venue_type.lower() if venue.size else venue.venue_type) if bit),
             "place": place,
             "area": area,

@@ -1,0 +1,106 @@
+// the venue list (core/templates/core/venue_list.html): the index card A to Z, as the act
+// index, with the filters in the lavender strip and the artists' filter in a row of its own
+
+@import "card";
+
+.venue-list-filters {
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  background: $strip;
+  font-size: 0.95rem;
+
+  form {
+    margin: 0;
+  }
+
+  .geoFilter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    align-items: baseline;
+  }
+
+  .venue-list-genre {
+    margin-top: 6px;
+  }
+
+  select {
+    max-width: 100%;
+  }
+}
+
+// for artists: set apart from the fan filters
+.act .venue-list-artists {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid $rule;
+
+  .venue-list-artists-head {
+    display: inline;
+    margin: 0;
+    font-weight: 700;
+  }
+}
+
+.act .index-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin: 0 0 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  span {
+    color: #8a857b;
+  }
+}
+
+.venue-letter {
+  break-inside: avoid;
+}
+
+.act-card .venue-initial {
+  margin: 14px 0 4px;
+  padding-top: 0;
+  border-top: 0;
+  border-bottom: 2px solid $tab;
+  font: 700 1.4rem Helvetica, Arial, sans-serif;
+}
+
+.venue-entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: 2 22em;
+  column-gap: 28px;
+}
+
+.venue-entry {
+  break-inside: avoid;
+  padding: 5px 0;
+  border-bottom: 1px solid $rule;
+  overflow-wrap: anywhere;
+}
+
+.venue-entry-name {
+  font: 700 1.05rem Helvetica, Arial, sans-serif;
+}
+
+.venue-entry-detail,
+.venue-entry-booking {
+  display: block;
+  font-size: 0.85rem;
+  color: $quiet;
+}
+
+.venue-entry-booking {
+  color: $ink;
+}
+
+.venue-none {
+  color: $quiet;
+}

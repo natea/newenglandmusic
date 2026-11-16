@@ -1,0 +1,38 @@
+{% extends 'core/base.html' %}
+{% load sass_tags %}
+
+{% block head %}
+  <link href="{% sass_src 'scss/venue.scss' %}" rel="stylesheet" type="text/css" />
+  <meta name="robots" content="noindex">
+{% endblock head %}
+
+{% block content %}
+{% comment %}
+  a venue's artist view (add-venue-list, core/views/venue_booking.py): how to ask for a show,
+  beside the fan page, as a plain facts card
+{% endcomment %}
+<article class="act venue-page venue-booking" aria-labelledby="venue-name">
+  <h1 class="act-tab" id="venue-name">{{ venue.name }}</h1>
+  {% include 'core/venue_tabs.html' %}
+  <div class="act-card">
+    {% if known %}
+      <p class="venue-booking-statement{% if venue.open_booking %} is-open{% endif %}">{{ statement }}</p>
+      {% if booking_type or apply or venue.booking_notes %}
+      <dl class="act-fields venue-fields">
+        {% if booking_type %}<dt>Booking</dt><dd><b>{{ booking_type.0 }}</b>{% if booking_type.1 %}<span class="venue-booking-meaning">{{ booking_type.1 }}</span>{% endif %}</dd>{% endif %}
+        {% if apply %}<dt>How to apply</dt><dd><a href="{{ apply.1 }}" target="_blank" rel="noopener">{{ apply.0 }}<span aria-hidden="true"> ↗</span></a></dd>{% endif %}
+        {% if venue.booking_notes %}<dt>Notes</dt><dd>{{ venue.booking_notes|urlize|linebreaksbr }}</dd>{% endif %}
+      </dl>
+      {% endif %}
+      {% if fields %}
+        <h2>The room</h2>
+        <dl class="act-fields venue-fields">
+          {% for label, value in fields %}<dt>{{ label }}</dt><dd>{{ value|linebreaksbr }}</dd>{% endfor %}
+        </dl>
+      {% endif %}
+    {% else %}
+      <p class="venue-none">No booking details are known yet.{% if venue.website %} Try <a href="{{ venue.website }}" target="_blank" rel="noopener">the venue's website<span aria-hidden="true"> ↗</span></a>.{% endif %}</p>
+    {% endif %}
+  </div>
+</article>
+{% endblock content %}

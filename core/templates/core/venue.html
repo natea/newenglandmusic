@@ -13,11 +13,12 @@
 {% endcomment %}
 <article class="act venue-page" aria-labelledby="venue-name">
   <h1 class="act-tab" id="venue-name">{{ venue.name }}</h1>
+  {% include 'core/venue_tabs.html' %}
   <div class="act-card">
     <p class="venue-facts">
       <span>{% if room %}<b>{{ room }}</b>{% if place %} · {% endif %}{% endif %}{{ place }}{% if area %} · <a href="/?metro={{ area.slug }}">{{ area_label }}</a>{% endif %}{% if venue.google_maps_link %} · <a href="{{ venue.google_maps_link }}" target="_blank" rel="noopener">Map<span aria-hidden="true"> ↗</span><span class="visually-hidden"> (Google Maps, opens another site)</span></a>{% endif %}</span>
       {% if venue.genre_notes %}<span class="venue-books">{{ venue.genre_notes|truncatechars:80 }}</span>{% endif %}
-      {% if booking_link %}<a class="venue-book" href="{{ booking_link }}"{% if venue.booking_url %} target="_blank" rel="noopener"{% endif %}>Open booking ›</a>{% endif %}
+      {% if booking_link %}<a class="venue-book" href="{{ booking_link }}">Open booking ›</a>{% endif %}
     </p>
 
     {% if bill %}

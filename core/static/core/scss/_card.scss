@@ -154,3 +154,29 @@ $quiet: #4f4b44;
     }
   }
 }
+
+// a venue's two views (core/venue_tabs.html): two folder tabs on the card's top edge, the
+// current one in card stock
+.venue-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+
+  a {
+    padding: 4px 12px;
+    border: 1px solid $hairline;
+    border-bottom: 0;
+    background: #e8e5dc;
+    color: $ink;
+    text-decoration: none;
+  }
+
+  a[aria-current="page"] {
+    background: $card;
+    font-weight: 700;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+}

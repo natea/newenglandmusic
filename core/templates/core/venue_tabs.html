@@ -1,0 +1,8 @@
+{% comment %}
+  the venue's two views, as two links (add-venue-list): the fan page and the artist view,
+  the current one marked. tab: "fans" or "artists"
+{% endcomment %}
+<nav class="venue-tabs" aria-label="{{ venue.name }}: views">
+  <a href="{% url 'venue_page' venue.slug %}"{% if tab == "fans" %} aria-current="page"{% endif %}>For fans</a>
+  <a href="{% url 'venue_booking' venue.slug %}"{% if tab == "artists" %} aria-current="page"{% endif %}>For artists</a>
+</nav>
