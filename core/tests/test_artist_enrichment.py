@@ -134,6 +134,12 @@ class EnrichTestCase(TestCase):
         mb = mb or FakeMusicBrainz()
         return enrich(record, mb, Matcher(mb, lastfm=lastfm, covered_states={"US-MA"}))
 
+    def test_an_inactive_act_stays_inactive(self):
+        band = Band.objects.create(name="Speedy Ortiz", state="MA", is_inactive=True)
+        self.enrich(band)
+        band.refresh_from_db()
+        self.assertEqual((band.musicbrainz_status, band.is_inactive), (Status.MATCHED, True))
+
     def test_a_clear_match_stores_its_data_and_members(self):
         band = Band.objects.create(name="Speedy Ortiz", state="MA")
         status, added = self.enrich(band)

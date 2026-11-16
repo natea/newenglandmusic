@@ -15,7 +15,7 @@ ACT_COLUMNS = [
     "act_id", "name", "city_town", "state",
     "website", "bandcamp_url", "bandcamp_embed_kind", "bandcamp_embed_id", "bandcamp_embed_status",
     "instagram_url", "youtube_url", "discogs_url", "link_hub_url", "link_hub_status",
-    "notes", "slug", "needs_review", "review_reasons",
+    "notes", "slug", "needs_review", "review_reasons", "is_inactive",
     "musicbrainz_id", "musicbrainz_status", "mb_type", "country", "area", "begin_date", "end_date",
     "disambiguation", "wikidata_id", "sources",
     "photo_file", "photo_author", "photo_license", "photo_license_url",
