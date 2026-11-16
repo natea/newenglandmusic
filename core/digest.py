@@ -155,7 +155,7 @@ def build_weekly(subscriber, events, site_url):
                 "venue": one_line(venue.name) if venue else "",
                 "town": one_line(venue.city_town) if venue else "",
                 "time": format_time(event.starttime),
-                "url": site_url(reverse("event_redirect", args=[event.pk])),
+                "url": site_url(reverse("event_page", args=[event.pk])),
             }
         )
     unsubscribe = site_url(reverse("digest_unsubscribe", args=[digest_tokens.unsubscribe_token(subscriber)]))

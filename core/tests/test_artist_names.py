@@ -261,3 +261,89 @@ class TitleStopwordsTestCase(SimpleTestCase):
         for title in ("They Might Be Giants", "Dropkick Murphys", "Free Throw", "Jamiroquai", "Evening Hymns", "Evening Elephants", "Live Wire", "Liver"):
             self.assertEqual(title_names(title), [title], title)
         self.assertEqual(title_names("Built to Spill Fall 2026 Tour"), ["Built to Spill"])
+
+
+class BillingTestCase(SimpleTestCase):
+    """the listing's title line, headliner and openers (add-event-pages, event-listing)"""
+
+    def bill(self, title=None, artists=None, kind=""):
+        from core.artist_names import billing
+
+        return billing(Event(title=title, artists=artists, kind=kind))
+
+    def test_headliner_and_openers(self):
+        self.assertEqual(
+            self.bill("Disko Lunatics", "Miss Chief, Trading Tombstones"),
+            ("", "Disko Lunatics", ["Miss Chief", "Trading Tombstones"]),
+        )
+
+    def test_no_act_in_the_title(self):
+        self.assertEqual(self.bill("Bluegrass Jam", "Frank Drake")[1:], ("Frank Drake", []))
+        self.assertEqual(self.bill("Bluegrass Jam"), ("", "Bluegrass Jam", []))
+
+    def test_a_title_that_adds_something(self):
+        self.assertEqual(
+            self.bill("Halloween Show", "Disko Lunatics, Miss Chief"),
+            ("Halloween Show", "Disko Lunatics", ["Miss Chief"]),
+        )
+
+    def test_a_title_that_is_only_the_names(self):
+        self.assertEqual(
+            self.bill("Dev Lemons, Venus & the Flytraps", "Dev Lemons, Venus & the Flytraps"),
+            ("", "Dev Lemons", ["Venus & the Flytraps"]),
+        )
+
+    def test_the_headliner_named_in_both(self):
+        self.assertEqual(self.bill("Kim Deal", "Kim Deal, Pile"), ("", "Kim Deal", ["Pile"]))
+
+    def test_the_presenter_prefix(self):
+        self.assertEqual(self.bill("AS220 Presents: Zipper", "Anthropocene"), ("", "Zipper", ["Anthropocene"]))
+
+    def test_a_tour_name_stays_in_the_title_line(self):
+        self.assertEqual(
+            self.bill("Dev Lemons - Eat the Pavement Tour"),
+            ("Dev Lemons - Eat the Pavement Tour", "Dev Lemons", []),
+        )
+
+    def test_a_sponsors_credit_isnt_an_opener(self):
+        self.assertEqual(
+            self.bill("Dead to the Core - November Show", "Presented by Ripple Effect Realty"),
+            ("Dead to the Core - November Show", "Dead to the Core", []),
+        )
+
+    def test_not_a_music_night(self):
+        self.assertEqual(self.bill("Halloween show", kind="other"), ("", "Halloween show", []))
+
+
+class BillingFromListingsTestCase(SimpleTestCase):
+    """titles the names cover poorly, from the listings of 2026-10-30"""
+
+    def bill(self, title=None, artists=None, kind=""):
+        from core.artist_names import billing
+
+        return billing(Event(title=title, artists=artists, kind=kind))
+
+    def test_nekrogoblikon(self):
+        line, headliner, openers = self.bill("20 Years of Nekrogoblikon with Special Guests Aborted", "Signs of the Swarm, Party Cannon")
+        self.assertEqual(headliner, "20 Years of Nekrogoblikon")
+        self.assertEqual(openers, ["Aborted", "Signs of the Swarm", "Party Cannon"])
+        self.assertEqual(line, "")
+
+    def test_disko_lunatics_halloween(self):
+        self.assertEqual(
+            self.bill("Halloween Show", "Disko Lunatics, Miss Chief, Trading Tombstones"),
+            ("Halloween Show", "Disko Lunatics", ["Miss Chief", "Trading Tombstones"]),
+        )
+
+    def test_under_21_open_mic(self):
+        self.assertEqual(self.bill("Under 21 Open Mic", kind="open_mic"), ("", "Under 21 Open Mic", []))
+
+    def test_the_codfather(self):
+        self.assertEqual(
+            self.bill('Jeff "The Codfather" Acoustic Trio', "The P.P.T. Band"),
+            ("", 'Jeff "The Codfather" Acoustic Trio', ["The P.P.T. Band"]),
+        )
+
+    def test_a_kind_of_night_with_a_headliner_named_after_it(self):
+        line, headliner, _ = self.bill("SAFETY 80'S - 21+ Halloween Show", "TBA")
+        self.assertEqual((line, headliner), ("SAFETY 80'S - 21+ Halloween Show", "SAFETY 80'S"))

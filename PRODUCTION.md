@@ -525,6 +525,12 @@ Each event has a row of link icons below its text: calendar file, Google Calenda
 
 The icon row is built when a page is rendered (`core/event_actions.py`), not stored with the event, so changing it needs no re-render. The stored HTML only holds a placeholder for it. After the deploy that introduced the placeholder (2026-10-27), run `resave_all_events` once on Render. Until then, stored events show no icon row.
 
+## Event pages
+
+Each approved event has its own page at `/event/<id>` (`core/views/event_page.py`): the date, the headliner and openers linked to their band and artist pages, the venue, price, ages and access, the ticket and venue links, the description and the play buttons. The address used to redirect into the month's listing, so every share link, calendar feed entry, weekly email and act page link now opens the page. An unapproved event's address answers 404; a past event's page stays, asks search engines not to index it, and says the show has passed.
+
+A listing row has one link, its headline, to that page (the tix badge still goes straight to tickets); act names in a listing aren't links. `core/artist_names.billing` reads the headliner, openers and the title line for both. The listing is stored HTML, so **after deploying run `resave_all_events` on Render** (a one-off job; about 5,200 events, half a minute). Until it runs, old rows keep their old links.
+
 ## Reading the sheet on a server
 
 The sheet sync now runs only by hand, for a one-off import; venues are kept in the admin. Locally, `sync_venues_from_gsheets` reads the sheet with the `gog` CLI, which signs in to Google as you through a browser. A server can't do that, so there it reads the sheet with a **Google Cloud service account** instead. The account can only read, and only sheets shared with it, so the sheet stays private. Set it up once:

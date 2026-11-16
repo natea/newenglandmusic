@@ -34,45 +34,14 @@
       {% if event.preface %}<span class='eventPreface'>{{ event.preface|safe }}&nbsp;</span>{% endif %}
 
       {% comment %}
-        if title and artists are present, show title in not bold, and artists in bold
-        also check if hyperlink is present or not to see whether artists is hyperlinked (in addition to being bold)
-
-        if only title or artists are present, show either one of them in bold
-        and also check whether hyperlink is present...
+        one link per row, to the event's own page (add-event-pages): the headliner bold and a
+        step larger, the openers after "with", and the show's title as a quiet line above when
+        it says something the names don't (core/artist_names.billing). act names aren't links
+        here; the event page links them to their band and artist pages
       {% endcomment %}
-
       {% spaceless %}
-        {% if title_parts or artist_parts %}
-          {% comment %}
-            an event with performers (add-band-pages): every performer's name, in the title or
-            the artists, links to its page, and the event's own page is the "info" link after
-            the venue, so no name links anywhere but to its act
-          {% endcomment %}
-          {% if event.title %}
-            <span class='{% if event.artists %}artist-present{% else %}title-only{% endif %}'>{% for text, url in title_parts %}{% if url %}<a class="performer" href="{{ url }}">{{ text }}</a>{% else %}{{ text }}{% endif %}{% endfor %}{% if event.artists %}:&nbsp;{% endif %}</span>
-          {% endif %}
-          {% if event.artists %}
-            <span class="artists">{% for text, url in artist_parts %}{% if url %}<a class="performer" href="{{ url }}">{{ text }}</a>{% else %}{{ text }}{% endif %}{% endfor %}</span>
-          {% endif %}
-        {% else %}
-          {% if event.hyperlink %}
-            <a href="{{ event.hyperlink }}" target="_blank">
-          {% endif %}
-
-          {% if event.title and event.artists %}
-            <span class='artist-present'>{{ event.title }}:&nbsp;</span>
-          {% elif event.title %}
-            <span class="title-only">{{ event.title }}</span>
-          {% endif %}
-
-          {% if event.artists %}
-            <span class="artists">{{ event.artists }}</span>
-          {% endif %}
-
-          {% if event.hyperlink %}
-            </a>
-          {% endif %}
-        {% endif %}
+        {% if title_line %}<span class="event-title-line">{{ title_line }}</span>{% endif %}
+        <a class="event-headline" href="/event/{{ event.pk }}"><b class="event-headliner">{{ headliner }}</b></a>{% if openers %}<span class="event-openers"> with {{ openers|join:", " }}</span>{% endif %}
       {% endspaceless %}
 
       {% if event.price %}
@@ -96,10 +65,6 @@
 
       {% else %}
         Unknown venue
-      {% endif %}
-
-      {% if event.hyperlink and title_parts or event.hyperlink and artist_parts %}
-        <a class="event-info" href="{{ event.hyperlink }}" target="_blank" rel="noopener">info ↗</a>
       {% endif %}
 
       {% comment %} "//" only between the parts there are: the links are in their own row {% endcomment %}
@@ -143,34 +108,5 @@
     opens the service's player below the row instead, and only then does anything load
     from spotify, apple, youtube or bandcamp
   {% endcomment %}
-  {% if artist_previews %}
-    <div class="artist-previews">
-      {% for preview in artist_previews %}
-        {% if preview.spotify %}
-          <a class="spotify-play" href="https://open.spotify.com/artist/{{ preview.spotify }}" data-spotify-artist="{{ preview.spotify }}" target="_blank" rel="noopener" title="Listen to {{ preview.label }} on Spotify">
-            <svg class="spotify-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
-            ▶ {{ preview.label }}
-          </a>
-        {% endif %}
-        {% if preview.apple %}
-          <a class="apple-play" href="https://music.apple.com/us/artist/{{ preview.apple.artist }}" data-apple-artist="{{ preview.apple.artist }}" data-apple-song="{{ preview.apple.song }}" data-apple-album="{{ preview.apple.album }}" data-artist-name="{{ preview.label }}" target="_blank" rel="noopener" title="Listen to {{ preview.label }} on Apple Music">
-            <svg class="apple-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 18.5a2.5 2.5 0 1 1-2-2.45V5.5l11-2v11a2.5 2.5 0 1 1-2-2.45V7.1l-7 1.3v10.1z"/></svg>
-            ▶ {{ preview.label }}
-          </a>
-        {% endif %}
-        {% if preview.youtube %}
-          <a class="youtube-play" href="{% if preview.youtube.video %}https://www.youtube.com/watch?v={{ preview.youtube.video }}{% else %}https://www.youtube.com/channel/{{ preview.youtube.channel }}{% endif %}" data-youtube-video="{{ preview.youtube.video }}" data-youtube-channel="{{ preview.youtube.channel }}" data-artist-name="{{ preview.label }}" target="_blank" rel="noopener" title="Listen to {{ preview.label }} on YouTube">
-            <svg class="youtube-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8zM9.6 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
-            ▶ {{ preview.label }}
-          </a>
-        {% endif %}
-        {% if preview.bandcamp %}
-          <a class="bandcamp-play" href="{{ preview.bandcamp.link }}" data-bandcamp-kind="{{ preview.bandcamp.kind }}" data-bandcamp-id="{{ preview.bandcamp.id }}" data-bandcamp-page="{{ preview.bandcamp.page }}" data-artist-name="{{ preview.label }}" target="_blank" rel="noopener" title="Listen to {{ preview.label }} on Bandcamp">
-            <svg class="bandcamp-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M0 18.75l7.437-13.5H24l-7.438 13.5H0z"/></svg>
-            ▶ {{ preview.label }} on Bandcamp
-          </a>
-        {% endif %}
-      {% endfor %}
-    </div>
-  {% endif %}
+  {% include 'core/artist_previews.html' %}
 </div>
