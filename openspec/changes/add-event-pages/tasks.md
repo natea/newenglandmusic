@@ -1,6 +1,6 @@
 ## 1. Before building
 
-- [ ] 1.1 Archive `add-band-pages` (all its tasks are done), so the `band-pages` spec this change modifies exists; verify `openspec validate add-event-pages` no longer reports that archive would refuse the `band-pages` delta.
+- [ ] 1.1 Verify `openspec validate add-event-pages` passes now that `add-band-pages` is archived (its `band-pages` spec, which this change modifies, exists).
 - [ ] 1.2 Take a database backup (`pg_dump -Fc` to `~/.local/share/nycnoise-backups/`) and create this change's worktree and database, per the worktree-per-change rule; verify the dev server runs from the worktree on its own port.
 
 ## 2. Reading the billing
@@ -12,14 +12,14 @@
 
 - [ ] 3.1 Rewrite `core/templates/core/event.html` to the title line, the headline linking to `/event/<id>`, the bold larger headliner and "with" openers, with no performer links and no "info" link, keeping the `data-` attributes, price, venue, description, access notes, tix badge, icon placeholder and play buttons; verify with listing tests for each `event-listing` requirement, including an event without performers.
 - [ ] 3.2 Style the headline, headliner, openers and title line in `core/static/core/scss/core.scss` (headliner one step larger, openers regular, title line small and quiet) and verify `core/tests/test_scss.py` compiles and the homepage renders at 390px with no sideways scroll.
-- [ ] 3.3 Remove `listing_parts`, `linked_parts` and performer-driven re-rendering (the `rebake` calls and the delete signals in `CoreConfig.ready`) now that rows don't depend on performers; verify the event-performer tests still pass with the listing assertions moved to the event page tests.
+- [ ] 3.3 Remove `listing_parts` and `linked_parts`, keeping performer-driven re-rendering (`rebake` and its signals), which the rows' Bandcamp buttons still need; verify the event-performer tests still pass with the listing assertions moved to the event page tests, and that a performer change still re-renders the row's Bandcamp button.
 - [ ] 3.4 Verify the day map still places and labels events from the new rows (the map test, and a look at a day with three venues).
 
 ## 4. The event page
 
-- [ ] 4.1 Turn `core/views/event_redirect.py` into the event page view at `/event/<id>`, named `event_page`: approved events only (404 otherwise), the share metadata kept, `noindex`; update the share icon, calendar feeds and band page to the new name, remove `core/empty.html` if nothing else uses it; verify with view tests for an approved, a past, an unapproved and an unknown event, and the share-preview title.
+- [ ] 4.1 Turn `core/views/event_redirect.py` into the event page view at `/event/<id>`, named `event_page`: approved events only (404 otherwise), the share metadata kept, a canonical link, and `noindex` only for a past event; update the share icon, calendar feeds, the weekly email (`core/digest.py`) and the act page to the new name, remove `core/empty.html` if nothing else uses it; verify with view tests for an approved, a past, an unapproved and an unknown event, the share-preview title, both indexing scenarios, and that a weekly email's and a search result's links open the page.
 - [ ] 4.2 Move the band page's card styles into a `_card.scss` partial imported by `band.scss` and a new `event_page.scss`, and verify the band page tests and `test_scss.py` still pass with the band page unchanged on screen.
-- [ ] 4.3 Build `core/templates/core/event_page.html`: the date and time tab, the title line, the headliner and openers with performers linked (including the occasion-prefix case), the lavender strip with the icon row, the venue, price, ages and access fields, the description, the play buttons, and the cancelled and past states; verify with tests for every `event-pages` scenario on what the page shows and the acts' links.
+- [ ] 4.3 Build `core/templates/core/event_page.html`: the date and time tab, the title line, the headliner and openers with performers linked (including the occasion-prefix case, and a performer awaiting review left plain), the lavender strip with the icon row, the venue (with its neighborhood), price, ages and access fields, the description, the play buttons (Bandcamp's included), and the cancelled and past states; verify with tests for every `event-pages` scenario on what the page shows and the acts' links.
 - [ ] 4.4 Add the "Tickets ↗" and "Venue's page ↗" links with normalized URL comparison (design decision 5), and verify tests for two different links, the same link (including a trailing slash and a `utm_` query), and only one link.
 - [ ] 4.5 Check the page at 390px and 1440px, light and dark, and verify the phone scenario: the date, headliner and venue in the first screen, no sideways scroll, contrast passing the design check.
 
