@@ -139,7 +139,10 @@ CLOSING = re.compile(KEYWORD + SPACE + '*:?' + SPACE + '*' + REF, re.IGNORECASE)
 MENTION = re.compile('(?<![' + WORD + '.@])@[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?')
 MAX_MESSAGE = 2000
 CHANGE_NAME = re.compile('[a-z0-9]+(-[a-z0-9]+)*')
-TASK = re.compile('^ *- [[]([ xX])[]] ([0-9]+[.][0-9]+)', re.MULTILINE)
+# a task's checkbox; its brackets are escaped with chr(92), as [[] reads as a nested set to python
+BRACKET_OPEN = chr(92) + '['
+BRACKET_CLOSE = chr(92) + ']'
+TASK = re.compile('^ *- ' + BRACKET_OPEN + '([ xX])' + BRACKET_CLOSE + ' ([0-9]+[.][0-9]+)', re.MULTILINE)
 
 
 def fail(reason):
