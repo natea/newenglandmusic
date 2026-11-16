@@ -174,7 +174,7 @@ CHARTS = [
     {
         "key": "players",
         "name": "Plays by service",
-        "description": "Which players people use: Spotify, Apple Music or YouTube.",
+        "description": "Which players people use: Spotify, Apple Music, YouTube or Bandcamp.",
         "query": trend([series("preview_played")], breakdown="service", display="ActionsBarValue"),
     },
     {

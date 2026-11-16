@@ -17,7 +17,9 @@ document.addEventListener("click", function (e) {
   }
   e.preventDefault();
   if (window.siteAnalytics) {
-    const service = button.classList.contains("apple-play") ? "apple_music"
+    // each button names its own service; bandcamp plays used to fall through to "spotify"
+    const service = isBandcamp ? "bandcamp"
+      : button.classList.contains("apple-play") ? "apple_music"
       : button.classList.contains("youtube-play") ? "youtube" : "spotify";
     window.siteAnalytics.capture("preview_played", { service: service });
   }

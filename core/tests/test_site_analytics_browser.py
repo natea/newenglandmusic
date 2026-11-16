@@ -124,6 +124,21 @@ class ListingEventsTestCase(StubbedPostHog, BrowserTestCase):
         page.locator("a.spotify-play").first.click()
         self.assertEqual([c["properties"] for c in self.named(page, "preview_played")], [{"service": "spotify"}])
 
+    def test_a_bandcamp_play_button(self):
+        page = self.stubbed_page("/")
+        # a row's bandcamp button, as the listing renders it; the player's frame can't load here
+        page.evaluate("""() => {
+            const a = document.createElement("a");
+            a.className = "bandcamp-play";
+            a.href = "https://belly.bandcamp.com/";
+            a.dataset.bandcampKind = "album";
+            a.dataset.bandcampId = "111";
+            a.textContent = "Belly";
+            document.querySelector("a.spotify-play").after(a);
+        }""")
+        page.locator("a.bandcamp-play").click()
+        self.assertEqual([c["properties"] for c in self.named(page, "preview_played")], [{"service": "bandcamp"}])
+
     def test_a_ticket_link(self):
         page = self.stubbed_page("/")
         page.locator(f"#event-{self.show.pk} a.ticket").click()
