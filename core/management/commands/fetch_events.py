@@ -179,6 +179,10 @@ def select_targets(
         venue = venues.get(row["sheet_id"])
         if venue is None:
             continue
+        # an inactive venue (closed, or not a music room) isn't fetched unless named by
+        # --sheet-ids; the weekly source check skips it too, but its last saved source stays
+        if venue.is_active is False and not sheet_ids:
+            continue
         source = REPORT_SOURCE_TO_TARGET_SOURCE.get(row["best_source"])
         # the ticketmaster api replaces a linked venue's ical feed, ticketing pages or ai
         # extraction -- feeds turned out to list a fraction of a venue's shows (the anthem:
