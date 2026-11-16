@@ -5,12 +5,12 @@
 
 ## 2. Slugs
 
-- [ ] 2.1 Add `Venue.slug` with a migration that fills it for every venue (town added on a clash), fill it in `save()` for new venues, and keep it out of the sheet sync; verify with tests for a new venue, two venues with one name, and a sheet sync that renames a venue without changing its slug.
+- [ ] 2.1 Add `Venue.slug` with a migration that fills it for every venue (town added on a clash), fill it in `save()` for new venues without ever rewriting an existing one, make it an editable, unique field in the venue admin, and keep it out of the manual sheet import; verify with tests for a new venue (including one added in the admin), two venues with one name, a rename in the admin keeping the slug, and a sheet import that renames a venue without changing its slug.
 
 ## 3. The page
 
-- [ ] 3.1 Add `core/views/venue_page.py` at `/venues/<slug>`: 404 for inactive or unknown venues, the upcoming approved shows in order, `noindex`, title and description; verify with view tests for an active, an inactive, an unknown and an unknown-status venue.
-- [ ] 3.2 Build `core/templates/core/venue.html` and `venue.scss` to the chosen composition (`.impeccable/mocks/decision/poster-column.html`): tab, fact line with the Map and Open booking links, "The bill" with nights linking to event pages and today's nights marked, the empty state, then "Playing here" and "Getting here"; verify with tests for every `venue-pages` scenario on the bill, the fact line, the sections and the map link.
+- [ ] 3.1 Add `core/views/venue_page.py` at `/venues/<slug>`: 404 for inactive, unknown and non-New England venues, the upcoming approved shows in order, a canonical link and no `noindex`, title and description; verify with view tests for an active, an inactive, an unknown, an unknown-status and a New York venue, and the indexing scenario.
+- [ ] 3.2 Build `core/templates/core/venue.html` and `venue.scss` to the chosen composition (`.impeccable/mocks/decision/poster-column.html`): tab, fact line with the sub-region (Massachusetts venues, linking to its listing), Map and Open booking links, "The bill" with nights linking to event pages and today's nights marked, the empty state, then "Playing here" and "Getting here"; verify with tests for every `venue-pages` scenario on the bill, the fact line, the sections and the map link.
 - [ ] 3.3 Link the event page's venue name to the venue page and give `VenueAdmin` "View on site"; verify with tests for both links.
 
 ## 4. Finish
