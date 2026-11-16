@@ -38,7 +38,6 @@ WEEKLY = [
     "manage.py match_eventbrite_organizers",
     "manage.py match_seatgeek_venues",
     "manage.py lookup_venue_neighborhoods",
-    "manage.py read_artist_link_hubs",
 ]
 DIGEST = ["manage.py send_weekly_digests"]
 
@@ -93,11 +92,13 @@ class JobScriptsTestCase(SimpleTestCase):
         self.assertEqual(calls, WEEKLY)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_the_bandcamp_finder_isnt_scheduled(self):
-        # bandcamp challenges requests from render's servers, so it runs by hand
+    def test_the_bandcamp_finder_and_link_hubs_arent_scheduled(self):
+        # bandcamp challenges requests from render's servers, and the hubs' robots.txt forbids
+        # reading them, so both run by hand
         for script in ("daily.sh", "weekly.sh", "digest.sh"):
             _, calls = self.run_job(script)
-            self.assertNotIn("manage.py find_bandcamp_embeds", calls, script)
+            for command in ("manage.py find_bandcamp_embeds", "manage.py read_artist_link_hubs"):
+                self.assertNotIn(command, calls, script)
 
     def test_digest_run(self):
         result, calls = self.run_job("digest.sh")
