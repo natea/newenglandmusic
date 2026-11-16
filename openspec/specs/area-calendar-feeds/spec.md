@@ -7,7 +7,7 @@ Lets visitors subscribe, in their own calendar app, to the shows in any region, 
 ## Requirements
 
 ### Requirement: A calendar feed for any area
-`/calendar.ics` SHALL return an iCalendar document (`text/calendar; charset=utf-8`) of approved events. It SHALL take the `region`, `state` and `metro` parameters with the same values and matching rules as the events listing, and filters given together SHALL all apply. With no parameters, it SHALL include events in every area.
+`/calendar.ics` SHALL return an iCalendar document (`text/calendar; charset=utf-8`) of approved events at New England venues. It SHALL take the `region`, `state` and `metro` parameters with the same values and matching rules as the events listing, and filters given together SHALL all apply. With no parameters, it SHALL include events in every area.
 
 The feed SHALL use only its own parameters, never the remembered filter cookie, and SHALL NOT set or change that cookie. Unknown or mismatched values SHALL be dropped as the listing drops them, so a stale URL covers a wider area rather than failing; an old Massachusetts metro SHALL be read as Massachusetts, as the listing reads it.
 
@@ -21,7 +21,7 @@ The feed SHALL use only its own parameters, never the remembered filter cookie, 
 
 #### Scenario: Whole Northeast
 - **WHEN** a calendar app fetches `/calendar.ics`
-- **THEN** the feed holds upcoming approved events in every area
+- **THEN** the feed holds upcoming approved events at New England venues, and none at venues elsewhere
 
 #### Scenario: Remembered filter ignored
 - **WHEN** a browser whose remembered filter is Maine fetches `/calendar.ics?state=vermont`
@@ -29,7 +29,7 @@ The feed SHALL use only its own parameters, never the remembered filter cookie, 
 
 #### Scenario: Unknown area
 - **WHEN** a feed URL names `state=atlantis`
-- **THEN** the feed includes every area, with status 200
+- **THEN** the feed includes every New England area, with status 200
 
 ### Requirement: Feed events stay up to date in calendar apps
 Each event in a feed SHALL have:
