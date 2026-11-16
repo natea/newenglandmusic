@@ -11,7 +11,7 @@ Issue: [#58 Remove non-New England regions and states from the homepage search f
 
 **Goals:** visitors see only New England events and search choices; one list to widen later; nothing deleted.
 
-**Non-Goals:** removing venues or events from the database or admin; changing the sheet or `sync_venues_from_gsheets`; venue pages, venue search results and location lookups (see open questions).
+**Non-Goals:** removing venues or events from the database; hiding other areas from the admin's Region, State and Metro filters; changing the sheet or `sync_venues_from_gsheets`; venue pages, venue search results and location lookups (see open questions).
 
 ## Decisions
 
@@ -27,11 +27,19 @@ A helper returns `Q(venue__state__in=NEW_ENGLAND_STATES)`, passed as an extra fi
 ### 4. Stale slugs follow the site's parser
 `parse_geo_filter(querydict, new_england_only=False)` passes the flag to `offered_areas`. The site's callers (`geo_filter_for_request`, so the homepage, month archives and cookie, and the calendar feed) pass `True`, so old links and cookies to removed areas are dropped as unknown and the cookie path clears a cookie that resolves to nothing. The admin calls it without the flag, so it still resolves every area. Tests pin both. Old calendar subscriptions naming a removed area become the unfiltered New England feed.
 
+### 5. The admin opens on New England *(revision, 2026-11-16)*
+A sidebar filter, "Area", with the choices "New England" (the default, applied when the address names no choice) and "All areas", is added to the event admin (and so the all-events review queue) and the venue admin. The default filters with `new_england_q` (events through `venue__`); "All areas" removes it. When a Region, State or Metro filter is chosen, the default doesn't apply, so picking New York shows New York's venues without also choosing "All areas". Search and the other filters combine with it as usual. *Alternative:* trimming the Region, State and Metro filters to New England (the owner's option 1). Rejected: editors sometimes need the other areas, and a default keeps them one click away.
+
+### 6. Fetching skips venues outside New England *(revision, 2026-11-16)*
+`select_targets` skips a venue whose `state` is set and, uppercased, isn't in `NEW_ENGLAND_STATES`, unless `--sheet-ids` names it. A blank state is still fetched: such a venue is probably a New England one with a missing value, and fetching it means fixing the state shows its events at once. Matching, link-hub reading and artist matching are unchanged. *Alternative:* deleting the out-of-area venues (the owner's option 4). Rejected: the scope may widen later.
+
 ## Risks / Trade-offs
 
 - [A venue's state is blank or wrong in the sheet, so a New England show disappears] → blank-state venues are hidden under this rule; the verification step counts upcoming events dropped and lists blank-state venues for an editor.
 - [Border venues in New York with New England audiences vanish] → intended for phase 1; the list is one line to widen.
 - [Sitemap and search suggestions diverge from the listing] → all use the same helper.
+- [An editor misses a show in the admin because it's outside New England] → the "Area" filter says "New England" when it applies, and "All areas" is one click; choosing a state anywhere overrides it.
+- [Widening the scope later leaves a gap of unfetched weeks] → widening the list makes the next daily run fetch those venues again; past shows are lost, upcoming ones arrive.
 
 ## Migration Plan
 
@@ -50,3 +58,4 @@ Tests use Django `TestCase` with venues and events created directly and the trim
 - **Wider than the issue:** besides the calendar and search, feeds, saved shows, band pages, discover and the sitemap also hide out-of-region events. Keep that, or limit phase 1 to the calendar and search?
 - **Direct links and venue-name suggestions:** event pages by id still open, and a venue-name search suggestion for an out-of-region venue leads to a search with no results. Acceptable for phase 1?
 - **Artist matching:** left unfiltered so Spotify, Apple Music and YouTube matching is unchanged. Should it narrow to New England in phase 2?
+- **Weekly venue work outside New England** *(revision)*: the weekly source check (`check_event_sources`, which crawls each venue's site) and the Ticketmaster, Eventbrite and SeatGeek matching still visit every venue. Skip venues outside New England there too?
