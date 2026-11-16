@@ -1,0 +1,20 @@
+[
+ {
+  "file": "a.html",
+  "label": "One grouped select",
+  "thesis": "The genre picker is one more select in the existing filter strip, with each main genre as a group whose first entry is 'All Jazz' and its sub-genres beneath. It matches the geo filter's pattern and costs the least space and code.",
+  "risk": "A long grouped list of sub-genres is hard to scan in a native select, especially on a phone, and a main genre and its sub-genre are picked from one flat menu, so the choice is easy to misread."
+ },
+ {
+  "file": "b.html",
+  "label": "Main genres, then sub-genres",
+  "thesis": "A row of main-genre chips sits under the filter strip; choosing one opens a second row of its sub-genres with 'All Jazz' first. Everything visible at once, no menus, and the two levels are plain to see.",
+  "risk": "Takes two rows of vertical space above the listing on the calendar and /bands, pushes the shows down, and wraps awkwardly on narrow screens; it departs from the strip's select-based style."
+ },
+ {
+  "file": "c.html",
+  "label": "Genre rail with counts",
+  "thesis": "A left rail lists main genres with counts, expanding the chosen one to show its sub-genres. Counts show what the filter will find before a visitor clicks, which suits a thin tagged dataset.",
+  "risk": "Counts need extra queries per page, a rail costs listing width on a page that is dense and text-first, and on narrow screens it must collapse above the listing."
+ }
+]
