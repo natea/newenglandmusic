@@ -43,7 +43,7 @@ The site can be shared now, so an upcoming event's page carries no `noindex` and
 
 ## Risks / Trade-offs
 
-- [The billing misreads a title, and the headline shows a fragment] → `billing` falls back to the full title when the names it finds cover less than the title's first word, and the title line keeps the original wording visible. Tests cover the listings seen on 2026-10-30 (Nekrogoblikon, Disko Lunatics, Dev Lemons, Bluegrass Jam).
+- [The billing misreads a title, and the headline shows a fragment] → the title line keeps the original wording visible whenever the names don't cover the title, and a title with no act names is the headline itself. On real listings no further fallback was needed ("20 Years of Nekrogoblikon" reads fine as a headliner), so none was built. Tests cover the listings seen on 2026-10-30 (Nekrogoblikon, Disko Lunatics, Under 21 Open Mic, the Codfather) and a sponsor credit in the artists text.
 - [Visitors used to the headline taking them to the venue's site] → the tix badge stays one click to tickets, and the event page's links are the first thing under the acts.
 - [Telegram and other bots that followed the redirect] → they now get a real page with the same metadata, which is what previews need.
 - [About 5,200 production listings must be re-rendered] → `resave_all_events` after deploy, as for `add-band-pages`. Until it runs, old rows still work (they link out as before).

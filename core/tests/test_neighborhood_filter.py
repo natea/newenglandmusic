@@ -93,8 +93,8 @@ class NeighborhoodChipsBrowserTestCase(BrowserTestCase):
         with page.expect_navigation():
             page.select_option("select.neighborhood-add", "West End, Boston, MA")
         self.assertEqual([t.rstrip("×").strip() for t in page.locator(".neighborhood-chip").all_inner_texts()], ["West End, Boston, MA"])
-        self.assertEqual(sorted(page.locator("div.event .title-only").all_inner_texts()), ["west end show"])
+        self.assertEqual(sorted(page.locator("div.event .event-headliner").all_inner_texts()), ["west end show"])
         with page.expect_navigation():
             page.click(".neighborhood-chip .town-remove")
         self.assertEqual(page.locator(".neighborhood-chip").count(), 0)
-        self.assertEqual(len(page.locator("div.event .title-only").all_inner_texts()), 3)
+        self.assertEqual(len(page.locator("div.event .event-headliner").all_inner_texts()), 3)

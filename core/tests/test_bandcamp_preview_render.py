@@ -230,9 +230,10 @@ class PlayerOrderTestCase(SimpleTestCase):
         self.assertEqual(players_in_order({"label": "Krill"}, "deck"), [])
 
     def test_the_event_order_matches_the_rows_html(self):
-        # the template draws buttons in this order: event.html
+        # the template draws buttons in this order: artist_previews.html, which a listing row
+        # (event.html) and an event page include
         from pathlib import Path
 
-        html = (Path(__file__).resolve().parents[1] / "templates" / "core" / "event.html").read_text()
+        html = (Path(__file__).resolve().parents[1] / "templates" / "core" / "artist_previews.html").read_text()
         positions = [html.index(f'class="{c}-play"') for c in ("spotify", "apple", "youtube", "bandcamp")]
         self.assertEqual(positions, sorted(positions))

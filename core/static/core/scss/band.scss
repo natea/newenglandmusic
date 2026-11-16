@@ -1,103 +1,12 @@
 // the band and artist page (core/templates/core/band.html): a filed index card on the
 // site's grey ground, the act's name on its purple tab, as a record-store bin divider
 
-$ground: #d4d0c7;
-$card: #f6f4ee;
-$hairline: #b9b4a8;
-$tab: #8b5d8b;
-$strip: #eeeeff;
-$rule: #c9d3e6;
-$link: #000080;
-$ink: #1a1a1a;
-$quiet: #4f4b44;
-
-.act {
-  margin: 22px 0 8px;
-
-  ::selection {
-    background: $strip;
-    color: $ink;
-  }
-
-  // the site's stylesheet sets paragraphs inline elsewhere; the card's are blocks
-  p {
-    display: block;
-  }
-
-  // :where keeps this below the action icons' own colours (core.scss .event-actions a)
-  :where(a) {
-    color: $link;
-    text-underline-offset: 0.15em;
-  }
-
-  a:focus-visible {
-    outline: 2px solid $link;
-    outline-offset: 2px;
-  }
-}
-
-.act-tab {
-  display: inline-block;
-  max-width: 100%;
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0.18em 0.45em 0.12em;
-  background: $tab;
-  color: #fff;
-  font: 800 clamp(2rem, 7vw, 3.4rem) / 1.02 Helvetica, Arial, sans-serif;
-  letter-spacing: -0.015em;
-  overflow-wrap: anywhere;
-}
-
-.act-card {
-  box-sizing: border-box;
-  background: $card;
-  border: 1px solid $hairline;
-  border-top: 3px solid $tab;
-  box-shadow: 0 1px 0 $hairline;
-  padding: 18px 24px 22px;
-  color: $ink;
-}
+@import "card";
 
 .act-meta {
   margin: 0 0 14px;
   font-size: 1.05rem;
   color: $quiet;
-}
-
-// .act's paragraph reset (display: block) would otherwise win over the strip's flex
-.act .act-next {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-  margin: 0;
-  padding: 10px 14px;
-  background: $strip;
-  font-size: 1.05rem;
-  line-height: 1.4;
-
-  .act-next-when {
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .act-next-more {
-    margin-left: auto;
-    font-size: 0.95rem;
-  }
-}
-
-// the calendar's own action icons (core/event_actions.py), under the strip and in each row
-// joined to the strip above it: one lavender band, the show then its actions
-.act-next-actions {
-  margin: 0 0 18px;
-  padding: 0 14px 8px;
-  background: $strip;
-
-  .event-actions {
-    margin: 0;
-  }
 }
 
 .act-shows .event-actions {
@@ -129,26 +38,6 @@ $quiet: #4f4b44;
 // the photo, after the bio, keeps the same clearance above its rule as every other block
 .act-fields.act-fields-photo {
   margin-top: 18px;
-}
-
-.act-fields {
-  display: grid;
-  grid-template-columns: 7.5em 1fr;
-  gap: 12px 16px;
-  margin: 0 0 18px;
-  padding-top: 14px;
-  border-top: 2px solid $tab;
-
-  dt {
-    font-weight: 700;
-    color: $quiet;
-    line-height: 1.5;
-  }
-
-  dd {
-    margin: 0;
-    line-height: 1.5;
-  }
 }
 
 .act-people {
@@ -223,35 +112,10 @@ $quiet: #4f4b44;
   }
 }
 
-// the bio on the card's ruled lines: the rules run the card's width like ruled card stock,
-// the text keeps a reading measure, and its line height matches the rules' pitch
-.act-bio {
-  padding-top: 14px;
-  border-top: 2px solid $tab;
-}
-
-.act-ruled {
-  background-image: repeating-linear-gradient(to bottom, transparent 0 27px, $rule 27px 28px);
-
-  p {
-    margin: 0;
-    max-width: 65ch;
-    font-size: 1rem;
-    line-height: 28px;
-  }
-}
-
 .act-credit {
   margin: 8px 0 0;
   font-size: 0.82rem;
   color: $quiet;
-}
-
-.act-card h2 {
-  margin: 22px 0 6px;
-  padding-top: 14px;
-  border-top: 2px solid $tab;
-  font: 700 1.25rem Helvetica, Arial, sans-serif;
 }
 
 .act-shows {
@@ -356,19 +220,6 @@ $quiet: #4f4b44;
 }
 
 @media (max-width: 600px) {
-  .act-card {
-    padding: 14px 14px 18px;
-  }
-
-  .act-fields {
-    grid-template-columns: 1fr;
-    gap: 2px;
-
-    dd {
-      margin-bottom: 10px;
-    }
-  }
-
   .act-shows li {
     grid-template-columns: 6.5em 1fr;
     gap: 10px;
