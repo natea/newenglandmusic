@@ -43,6 +43,8 @@ NOT_EXPORTED = {
     "wikipedia_fetched_at",
     # cc by-nc-sa, also to be credited
     "genres",
+    # exported from the next step on
+    "is_inactive",
 }
 
 # the last column: a band's members, or the bands an artist belongs to

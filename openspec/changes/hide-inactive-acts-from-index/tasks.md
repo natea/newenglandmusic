@@ -2,9 +2,9 @@ Issue: [#57 Remove inactive bands from the public-facing Bands & Artists page](h
 
 ## 1. Model and index
 
-- [ ] 1.1 Add `MusicAct.is_inactive` (default False, indexed) with one migration covering both `Band` and `Artist`
-- [ ] 1.2 Leave inactive acts out of `live_acts()` in `core/views/act_index.py`
-- [ ] 1.3 Tests: inactive acts left off `/bands` and its count; their pages, show links, search and sitemap still work; held and inactive are independent; the discovery deck test in `core/tests/test_discover.py` guards that inactive acts stay in the deck; update `core/tests/test_new_england_scope.py`'s use of `live_acts()` if needed
+- [x] 1.1 Add `MusicAct.is_inactive` (default False, indexed) with one migration covering both `Band` and `Artist`
+- [x] 1.2 Leave inactive acts out of `live_acts()` in `core/views/act_index.py`
+- [x] 1.3 Tests: inactive acts left off `/bands` and its count; their pages, show links, search and sitemap still work; held and inactive are independent; the discovery deck test in `core/tests/test_discover.py` guards that inactive acts stay in the deck; update `core/tests/test_new_england_scope.py`'s use of `live_acts()` if needed
 
 ## 2. Admin and export
 
