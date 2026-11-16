@@ -67,16 +67,19 @@ The list and the artist view carry a per-page `noindex` and stay out of the site
 
 No outside service is called. Tests build `Venue` and `GeoArea` rows directly and never touch Google Sheets (`gog`), Google Places, venue websites, Anthropic, ticketing or music APIs. The suite runs with outbound network blocked as the rest of it does.
 
-## Open Questions
+## Owner's decisions (2026-11-16)
 
-- Does the owner approve the plain-words meanings of the six booking types (decision 8)?
-- Is the owner content that the booking fields leave the `add-venue-pages` fan page (decision 7), overriding what was proposed there?
-
-- Should the artist view also list the venue's recent past shows, as a sign of what the room books? Left out here; adding it later changes only the artist view.
-- The artist view shows `booking_notes`, which come straight from the sheet and may hold contact details; `improve-sitemap` keeps them off public pages. Is the owner content to show them (they are the "notes" the thread asked for), or should they wait until the sheet's notes are checked?
-- The "Venues" menu item, the homepage cookie shared with `/venues` (decision 3) and the genre not being remembered (decision 4) are this change's readings; the thread said only "similar to how you can filter the events on the homepage". Does the owner agree with each?
-- The genre choices are only as tidy as what the sheet's editors typed (spelling, near-duplicates such as "R&B" and "R and B"). The list folds case only. Does the owner want a curated genre list or a clean-up of the sheet's values before launch, or is the sheet's own vocabulary fine for now? Until then the choices follow the sheet.
-- Does an editor want a "Last checked" date on booking details? The sheet has none, so none is shown.
+- **Booking leaves the fan page** (decision 7): yes. `add-venue-pages` was already built, so its fan page's "Playing here" booking fields and fact-line "Open booking" link are changed in code here, and its spec is changed by this change's delta.
+- **Booking notes are shown** on the artist view. They are mostly the venues' own public booking instructions; 32 of 153 include an email address, the venues' booking addresses. Editors can trim any note in the admin.
+- **The booking types' plain meanings** (decision 8) use the drafted wording:
+  - Submit an Artist: send them your act and they'll place you on a bill.
+  - Submit a Show: pitch a complete show (the whole bill) and they host it.
+  - Locals Only: books local acts only.
+  - Dart Throw: no set process; reach out and see.
+  - Touring Acts Only: books touring acts only.
+  - Must Include a Local: a touring bill must include a local act.
+- **Search engines** (decision 10): the site can be shared now, so `/venues` is open to search engines with a canonical link; the artist views stay `noindex`, being thin pages beside the fan page. Neither is added to the sitemap here (`add-search-visibility` owns the sitemap's sections).
+- **Defaults kept as proposed:** the "Venues" menu item, the place cookie shared with the homepage, the genre not remembered, the sheet's own genre vocabulary (case folded only), no "last checked" date, no past shows on the artist view.
 
 ## Sketches
 

@@ -23,6 +23,7 @@ Each night is rendered from `billing(event)` (title line dropped on the bill, he
 *Alternative:* embed the stored listing HTML. Rejected: the listing repeats the venue on every row and carries the description, which the bill drops on purpose.
 
 ### 3. Facts as two quiet sections below the bill
+(Changed by `add-venue-list`, 2026-11-16: booking type, link and notes moved to the venue's artist view; "Playing here" keeps open mic, genres, niche and size, and the fact line's "Open booking" link goes to the artist view.)
 "Playing here" and "Getting here" are definition lists in the card's field style (7.5em label column), each field drawn only when it has a value; booleans (open mic, family-friendly, LGBTQ+-friendly) are drawn only when true or false, as "Yes" or "No", never when unknown. The fact line above the bill is assembled from the same values, so they can't disagree.
 
 ### 4. New England's venues, and the sub-region

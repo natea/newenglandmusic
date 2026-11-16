@@ -100,16 +100,12 @@ The place filters SHALL share the homepage's remembered filter, as `event-geo-fi
 - **WHEN** a visitor filters to Jazz and later opens `/venues`
 - **THEN** the genre filter is not applied
 
-### Requirement: The list reads well and stays out of search while unshared
-The list SHALL fit a 390px-wide screen with no sideways scrolling and have a title and description naming venues. The page SHALL ask search engines not to index it, and SHALL NOT be in the sitemap, for as long as `add-venue-pages` does the same for venue pages; if `improve-sitemap`'s site-wide indexing switch lands, the list follows it.
+### Requirement: The list reads well and can be found
+The list SHALL fit a 390px-wide screen with no sideways scrolling and have a title and description naming venues. The page SHALL be open to search engines, with a canonical link to `/venues` without its filter parameters.
 
-#### Scenario: Not indexed
-- **WHEN** a search engine fetches `/venues`
-- **THEN** the page asks not to be indexed
-
-#### Scenario: Not in the sitemap
-- **WHEN** a search engine fetches the sitemap
-- **THEN** it doesn't list `/venues`
+#### Scenario: Can be indexed
+- **WHEN** a search engine fetches `/venues?state=vermont`
+- **THEN** the page carries no `noindex`, and its canonical link is the site's `/venues`
 
 #### Scenario: Title and description
 - **WHEN** a visitor opens `/venues`
