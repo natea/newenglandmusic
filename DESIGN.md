@@ -302,6 +302,14 @@ The act card's sibling for one show, at `/event/<id>` (the card styles are share
 - **Fields:** Venue (with its neighborhood and town), Price, Ages, Access; the description on ruled card stock; the play buttons under a plum rule.
 - A cancelled show says so in red above the bill and strikes the bill through; a past show says it has passed.
 
+### Venue page (the room's show bill)
+The act card's sibling for one venue, at `/venues/<slug>`, set as a gig-poster column.
+- **Tab:** the venue's name, as an act's.
+- **Fact line:** room size and kind in bold, then neighborhood, town and state, the Massachusetts sub-region as a link to its listing, and "Map ↗", in quiet grey; what it books on the next line; a lavender "Open booking ›" at the right when it takes new acts. A plum rule closes it.
+- **The bill:** "The bill" with the show count, then one ruled-blue row a night: a big tabular day number over the lowercase weekday and month, the headliner bold at 1.4rem, "with" openers in quiet grey, the time at the right (under the acts on phones). The whole row links to the event page. Today's nights sit on a lavender band and say "today".
+- **Playing here / Getting here:** field lists under plum-ruled headings, each field only when known; yes-or-no facts only when known.
+- No map is drawn; the location is text and a link out to Google Maps.
+
 ### Act index (`/bands`) and search results
 Set as the index at the back of a reference book, on the act card.
 - **Tab and meta:** "Bands & artists" (or "Search: <words>") on the plum tab; the count, "A to Z", as the meta line.
