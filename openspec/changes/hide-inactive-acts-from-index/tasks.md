@@ -14,8 +14,8 @@ Issue: [#57 Remove inactive bands from the public-facing Bands & Artists page](h
 
 ## 3. Command
 
-- [ ] 3.1 Write `mark_inactive_acts` as a `RecordedCommand` with slugs, saving with `queryset.update()` (optionally `bands/` or `artists/` qualified), `--file`, `--dry-run` and `--active`
-- [ ] 3.2 Tests: marking by slug, comments and blank lines in the file, dry run, unknown address, a slug in both kinds (ambiguous, nothing changed), a kind-qualified address, `--file`, the job run, a held act, reversing
+- [x] 3.1 Write `mark_inactive_acts` as a `RecordedCommand` with slugs, saving with `queryset.update()` (optionally `bands/` or `artists/` qualified), `--file`, `--dry-run` and `--active`
+- [x] 3.2 Tests: marking by slug, comments and blank lines in the file, dry run, unknown address, a slug in both kinds (ambiguous, nothing changed), a kind-qualified address, `--file`, the job run, a held act, reversing
 
 ## 4. Docs and rollout
 
