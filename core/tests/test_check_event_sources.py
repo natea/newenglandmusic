@@ -245,6 +245,17 @@ class CheckVenueTestCase(SimpleTestCase):
         self.assertEqual(result["best_source"], "robots-blocked")
         self.assertNotIn("https://venue.example/", session.requested)
 
+    def test_robots_blocked_behind_a_byte_order_mark(self):
+        # boynton yards' robots.txt starts with a byte-order mark, which hid its first line
+        result, session = self.check(
+            {
+                "https://venue.example/robots.txt": "\ufeffUser-agent: *\nDisallow: /\n\nUser-agent: Googlebot\nDisallow:",
+                "https://venue.example/": LONG_TEXT,
+            }
+        )
+        self.assertEqual(result["best_source"], "robots-blocked")
+        self.assertNotIn("https://venue.example/", session.requested)
+
     def test_dead_domain(self):
         error = requests.ConnectionError("NameResolutionError: venue.example")
         result, _ = self.check({"https://venue.example/": error})

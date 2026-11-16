@@ -82,6 +82,33 @@ class ActIndexTestCase(TestCase):
         self.assertNotIn("#", self.entries(response))
         self.assertNotContains(response, "3 1/2 Girls")
 
+    def test_inactive_acts_left_out_and_not_counted(self):
+        Band.objects.create(name="The Cars", is_inactive=True)
+        Artist.objects.create(name="Greg Humphreys", is_inactive=True)
+        response = self.page()
+        self.assertEqual(self.entries(response), {"A": ["Anjimile"], "B": ["Belly"]})
+        self.assertEqual(response.context["count"], 2)
+        self.assertNotContains(response, "Cars")
+        self.assertNotContains(response, "Humphreys")
+
+    def test_inactive_acts_keep_their_pages_links_search_and_sitemap(self):
+        from core.tests.discover_fixture import show
+
+        cars = Band.objects.create(name="The Cars", is_inactive=True)
+        event = show(cars, timezone.now() + timedelta(days=3))
+        self.assertEqual(self.client.get("/bands/the-cars").status_code, 200)
+        self.assertContains(self.client.get("/", {"s": "cars"}), "<mark>Cars</mark>")
+        self.assertContains(self.client.get("/sitemap.xml"), "/bands/the-cars")
+        self.assertEqual(EventPerformer.objects.get(event=event).band, cars)
+
+    def test_inactive_and_held_are_independent(self):
+        inactive = Band.objects.create(name="Dormant", is_inactive=True)
+        held = Band.objects.create(name="Held Band", needs_review=True)
+        self.assertEqual(self.client.get(inactive.get_absolute_url()).status_code, 200)
+        self.assertEqual(self.client.get(held.get_absolute_url()).status_code, 404)
+        self.assertNotIn("D", self.entries(self.page()))
+        self.assertNotIn("H", self.entries(self.page()))
+
     def test_pages_and_guide_words(self):
         from core.views.act_index import PAGE_SIZE
 

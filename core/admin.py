@@ -1535,11 +1535,11 @@ class MusicActAdmin(admin.ModelAdmin):
     form = MusicActForm
     change_list_template = "admin/core/act_change_list.html"
     list_display = ("name", "city_town", "state", "musicbrainz_status", "musicbrainz_page", "source_labels", "review", "link_hub_findings_count", "act_id")
-    list_filter = ("needs_review", "state", "musicbrainz_status", "bandcamp_embed_status", ActSourceFilter, LinkHubFindingsFilter)
+    list_filter = ("needs_review", "is_inactive", "state", "musicbrainz_status", "bandcamp_embed_status", ActSourceFilter, LinkHubFindingsFilter)
     search_fields = ("name", "act_id", "musicbrainz_id")
     actions = [
         "clear_musicbrainz_match", "mark_ready", "accept_link_hub_findings", "dismiss_link_hub_findings",
-        "decline_bandcamp_player", "lift_bandcamp_decline",
+        "decline_bandcamp_player", "lift_bandcamp_decline", "mark_inactive", "mark_active",
     ]
     readonly_fields = (
         "bandcamp_embed_status", "bandcamp_embed_checked_at", "bandcamp_embed_for",
@@ -1549,7 +1549,7 @@ class MusicActAdmin(admin.ModelAdmin):
         "photo_preview", "source_labels", "review",
     )
     fieldsets = (
-        (None, {"fields": ("name", "slug", "act_id", "source_labels", "review", "city_town", "state", "notes")}),
+        (None, {"fields": ("name", "slug", "act_id", "source_labels", "review", "is_inactive", "city_town", "state", "notes")}),
         ("Links", {"fields": ("website", "bandcamp_url", "instagram_url", "youtube_url")}),
         (
             "Link hub",
@@ -1689,6 +1689,17 @@ class MusicActAdmin(admin.ModelAdmin):
         # events an editor linked to a held act, whose button follows the mark
         rebake_events_of(held)
         self.message_user(request, f"{len(held)} marked ready; {linked} events linked to them.")
+
+    @admin.action(description="Mark inactive: leave off the Bands & artists index")
+    def mark_inactive(self, request, queryset):
+        # update(), so the acts' events aren't re-rendered: the mark changes nothing they show
+        count = queryset.update(is_inactive=True)
+        self.message_user(request, f"{count} marked inactive.")
+
+    @admin.action(description="Mark active: list on the Bands & artists index")
+    def mark_active(self, request, queryset):
+        count = queryset.update(is_inactive=False)
+        self.message_user(request, f"{count} marked active.")
 
     @admin.display(description="Sources")
     def source_labels(self, act):

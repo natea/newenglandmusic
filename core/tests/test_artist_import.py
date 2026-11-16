@@ -60,6 +60,23 @@ class ImportArtistsTestCase(TestCase):
         # nothing changed but the update times, which a no-op import doesn't touch
         self.assertEqual(before, after)
 
+    def test_the_inactive_mark_is_kept(self):
+        import_rows(rows(KRILL))
+        Band.objects.filter(act_id="A0001").update(is_inactive=True)
+        import_rows(rows(KRILL.replace("Boston", "Salem")))
+        self.assertTrue(Band.objects.get(act_id="A0001").is_inactive)
+
+    def test_the_inactive_column_is_ignored(self):
+        import_rows(rows(KRILL))
+        Band.objects.filter(act_id="A0001").update(is_inactive=True)
+        Artist.objects.create(name="Kim", act_id="A0002")
+        text = "Act_ID,Name,Kind,Town,State,is_inactive\nA0001,Krill,band,Boston,MA,no\nA0002,Kim,artist,Boston,MA,yes\n"
+        report = import_rows(rows_from_csv(io.StringIO(text)))
+        self.assertEqual(report.problems, [])
+        self.assertEqual(
+            (Band.objects.get(act_id="A0001").is_inactive, Artist.objects.get(act_id="A0002").is_inactive), (True, False)
+        )
+
     def test_an_editors_change_is_kept(self):
         import_rows(rows(KRILL))
         Band.objects.filter(act_id="A0001").update(website="https://krill.band", field_sources={"website": "editor"})

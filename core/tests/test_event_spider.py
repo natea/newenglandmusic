@@ -310,6 +310,17 @@ class PageTextTestCase(SimpleTestCase):
         self.assertFalse(is_ticketing_event_url("https://www.eventbrite.com/o/organizer"))
         self.assertFalse(is_ticketing_event_url("https://venue.example/events/1"))
 
+    def test_axs_etix_eventim_and_ticketweb_pages_are_not_crawled(self):
+        # axs and etix are never crawled (AGENTS.md); eventim and ticketweb refused every run
+        for url in (
+            "https://www.axs.com/events/363728/one-night-band-tickets",
+            "https://www.etix.com/ticket/p/1234/show",
+            "https://www.eventim.us/event/New-EnglandMetalandHardcoreFest/554826",
+            "https://www.ticketweb.com/event/whos-who-fete-music-hall-tickets/15054983",
+        ):
+            with self.subTest(url):
+                self.assertFalse(is_ticketing_event_url(url))
+
     def test_tixr_event_pages_are_not_crawled(self):
         # tixr blocks crawlers by ip, which also locks out people buying tickets
         self.assertFalse(is_ticketing_event_url("https://www.tixr.com/groups/venue/events/show-165144"))

@@ -2,7 +2,7 @@
 the a–z index of bands and artists at /bands (add-act-index-and-search): every live act,
 bands and artists together, grouped by first letter ("#" for digits and symbols, a leading
 "The" ignored), each with its kind, home town and next upcoming show. acts held for review
-aren't listed; /artists redirects here.
+aren't listed, nor are acts marked inactive, which keep their pages; /artists redirects here.
 """
 
 import unicodedata
@@ -67,7 +67,7 @@ def live_acts():
     acts = []
     for model in (Band, Artist):
         acts.extend(
-            model.objects.filter(needs_review=False)
+            model.objects.filter(needs_review=False, is_inactive=False)
             .annotate(next_show=Min("performances__event__starttime", filter=upcoming))
             .only("name", "slug", "city_town", "state", "area")
         )

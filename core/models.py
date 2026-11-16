@@ -939,6 +939,9 @@ class MusicAct(models.Model):
     # in REVIEW_REASONS
     needs_review = models.BooleanField(default=False, db_index=True)
     review_reasons = ArrayField(models.CharField(max_length=16), blank=True, default=list)
+    # no longer active: left off the /bands index only, its page and show links stay. editors
+    # (and mark_inactive_acts) own it; imports and enrichment never write it
+    is_inactive = models.BooleanField(default=False, db_index=True)
 
     REVIEW_REASONS = {
         "not_found": "not on MusicBrainz",

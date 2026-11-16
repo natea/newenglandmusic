@@ -181,6 +181,10 @@ def select_targets(
         venue = venues.get(row["sheet_id"])
         if venue is None:
             continue
+        # an inactive venue (closed, or not a music room) isn't fetched unless named by
+        # --sheet-ids; the weekly source check skips it too, but its last saved source stays
+        if venue.is_active is False and not sheet_ids:
+            continue
         # the site lists only new england's shows, so a venue elsewhere isn't fetched unless
         # named by --sheet-ids; a venue with no state still is (fixing it shows its events)
         if venue.state and venue.state.upper() not in NEW_ENGLAND_STATES and not sheet_ids:
