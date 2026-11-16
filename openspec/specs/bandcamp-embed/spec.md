@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lets visitors hear an act that has a Bandcamp page in Bandcamp's own embedded player, on event listings and on artist and band pages. A weekly command reads the player's album or track ID from the act's own Bandcamp page once and keeps it, so no page view ever asks Bandcamp for anything.
+Lets visitors hear an act that has a Bandcamp page in Bandcamp's own embedded player, on event listings and on artist and band pages. A command, run by hand, reads the player's album or track ID from the act's own Bandcamp page once and keeps it, so no page view ever asks Bandcamp for anything.
 
 ## Requirements
 
@@ -131,7 +131,7 @@ The command SHALL look up an act whose Bandcamp URL has never been looked up or 
 - **WHEN** a band was `no_playable` 100 days ago
 - **THEN** the run looks it up again
 
-#### Scenario: A failed look-up is not repeated weekly
+#### Scenario: A failed look-up is not repeated on every run
 - **WHEN** a band was `no_playable`, `failed` or `blocked` 10 days ago at its current URL
 - **THEN** the run makes no request for it, and it does not use the run's cap
 
@@ -242,7 +242,7 @@ Wherever the site offers an act's players in a fixed order, it SHALL put Bandcam
 An editor SHALL be able to mark an act's Bandcamp player as declined in the admin, for an act that asks not to have one. A declined act SHALL have status `declined`, no kind or ID, no usable player, and no button or section; the lookup SHALL make no request for it, and no lookup or clearing SHALL undo the mark. Only an editor can lift it.
 
 #### Scenario: Declined act
-- **WHEN** an admin marks a band declined, and the weekly run reaches the band
+- **WHEN** an admin marks a band declined, and the next run reaches the band
 - **THEN** no request is made for it, its status stays `declined`, and its events and page show no Bandcamp player
 
 #### Scenario: Clearing does not lift a decline
