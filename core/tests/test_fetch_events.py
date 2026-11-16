@@ -594,6 +594,11 @@ class FetchEventsTicketmasterTestCase(TestCase):
         )
         self.assertNotIn("V0098", self.sources(None, True))
 
+    def test_inactive_venues_are_left_out_unless_named(self):
+        Venue.objects.filter(sheet_id="V0001").update(is_active=False)
+        self.assertNotIn("V0001", self.sources(None, True))
+        self.assertIn("V0001", self.sources({"V0001"}, False))
+
     def test_skip_ticketmaster_uses_the_report_sources(self):
         targets = fetch_events.select_targets(3, None, True, use_ticketmaster=False)
         self.assertEqual(
