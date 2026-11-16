@@ -13,6 +13,7 @@ from .views.email_subscribe import email_subscribe
 from .views.event_gcal import event_gcal_redirect
 from .views.event_ics_download import event_ics_download
 from .views.event_page import event_page
+from .views.venue_page import venue_page
 from .views.event_submission import EventCreateView
 from .views.health import health
 from .views.index import index, past_month_archive
@@ -68,6 +69,7 @@ urlpatterns = [
     path("email-subscribe", email_subscribe, name="email_subscribe"),
     path("venue-autocomplete/", VenueAutocomplete.as_view(), name="venue-autocomplete"),
     path("event/<int:event_id>", event_page, name="event_page"),
+    path("venues/<slug:slug>", venue_page, name="venue_page"),
     # next url is password-protected and lets developers get a copy
     # of the prod data locally
     path("internal-api/db", internal_db_dump, name="internal_db_dump"),

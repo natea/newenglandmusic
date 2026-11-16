@@ -33,7 +33,7 @@
 
     <dl class="act-fields">
       <dt>Venue</dt>
-      <dd>{% if event.venue_override %}{{ event.venue_override|safe }}{% elif venue %}<b>{{ venue.name }}</b>{% if venue.location %}, {{ venue.location }}{% endif %}{% else %}Unknown venue{% endif %}</dd>
+      <dd>{% if event.venue_override %}{{ event.venue_override|safe }}{% elif venue %}<b>{% if venue_url %}<a href="{{ venue_url }}">{{ venue.name }}</a>{% else %}{{ venue.name }}{% endif %}</b>{% if venue.location %}, {{ venue.location }}{% endif %}{% else %}Unknown venue{% endif %}</dd>
       {% if event.price %}<dt>Price</dt><dd>{{ event.price }}</dd>{% endif %}
       {% if event.age_policy %}<dt>Ages</dt><dd>{{ event.age_policy }}</dd>{% endif %}
       {% if event.age_policy_emoji or venue.accessibility_notes and not event.venue_override %}<dt>Access</dt><dd>{% if event.age_policy_emoji %}{{ event.age_policy_emoji }} {% endif %}{% if venue.accessibility_notes and not event.venue_override %}{{ venue.accessibility_notes }}{% endif %}</dd>{% endif %}
