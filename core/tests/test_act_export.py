@@ -46,6 +46,10 @@ class ActRowTestCase(TestCase):
         self.assertNotIn("bandcamp_embed_for", header_row)
         self.assertNotIn("bandcamp_embed_checked_at", header_row)
 
+    def test_an_inactive_act(self):
+        self.assertEqual(row_dict(Band.objects.create(name="The Cars", is_inactive=True))["is_inactive"], "yes")
+        self.assertEqual(row_dict(Band.objects.create(name="Belly"))["is_inactive"], "no")
+
     def test_band_members(self):
         band = Band.objects.create(name="Krill")
         bass = Artist.objects.create(name="Jonah Furman")

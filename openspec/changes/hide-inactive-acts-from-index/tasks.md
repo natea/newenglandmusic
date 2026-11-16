@@ -8,9 +8,9 @@ Issue: [#57 Remove inactive bands from the public-facing Bands & Artists page](h
 
 ## 2. Admin and export
 
-- [ ] 2.1 Add the checkbox, list filter and "Mark inactive" / "Mark active" actions to `MusicActAdmin`; the actions use `queryset.update()`, and the form's `save_model` recording `is_inactive` in `field_sources` is harmless since nothing reads it
-- [ ] 2.2 Add `is_inactive` to the CSV export columns (`act-export`)
-- [ ] 2.3 Tests: the actions and filter; imports and enrichment leave the mark; the export column (and `test_act_export` passes); an exported file with the column still imports with `import_artists`
+- [x] 2.1 Add the checkbox, list filter and "Mark inactive" / "Mark active" actions to `MusicActAdmin`; the actions use `queryset.update()`, and the form's `save_model` recording `is_inactive` in `field_sources` is harmless since nothing reads it
+- [x] 2.2 Add `is_inactive` to the CSV export columns (`act-export`)
+- [x] 2.3 Tests: the actions and filter; imports and enrichment leave the mark; the export column (and `test_act_export` passes); an exported file with the column still imports with `import_artists`
 
 ## 3. Command
 
