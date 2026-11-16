@@ -101,18 +101,22 @@ When a name matches several MusicBrainz candidates of the right kind, enrichment
 - **THEN** the Providence group is accepted
 
 ### Requirement: Bandcamp only as a link
-The site SHALL NOT request anything from Bandcamp. A record's Bandcamp URL SHALL come only from an editor, the import, MusicBrainz's links, or the record's link hub (see `artist-link-hubs`), and SHALL be accepted only when it's an `https` URL on `bandcamp.com` or a subdomain of it.
+The site SHALL request nothing from Bandcamp except, in `find_bandcamp_embeds` (see `bandcamp-embed`), an act's own Bandcamp page and Bandcamp's player for a release on it, to read the numeric ID of a release the embedded player can play. It SHALL NOT scrape anything else from Bandcamp, use a proxy or scraping service, or request Bandcamp for any other reason, and enrichment, the imports and the link-hub reader SHALL request nothing from it. A record's Bandcamp URL SHALL come only from an editor, the import, MusicBrainz's links, or the record's link hub (see `artist-link-hubs`), and SHALL be accepted only when it's an `https` URL on `bandcamp.com` or a subdomain of it.
 
 #### Scenario: A Bandcamp link from MusicBrainz
 - **WHEN** MusicBrainz lists a band's Bandcamp page
-- **THEN** the band stores that URL, and no request is made to Bandcamp
+- **THEN** the band stores that URL, and enrichment makes no request to Bandcamp
 
 #### Scenario: Not a Bandcamp URL
 - **WHEN** an import row's `Bandcamp` is "https://example.com/krill"
 - **THEN** the row's Bandcamp URL is reported as invalid and not saved, and the rest of the row is imported
 
+#### Scenario: The import asks Bandcamp for nothing
+- **WHEN** an import row gives a valid Bandcamp URL
+- **THEN** the URL is stored and no request is made to Bandcamp; the player lookup reads it later
+
 ### Requirement: Admins manage the records
-The admin SHALL list artists and bands with their town, state and MusicBrainz status, filter them by state, by status and by source, show each record's sources, and search them by name. A band's page SHALL show its members inline, and an artist's page the bands they're in. An admin SHALL be able to set a record's MusicBrainz ID by hand, which marks it as the editor's and keeps later enrichment from replacing it, and to clear a match so the next run searches again. A field an admin edits SHALL be marked as the editor's, so the import doesn't overwrite it. MusicBrainz's genres SHALL be credited to MusicBrainz where they're shown.
+The admin SHALL list artists and bands with their town, state and MusicBrainz status, filter them by state, by status, by source and by whether they're inactive, show each record's sources, and search them by name. A band's page SHALL show its members inline, and an artist's page the bands they're in. An admin SHALL be able to set a record's MusicBrainz ID by hand, which marks it as the editor's and keeps later enrichment from replacing it, and to clear a match so the next run searches again. A field an admin edits SHALL be marked as the editor's, so the import doesn't overwrite it. MusicBrainz's genres SHALL be credited to MusicBrainz where they're shown.
 
 #### Scenario: Setting the MusicBrainz ID by hand
 - **WHEN** an admin sets an "ambiguous" band's MusicBrainz ID and the enrichment runs with `--refresh`
@@ -340,3 +344,68 @@ The hub fields and the links filled from a hub SHALL survive clearing a MusicBra
 #### Scenario: Clearing a match
 - **WHEN** an admin clears a band's MusicBrainz match, and the band's Instagram link was filled from its hub
 - **THEN** the Instagram link and the hub's findings stay, and the hub address, if MusicBrainz's, stays marked as MusicBrainz's
+
+### Requirement: Records keep a Bandcamp player
+Artist and band records SHALL keep the Bandcamp player fields defined in `bandcamp-embed`. They SHALL be left alone by enrichment, the imports and clearing a MusicBrainz match, and a player an editor set SHALL be marked "editor" in `field_sources`.
+
+#### Scenario: Clearing a match
+- **WHEN** an admin clears a band's MusicBrainz match
+- **THEN** its Bandcamp player and status stay
+
+#### Scenario: Import leaves the player
+- **WHEN** an import row updates a band that has a found player
+- **THEN** the player's kind, ID, status and time are unchanged
+
+### Requirement: Editors mark acts inactive
+Each band and artist SHALL carry an inactive mark, off by default, that editors set or clear in the admin: on the act's form, with a list filter, and with bulk actions "Mark inactive" and "Mark active". Imports and enrichment SHALL NOT set or clear it.
+
+#### Scenario: Marking in the admin
+- **WHEN** an editor selects two acts and runs "Mark inactive", then filters the list by inactive
+- **THEN** both are inactive and the filter lists them, and "Mark active" reverses it
+
+#### Scenario: Imports leave the mark alone
+- **WHEN** an inactive act is imported again by `import_artists` or `import_act_list`, or enriched from MusicBrainz
+- **THEN** it is still inactive
+
+#### Scenario: Import ignores the column
+- **WHEN** an exported file with an `is_inactive` column is read back in by `import_artists`
+- **THEN** the import succeeds and no act's mark changes
+
+### Requirement: A command marks acts inactive by address
+`mark_inactive_acts` SHALL mark the bands and artists whose slugs it is given, as arguments or from `--file` (one per line, blank lines and lines starting with `#` ignored), inactive (active with `--active`), and with `--dry-run` change nothing. A bare slug matching both a band and an artist SHALL mark neither and be reported as ambiguous; `bands/slug` names the kind. It SHALL report the acts it changed and the addresses it didn't find, and record a job run.
+
+#### Scenario: Marking by slug
+- **WHEN** it is run with `the-cars` and `greg-humphreys`, a band and an artist
+- **THEN** both are inactive and it prints both
+
+#### Scenario: A dry run
+- **WHEN** it is run with `--dry-run` and `the-cars`
+- **THEN** it prints that it would mark the act, and the act is unchanged
+
+#### Scenario: An unknown address
+- **WHEN** it is run with `the-cars` and `no-such-band`
+- **THEN** The Cars is marked, and `no-such-band` is listed as not found
+
+#### Scenario: An ambiguous address
+- **WHEN** a band and an artist both have the slug `orbit` and the command is run with `orbit`
+- **THEN** neither is changed and `orbit` is reported as ambiguous
+
+#### Scenario: A kind-qualified address
+- **WHEN** a band and an artist both have the slug `orbit` and the command is run with `bands/orbit`
+- **THEN** only the band is marked
+
+#### Scenario: Addresses from a file
+- **WHEN** it is run with `--file` naming a file that lists `the-cars` and `greg-humphreys`
+- **THEN** both are marked, as if given as arguments
+
+#### Scenario: Comments in the file
+- **WHEN** the file has a `#` comment line, a blank line and `bands/the-cars`
+- **THEN** only The Cars is marked and no address is reported as not found
+
+#### Scenario: A job run
+- **WHEN** it is run
+- **THEN** a job run is recorded with the number of acts changed
+
+#### Scenario: Reversing
+- **WHEN** it is run with `--active` and `the-cars`
+- **THEN** The Cars is active again

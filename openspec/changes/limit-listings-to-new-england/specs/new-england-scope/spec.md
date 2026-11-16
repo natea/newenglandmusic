@@ -46,20 +46,47 @@ The calendar feeds, the saved shows page, act and band pages' show lists and nex
 - **WHEN** the only events in a month are at venues outside New England
 - **THEN** that month isn't in the sitemap
 
-### Requirement: Nothing is deleted and the pipeline is unchanged
-The admin SHALL keep showing all events, no venue or event SHALL be deleted, and event fetching SHALL keep saving events for every venue.
+### Requirement: Nothing is deleted, and the admin opens on New England
+No venue or event SHALL be deleted. The admin's event list, its all-events review queue and its venue list SHALL by default leave out events and venues whose venue's state is set to a state outside New England, and SHALL offer an "All areas" choice that shows every one. A venue with no state, and an event with no venue, SHALL stay in the default list, as an editor needs to see them. A Region, State or Metro filter chosen in the admin SHALL show that area's events or venues wherever it is, without the default narrowing them.
 
-#### Scenario: Admin and data untouched
-- **WHEN** an editor opens the event list in the admin
-- **THEN** events at venues outside New England are still listed, and no event or venue was deleted
+#### Scenario: Admin opens on New England
+- **WHEN** an editor opens the all-events review queue with no filter chosen
+- **THEN** only events at New England venues are listed, and an unapproved event at a New York venue isn't
+
+#### Scenario: No state, or no venue
+- **WHEN** a venue has no state, and an event was submitted with no venue
+- **THEN** both are in the admin's default lists
+
+#### Scenario: All areas
+- **WHEN** the editor chooses "All areas"
+- **THEN** events at venues everywhere are listed, the New York one included
+
+#### Scenario: A chosen state outside New England
+- **WHEN** the editor chooses the State filter "New York" in the venue list
+- **THEN** New York's venues are listed
+
+#### Scenario: Nothing deleted
+- **WHEN** the scope applies
+- **THEN** no event or venue was deleted
 
 #### Scenario: Artist matching unchanged
 - **WHEN** an artist is named only by an approved event at a New York venue and `match_spotify_artists` runs
 - **THEN** the artist is still matched, as before
 
-#### Scenario: Fetching continues
-- **WHEN** `fetch_events` runs for a venue outside New England
-- **THEN** its new events are still saved, unapproved, as before
+### Requirement: Events are fetched only for New England venues
+`fetch_events` SHALL fetch events only for venues in New England and venues with no state, unless `--sheet-ids` names a venue, which is fetched wherever it is. Existing events at other venues SHALL be left as they are.
+
+#### Scenario: A venue outside New England is skipped
+- **WHEN** `fetch_events --all` runs and a New York venue has a saved event source
+- **THEN** no events are fetched for it, and its existing events are left as they are
+
+#### Scenario: A venue with no state is fetched
+- **WHEN** `fetch_events --all` runs for a venue whose state is blank
+- **THEN** its events are fetched as before
+
+#### Scenario: Named on purpose
+- **WHEN** `fetch_events --sheet-ids` names a New York venue
+- **THEN** its events are fetched
 
 ### Requirement: The New England states are one setting
 The states counted as New England SHALL be defined in one place, so a later phase can widen the site's scope by changing that list alone.
