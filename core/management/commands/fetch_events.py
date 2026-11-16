@@ -5,6 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
+from core.geo_filters import NEW_ENGLAND_STATES
+from django.db.models import Q
 from core.event_fetching.classification import classify
 from core.event_fetching.eventbrite import EventbriteClient, EventbriteError, is_at_venue
 from core.event_fetching.eventbrite import to_event_dict as eventbrite_event
@@ -179,6 +181,10 @@ def select_targets(
         venue = venues.get(row["sheet_id"])
         if venue is None:
             continue
+        # the site lists only new england's shows, so a venue elsewhere isn't fetched unless
+        # named by --sheet-ids; a venue with no state still is (fixing it shows its events)
+        if venue.state and venue.state.upper() not in NEW_ENGLAND_STATES and not sheet_ids:
+            continue
         source = REPORT_SOURCE_TO_TARGET_SOURCE.get(row["best_source"])
         # the ticketmaster api replaces a linked venue's ical feed, ticketing pages or ai
         # extraction -- feeds turned out to list a fraction of a venue's shows (the anthem:
@@ -211,7 +217,8 @@ def select_targets(
             if sheet_ids:
                 linked = linked.filter(sheet_id__in=sheet_ids)
             else:
-                linked = linked.exclude(is_active=False)
+                # as for the saved sources above: inactive venues and venues elsewhere are left out
+                linked = linked.exclude(is_active=False).exclude(Q(state__gt="") & ~Q(state__in=NEW_ENGLAND_STATES))
             for venue in linked.exclude(sheet_id__in=seen).order_by("sheet_id"):
                 targets.append(make_target(venue, source))
                 seen.add(venue.sheet_id)

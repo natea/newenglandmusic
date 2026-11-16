@@ -47,11 +47,15 @@ The calendar feeds, the saved shows page, act and band pages' show lists and nex
 - **THEN** that month isn't in the sitemap
 
 ### Requirement: Nothing is deleted, and the admin opens on New England
-No venue or event SHALL be deleted. The admin's event list, its all-events review queue and its venue list SHALL show New England's events and venues by default, and SHALL offer an "All areas" choice that shows every one. A Region, State or Metro filter chosen in the admin SHALL show that area's events or venues wherever it is, without the default narrowing them.
+No venue or event SHALL be deleted. The admin's event list, its all-events review queue and its venue list SHALL by default leave out events and venues whose venue's state is set to a state outside New England, and SHALL offer an "All areas" choice that shows every one. A venue with no state, and an event with no venue, SHALL stay in the default list, as an editor needs to see them. A Region, State or Metro filter chosen in the admin SHALL show that area's events or venues wherever it is, without the default narrowing them.
 
 #### Scenario: Admin opens on New England
 - **WHEN** an editor opens the all-events review queue with no filter chosen
 - **THEN** only events at New England venues are listed, and an unapproved event at a New York venue isn't
+
+#### Scenario: No state, or no venue
+- **WHEN** a venue has no state, and an event was submitted with no venue
+- **THEN** both are in the admin's default lists
 
 #### Scenario: All areas
 - **WHEN** the editor chooses "All areas"

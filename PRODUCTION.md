@@ -512,7 +512,10 @@ The site measures its own use with PostHog and GoatCounter, both in the browser 
 
 ## What the site lists
 
-The public site lists only events at venues in Massachusetts, Connecticut, Rhode Island, New Hampshire, Maine and Vermont, and offers only the regions, states and metro areas inside them. Events at other venues, and events with no venue, are hidden from the listings, search, calendar feeds, saved shows, act pages, the discover page and the sitemap, but nothing is deleted: the admin shows them all, `fetch_events` keeps fetching them, and the artist matching still reads them. An event opened by its own link still works.
+The public site lists only events at venues in Massachusetts, Connecticut, Rhode Island, New Hampshire, Maine and Vermont, and offers only the regions, states and metro areas inside them. Events at other venues, and events with no venue, are hidden from the listings, search, calendar feeds, saved shows, act pages, the discover page and the sitemap, but nothing is deleted: the admin shows them under "All areas", and the artist matching still reads them. An event opened by its own link still works.
+
+- **The admin opens on New England.** The event list, the review queue and the venue list leave out what's at a venue whose state is set to somewhere else; venues with no state and events with no venue stay in. The sidebar's "Area" filter has "All areas" for the rest, and choosing a Region, State or Metro shows that area wherever it is.
+- **The daily fetch skips venues outside New England** (and inactive venues): on 2026-11-16 that took it from 568 venues to 435. A venue with no state is still fetched, and `fetch_events --sheet-ids` fetches any venue it names. Widening `NEW_ENGLAND_STATES` brings both back.
 
 The states are one list, `NEW_ENGLAND_STATES` in `core/geo_filters.py`; widening the scope is a change to that list. A venue whose state is blank in the sheet is hidden too, so an editor should fix its state there.
 
