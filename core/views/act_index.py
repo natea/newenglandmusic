@@ -8,7 +8,9 @@ aren't listed, nor are acts marked inactive, which keep their pages; /artists re
 import unicodedata
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Min, Q
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 
 from core.geo_filters import new_england_q
@@ -76,6 +78,23 @@ def live_acts():
 
 
 def act_index(request):
+    """
+    the index, cached for ACT_INDEX_CACHE_SECONDS: its 3,750 entries took about a second to
+    render on render.com (2026-11-16), and it holds nothing particular to a visitor. the key
+    carries the new york date, so the next shows' dates roll over at midnight; an editor's
+    change shows within the cache's lifetime
+    """
+    seconds = settings.ACT_INDEX_CACHE_SECONDS
+    key = f"act-index:{get_current_new_york_datetime():%Y-%m-%d}"
+    html = cache.get(key) if seconds else None
+    if html is None:
+        html = render_act_index(request).content
+        if seconds:
+            cache.set(key, html, seconds)
+    return HttpResponse(html)
+
+
+def render_act_index(request):
     groups = {letter: [] for letter in LETTERS}
     for act in live_acts():
         act.index_name = index_name(act.name)

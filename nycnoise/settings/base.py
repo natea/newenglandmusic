@@ -14,6 +14,10 @@ load_dotenv()
 # tests run without the api keys .env holds (see core/test_runner.py)
 TEST_RUNNER = "core.test_runner.TestRunner"
 
+# how long the /bands index's rendered page is kept (core/views/act_index.py); 0 to render it
+# on every request, as the tests do
+ACT_INDEX_CACHE_SECONDS = 600
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 

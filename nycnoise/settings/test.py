@@ -24,3 +24,6 @@ WHITENOISE_AUTOREFRESH = True
 # don't email Jessica during testing!!
 # don't email Jessica during testing!!
 ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION = False
+
+# every test renders /bands afresh, from its own data
+ACT_INDEX_CACHE_SECONDS = 0

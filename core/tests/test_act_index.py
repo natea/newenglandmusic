@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from core.models import Artist, Band, Event, EventPerformer, Venue
 from core.views.act_index import letter_of, sort_name
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 
 
@@ -155,3 +155,41 @@ class MenuItemTestCase(TestCase):
         item = MenuItem.objects.get(url="/bands")
         self.assertEqual((item.name, item.show_in_header), ("Bands & artists", True))
         self.assertContains(self.client.get("/bands"), 'href="/bands"')
+
+
+@override_settings(ACT_INDEX_CACHE_SECONDS=600)
+class CachedIndexTestCase(TestCase):
+    """the rendered index is kept for a while: it took about a second to render in production"""
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.addCleanup(cache.clear)
+        Band.objects.create(name="Belly")
+
+    def test_a_second_visit_is_served_from_the_cache(self):
+        self.assertContains(self.client.get("/bands"), "Belly")
+        Band.objects.create(name="Krill")
+        with self.assertNumQueries(0):
+            response = self.client.get("/bands")
+        self.assertContains(response, "Belly")
+        self.assertNotContains(response, "Krill")
+
+    def test_a_new_day_renders_afresh(self):
+        from unittest import mock
+        import datetime
+
+        from core.utils_datemath import NYCTZ
+
+        self.client.get("/bands")
+        Band.objects.create(name="Krill")
+        tomorrow = datetime.datetime.now(NYCTZ) + datetime.timedelta(days=1)
+        with mock.patch("core.views.act_index.get_current_new_york_datetime", return_value=tomorrow):
+            self.assertContains(self.client.get("/bands"), "Krill")
+
+    @override_settings(ACT_INDEX_CACHE_SECONDS=0)
+    def test_off(self):
+        self.client.get("/bands")
+        Band.objects.create(name="Krill")
+        self.assertContains(self.client.get("/bands"), "Krill")
