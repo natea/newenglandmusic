@@ -267,3 +267,10 @@ class ArtistViewTestCase(VenueListTestCase):
         self.assertEqual(self.client.get("/venues/booking").status_code, 200)
         self.assertEqual(self.client.get("/venues/booking/booking").status_code, 200)
         self.assertEqual(self.client.get("/venues").status_code, 200)
+
+
+class SingularAddressTestCase(TestCase):
+    def test_the_singular_redirects(self):
+        self.assertRedirects(self.client.get("/venue"), "/venues", status_code=301, fetch_redirect_response=False)
+        self.assertRedirects(self.client.get("/venue/"), "/venues", status_code=301, fetch_redirect_response=False)
+        self.assertRedirects(self.client.get("/venue/obriens/"), "/venues/obriens", status_code=301, fetch_redirect_response=False)
