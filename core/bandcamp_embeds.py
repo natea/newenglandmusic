@@ -37,6 +37,9 @@ MAX_PLAYERS_TRIED = 3
 # available" message is always in the page, hidden until its script shows it, so the text
 # can't tell a playable release from one that isn't
 PLAYER_DATA_ATTRIBUTE = "data-player-data"
+# what bandcamp sends a request it takes for a bot (from a data centre, say) instead of the
+# page, with an ordinary 200: a script-run challenge, which this never runs
+CHALLENGE_TITLE = "Client Challenge"
 REFRESH_FOUND_AFTER = datetime.timedelta(days=365)
 RETRY_OTHERS_AFTER = datetime.timedelta(days=90)
 TILE_RE = re.compile(r"(album|track)-(\d+)")
@@ -144,8 +147,8 @@ def find_candidates(html):
 
 def fetch(session, url):
     """
-    (problem, html, final url): the page, or why not: "blocked" (robots.txt, or 403, 406 or
-    429), "gone" (404 or 410) or "failed" (anything else, and a redirect off bandcamp, which
+    (problem, html, final url): the page, or why not: "blocked" (robots.txt, 403, 406 or 429,
+    or bandcamp's bot challenge page), "gone" (404 or 410) or "failed" (anything else, and a redirect off bandcamp, which
     is never followed)
     """
     for _ in range(MAX_REDIRECTS + 1):
@@ -166,8 +169,16 @@ def fetch(session, url):
             return "gone", "", url
         if r.status_code != 200:
             return "failed", "", url
+        if is_challenge(r.text):
+            return "blocked", "", url
         return "", r.text, url
     return "failed", "", url
+
+
+def is_challenge(html):
+    """whether bandcamp sent its bot challenge instead of the page"""
+    title = BeautifulSoup(html, "html.parser").title
+    return bool(title and title.get_text(strip=True) == CHALLENGE_TITLE)
 
 
 def player_available(session, kind, embed_id):

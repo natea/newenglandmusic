@@ -164,6 +164,24 @@ class LookupTestCase(SimpleTestCase):
         self.assertEqual(result.status, "blocked")
 
 
+class ChallengeTestCase(SimpleTestCase):
+    """bandcamp's bot challenge, sent with a 200 instead of the page, is a block, not an unreadable page"""
+
+    def test_the_challenge_page_is_blocked(self):
+        result, session = looked_up({FRONT: page("challenge.html")})
+        self.assertEqual(result.status, "blocked")
+        # no /music page or player is tried after a block
+        self.assertEqual(session.pages_requested(), [FRONT])
+
+    def test_a_challenged_player_page_is_blocked(self):
+        result, _ = looked_up({FRONT: page("album_redirect.html"), player("album", "111"): page("challenge.html")})
+        self.assertEqual(result.status, "blocked")
+
+    def test_an_ordinary_page_is_not_a_challenge(self):
+        self.assertFalse(bandcamp_embeds.is_challenge(page("album_redirect.html")))
+        self.assertTrue(bandcamp_embeds.is_challenge(page("challenge.html")))
+
+
 class PoliteSessionTestCase(SimpleTestCase):
     def test_two_seconds_apart_and_robots_asked_once(self):
         fake = FakeSession({FRONT: "x", "https://krill.bandcamp.com/music": "x"})

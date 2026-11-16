@@ -87,7 +87,7 @@ The command SHALL obey robots.txt (asked for once per host a run), send the user
 - **THEN** that redirect is not followed, and the act's status is `failed`
 
 ### Requirement: Failures are recorded, and only the ID is kept
-For an act with no found player (including one whose found player was read from a different URL than the current one), a request answered 403, 406 or 429 SHALL set status `blocked`; 404 or 410, `gone`; a page with no release, `unreadable`; a timeout or other error, `failed`. The command SHALL store nothing from a page but the kind and ID, and SHALL stop the run when Bandcamp blocks three acts in a row.
+For an act with no found player (including one whose found player was read from a different URL than the current one), a request answered 403, 406 or 429, or answered with Bandcamp's bot challenge page (titled "Client Challenge") instead of the page, SHALL set status `blocked`; 404 or 410, `gone`; a page with no release, `unreadable`; a timeout or other error, `failed`. The command SHALL store nothing from a page but the kind and ID, and SHALL stop the run when Bandcamp blocks three acts in a row.
 
 #### Scenario: A deleted page
 - **WHEN** an act's Bandcamp page answers 404
@@ -107,6 +107,10 @@ For an act that already has a found player whose URL it was read from equals the
 #### Scenario: Blocked repeatedly
 - **WHEN** three acts in a row answer 429
 - **THEN** the run stops, the rest are left for the next run, and the run is recorded with a problem
+
+#### Scenario: Bandcamp's bot challenge
+- **WHEN** Bandcamp answers an act's page with its "Client Challenge" page and status 200, as it does to requests from a data centre
+- **THEN** the act's status is `blocked`, not `unreadable`, and three such acts in a row stop the run
 
 #### Scenario: Nothing else is kept
 - **WHEN** a page is read and a player ID found
