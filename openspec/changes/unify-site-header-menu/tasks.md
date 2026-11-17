@@ -17,4 +17,4 @@ Issue: [#36 Use the same header and nav menu on every page](https://github.com/n
 
 ## 3. Wrap up
 - [ ] 3.1 Resolve the design's open questions with the owner (which items, picker, advanced search, sketch), and add a menu-item migration only if they ask.
-- [ ] 3.2 Run the full test suite with the network blocked.
+- [x] 3.2 Run the full test suite with the network blocked.
