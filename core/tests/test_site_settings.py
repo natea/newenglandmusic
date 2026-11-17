@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 from unittest import mock
 
 from core.models import Event, Venue
@@ -46,9 +49,9 @@ class SiteSettingsTestCase(TestCase):
         self.assertNotContains(response, "nyc-noise.com")
 
     @override_settings(
-        ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION=True,
+        EMAIL_ON_EVENT_SUBMISSION=True,
         DEFAULT_FROM_EMAIL="events@example.org",
-        JESSICA_EMAIL="hello@example.org",
+        CONTACT_EMAIL="hello@example.org",
     )
     def test_submission_email_uses_the_configured_addresses(self):
         venue = Venue.objects.create(name="The Venue")
@@ -60,6 +63,27 @@ class SiteSettingsTestCase(TestCase):
         kwargs = sender.send_email.call_args.kwargs
         self.assertEqual(kwargs["source"], "events@example.org")
         self.assertEqual(kwargs["destination"], "hello@example.org")
+
+    @override_settings(EMAIL_ON_EVENT_SUBMISSION=False)
+    def test_no_submission_email_when_the_setting_is_off(self):
+        venue = Venue.objects.create(name="The Venue")
+        with mock.patch("core.views.event_submission.aws_mail_sender") as sender:
+            self.client.post(
+                reverse("submit_event"),
+                {"starttime": timezone.now(), "title": "show", "venue": venue.pk},
+            )
+        sender.send_email.assert_not_called()
+
+    def test_the_setting_is_off_unless_the_environment_says_true(self):
+        # read the way base.py reads it, in a fresh interpreter with a chosen environment
+        code = "from django.conf import settings; print(settings.EMAIL_ON_EVENT_SUBMISSION)"
+        for value, expected in ((None, "False"), ("false", "False"), ("True", "True"), ("true", "True")):
+            env = {k: v for k, v in os.environ.items() if k != "EMAIL_ON_EVENT_SUBMISSION"}
+            env["DJANGO_SETTINGS_MODULE"] = "nycnoise.settings.base"
+            if value is not None:
+                env["EMAIL_ON_EVENT_SUBMISSION"] = value
+            out = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True)
+            self.assertEqual(out.stdout.strip(), expected, (value, out.stderr[-300:]))
 
 
 class MapsTestCase(TestCase):

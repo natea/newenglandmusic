@@ -40,5 +40,5 @@ None. The event submission form has no spec yet, and this change's spec covers t
 - **Admin:**
   - a `VenueSuggestionAdmin`
   - in `EventAdmin`: a "waiting for a venue" column and filter, and a block on approving those events in `mark_as_approved` and `save_model`
-- **Email:** the existing `aws_mail_sender` path, behind `ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION`.
+- **Email:** the existing `aws_mail_sender` path, behind `EMAIL_ON_EVENT_SUBMISSION`.
 - **The sheet:** no change to `sync_venues_from_gsheets`. Admins add accepted venues to the sheet by hand, as now.

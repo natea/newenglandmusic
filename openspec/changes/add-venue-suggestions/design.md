@@ -48,7 +48,7 @@
 
 **Emails reuse the existing path.** The event email gains the unlisted venue's name, town and state. A suggestion from `/suggest-venue` sends its own short email. Both are behind the existing setting, so nothing is sent by default.
 
-**Testing and external services.** The only external service is SES, through `aws_mail_sender.send_email`, which the tests replace with a mock to check it's called, or not called. `ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION` is switched on with `override_settings`. Everything else uses the Django test client and the test database. The admin tests call `EventAdmin` and `VenueSuggestionAdmin` with a `RequestFactory` superuser, as `test_venue_admin` does. Nothing calls the sheet, Places, Ticketmaster or Anthropic, and the suite still runs with outbound network blocked.
+**Testing and external services.** The only external service is SES, through `aws_mail_sender.send_email`, which the tests replace with a mock to check it's called, or not called. `EMAIL_ON_EVENT_SUBMISSION` is switched on with `override_settings`. Everything else uses the Django test client and the test database. The admin tests call `EventAdmin` and `VenueSuggestionAdmin` with a `RequestFactory` superuser, as `test_venue_admin` does. Nothing calls the sheet, Places, Ticketmaster or Anthropic, and the suite still runs with outbound network blocked.
 
 ## Risks / Trade-offs
 

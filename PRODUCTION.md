@@ -24,7 +24,7 @@ Everything is configured through environment variables. `.env.example` lists the
 | `ALLOWED_HOSTS` | your domain(s), comma-separated, e.g. `newenglandmusic.example,www.newenglandmusic.example` |
 | `SITE_URL` | `https://` plus your domain, used in share links |
 | `PROD_INTERNAL_API_SERVER`, `RC_DEVELOPER_INTERNAL_TOKEN` | inherited from nyc noise and not used by this fork; blank is fine, but they must be set |
-| `DEBUG_TOOLBAR_ENABLE`, `PYINSTRUMENT_ENABLE`, `ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION` | `false` unless you want them |
+| `DEBUG_TOOLBAR_ENABLE`, `PYINSTRUMENT_ENABLE` | `false` unless you want them |
 
 **The secret key.** Locally a UUID is fine. In production, use Django's own generator, which makes a longer and more random key:
 
@@ -52,6 +52,7 @@ Keep it only in the host's settings, never in git. Changing it logs everyone out
 - **`DEFAULT_FROM_EMAIL`:** the sender of outgoing email.
   - Submission emails go out through Amazon SES, so this must be an address verified in SES.
   - They also need `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+- **`EMAIL_ON_EVENT_SUBMISSION`:** `true` emails each event submission to `CONTACT_EMAIL`. Off when unset; `render.yaml` turns it on for the web service.
 - **`PROTOMAPS_API_KEY`:** the home page's maps. In your Protomaps account, restrict it to your domain: its CORS origins list each address the pages are served from (now `https://stagehopper.app`), and the day maps are blank anywhere else. `MAP_CENTER_LATITUDE`, `MAP_CENTER_LONGITUDE` and `MAP_ZOOM` set where the maps start.
 - **`GOOGLE_ANALYTICS_ID`, `GOATCOUNTER_CODE`, `POSTHOG_PROJECT_TOKEN` and `POSTHOG_HOST`:** analytics. Each loads only when it is set; see "Analytics" below.
 

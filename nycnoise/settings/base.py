@@ -283,11 +283,9 @@ SECURE_REFERRER_POLICY = (
     "strict-origin-when-cross-origin",
 )
 
-ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION = (
-    os.environ["ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION"] == "True"
-)
+# emails each event submission to CONTACT_EMAIL; off unless set to "true"
+EMAIL_ON_EVENT_SUBMISSION = os.environ.get("EMAIL_ON_EVENT_SUBMISSION", "").lower() == "true"
 # the sender of outgoing email; it must be an address the mail service has verified
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL") or "webmaster@localhost"
 # shown on the submit-event form, and where event submissions are emailed
 CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", "")
-JESSICA_EMAIL = CONTACT_EMAIL

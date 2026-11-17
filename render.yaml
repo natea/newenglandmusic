@@ -107,8 +107,9 @@ services:
         value: "false"
       - key: DEBUG_TOOLBAR_ENABLE
         value: "false"
-      - key: ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION
-        value: "False"
+      # emails each event submission to CONTACT_EMAIL, through amazon ses
+      - key: EMAIL_ON_EVENT_SUBMISSION
+        value: "true"
 
   # sheet sync, places lookups and event fetching, daily at 10:00 utc (5 or 6 am eastern)
   - type: cron
@@ -238,8 +239,6 @@ services:
         value: "false"
       - key: DEBUG_TOOLBAR_ENABLE
         value: "false"
-      - key: ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION
-        value: "False"
 
   # event source check and api matching, sundays at 07:00 utc, before that day's daily run
   - type: cron
@@ -306,8 +305,6 @@ services:
         value: "false"
       - key: DEBUG_TOOLBAR_ENABLE
         value: "false"
-      - key: ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION
-        value: "False"
 
   # the weekly email, thursdays at 13:00 utc (8 or 9 am eastern), so people can plan the weekend
   - type: cron
@@ -367,5 +364,3 @@ services:
         value: "false"
       - key: DEBUG_TOOLBAR_ENABLE
         value: "false"
-      - key: ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION
-        value: "False"

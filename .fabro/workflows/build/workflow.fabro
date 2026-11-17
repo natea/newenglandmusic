@@ -64,6 +64,7 @@ RC_DEVELOPER_INTERNAL_TOKEN=0xdeadbeef
 PROD_INTERNAL_API_SERVER=https://nyc-noise.com
 DEBUG_TOOLBAR_ENABLE=false
 PYINSTRUMENT_ENABLE=false
+# the old name of EMAIL_ON_EVENT_SUBMISSION: branches cut before the rename can't start without it
 ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION=false
 EOT
 set -a; . ./.intentable/test.env; set +a

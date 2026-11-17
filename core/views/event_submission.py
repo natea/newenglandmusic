@@ -74,11 +74,11 @@ class UserSubmittedEventForm(forms.ModelForm):
         if commit:
             obj.save()
 
-        # let Jessica know!
-        if settings.ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION:
+        # tell the site's contact address
+        if settings.EMAIL_ON_EVENT_SUBMISSION:
             aws_mail_sender.send_email(
                 source=settings.DEFAULT_FROM_EMAIL,
-                destination=settings.JESSICA_EMAIL,
+                destination=settings.CONTACT_EMAIL,
                 subject="NEW EVENT SUBMISSION",
                 text=f"new event submission: {obj.title}",
                 html=f"""

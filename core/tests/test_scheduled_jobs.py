@@ -207,7 +207,13 @@ class RenderConfigurationTestCase(SimpleTestCase):
         for key in ("SITE_URL", "DEFAULT_FROM_EMAIL", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
             self.assertIs(web[key].get("sync"), False, key)
         digest = self.services["newenglandmusic-digest"]
-        # the settings read this one without a default
         values = {var["key"]: var.get("value") for var in digest["envVars"]}
-        self.assertEqual(values["ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION"], "False")
         self.assertEqual(values["DJANGO_SETTINGS_MODULE"], "nycnoise.settings.prod")
+
+    def test_only_the_web_service_emails_event_submissions(self):
+        for name, service in self.services.items():
+            values = {var["key"]: var.get("value") for var in service["envVars"]}
+            # the setting's old name, which nothing reads any more
+            self.assertNotIn("ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION", values, name)
+            expected = "true" if name == "newenglandmusic" else None
+            self.assertEqual(values.get("EMAIL_ON_EVENT_SUBMISSION"), expected, name)
