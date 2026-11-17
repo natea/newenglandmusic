@@ -6,7 +6,7 @@ Keeps the site's look in one place: a single token file that every page's colour
 ## ADDED Requirements
 
 ### Requirement: One token file holds the site's look
-The site's colours, font families, type sizes, letter spacing, line heights, corner radii, breakpoints and container widths SHALL be defined in one token file. It SHALL define a named role for each job a value does on the site: the page ground, surfaces, ink, icons, body text, quiet text, rules, control borders, links, the accent and the type on it, the map's ground, water, parks, pins and location dot, the display, body and label fonts, and the tile, box, control and pill radii.
+The site's colours, font families, type sizes, letter spacing, line heights, corner radii, breakpoints and container widths SHALL be defined in one token file. It SHALL define a named role for each job a value does on the site: the page ground, surfaces, ink, quiet and faint text, rules, links, the accent and the type on it, the map's ground, water, parks and pins, the display, body and label fonts, and the box, chip and pill radii.
 
 #### Scenario: The roles exist
 - **WHEN** the token file is read
@@ -14,14 +14,14 @@ The site's colours, font families, type sizes, letter spacing, line heights, cor
 
 #### Scenario: The accent as designed
 - **WHEN** the site is built from the token file as shipped
-- **THEN** the accent is `#FFEF3B`, links are the blue scale's 600 step, the display font is Inter Tight, the body font is the system's sans and the label font is Geist Mono
+- **THEN** the accent is `#FFEF3B`, links are `#1F35FF`, the display font is Inter Tight, the body font is the system's sans and the label font is Geist Mono
 
 ### Requirement: Changing a token restyles every page
 A page's styles SHALL take a role's value from the token file, so that changing one role's value and rebuilding the stylesheet changes it wherever that role is used, with no template edited.
 
 #### Scenario: A new accent
 - **WHEN** the accent role is changed to `#FF6B00` and the stylesheet is rebuilt
-- **THEN** the header's search button, a "Tonight" tag and the band page's next-show band are all drawn in `#FF6B00`
+- **THEN** a ticket price in a listing, a "Tonight" tag and the band page's next-show band are all drawn in `#FF6B00`
 
 #### Scenario: A new display font
 - **WHEN** the display font role is changed to "Georgia" and the stylesheet is rebuilt
