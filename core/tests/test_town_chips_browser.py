@@ -26,10 +26,15 @@ class TownChipsBrowserTestCase(BrowserTestCase):
         return sorted(page.locator("div.event .title-only").all_inner_texts())
 
     def chips(self, page):
+        # the chips sit in the closed section after a reload
+        if page.locator(".controlsFold").get_attribute("open") is None:
+            page.click(".controlsFold > summary")
         return [text.rstrip("×").strip() for text in page.locator(".town-chip").all_inner_texts()]
 
     def test_adding_and_removing_towns(self):
         _, page = self.open_page(f"/?metro={self.metro}")
+        # the filter sits in the listing's closed section, which reloads closed
+        page.click(".controlsFold > summary")
         self.assertFalse(page.locator('select[name="town"]').is_visible())
         self.assertEqual(self.titles(page), ["cambridge show", "medford show", "somerville show"])
 
@@ -58,5 +63,6 @@ class TownChipsBrowserTestCase(BrowserTestCase):
 
     def test_without_javascript_the_plain_multi_select(self):
         _, page = self.open_page(f"/?metro={self.metro}", javascript=False)
+        page.click(".controlsFold > summary")
         self.assertTrue(page.locator('select[name="town"][multiple]').is_visible())
         self.assertEqual(page.locator(".town-chip").count(), 0)

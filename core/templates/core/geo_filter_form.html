@@ -62,7 +62,7 @@
       <input type="hidden" name="metro" value="">
     {% endif %}
     <button type="submit">filter</button>
-    {% if geo_filter %}
+    {% if geo_filter and not clear_in_summary %}
       <a href="{{ request.path }}?clear=1">show all</a>
     {% endif %}
   </form>

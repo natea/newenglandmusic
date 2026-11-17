@@ -84,3 +84,32 @@
     font-size: 0.85rem;
   }
 }
+
+/* the listing's filter and location form, folded into one bar with what applies in its summary */
+.listingControls {
+  display: flex;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 4px 6px;
+  background: #eeeeff;
+  border: 1px solid #b9b4a8;
+  margin-bottom: 6px;
+
+  .controlsFold {
+    flex: 1;
+    min-width: 0;
+
+    summary {
+      cursor: pointer;
+    }
+
+    .geoFilter,
+    .locationForm {
+      padding: 6px 0;
+    }
+  }
+
+  .controlsClear {
+    white-space: nowrap;
+  }
+}
