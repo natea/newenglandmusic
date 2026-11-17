@@ -46,6 +46,8 @@ NOT_EXPORTED = {
     "place_looked_up_at",
     # bookkeeping, not a detail of the venue
     "neighborhood_checked_at",
+    # the site's own address for the venue page (/venues/<slug>), not a detail of the venue
+    "slug",
 }
 
 # a cell starting with one of these could run as a formula when the file is opened

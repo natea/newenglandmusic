@@ -41,6 +41,19 @@ for try in 1 2 3; do
   if [ $try = 3 ]; then echo 'the browser download failed three times'; exit 1; fi
   sleep 20
 done
+# the agents' Claude Code moves a shell command that outlasts its timeout to the background, and
+# an agent that then ends its turn to wait for it ends its stage (run 01M7ESMMJ49DV2CFSZF4TRAX61,
+# 15 November 2026). The user settings below turn background tasks off and let the suite run in
+# the foreground for up to 30 minutes, or an hour when the agent asks for it.
+venv/bin/python - <<'EOT'
+import json
+from pathlib import Path
+path = Path.home() / '.claude' / 'settings.json'
+settings = json.loads(path.read_text()) if path.exists() else {}
+settings.setdefault('env', {}).update({'CLAUDE_CODE_DISABLE_BACKGROUND_TASKS': '1', 'BASH_DEFAULT_TIMEOUT_MS': '1800000', 'BASH_MAX_TIMEOUT_MS': '3600000'})
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text(json.dumps(settings, indent=2))
+EOT
 mkdir -p .intentable
 cat > .intentable/test.env <<'EOT'
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/djtesting
@@ -126,7 +139,10 @@ CLOSING = re.compile(KEYWORD + SPACE + '*:?' + SPACE + '*' + REF, re.IGNORECASE)
 MENTION = re.compile('(?<![' + WORD + '.@])@[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?')
 MAX_MESSAGE = 2000
 CHANGE_NAME = re.compile('[a-z0-9]+(-[a-z0-9]+)*')
-TASK = re.compile('^ *- [[]([ xX])[]] ([0-9]+[.][0-9]+)', re.MULTILINE)
+# a task's checkbox; its brackets are escaped with chr(92), as [[] reads as a nested set to python
+BRACKET_OPEN = chr(92) + '['
+BRACKET_CLOSE = chr(92) + ']'
+TASK = re.compile('^ *- ' + BRACKET_OPEN + '([ xX])' + BRACKET_CLOSE + ' ([0-9]+[.][0-9]+)', re.MULTILINE)
 
 
 def fail(reason):

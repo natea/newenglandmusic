@@ -1,0 +1,198 @@
+// a venue's own page (core/templates/core/venue.html): the index card as the room's show
+// bill, the gig-poster column (.impeccable/mocks/decision/poster-column.html)
+
+@import "card";
+
+.act .venue-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: baseline;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid $tab;
+  color: $quiet;
+  font-size: 0.95rem;
+
+  b {
+    color: $ink;
+  }
+}
+
+// lavender only where the visitor acts: the booking link, and today's nights
+.act .venue-book {
+  margin-left: auto;
+  padding: 2px 10px;
+  background: $strip;
+  color: $ink;
+  font-weight: 700;
+}
+
+.venue-bill-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 14px 0 4px;
+
+  // the fact line's plum rule is already above it: none of the card's own heading rule
+  h2 {
+    margin: 0;
+    padding-top: 0;
+    border-top: 0;
+    font: 700 1.25rem Helvetica, Arial, sans-serif;
+  }
+
+  span {
+    font-size: 0.85rem;
+    color: $quiet;
+  }
+}
+
+.venue-bill {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+}
+
+.venue-night {
+  border-top: 1px solid $rule;
+
+  > a {
+    display: grid;
+    grid-template-columns: 5.2em 1fr auto;
+    gap: 0 16px;
+    align-items: baseline;
+    padding: 9px 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  a:hover .venue-acts b,
+  a:focus-visible .venue-acts b {
+    color: $link;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+
+  &.is-tonight {
+    margin: 0 -24px;
+    padding: 0 24px;
+    background: $strip;
+    border-top-color: transparent;
+  }
+
+  &.is-cancelled .venue-acts b {
+    text-decoration: line-through;
+  }
+}
+
+.venue-date {
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+
+  b {
+    display: block;
+    font-size: 1.6rem;
+  }
+
+  span {
+    font-size: 0.82rem;
+    color: $quiet;
+  }
+
+  // said in words as well as by the lavender band
+  .venue-today {
+    display: block;
+    font-weight: 700;
+    color: $ink;
+  }
+}
+
+.venue-acts {
+  min-width: 0;
+  overflow-wrap: anywhere;
+
+  b {
+    font-size: 1.4rem;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+  }
+
+  .venue-with {
+    display: block;
+    color: $quiet;
+    font-size: 0.95rem;
+  }
+}
+
+.venue-time {
+  font-variant-numeric: tabular-nums;
+  color: $quiet;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.venue-none {
+  margin: 14px 0 18px;
+  color: $quiet;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .venue-night {
+    > a {
+      grid-template-columns: 3.6em 1fr;
+    }
+
+    &.is-tonight {
+      margin: 0 -14px;
+      padding: 0 14px;
+    }
+  }
+
+  .venue-acts b {
+    font-size: 1.2rem;
+  }
+
+  // the time joins the acts on a phone, under the openers
+  .venue-time {
+    grid-column: 2;
+  }
+
+  .act .venue-book {
+    margin-left: 0;
+  }
+}
+
+// the section's heading carries the plum rule, so its field list doesn't repeat it
+.act-fields.venue-fields {
+  padding-top: 4px;
+  border-top: 0;
+}
+
+// the artist view: one plain statement, then the booking facts
+.act .venue-booking-statement {
+  margin: 4px 0 14px;
+  font: 700 1.35rem Helvetica, Arial, sans-serif;
+
+  &.is-open {
+    display: inline-block;
+    padding: 2px 10px;
+    background: $strip;
+  }
+}
+
+.venue-booking-meaning {
+  display: block;
+  color: $quiet;
+}

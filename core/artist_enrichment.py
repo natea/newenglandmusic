@@ -24,6 +24,7 @@ from django.utils import timezone
 from core.artist_evidence import covered_places, shares_name
 from core.artist_matching import normalize
 from core.artists import is_bandcamp_url
+from core.event_performers import rebake_events_of
 from core.link_hubs import LINK_HUB, clean_hub_url
 from core.models import Artist, Band, BandMembership, MusicAct
 from core.wikipedia import WikipediaError
@@ -317,6 +318,7 @@ def enrich(record, musicbrainz, matcher, wikipedia=None, problems=None):
     musicbrainz can't be asked
     """
     now = timezone.now()
+    bandcamp_before = record.bandcamp_url
     if record.musicbrainz_id:
         status = Status.EDITOR if record.musicbrainz_status == Status.EDITOR else Status.MATCHED
         mbid = record.musicbrainz_id
@@ -339,6 +341,9 @@ def enrich(record, musicbrainz, matcher, wikipedia=None, problems=None):
             add_introduction(record, wikipedia, problems if problems is not None else [])
     record.musicbrainz_checked_at = now
     record.save()
+    if record.bandcamp_url != bandcamp_before:
+        # a new address makes a found player stale, and listings bake in its button
+        rebake_events_of([record])
     if details is not None and isinstance(record, Band):
         added = add_members(record, details)
     return record.musicbrainz_status, added

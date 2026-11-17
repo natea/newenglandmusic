@@ -27,7 +27,7 @@ With PostHog switched on, the site SHALL record each pageview and autocaptured c
 - `search_results_viewed` when a search results page is shown (the words searched; how many bands and artists, venues, upcoming shows, past shows and pages matched; and the total);
 - `act_page_viewed` when a band's or artist's page is shown (its name, its kind, and whether it has an upcoming show);
 - `show_saved` and `show_unsaved` when a show's bookmark is pressed (the show's ID and name);
-- `preview_played` when a play button is pressed (its service: Spotify, Apple Music or YouTube);
+- `preview_played` when a play button is pressed (its service: Spotify, Apple Music, YouTube or Bandcamp);
 - `ticket_link_opened` when a show's ticket link is followed (the show's ID and name);
 - `show_added_to_calendar` when a show's calendar file or Google Calendar link is followed (which one, and the show's ID and name);
 - `calendar_feed_subscribed` when a calendar feed's subscribe link is followed;
@@ -50,6 +50,10 @@ A show's name SHALL be its title and artists as the listing prints them.
 #### Scenario: A play button
 - **WHEN** a visitor presses a Spotify play button
 - **THEN** a `preview_played` event is recorded with the service "spotify"
+
+#### Scenario: A Bandcamp play button
+- **WHEN** a visitor presses a Bandcamp play button
+- **THEN** a `preview_played` event is recorded with the service "bandcamp"
 
 #### Scenario: A ticket link
 - **WHEN** a visitor follows a show's "tix" link

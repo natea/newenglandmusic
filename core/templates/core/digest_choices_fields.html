@@ -1,0 +1,92 @@
+{% comment %}
+  the choices shared by the signup and preferences forms (core/digest_forms.py): a show is
+  emailed when any one of them matches. plain fields, so it works without js; the script at the
+  end only fills in suggestions for the town and venue inputs
+{% endcomment %}
+{% if errors %}
+  <div class="digestErrors" role="alert">
+    {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+  </div>
+{% endif %}
+{% for typed, places in candidates %}
+  <div class="digestErrors">
+    <p>Which “{{ typed }}” do you mean?</p>
+    {% for place in places %}
+      <button type="submit" name="near_pick" value="{{ place }}">{{ place }}</button>
+    {% endfor %}
+  </div>
+{% endfor %}
+<div class="digestRow">
+  <span class="digestKey">Areas</span>
+  <span class="digestValue">
+    <label class="digestPill"><input type="checkbox" name="area" value="all" {% if "all" in ticked %}checked{% endif %}> All of New England</label>
+    {% for value, label in area_options %}
+      <label class="digestPill"><input type="checkbox" name="area" value="{{ value }}" {% if value in ticked %}checked{% endif %}> {{ label }}</label>
+    {% endfor %}
+  </span>
+</div>
+<div class="digestRow">
+  <span class="digestKey">Near</span>
+  <span class="digestValue">
+    within
+    <select name="near_miles" aria-label="Miles">
+      {% for miles in miles_options %}<option value="{{ miles }}" {% if miles == near_miles %}selected{% endif %}>{{ miles }} mi</option>{% endfor %}
+    </select>
+    of <input type="text" name="near_q" value="{{ near_label }}" placeholder="ZIP code or town" size="16" maxlength="100" autocomplete="off">
+  </span>
+</div>
+<div class="digestRow">
+  <span class="digestKey">Towns</span>
+  <span class="digestValue">
+    {% for town in towns %}
+      <input type="text" name="town" value="{{ town }}" placeholder="Town, ST" list="digest-towns" size="22" maxlength="200" autocomplete="off">
+    {% endfor %}
+    <datalist id="digest-towns"></datalist>
+  </span>
+</div>
+<div class="digestRow">
+  <span class="digestKey">Venues</span>
+  <span class="digestValue">
+    {% for venue in venues %}
+      <input type="text" name="venue" value="{{ venue }}" placeholder="Venue name" list="digest-venues" size="30" maxlength="200" autocomplete="off">
+    {% endfor %}
+    <datalist id="digest-venues"></datalist>
+  </span>
+</div>
+<p class="digestHint">A show is included if any choice matches. Up to 20 choices.</p>
+<script>
+  (function () {
+    function fill(input, kind) {
+      input.addEventListener('input', function () {
+        if (input.value.length < 2) { return; }
+        fetch('{% url "digest_suggest" %}?kind=' + kind + '&q=' + encodeURIComponent(input.value))
+          .then(function (response) { return response.json(); })
+          .then(function (data) {
+            var list = document.getElementById('digest-' + kind + 's');
+            list.replaceChildren(...data.suggestions.map(function (text) {
+              var option = document.createElement('option');
+              option.value = text;
+              return option;
+            }));
+          });
+      });
+    }
+    // typing in the last empty input adds another, so any number can be followed (up to the
+    // form's limit); without javascript the form has two empty inputs at a time
+    var MAX = {{ max_choices }};
+    function grow(input, kind) {
+      input.addEventListener('input', function () {
+        var inputs = document.querySelectorAll('input[name="' + kind + '"]');
+        if (!input.value || input !== inputs[inputs.length - 1] || inputs.length >= MAX) { return; }
+        var next = input.cloneNode();
+        next.value = '';
+        input.after(' ', next);
+        fill(next, kind);
+        grow(next, kind);
+      });
+    }
+    ['town', 'venue'].forEach(function (kind) {
+      document.querySelectorAll('input[name="' + kind + '"]').forEach(function (input) { fill(input, kind); grow(input, kind); });
+    });
+  })();
+</script>

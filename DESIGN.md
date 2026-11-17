@@ -278,7 +278,7 @@ The calendar's one icon language, reused on the act page.
 - **Month bar:** plum, with the previous, current and next months as three equal white links.
 
 ### Listing row
-- **Structure:** time column (tabular), bold names, venue in bold with its town, a small description after "//", then the wrapped rows of icons and pills. A row that is the URL target flashes orange (#ffa600 fading over 2s, ease-out). A cancelled row is struck through and greyed (#666).
+- **Structure:** time column (tabular); the show's own title as a small quiet line when it says more than the names; the headline, the row's one link (navy, to the event's page), with the headliner bold and one step larger; the openers after "with" in the row's weight, not links; the venue in bold with its town; a small description after "//"; then the wrapped rows of icons and pills. A row that is the URL target flashes orange (#ffa600 fading over 2s, ease-out). A cancelled row is struck through and greyed (#666).
 
 ### Act card (signature component)
 A record-store divider and index card for one band or artist.
@@ -292,6 +292,28 @@ A record-store divider and index card for one band or artist.
 - **Show list:** a Title heading, then a grid of rows with a bold tabular date (the time below it in quiet grey) and the venue with its icon row, separated by 1px ruled-blue rules.
 - **Foot:** the invitation to send a photo, bio or links, and the genres' source, in small quiet type.
 - Empty fields are left out entirely, so a sparse act's card is short and nothing on it is filler.
+
+### Event card
+The act card's sibling for one show, at `/event/<id>` (the card styles are shared, `_card.scss`).
+- **Tab:** the date and start time in display type, smaller than an act's name ("Mon Nov 16 · 7:00 p.m.").
+- **Title line:** the show's own title in quiet grey above the bill, only when it says more than the names.
+- **Bill:** the lavender strip holds the headliner as the page's heading (display type) and the openers after "with", each a link when it's a band or artist with a page, then the show's action icons.
+- **Links:** "Tickets ↗" and "Venue's page ↗" in bold under the strip; one "Tickets ↗" when they're the same page.
+- **Fields:** Venue (with its neighborhood and town), Price, Ages, Access; the description on ruled card stock; the play buttons under a plum rule.
+- A cancelled show says so in red above the bill and strikes the bill through; a past show says it has passed.
+
+### Venue page (the room's show bill)
+The act card's sibling for one venue, at `/venues/<slug>`, set as a gig-poster column.
+- **Tab:** the venue's name, as an act's.
+- **Fact line:** room size and kind in bold, then neighborhood, town and state, the Massachusetts sub-region as a link to its listing, and "Map ↗", in quiet grey; what it books on the next line; a lavender "Open booking ›" at the right when it takes new acts. A plum rule closes it.
+- **The bill:** "The bill" with the show count, then one ruled-blue row a night: a big tabular day number over the lowercase weekday and month, the headliner bold at 1.4rem, "with" openers in quiet grey, the time at the right (under the acts on phones). The whole row links to the event page. Today's nights sit on a lavender band and say "today".
+- **Playing here / Getting here:** field lists under plum-ruled headings, each field only when known; yes-or-no facts only when known.
+- No map is drawn; the location is text and a link out to Google Maps.
+
+### Venue list and artist view
+- **List (`/venues`):** the index card with "Venues" on the tab; the place form and a genre select in the lavender strip, with "For artists: Takes open bookings" in a row of its own under a ruled line; the letter rail; letters as plum-ruled headings over two columns of entries (bold name, then town · room · genres in quiet grey, and the booking type under the open-bookings filter).
+- **Tabs:** "For fans" and "For artists" as two folder tabs on a venue card's top edge, the current one in card stock and bold.
+- **Artist view:** one statement in display type ("Takes open bookings" on a lavender band), then the booking facts (type with its meaning in quiet grey, how to apply, notes) and "The room".
 
 ### Act index (`/bands`) and search results
 Set as the index at the back of a reference book, on the act card.

@@ -1,0 +1,12 @@
+{% autoescape off %}{{ total }} show{{ total|pluralize }} match{{ total|pluralize:"es," }} your choices this week.
+{% for day in days %}
+{{ day.label }}
+{% for event in day.events %}- {{ event.title }}{% if event.artists %} · {{ event.artists }}{% endif %}{% if event.venue %} · {{ event.venue }}{% if event.town %}, {{ event.town }}{% endif %}{% endif %} · {{ event.time }}
+  {{ event.url }}
+{% endfor %}{% endfor %}{% if see_all %}
+See all {{ total }} on the site: {{ see_all }}
+{% endif %}
+You get this because you signed up for the weekly email.
+Change your shows (you'll get a sign-in code): {{ sign_in }}
+Unsubscribe (one click): {{ unsubscribe }}
+{% endautoescape %}

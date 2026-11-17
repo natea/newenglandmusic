@@ -14,6 +14,18 @@ class PrivacyPageTestCase(TestCase):
         self.assertContains(response, "Gazetteer files")
         self.assertContains(response, "OpenStreetMap")
 
+    def test_bandcamp_players(self):
+        self.assertContains(self.client.get("/privacy"), "Players from Spotify, Apple Music, YouTube and Bandcamp")
+        self.assertContains(self.client.get("/privacy"), 'href="https://bandcamp.com/privacy"')
+        self.assertContains(self.client.get("/privacy"), "which may set its own cookies")
+
+    def test_the_site_sets_no_policy_that_blocks_bandcamp_frames(self):
+        # no content-security policy, frame-src or frame-ancestors is set: a Bandcamp frame needs none opened
+        response = self.client.get("/")
+        for header in ("Content-Security-Policy", "Content-Security-Policy-Report-Only"):
+            self.assertNotIn(header, response)
+        self.assertNotIn("frame-src", response.content.decode())
+
     def test_footer_link(self):
         for url in ("/", "/saved", "/submit-event", "/privacy"):
             with self.subTest(url=url):

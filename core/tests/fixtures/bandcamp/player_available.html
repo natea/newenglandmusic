@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<!-- test fixture: the structure of bandcamp's EmbeddedPlayer page as read live on 2026-11-15 (the
+     track data in data-player-data, and the "not available" message always present but hidden),
+     cut down to what the finder reads, with the urls replaced -->
+<html><head><title>Salt | Krill</title></head>
+<body>
+<script data-player-data="{&quot;album_id&quot;: 111, &quot;album_title&quot;: &quot;Salt&quot;, &quot;killed&quot;: false, &quot;album_private&quot;: false, &quot;subscriber_only&quot;: false, &quot;tracks&quot;: [{&quot;id&quot;: 1, &quot;title&quot;: &quot;Salt&quot;, &quot;file&quot;: {&quot;mp3-128&quot;: &quot;https://t4.bcbits.example/stream/1&quot;}}, {&quot;id&quot;: 2, &quot;title&quot;: &quot;Pepper&quot;, &quot;file&quot;: {&quot;mp3-128&quot;: &quot;https://t4.bcbits.example/stream/2&quot;}}]}"></script>
+<div id="player"></div>
+<div id="nonplayable" style="display:none"><p>Sorry, this track or album is not available.</p></div>
+</body></html>

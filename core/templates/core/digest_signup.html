@@ -1,0 +1,18 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+  <div id='maincontent' class='static_page digestPage'>
+    <h1 class="digestTab">Weekly email</h1>
+    <form method="post" action="{% url 'digest_signup' %}" class="digestCard">
+      {% csrf_token %}
+      <p>One email a week with shows near you. No password. We confirm by link.</p>
+      <p><label><b>Email address</b><br>
+        <input type="email" name="email" value="{{ email }}" placeholder="you@example.com" size="34" maxlength="254" required autocomplete="email"></label></p>
+      {# people leave this empty; a bot that fills it in gets nothing #}
+      <p class="digestHoney" aria-hidden="true"><label>Leave this empty <input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>
+      {% include "core/digest_choices_fields.html" %}
+      <p><button type="submit">Sign up</button></p>
+      <p class="digestHint">Already signed up? <a href="{% url 'digest_sign_in' %}">Get a sign-in code</a></p>
+    </form>
+  </div>
+{% endblock %}

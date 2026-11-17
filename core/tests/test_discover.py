@@ -45,6 +45,12 @@ class DeckTestCase(DiscoverTestCase):
         show(held, days(5), self.lupo)
         self.assertEqual(self.names(self.page()), [])
 
+    def test_an_inactive_act_stays_in_the_deck(self):
+        self.belly.is_inactive = True
+        self.belly.save()
+        show(self.belly, days(7), self.lupo)
+        self.assertEqual(self.names(self.page()), ["Belly"])
+
     def test_an_unapproved_upcoming_show_does_not_count(self):
         show(self.belly, days(5), self.lupo, approved=False)
         self.assertEqual(self.names(self.page()), [])

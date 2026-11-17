@@ -61,9 +61,14 @@
       {# a state with no metros (e.g. rhode island) still clears a stale metro #}
       <input type="hidden" name="metro" value="">
     {% endif %}
+    {% comment %}
+      a page's own filters, kept when the place changes (the venue list's genre and open
+      booking, add-venue-list): hidden, and not place fields, so the script below leaves them be
+    {% endcomment %}
+    {% for name, value in form_extras %}<input type="hidden" name="{{ name }}" value="{{ value }}" data-extra>{% endfor %}
     <button type="submit">filter</button>
     {% if geo_filter and not clear_in_summary %}
-      <a href="{{ request.path }}?clear=1">show all</a>
+      <a href="{{ request.path }}?clear=1{% for name, value in form_extras %}&amp;{{ name }}={{ value|urlencode }}{% endfor %}">show all</a>
     {% endif %}
   </form>
   <script>
@@ -78,7 +83,7 @@
         }
         // leave "All" selects out of the url, unless all of them are "All":
         // those empty values are what tells the server to forget the filter
-        const fields = [...form.querySelectorAll('select, input[type="hidden"]')];
+        const fields = [...form.querySelectorAll('select, input[type="hidden"]:not([data-extra])')];
         if (fields.some(field => field.value)) {
           fields.filter(field => !field.value).forEach(field => { field.disabled = true; });
         }

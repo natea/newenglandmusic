@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Option A: index cards</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;width:1440px;height:900px;overflow:hidden;background:#d4d0c7;font:16px/1.4 system-ui,sans-serif;color:#000}
+a{color:#000080}
+.bar{background:#8b5b8b;color:#fff;padding:2px 12px;font-weight:700}
+.wrap{display:flex;gap:28px;padding:22px 28px}
+.col{display:flex;flex-direction:column;gap:12px}
+.lab{font:700 13px system-ui;text-transform:uppercase;letter-spacing:.06em;color:#4f4b44}
+.tab{display:inline-block;background:#8b5b8b;color:#fff;font:800 40px/1.02 Helvetica,Arial,sans-serif;letter-spacing:-.015em;padding:.18em .45em .12em}
+.card{background:#f6f4ee;color:#1a1a1a;padding:18px 24px 22px;background-image:linear-gradient(#c9d3e6 1px,transparent 1px);background-size:100% 28px;background-position:0 17px;line-height:28px}
+.card p{margin:0}
+.field{display:inline-block;background:#fff;border:1px solid #b9b4a8;padding:0 8px;line-height:26px;min-width:260px}
+.btn{display:inline-block;background:#fff;border:1px solid #000;border-radius:14px;padding:0 14px;font-weight:700;line-height:26px}
+.row{display:flex;gap:10px;align-items:baseline}
+.k{width:7.5em;font-weight:700;flex:none}
+.pill{display:inline-block;border:1px solid #000;border-radius:12px;padding:0 8px;font-size:13.6px;line-height:22px;margin-right:4px}
+.pill.on{background:#eeeeff}
+.strip{background:#eeeeff;padding:6px;line-height:22px;margin:0}
+.mail{background:#fff;border:1px solid #b9b4a8;padding:16px 20px;font:15px/1.45 Georgia,serif}
+.mail h3{font:800 20px Helvetica,Arial,sans-serif;margin:0 0 6px}
+.mail .d{background:#d4d0c7;font:700 15px system-ui;padding:3px 8px;margin:10px 0 4px}
+.mail .s{font-size:12.5px;color:#4f4b44;border-top:1px solid #b9b4a8;margin-top:10px;padding-top:6px}
+</style></head><body>
+<div class="bar">New England Music &nbsp; Calendar &nbsp; Venues &nbsp; Acts &nbsp; Weekly email</div>
+<div class="wrap">
+<div class="col" style="width:400px">
+<div class="lab">1 · Sign up (/digest)</div>
+<div><span class="tab">Weekly email</span></div>
+<div class="card" style="height:300px">
+<p>One email a week with shows near you.</p>
+<p>No password. We confirm by link.</p>
+<p><b>Email address</b></p>
+<p><span class="field" style="min-width:330px">you@example.com</span></p>
+<p><span class="btn">Choose my shows</span></p>
+<p style="font-size:13.6px;color:#4f4b44">Already signed up? <a href="#">Get a sign-in code</a></p>
+</div>
+<div class="card" style="height:150px">
+<p><b>Check your email</b></p>
+<p>We sent a link to you@example.com.</p>
+<p>Press Confirm there. It lasts 7 days.</p>
+</div>
+</div>
+<div class="col" style="width:520px">
+<div class="lab">2 · Preferences (after sign-in code)</div>
+<div><span class="tab">Your shows</span></div>
+<div class="card" style="height:600px">
+<div class="row"><span class="k">Areas</span><span><span class="pill on">Greater Boston</span><span class="pill on">Rhode Island</span><span class="pill">+ add</span></span></div>
+<div class="row"><span class="k">Near</span><span>within <span class="pill on">25 mi</span> of <span class="field" style="min-width:120px">02139</span></span></div>
+<div class="row"><span class="k">Towns</span><span><span class="pill on">Northampton</span><span class="pill">+ add</span></span></div>
+<div class="row"><span class="k">Venues</span><span><span class="pill on">The Sinclair</span><span class="pill on">Great Scott</span><span class="pill">+ add</span></span></div>
+<p style="font-size:13.6px;color:#4f4b44;line-height:20px;margin:6px 0">A show is included if any choice matches. Up to 20 choices.</p>
+<p><span class="strip" style="display:block">Right now this matches about 38 shows next week.</span></p>
+<p><span class="btn">Save</span> &nbsp; <span class="btn">Pause the email</span></p>
+<p style="margin-top:14px"><a href="#">Delete my account and everything stored</a></p>
+</div>
+</div>
+<div class="col" style="width:420px">
+<div class="lab">3 · The weekly email</div>
+<div class="mail">
+<h3>Shows near you, Nov 6–12</h3>
+<div>38 shows match your choices.</div>
+<div class="d">Thu Nov 6</div>
+<div><b>Mitski</b> · The Sinclair, Cambridge · 8pm · $45</div>
+<div><b>Pond Bats</b> · Great Scott, Allston · 9pm</div>
+<div class="d">Fri Nov 7</div>
+<div><b>Open mic</b> · Iron Horse, Northampton · 7pm</div>
+<div><a href="#">See all on the calendar</a> (50 shown at most)</div>
+<div class="s">You get this because you signed up at New England Music. <a href="#">Change your shows</a> · <a href="#">Unsubscribe</a> (one click)</div>
+</div>
+</div>
+</div>
+</body></html>

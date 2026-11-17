@@ -1,0 +1,58 @@
+{% extends 'core/base.html' %}
+{% load sass_tags %}
+
+{% block head %}
+  <link href="{% sass_src 'scss/event_page.scss' %}" rel="stylesheet" type="text/css" />
+  {% if is_past %}<meta name="robots" content="noindex">{% else %}<link rel="canonical" href="{{ canonical }}">{% endif %}
+{% endblock head %}
+
+{% block content %}
+{% comment %}
+  an event's own page (add-event-pages, core/views/event_page.py): the band page's index card,
+  with the date on the tab and the bill in the lavender strip
+{% endcomment %}
+<article class="act event-page{% if event.is_cancelled %} is-cancelled{% endif %}" aria-labelledby="event-headliner">
+  <p class="act-tab event-page-when"><time datetime="{{ event.starttime|date:'c' }}">{{ event.starttime|date:'D M j' }}{% if event.starttime_override %} · {{ event.starttime_override }}{% else %} · {{ event.starttime|time:'g:i a' }}{% endif %}</time></p>
+  <div class="act-card">
+    {% if event.is_cancelled %}
+      <p class="event-page-status">This show is cancelled.</p>
+    {% elif is_past %}
+      <p class="event-page-status">This show has passed.</p>
+    {% endif %}
+
+    {% if title_line %}<p class="event-page-title-line">{{ title_line }}</p>{% endif %}
+    <div class="act-next event-page-bill">
+      <h1 id="event-headliner" class="event-page-headliner">{% for text, url in headliner %}{% if url %}<a href="{{ url }}">{{ text }}</a>{% else %}{{ text }}{% endif %}{% endfor %}</h1>
+      {% if openers %}<p class="event-page-openers">with {% for opener in openers %}{% for text, url in opener %}{% if url %}<a href="{{ url }}">{{ text }}</a>{% else %}{{ text }}{% endif %}{% endfor %}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    </div>
+    <div class="act-next-actions" id="event-{{ event.pk }}" data-title-and-artists="{{ event.title_and_artists }}">{{ actions }}</div>
+
+    {% if links %}
+      <p class="event-page-links">{% for label, url in links %}<a href="{{ url }}" target="_blank" rel="noopener">{{ label }}<span aria-hidden="true"> ↗</span><span class="visually-hidden"> (opens another site)</span></a>{% endfor %}</p>
+    {% endif %}
+
+    <dl class="act-fields">
+      <dt>Venue</dt>
+      <dd>{% if event.venue_override %}{{ event.venue_override|safe }}{% elif venue %}<b>{% if venue_url %}<a href="{{ venue_url }}">{{ venue.name }}</a>{% else %}{{ venue.name }}{% endif %}</b>{% if venue.location %}, {{ venue.location }}{% endif %}{% else %}Unknown venue{% endif %}</dd>
+      {% if event.price %}<dt>Price</dt><dd>{{ event.price }}</dd>{% endif %}
+      {% if event.age_policy %}<dt>Ages</dt><dd>{{ event.age_policy }}</dd>{% endif %}
+      {% if event.age_policy_emoji or venue.accessibility_notes and not event.venue_override %}<dt>Access</dt><dd>{% if event.age_policy_emoji %}{{ event.age_policy_emoji }} {% endif %}{% if venue.accessibility_notes and not event.venue_override %}{{ venue.accessibility_notes }}{% endif %}</dd>{% endif %}
+    </dl>
+
+    {% if event.preface or event.description %}
+      <div class="act-bio event-page-description">
+        <div class="act-ruled">
+          {% if event.preface %}<p>{{ event.preface|safe }}</p>{% endif %}
+          {% if event.description %}<p>{{ event.description|safe }}</p>{% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if artist_previews %}
+      <section class="event event-page-listen" aria-label="Listen">
+        {% include 'core/artist_previews.html' %}
+      </section>
+    {% endif %}
+  </div>
+</article>
+{% endblock content %}

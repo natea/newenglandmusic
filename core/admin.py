@@ -23,14 +23,14 @@ from ordered_model.admin import OrderedModelAdmin
 from solo.admin import SingletonModelAdmin
 from tinymce.widgets import TinyMCE
 
-from .geo_filters import area_q, metro_fits_state, offered_areas, parse_geo_filter
+from .geo_filters import area_q, metro_fits_state, new_england_q, offered_areas, parse_geo_filter
 from . import act_sources, apple_music, youtube
 from .act_export import act_row, header as act_header, prefetch as prefetch_memberships
 from .venue_export import HEADER, csv_download, venue_row
 from .places import PlacesClient, PlacesError
 from .spotify import parse_artist_id
 from .wikipedia import LICENSE_URL, commons_file_page, commons_thumbnail
-from .event_performers import rebake, relink_events_naming
+from .event_performers import rebake, rebake_events_of, relink_events_naming
 from .spotify_links import rebake_events_naming
 from .artist_matching import normalize
 from .job_runs import DIDNT_FINISH, STALE_AFTER, outcome
@@ -44,6 +44,7 @@ from .models import (
     MusicAct,
     YouTubeArtistLink,
     DateMessage,
+    DigestChoice,
     EmailSubscriber,
     Event,
     GeoArea,
@@ -52,6 +53,7 @@ from .models import (
     MenuItem,
     SpotifyArtistLink,
     StaticPage,
+    Subscriber,
     Venue,
     VenueFetchStatus,
 )
@@ -96,6 +98,45 @@ class GeoAreaListFilter(SimpleListFilter):
         if area is None:
             return queryset
         return queryset.filter(area_q(area, prefix=self.field_prefix))
+
+
+class ScopeListFilter(SimpleListFilter):
+    """
+    the admin opens on new england (limit-listings-to-new-england), as the site does, with
+    "all areas" a click away. a chosen region, state or metro steps it aside, so picking new
+    york shows new york's venues without also choosing "all areas"
+    """
+
+    title = "area"
+    parameter_name = "scope"
+    ALL = "all"
+    # how the filtered model reaches the venue: "venue__" for events, "" for venues
+    field_prefix = ""
+
+    def lookups(self, request, model_admin):
+        return [(self.ALL, "All areas")]
+
+    def choices(self, changelist):
+        for value, label in ((None, "New England"), (self.ALL, "All areas")):
+            yield {
+                "selected": self.value() == value,
+                "query_string": changelist.get_query_string(
+                    {self.parameter_name: value} if value else {}, [self.parameter_name]
+                ),
+                "display": label,
+            }
+
+    def queryset(self, request, queryset):
+        if self.value() == self.ALL or any(request.GET.get(kind.value) for kind in GeoArea.Kind):
+            return queryset
+        # hides only what's somewhere else: a venue with no state, or an event with no venue
+        # (a submission, say), is something an editor needs to see
+        elsewhere = Q(**{f"{self.field_prefix}state__gt": ""}) & ~new_england_q(self.field_prefix)
+        return queryset.exclude(elsewhere)
+
+
+def scope_list_filter(field_prefix):
+    return type("ScopeListFilter", (ScopeListFilter,), {"field_prefix": field_prefix})
 
 
 def geo_area_list_filters(field_prefix):
@@ -299,6 +340,7 @@ class EventAdmin(admin.ModelAdmin):
     list_filter = [
         StartTimeListFilter,
         KindListFilter,
+        scope_list_filter("venue__"),
         *geo_area_list_filters(field_prefix="venue__"),
         "is_approved",
         "user_submitted",
@@ -589,6 +631,7 @@ class VenueAdmin(admin.ModelAdmin):
     list_display_links = ("name",)
     list_filter = (
         "is_active",
+        scope_list_filter(""),
         *geo_area_list_filters(field_prefix=""),
         "size",
         "open_booking",
@@ -622,7 +665,7 @@ class VenueAdmin(admin.ModelAdmin):
         "skip_place_lookup",
     ]
     fieldsets = (
-        (None, {"fields": ("sheet_id", "name", "is_active", "venue_type", "size")}),
+        (None, {"fields": ("sheet_id", "name", "slug", "is_active", "venue_type", "size")}),
         (
             "Location",
             {"fields": ("state", "city_town", "county", "latitude", "longitude")},
@@ -920,6 +963,29 @@ class EmailSubscriberAdmin(admin.ModelAdmin):
 
 
 admin.site.register(EmailSubscriber, EmailSubscriberAdmin)
+
+
+class DigestChoiceInline(admin.TabularInline):
+    model = DigestChoice
+    extra = 0
+    raw_id_fields = ("venue",)
+
+
+class SubscriberAdmin(admin.ModelAdmin):
+    # editors see every address but can't export or send from here
+    list_display = ("email", "is_confirmed", "paused", "created_at")
+    list_filter = ("paused",)
+    search_fields = ("email",)
+    ordering = ("-created_at",)
+    readonly_fields = ("confirmed_at", "created_at", "last_digest_week")
+    inlines = [DigestChoiceInline]
+
+    @admin.display(boolean=True, description="Confirmed")
+    def is_confirmed(self, obj):
+        return obj.confirmed
+
+
+admin.site.register(Subscriber, SubscriberAdmin)
 
 
 class MenuItemAdmin(OrderedModelAdmin):
@@ -1438,7 +1504,23 @@ class LinkHubFindingsFilter(SimpleListFilter):
         return queryset.filter(pk__in=[a.pk for a in with_findings if open_findings(a)])
 
 
+BANDCAMP_EMBED_FIELDS = ("bandcamp_embed_kind", "bandcamp_embed_id")
+
+
 class MusicActForm(forms.ModelForm):
+    def clean(self):
+        cleaned = super().clean()
+        kind, embed_id = cleaned.get("bandcamp_embed_kind"), cleaned.get("bandcamp_embed_id")
+        if bool(kind) != bool(embed_id) and not self.errors.get("bandcamp_embed_id"):
+            self.add_error("bandcamp_embed_id", "set the kind and the number together, or clear both")
+        elif (
+            kind
+            and self.instance.bandcamp_embed_status == MusicAct.BandcampEmbedStatus.DECLINED
+            and set(BANDCAMP_EMBED_FIELDS) & set(self.changed_data)
+        ):
+            self.add_error("bandcamp_embed_id", "this act declined a Bandcamp player: lift that first, with the list's action")
+        return cleaned
+
     def clean_link_hub_url(self):
         url = self.cleaned_data["link_hub_url"]
         if not url:
@@ -1453,23 +1535,37 @@ class MusicActAdmin(admin.ModelAdmin):
     form = MusicActForm
     change_list_template = "admin/core/act_change_list.html"
     list_display = ("name", "city_town", "state", "musicbrainz_status", "musicbrainz_page", "source_labels", "review", "link_hub_findings_count", "act_id")
-    list_filter = ("needs_review", "state", "musicbrainz_status", ActSourceFilter, LinkHubFindingsFilter)
+    list_filter = ("needs_review", "is_inactive", "state", "musicbrainz_status", "bandcamp_embed_status", ActSourceFilter, LinkHubFindingsFilter)
     search_fields = ("name", "act_id", "musicbrainz_id")
-    actions = ["clear_musicbrainz_match", "mark_ready", "accept_link_hub_findings", "dismiss_link_hub_findings"]
+    actions = [
+        "clear_musicbrainz_match", "mark_ready", "accept_link_hub_findings", "dismiss_link_hub_findings",
+        "decline_bandcamp_player", "lift_bandcamp_decline", "mark_inactive", "mark_active",
+    ]
     readonly_fields = (
+        "bandcamp_embed_status", "bandcamp_embed_checked_at", "bandcamp_embed_for",
         "link_hub_status", "link_hub_checked_at", "link_hub_findings_table",
         "musicbrainz_status", "musicbrainz_checked_at", "musicbrainz_page", "genres_from_musicbrainz",
         *[f for f in MUSICBRAINZ_FIELDS if f != "genres"], "field_sources", "introduction_from_wikipedia",
         "photo_preview", "source_labels", "review",
     )
     fieldsets = (
-        (None, {"fields": ("name", "slug", "act_id", "source_labels", "review", "city_town", "state", "notes")}),
+        (None, {"fields": ("name", "slug", "act_id", "source_labels", "review", "is_inactive", "city_town", "state", "notes")}),
         ("Links", {"fields": ("website", "bandcamp_url", "instagram_url", "youtube_url")}),
         (
             "Link hub",
             {
                 "description": "the act's Linktree-style page, read weekly: it fills empty links, and links that differ are listed here to accept or dismiss with the list's actions",
                 "fields": ("link_hub_url", "link_hub_status", "link_hub_checked_at", "link_hub_findings_table"),
+            },
+        ),
+        (
+            "Bandcamp player",
+            {
+                "description": "set the kind and number (from Bandcamp's Share / Embed screen) to choose the player by hand: it shows at once and the weekly lookup never replaces it. clear both to let the lookup fill it again",
+                "fields": (
+                    "bandcamp_embed_kind", "bandcamp_embed_id", "bandcamp_embed_status", "bandcamp_embed_checked_at",
+                    "bandcamp_embed_for",
+                ),
             },
         ),
         (
@@ -1590,7 +1686,20 @@ class MusicActAdmin(admin.ModelAdmin):
         held = list(queryset.filter(needs_review=True))
         queryset.filter(needs_review=True).update(needs_review=False, review_reasons=[])
         linked = relink_events_naming(held)
+        # events an editor linked to a held act, whose button follows the mark
+        rebake_events_of(held)
         self.message_user(request, f"{len(held)} marked ready; {linked} events linked to them.")
+
+    @admin.action(description="Mark inactive: leave off the Bands & artists index")
+    def mark_inactive(self, request, queryset):
+        # update(), so the acts' events aren't re-rendered: the mark changes nothing they show
+        count = queryset.update(is_inactive=True)
+        self.message_user(request, f"{count} marked inactive.")
+
+    @admin.action(description="Mark active: list on the Bands & artists index")
+    def mark_active(self, request, queryset):
+        count = queryset.update(is_inactive=False)
+        self.message_user(request, f"{count} marked active.")
 
     @admin.display(description="Sources")
     def source_labels(self, act):
@@ -1642,7 +1751,16 @@ class MusicActAdmin(admin.ModelAdmin):
         """what an editor changes is theirs: the import leaves it, and a musicbrainz id they
         set is looked up by the next enrichment and never replaced"""
         for name in form.changed_data:
-            act.field_sources[name] = "editor"
+            if name not in BANDCAMP_EMBED_FIELDS:
+                act.field_sources[name] = "editor"
+        if set(BANDCAMP_EMBED_FIELDS) & set(form.changed_data):
+            if act.bandcamp_embed_kind:
+                act.field_sources["bandcamp_embed"] = "editor"
+            else:
+                # cleared: the lookup may fill it again, unless the act declined a player
+                act.field_sources.pop("bandcamp_embed", None)
+                if act.bandcamp_embed_status != MusicAct.BandcampEmbedStatus.DECLINED:
+                    act.bandcamp_embed_status, act.bandcamp_embed_for, act.bandcamp_embed_checked_at = "", "", None
         if "link_hub_url" in form.changed_data:
             # a new address is read by the next run
             act.link_hub_status, act.link_hub_checked_at = "", None
@@ -1653,6 +1771,8 @@ class MusicActAdmin(admin.ModelAdmin):
             else:
                 clear_musicbrainz(act)
         super().save_model(request, act, form, change)
+        # listings bake in the act's player button
+        rebake_events_of([act])
 
     def save_formset(self, request, form, formset, change):
         # a membership added here is the editor's
@@ -1665,9 +1785,30 @@ class MusicActAdmin(admin.ModelAdmin):
 
     @admin.action(description="Clear MusicBrainz match (the next enrichment searches again)")
     def clear_musicbrainz_match(self, request, queryset):
-        for act in queryset:
+        acts = list(queryset)
+        for act in acts:
             clear_musicbrainz(act)
             act.save()
+        # it can blank a bandcamp link, which makes a found player stale
+        rebake_events_of(acts)
+
+    @admin.action(description="Decline a Bandcamp player (clear it; the lookup never fills it again)")
+    def decline_bandcamp_player(self, request, queryset):
+        acts = list(queryset)
+        for act in acts:
+            sources = {k: v for k, v in act.field_sources.items() if k != "bandcamp_embed"}
+            type(act).objects.filter(pk=act.pk).update(
+                bandcamp_embed_kind="", bandcamp_embed_id="", bandcamp_embed_for="", bandcamp_embed_checked_at=None,
+                bandcamp_embed_status=MusicAct.BandcampEmbedStatus.DECLINED, field_sources=sources,
+            )
+        rebake_events_of(acts)
+        self.message_user(request, f"{len(acts)} declined a Bandcamp player.")
+
+    @admin.action(description="Lift a Bandcamp decline (the next run looks the act up)")
+    def lift_bandcamp_decline(self, request, queryset):
+        declined = queryset.filter(bandcamp_embed_status=MusicAct.BandcampEmbedStatus.DECLINED)
+        lifted = declined.update(bandcamp_embed_status="", bandcamp_embed_for="", bandcamp_embed_checked_at=None)
+        self.message_user(request, f"{lifted} declines lifted.")
 
 
 def clear_musicbrainz(act):

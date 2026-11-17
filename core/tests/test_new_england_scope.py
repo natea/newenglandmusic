@@ -171,7 +171,9 @@ class UntouchedTestCase(ScopeTestCase):
     def test_admin_and_data_untouched(self):
         self.show("new york show", self.new_york, is_approved=True)
         self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "pw"))
-        self.assertContains(self.client.get("/admin/core/alleventproxy/"), "new york show")
+        # the admin opens on new england, with every area a click away; nothing is deleted
+        self.assertNotContains(self.client.get("/admin/core/alleventproxy/"), "new york show")
+        self.assertContains(self.client.get("/admin/core/alleventproxy/?scope=all"), "new york show")
         self.assertTrue(Event.objects.filter(title="new york show").exists())
         self.assertTrue(Venue.objects.filter(state="NY").exists())
 

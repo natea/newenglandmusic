@@ -13,7 +13,7 @@ from solo.models import SingletonModel
 from tinymce import models as tinymce_models
 
 from core.artist_matching import normalize
-from core.artists import MBID_PATTERN, validate_bandcamp_url
+from core.artists import MBID_PATTERN, bandcamp_player_url, validate_bandcamp_embed_id, validate_bandcamp_url
 from core.utils_event_caching import bake_event_html
 from core.utils_static_page import refresh_searchable_static_page_bits
 
@@ -305,6 +305,10 @@ class Venue(models.Model):
     # the sheet's Venue_ID column (e.g. V0042). this is what the sync matches on,
     # as venue names (and even name + city + state) are not unique in the sheet
     sheet_id = models.CharField(max_length=32, unique=True, null=True, blank=True)
+    # the venue page's address, /venues/<slug> (add-venue-pages): made from the name once,
+    # when the venue is first saved, and never rewritten, so a rename keeps the address.
+    # editors may change it in the admin; the sheet import never touches it
+    slug = models.SlugField(max_length=140, unique=True, null=True, blank=True)
 
     # not from the sheet: set by the match_ticketmaster_venues command or by hand, so
     # the venue's events can be fetched from the ticketmaster discovery api
@@ -409,11 +413,16 @@ class Venue(models.Model):
     safety_notes = models.TextField(blank=True, default="")
 
     def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = venue_slug(self.name, self.city_town, exclude_pk=self.pk)
         # actually save data to db
         super().save(*args, **kwargs)
         # for all related events, refresh their baked html
         for event in self.event_set.all():
             event.rebake_html()
+
+    def get_absolute_url(self):
+        return reverse("venue_page", kwargs={"slug": self.slug})
 
     @property
     def location(self):
@@ -600,6 +609,77 @@ class EmailSubscriber(models.Model):
 
     def __str__(self):
         return self.email
+
+
+class Subscriber(models.Model):
+    """
+    someone who gets the weekly email (add-weekly-email-digest). not a django user, so a
+    subscriber can never reach the admin. last_digest_week is the monday of the last week sent
+    """
+
+    email = models.EmailField(unique=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    paused = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_digest_week = models.DateField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        self.email = self.email.strip().lower()
+        super().save(*args, **kwargs)
+
+    @property
+    def confirmed(self):
+        return self.confirmed_at is not None
+
+    def __str__(self):
+        return self.email
+
+
+class SignInCode(models.Model):
+    """a keyed hash of a 6-digit sign-in code; it works once and expires (core/digest_tokens.py)"""
+
+    subscriber = models.ForeignKey(Subscriber, on_delete=models.CASCADE, related_name="codes")
+    code_hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+
+
+class DigestChoice(models.Model):
+    """
+    one way a subscriber chose shows; a show is emailed when any choice matches it.
+    area: area_query is a GeoFilter query string ("all=1" for the whole Northeast);
+    near: label, latitude and longitude (rounded) and miles; town: town and state; venue: venue
+    """
+
+    class Kind(models.TextChoices):
+        AREA = "area", "Area"
+        NEAR = "near", "Near a place"
+        TOWN = "town", "Town"
+        VENUE = "venue", "Venue"
+
+    subscriber = models.ForeignKey(Subscriber, on_delete=models.CASCADE, related_name="choices")
+    kind = models.CharField(max_length=8, choices=Kind.choices)
+    area_query = models.CharField(max_length=300, blank=True)
+    label = models.CharField(max_length=100, blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    miles = models.PositiveSmallIntegerField(null=True, blank=True)
+    town = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=2, blank=True)
+    venue = models.ForeignKey(Venue, on_delete=models.CASCADE, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ("pk",)
+
+
+class MailRequest(models.Model):
+    """an address (or a hash of a client address) and a time, kept a day for the sending limits"""
+
+    address = models.CharField(max_length=254, blank=True)
+    client_hash = models.CharField(max_length=64, blank=True)
+    kind = models.CharField(max_length=16)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
 
 
 # 'IndexPageMessages' is a misnomer, as this
@@ -868,6 +948,9 @@ class MusicAct(models.Model):
     # in REVIEW_REASONS
     needs_review = models.BooleanField(default=False, db_index=True)
     review_reasons = ArrayField(models.CharField(max_length=16), blank=True, default=list)
+    # no longer active: left off the /bands index only, its page and show links stay. editors
+    # (and mark_inactive_acts) own it; imports and enrichment never write it
+    is_inactive = models.BooleanField(default=False, db_index=True)
 
     REVIEW_REASONS = {
         "not_found": "not on MusicBrainz",
@@ -932,12 +1015,65 @@ class MusicAct(models.Model):
     link_hub_checked_at = models.DateTimeField(null=True, blank=True)
     link_hub_findings = models.JSONField(blank=True, default=list)
 
+    class BandcampEmbedKind(models.TextChoices):
+        ALBUM = "album", "Album"
+        TRACK = "track", "Track"
+
+    class BandcampEmbedStatus(models.TextChoices):
+        FOUND = "found", "Found"
+        NO_PLAYABLE = "no_playable", "No playable release"
+        BLOCKED = "blocked", "Blocked"
+        GONE = "gone", "Page gone"
+        UNREADABLE = "unreadable", "Page not readable"
+        FAILED = "failed", "Failed"
+        # an editor turned the player off for the act: the lookup never requests or refills it
+        DECLINED = "declined", "Declined"
+
+    # the act's bandcamp player (find_bandcamp_embeds, core/bandcamp_embeds.py): the kind and
+    # numeric id are all that's kept from bandcamp. an editor's value is marked "editor" in
+    # field_sources["bandcamp_embed"] and never overwritten. bandcamp_embed_for is the
+    # bandcamp_url last looked up, set on every outcome, so a changed url is noticed and a
+    # failed look-up isn't repeated before its time
+    bandcamp_embed_kind = models.CharField(max_length=8, choices=BandcampEmbedKind.choices, blank=True, default="")
+    bandcamp_embed_id = models.CharField(max_length=20, blank=True, default="", validators=[validate_bandcamp_embed_id])
+    bandcamp_embed_status = models.CharField(
+        max_length=16, choices=BandcampEmbedStatus.choices, blank=True, default=""
+    )
+    bandcamp_embed_checked_at = models.DateTimeField(null=True, blank=True)
+    bandcamp_embed_for = models.URLField(max_length=300, blank=True, default="")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True
         ordering = ("name",)
+
+    @property
+    def bandcamp_player_by_editor(self):
+        return self.field_sources.get("bandcamp_embed") == "editor"
+
+    @property
+    def bandcamp_player_usable(self):
+        """
+        whether the player may be shown: kind and id set, and either an editor set them or
+        the lookup found them at the act's current bandcamp address. every display rule
+        asks this, never the status alone
+        """
+        if not (self.bandcamp_embed_kind and self.bandcamp_embed_id):
+            return False
+        if self.bandcamp_embed_status == self.BandcampEmbedStatus.DECLINED:
+            return False
+        if self.bandcamp_player_by_editor:
+            return True
+        return (
+            self.bandcamp_embed_status == self.BandcampEmbedStatus.FOUND
+            and self.bandcamp_embed_for == self.bandcamp_url
+        )
+
+    @property
+    def bandcamp_player_url(self):
+        return bandcamp_player_url(self.bandcamp_embed_kind, self.bandcamp_embed_id)
 
     def save(self, *args, **kwargs):
         self.name_key = normalize(self.name)
@@ -954,6 +1090,23 @@ class MusicAct(models.Model):
 
     def __str__(self):
         return self.name
+
+
+def venue_slug(name, town="", exclude_pk=None, taken=None):
+    """
+    a venue's slug: its name ("obriens"), or with its town when another venue has that name
+    ("the-bar-portland"), or a number after that. taken: slugs already used, when filling
+    many at once (the migration)
+    """
+    if taken is None:
+        taken = set(Venue.objects.exclude(pk=exclude_pk).exclude(slug=None).values_list("slug", flat=True))
+    for base in [(slugify(name) or "venue")[:120], (slugify(f"{name} {town}") or "venue")[:130]]:
+        if base not in taken:
+            return base
+    slug, n = f"{base}-2", 3
+    while slug in taken:
+        slug, n = f"{base}-{n}", n + 1
+    return slug
 
 
 def unique_slug(model, name, exclude_pk=None):

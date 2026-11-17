@@ -38,8 +38,8 @@ WEEKLY = [
     "manage.py match_eventbrite_organizers",
     "manage.py match_seatgeek_venues",
     "manage.py lookup_venue_neighborhoods",
-    "manage.py read_artist_link_hubs",
 ]
+DIGEST = ["manage.py send_weekly_digests"]
 
 
 class JobScriptsTestCase(SimpleTestCase):
@@ -83,7 +83,7 @@ class JobScriptsTestCase(SimpleTestCase):
 
     def test_output_is_unbuffered(self):
         # so the host's log shows each command's report as it runs
-        for script in ("daily.sh", "weekly.sh"):
+        for script in ("daily.sh", "weekly.sh", "digest.sh"):
             self.run_job(script)
             self.assertEqual(self.unbuffered, "1", script)
 
@@ -91,6 +91,27 @@ class JobScriptsTestCase(SimpleTestCase):
         result, calls = self.run_job("weekly.sh")
         self.assertEqual(calls, WEEKLY)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_the_bandcamp_finder_and_link_hubs_arent_scheduled(self):
+        # bandcamp challenges requests from render's servers, and the hubs' robots.txt forbids
+        # reading them, so both run by hand
+        for script in ("daily.sh", "weekly.sh", "digest.sh"):
+            _, calls = self.run_job(script)
+            for command in ("manage.py find_bandcamp_embeds", "manage.py read_artist_link_hubs"):
+                self.assertNotIn(command, calls, script)
+
+    def test_digest_run(self):
+        result, calls = self.run_job("digest.sh")
+        self.assertEqual(calls, DIGEST)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_a_failed_digest_fails_the_job(self):
+        result, calls = self.run_job("digest.sh", fail_step=DIGEST[0])
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("=== 1 step(s) failed:\n  python manage.py send_weekly_digests", result.stdout)
+
+    def test_digest_script_sources_the_shared_steps(self):
+        self.assertIn('source "$(dirname "$0")/steps.sh"', (BIN / "digest.sh").read_text())
 
     def test_places_lookup_fails(self):
         result, calls = self.run_job("daily.sh", fail_step=DAILY[0])
@@ -106,14 +127,14 @@ class JobScriptsTestCase(SimpleTestCase):
 
     def test_scripts_name_real_commands(self):
         commands = get_commands()
-        for script in ("daily.sh", "weekly.sh"):
+        for script in ("daily.sh", "weekly.sh", "digest.sh"):
             named = re.findall(r"^step python manage\.py (\w+)", (BIN / script).read_text(), re.M)
             self.assertTrue(named, script)
             for command in named:
                 self.assertIn(command, commands, f"{script}: {command}")
 
     def test_scripts_are_executable(self):
-        for script in ("daily.sh", "weekly.sh", "build-job.sh"):
+        for script in ("daily.sh", "weekly.sh", "digest.sh", "build-job.sh"):
             self.assertTrue(os.access(BIN / script, os.X_OK), script)
 
 
@@ -164,12 +185,29 @@ class RenderConfigurationTestCase(SimpleTestCase):
             self.keys_from_web(weekly),
             {"DJANGO_SECRET_KEY", "TICKETMASTER_API_KEY", "EVENTBRITE_API_KEY", "SEATGEEK_CLIENT_ID", "API_CONTACT_EMAIL", "SITE_URL"},
         )
-        for job in (daily, weekly):
+        digest = self.services["newenglandmusic-digest"]
+        # thursdays at 13:00 utc, a script that reports failure like the others
+        self.assertEqual((digest["type"], digest["schedule"], digest["startCommand"]), ("cron", "0 13 * * 4", "./bin/digest.sh"))
+        self.assertEqual(
+            self.keys_from_web(digest),
+            {"DJANGO_SECRET_KEY", "SITE_URL", "DEFAULT_FROM_EMAIL", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"},
+        )
+        for job in (daily, weekly, digest):
             database = next(var for var in job["envVars"] if var["key"] == "DATABASE_URL")
             self.assertEqual(database["fromDatabase"]["name"], "newenglandmusic")
             self.assertEqual(job["autoDeployTrigger"], "checksPass")
 
     def test_jobs_dont_migrate(self):
-        for name in ("newenglandmusic-daily", "newenglandmusic-weekly"):
+        for name in ("newenglandmusic-daily", "newenglandmusic-weekly", "newenglandmusic-digest"):
             build = (ROOT / self.services[name]["buildCommand"]).read_text()
             self.assertNotIn("migrate", re.sub(r"#.*", "", build), name)
+
+    def test_the_web_service_declares_what_the_digest_job_copies(self):
+        web = {var["key"]: var for var in self.services["newenglandmusic"]["envVars"]}
+        for key in ("SITE_URL", "DEFAULT_FROM_EMAIL", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
+            self.assertIs(web[key].get("sync"), False, key)
+        digest = self.services["newenglandmusic-digest"]
+        # the settings read this one without a default
+        values = {var["key"]: var.get("value") for var in digest["envVars"]}
+        self.assertEqual(values["ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION"], "False")
+        self.assertEqual(values["DJANGO_SETTINGS_MODULE"], "nycnoise.settings.prod")

@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from core.models import Artist, Band, Event, EventPerformer, Venue
 from core.views.act_index import letter_of, sort_name
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 
 
@@ -82,6 +82,33 @@ class ActIndexTestCase(TestCase):
         self.assertNotIn("#", self.entries(response))
         self.assertNotContains(response, "3 1/2 Girls")
 
+    def test_inactive_acts_left_out_and_not_counted(self):
+        Band.objects.create(name="The Cars", is_inactive=True)
+        Artist.objects.create(name="Greg Humphreys", is_inactive=True)
+        response = self.page()
+        self.assertEqual(self.entries(response), {"A": ["Anjimile"], "B": ["Belly"]})
+        self.assertEqual(response.context["count"], 2)
+        self.assertNotContains(response, "Cars")
+        self.assertNotContains(response, "Humphreys")
+
+    def test_inactive_acts_keep_their_pages_links_search_and_sitemap(self):
+        from core.tests.discover_fixture import show
+
+        cars = Band.objects.create(name="The Cars", is_inactive=True)
+        event = show(cars, timezone.now() + timedelta(days=3))
+        self.assertEqual(self.client.get("/bands/the-cars").status_code, 200)
+        self.assertContains(self.client.get("/", {"s": "cars"}), "<mark>Cars</mark>")
+        self.assertContains(self.client.get("/sitemap.xml"), "/bands/the-cars")
+        self.assertEqual(EventPerformer.objects.get(event=event).band, cars)
+
+    def test_inactive_and_held_are_independent(self):
+        inactive = Band.objects.create(name="Dormant", is_inactive=True)
+        held = Band.objects.create(name="Held Band", needs_review=True)
+        self.assertEqual(self.client.get(inactive.get_absolute_url()).status_code, 200)
+        self.assertEqual(self.client.get(held.get_absolute_url()).status_code, 404)
+        self.assertNotIn("D", self.entries(self.page()))
+        self.assertNotIn("H", self.entries(self.page()))
+
     def test_pages_and_guide_words(self):
         from core.views.act_index import PAGE_SIZE
 
@@ -128,3 +155,41 @@ class MenuItemTestCase(TestCase):
         item = MenuItem.objects.get(url="/bands")
         self.assertEqual((item.name, item.show_in_header), ("Bands & artists", True))
         self.assertContains(self.client.get("/bands"), 'href="/bands"')
+
+
+@override_settings(ACT_INDEX_CACHE_SECONDS=600)
+class CachedIndexTestCase(TestCase):
+    """the rendered index is kept for a while: it took about a second to render in production"""
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.addCleanup(cache.clear)
+        Band.objects.create(name="Belly")
+
+    def test_a_second_visit_is_served_from_the_cache(self):
+        self.assertContains(self.client.get("/bands"), "Belly")
+        Band.objects.create(name="Krill")
+        with self.assertNumQueries(0):
+            response = self.client.get("/bands")
+        self.assertContains(response, "Belly")
+        self.assertNotContains(response, "Krill")
+
+    def test_a_new_day_renders_afresh(self):
+        from unittest import mock
+        import datetime
+
+        from core.utils_datemath import NYCTZ
+
+        self.client.get("/bands")
+        Band.objects.create(name="Krill")
+        tomorrow = datetime.datetime.now(NYCTZ) + datetime.timedelta(days=1)
+        with mock.patch("core.views.act_index.get_current_new_york_datetime", return_value=tomorrow):
+            self.assertContains(self.client.get("/bands"), "Krill")
+
+    @override_settings(ACT_INDEX_CACHE_SECONDS=0)
+    def test_off(self):
+        self.client.get("/bands")
+        Band.objects.create(name="Krill")
+        self.assertContains(self.client.get("/bands"), "Krill")

@@ -119,6 +119,41 @@ class AdminSidebarTestCase(TestCase):
         request, changelist = self.changelist(admin, "/admin/core/alleventproxy/", {"state": "new-york"})
         self.assertEqual({e.title for e in changelist.get_queryset(request)}, {"Beacon Hall"})
 
+    def titles(self, params):
+        request, changelist = self.changelist(EventAdmin(AllEventProxy, AdminSite()), "/admin/core/alleventproxy/", params)
+        return {e.title for e in changelist.get_queryset(request)}
+
+    def test_admin_opens_on_new_england(self):
+        Event.all_objects.filter(title="Beacon Hall").update(is_approved=False)
+        self.assertEqual(self.titles({}), {"Hartford Hall"})
+        self.assertEqual(self.titles({"is_approved__exact": "0"}), set())
+
+    def test_all_areas(self):
+        self.assertEqual(self.titles({"scope": "all"}), {"Beacon Hall", "Hartford Hall"})
+
+    def test_a_chosen_state_outside_new_england(self):
+        request, changelist = self.changelist(VenueAdmin(Venue, AdminSite()), "/admin/core/venue/", {"state": "new-york"})
+        self.assertEqual({v.name for v in changelist.get_queryset(request)}, {"Beacon Hall"})
+
+    def test_the_venue_list_opens_on_new_england(self):
+        request, changelist = self.changelist(VenueAdmin(Venue, AdminSite()), "/admin/core/venue/", {})
+        self.assertEqual({v.name for v in changelist.get_queryset(request)}, {"Hartford Hall"})
+        spec = next(spec for spec in changelist.filter_specs if spec.title == "area")
+        self.assertEqual([c["display"] for c in spec.choices(changelist)], ["New England", "All areas"])
+        self.assertTrue(next(c for c in spec.choices(changelist) if c["display"] == "New England")["selected"])
+
+    def test_no_state_or_no_venue_stays_in(self):
+        Venue.objects.create(name="Stateless Hall", state="")
+        Event.objects.create(title="Submitted", starttime=timezone.now() + timezone.timedelta(days=3), venue_override="a barn")
+        self.assertIn("Submitted", self.titles({}))
+        request, changelist = self.changelist(VenueAdmin(Venue, AdminSite()), "/admin/core/venue/", {})
+        self.assertIn("Stateless Hall", {v.name for v in changelist.get_queryset(request)})
+
+    def test_nothing_deleted(self):
+        self.titles({})
+        self.assertEqual(Event.all_objects.count(), 2)
+        self.assertEqual(Venue.objects.count(), 2)
+
 
 class StaleLinksTestCase(TestCase):
     def setUp(self):

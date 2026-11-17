@@ -7,11 +7,19 @@
   padding: 6px;
   background: #eeeeff;
 
+  // a label keeps its words on one line but no wider than the screen, and its menu shrinks
+  // inside it: the longest sub-region ("Pioneer Valley / Connecticut River Valley") would
+  // otherwise make the metro menu wider than a 320px phone
   label {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3em;
+    max-width: 100%;
     white-space: nowrap;
   }
 
   select {
+    min-width: 0;
     max-width: 100%;
   }
 }

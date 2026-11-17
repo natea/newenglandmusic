@@ -6,6 +6,7 @@
 @import "event_submission.scss";
 @import "no_cal.scss";
 @import "geo_filter.scss";
+@import "digest.scss";
 
 $background-main: #d4d0c7;
 
@@ -152,12 +153,6 @@ article {
     background: #ffa60015;
   }
 
-  .title-only {
-    font-weight: bold;
-  }
-  .artists {
-    font-weight: bold;
-  }
   a.ticket {
     font-weight: bold;
   }
@@ -243,7 +238,8 @@ article {
 
   .spotify-play,
   .apple-play,
-  .youtube-play {
+  .youtube-play,
+  .bandcamp-play {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -313,6 +309,58 @@ article {
 
     .youtube-more {
       font-size: 0.85rem;
+    }
+  }
+
+  .bandcamp-mark {
+    width: 12px;
+    height: 12px;
+    fill: #1da0c3;
+  }
+
+  .bandcamp-play:hover {
+    border-color: #1da0c3;
+  }
+
+  // the open button is filled, as the sketch draws it (aria-expanded is set by artist_preview.js)
+  .bandcamp-play[aria-expanded="true"] {
+    background: black;
+    color: white;
+    font-weight: 700;
+
+    .bandcamp-mark {
+      fill: white;
+    }
+  }
+
+  // bandcamp's large player, a fixed height with its artwork and track list; as wide as the
+  // column down to 320px, and on a narrow screen the whole width, past the time column
+  .bandcamp-player {
+    iframe {
+      border: 0;
+      border-radius: 10px;
+      display: block;
+      height: 300px;
+      margin-top: 6px;
+      max-width: 100%;
+      min-width: #{"min(320px, 100%)"};
+      width: 100%;
+    }
+
+    .bandcamp-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+      align-items: center;
+      font-size: 0.85rem;
+      margin: 4px 0 0;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .artist-player {
+      margin-left: 0;
+      max-width: 100%;
     }
   }
 
@@ -416,15 +464,17 @@ article {
   }
 }
 
-// a performer's name links to its page (add-band-pages), bold like the artists even in a
-// title; the event's own page is then the small "info" link after the venue
-.event a.performer {
-  font-weight: 700;
+// one link per row, to the event's page (add-event-pages): the headliner bold and a step
+// larger, the openers in the row's weight, the show's own title a quiet line above
+.event .event-title-line {
+  display: block;
+  font-size: 0.85em;
+  color: #4f4b44;
 }
 
-.event a.event-info {
-  font-size: 0.85em;
-  white-space: nowrap;
+.event .event-headliner {
+  font-size: 1.12em;
+  font-weight: 700;
 }
 
 // in a listing, a row of their own below the text, lined up with it like the play buttons

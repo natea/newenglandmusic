@@ -1,17 +1,25 @@
 // the listing's play buttons (see core/templates/core/event.html): each is a link to the
-// artist on spotify, apple music or youtube, which with javascript opens that service's
-// embedded player below the event's buttons instead. nothing loads from any of them until
-// a click, and only one player is open at a time, across all three. listening on document
-// covers the map panel's copies of events.
+// artist on spotify, apple music, youtube or bandcamp, which with javascript opens that
+// service's embedded player below the event's buttons instead. nothing loads from any of
+// them until a click, and only one player is open at a time, across all four. listening on
+// document covers the map panel's copies of events. a band or artist page's bandcamp button
+// (core/templates/core/band.html) opens its player in the section's own box.
 document.addEventListener("click", function (e) {
   const button = e.target.closest
-    && e.target.closest("a.spotify-play[data-spotify-artist], a.apple-play[data-apple-song], a.youtube-play[data-youtube-channel]");
+    && e.target.closest("a.spotify-play[data-spotify-artist], a.apple-play[data-apple-song], a.youtube-play[data-youtube-channel], a.bandcamp-play[data-bandcamp-id]");
   if (!button) {
+    return;
+  }
+  const isBandcamp = button.classList.contains("bandcamp-play");
+  // an address the player can't be built from stays a plain link
+  if (isBandcamp && !bandcampSrc(button)) {
     return;
   }
   e.preventDefault();
   if (window.siteAnalytics) {
-    const service = button.classList.contains("apple-play") ? "apple_music"
+    // each button names its own service; bandcamp plays used to fall through to "spotify"
+    const service = isBandcamp ? "bandcamp"
+      : button.classList.contains("apple-play") ? "apple_music"
       : button.classList.contains("youtube-play") ? "youtube" : "spotify";
     window.siteAnalytics.capture("preview_played", { service: service });
   }
@@ -23,25 +31,46 @@ document.addEventListener("click", function (e) {
     return;
   }
 
-  const row = button.closest(".artist-previews");
+  const row = button.closest(".artist-previews") || button.closest(".act-listen-box");
   const id = playerId(button);
   const open = document.querySelector(".artist-player");
-  const wasThisOne = open && open.dataset.playing === id && open.previousElementSibling === row;
+  const wasThisOne = open && open.dataset.playing === id && (open.previousElementSibling === row || open.parentElement === row);
   if (open) {
-    open.remove();
+    closePlayer(open);
   }
   if (wasThisOne) {
     return;
   }
 
-  const player = button.classList.contains("apple-play") ? applePlayer(button)
+  const player = isBandcamp ? bandcampPlayer(button)
+    : button.classList.contains("apple-play") ? applePlayer(button)
     : button.classList.contains("youtube-play") ? youtubePlayer(button) : spotifyPlayer(button);
   player.classList.add("artist-player");
   player.dataset.playing = id;
-  row.after(player);
+  if (button.closest(".artist-previews")) {
+    row.after(player);
+  } else {
+    row.appendChild(player);
+  }
+  if (isBandcamp) {
+    player.opener = button;
+    button.setAttribute("aria-expanded", "true");
+    player.querySelector("iframe").focus();
+  }
 });
 
+// removes an open player, and marks its button closed
+function closePlayer(player) {
+  player.remove();
+  if (player.opener) {
+    player.opener.setAttribute("aria-expanded", "false");
+  }
+}
+
 function playerId(button) {
+  if (button.classList.contains("bandcamp-play")) {
+    return "bandcamp:" + button.dataset.bandcampKind + "=" + button.dataset.bandcampId;
+  }
   if (button.classList.contains("apple-play")) {
     return "apple:" + button.dataset.appleSong;
   }
@@ -176,5 +205,54 @@ function youtubePlayer(button, height, autoplay) {
   more.rel = "noopener";
   more.textContent = "More by " + button.dataset.artistName + " on YouTube";
   box.appendChild(more);
+  return box;
+}
+
+// bandcamp's large player (artwork and track list), whose address is a fixed kind and a
+// number: nothing else from the page reaches it. "" when either isn't right
+function bandcampSrc(button) {
+  const kind = button.dataset.bandcampKind;
+  const id = button.dataset.bandcampId;
+  if ((kind !== "album" && kind !== "track") || !/^[0-9]+$/.test(id || "")) {
+    return "";
+  }
+  return "https://bandcamp.com/EmbeddedPlayer/" + kind + "=" + id + "/size=large/tracklist=true/artwork=small/";
+}
+
+// bandcamp's own player, with a Close button, and a link to the act's page under it as the
+// way out when the release has been removed. focus goes into the frame when it opens (see the
+// click handler) and back to the button when it closes
+function bandcampPlayer(button) {
+  const box = document.createElement("div");
+  box.className = "bandcamp-player";
+  const name = button.dataset.artistName;
+
+  const player = document.createElement("iframe");
+  player.src = bandcampSrc(button);
+  player.frameBorder = "0";
+  player.title = "Bandcamp player: " + name;
+  box.appendChild(player);
+
+  const footer = document.createElement("p");
+  footer.className = "bandcamp-footer";
+  if (button.dataset.bandcampPage) {
+    const more = document.createElement("a");
+    more.className = "bandcamp-more";
+    more.href = button.dataset.bandcampPage;
+    more.target = "_blank";
+    more.rel = "noopener";
+    more.textContent = "More by " + name + " on Bandcamp";
+    footer.appendChild(more);
+  }
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "bandcamp-close";
+  close.textContent = "Close";
+  close.addEventListener("click", function () {
+    closePlayer(box);
+    button.focus();
+  });
+  footer.appendChild(close);
+  box.appendChild(footer);
   return box;
 }

@@ -7,11 +7,15 @@ from .views.search import suggest
 from .views.act_page import artist_page, band_page
 from .views.autocomplete import VenueAutocomplete
 from .views.calendar_feed import calendar_feed
+from .views import digest as digest_views
 from .views.discover import discover
 from .views.email_subscribe import email_subscribe
 from .views.event_gcal import event_gcal_redirect
 from .views.event_ics_download import event_ics_download
-from .views.event_redirect import event_redirect
+from .views.event_page import event_page
+from .views.venue_page import venue_page
+from .views.venue_booking import venue_booking
+from .views.venue_list import venue_list
 from .views.event_submission import EventCreateView
 from .views.health import health
 from .views.index import index, past_month_archive
@@ -35,6 +39,15 @@ urlpatterns = [
         name="past_month_archive",
     ),
     # other urls
+    path("digest", digest_views.signup, name="digest_signup"),
+    path("digest/check-email", digest_views.check_email, name="digest_check_email"),
+    path("digest/confirm/<str:token>", digest_views.confirm, name="digest_confirm"),
+    path("digest/sign-in", digest_views.sign_in_page, name="digest_sign_in"),
+    path("digest/preferences", digest_views.preferences, name="digest_preferences"),
+    path("digest/delete", digest_views.delete_account, name="digest_delete"),
+    path("digest/unsubscribe/<str:token>", digest_views.unsubscribe, name="digest_unsubscribe"),
+    path("digest/sign-out", digest_views.sign_out, name="digest_sign_out"),
+    path("digest/suggest", digest_views.suggest, name="digest_suggest"),
     path("submit-event", EventCreateView.as_view(), name="submit_event"),
     path("location", set_location, name="set_location"),
     path("location/suggest", suggest_locations, name="suggest_locations"),
@@ -46,7 +59,7 @@ urlpatterns = [
     path("discover", discover, name="discover"),
     path("discover/", without_trailing_slash),
     re_path(r"^(?:bands|artists)(?:/[-\w]+)?/$", without_trailing_slash),
-    re_path(r"^(?P<kind>band|artist)(?:/(?P<slug>[-\w]+))?/?$", plural_address),
+    re_path(r"^(?P<kind>band|artist|venue)(?:/(?P<slug>[-\w]+))?/?$", plural_address),
     path("search/suggest", suggest, name="search_suggest"),
     path("artists", artists_index, name="artists_index"),
     path("bands/<slug:slug>", band_page, name="band_page"),
@@ -57,7 +70,11 @@ urlpatterns = [
     path("event/<int:event_id>/ics", event_ics_download, name="event_ics_download"),
     path("email-subscribe", email_subscribe, name="email_subscribe"),
     path("venue-autocomplete/", VenueAutocomplete.as_view(), name="venue-autocomplete"),
-    path("event/<int:event_id>", event_redirect, name="event_redirect"),
+    path("event/<int:event_id>", event_page, name="event_page"),
+    path("venues", venue_list, name="venue_list"),
+    re_path(r"^venues(?:/[-\w]+(?:/booking)?)?/$", without_trailing_slash),
+    path("venues/<slug:slug>", venue_page, name="venue_page"),
+    path("venues/<slug:slug>/booking", venue_booking, name="venue_booking"),
     # next url is password-protected and lets developers get a copy
     # of the prod data locally
     path("internal-api/db", internal_db_dump, name="internal_db_dump"),

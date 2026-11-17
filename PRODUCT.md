@@ -43,7 +43,7 @@ A Northeast US music venue database and event calendar. Venues come from a Googl
   - Wikipedia text: shown word for word, credited with a link to the article and CC BY-SA 4.0.
   - MusicBrainz genre tags: credited (CC BY-NC-SA).
   - OpenStreetMap neighborhoods: credited "© OpenStreetMap contributors".
-  - Bandcamp: links only; no data, no scraping.
+  - Bandcamp: a link and a player ID only; the ID is read by `find_bandcamp_embeds` from the act's own page, once, and nothing else is scraped from it, no proxy is used.
 - **Not yet public:** artist and band pages, and showing an event's linked performers to visitors.
 - **Undecided:** the site's name (see Brand Commitments).
 

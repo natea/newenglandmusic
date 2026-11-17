@@ -1,0 +1,56 @@
+Issue: [#13 Visitors can signup to receive a weekly email of upcoming shows that match their interests](https://github.com/natea/newenglandmusic/issues/13)
+
+## 1. Models and migration
+
+- [x] 1.1 Add `Subscriber`, `SignInCode` and `DigestChoice` (kinds `area`, `near`, `town`, `venue`) to `core/models.py`, with a migration. Venue choices cascade on venue deletion; emails are stored lowercase and unique.
+- [x] 1.1a Add `MailRequest` (address, client hash, kind, time), used by the sending limits, to the same migration.
+- [x] 1.2 Register `Subscriber` in the admin (address, confirmed, paused, created; deletable; choices shown inline).
+- [x] 1.3 Add `core/tests/test_digest_models.py` covering lowercase uniqueness, cascades on venue and subscriber deletion, and the admin list columns.
+
+## 2. Mail sender
+
+- [x] 2.1 Add `send_raw_email()` to `core/utils_aws.py`: a text and HTML `multipart/alternative` message with optional extra headers, sent with SES `send_raw_email`, leaving `send_email()` unchanged.
+- [x] 2.2 Add `core/tests/test_mail_sender.py` with a fake SES client: both parts and the headers appear in the recorded message, a client error, a credentials error and a throttling reply are raised to the caller, a line break in an address is refused, and `send_email()` still behaves as before.
+
+## 3. Signed links and sign-in codes
+
+- [x] 3.1 Add `core/digest_tokens.py`: purpose-salted signed tokens for confirmation (7 days) and unsubscribe (no expiry), and the sign-in code helpers (generate with `secrets`, keyed hash, constant-time check, 15 minutes, single use, newer code cancels older, 5 tries per code and 10 an hour per address, the 3-an-hour address limit and the 10-an-hour client limit).
+- [x] 3.2 Add `core/tests/test_digest_tokens.py` covering the scenarios for valid and altered links, the expired and used code, the lockouts, the address and client limits, and that the reply doesn't wait for the mail service (the fake sender is only called after the response is returned).
+
+## 4. Choosing shows
+
+- [x] 4.1 Add `core/digest.py`: `events_for(subscriber, window)` as a union of area, near, town and venue choices over approved, uncancelled events, plus a helper that loads located venues once for the distance choices. A choice is stale unless the parsed `GeoFilter.query_string` equals the stored string (apart from `all=1`). Verify with 4.2.
+- [x] 4.2 Add `core/tests/test_digest_selection.py` covering every scenario in "Choices select shows": area, distance (6 and 14 miles), followed town and venue, union with no duplicates, unapproved events, a venue with no coordinates, an area choice that went stale selecting nothing, a partly vanished one (a dropped metro, a renamed town) selecting nothing, a null start time, "All of the Northeast", a metro narrowed to towns, and a remembered neighborhood narrowing stripped from the form (with 5.3).
+
+## 5. Signup, confirmation and sign-in views
+
+- [x] 5.1 Add the choices form (areas and metro towns, near-a-place with the Gazetteer lookup and its candidate list, followed towns and venues) and the `/digest` signup view with the same response for known and unknown addresses, starting from the remembered filter and location.
+- [x] 5.2 Add the confirmation view (a button, no sign-in), the sign-in view (request and enter code) and sign-out, using the session (fresh key, 30-day limit, subscriber re-checked each request, no Django login).
+- [x] 5.3 Add `core/tests/test_digest_signup.py` and `core/tests/test_digest_sign_in.py` covering each scenario of the requirements on signing up again before confirming, signing up revealing nothing about other addresses, limits on emails to one address or from one client, and "Signing up needs only an email address", "Confirmation switches the email on", "Choosing which shows" (including the shared-town list and the rounded coordinates) and "Signing in with an emailed code", with the fake SES client and a small Gazetteer fixture. Include the link-then-button and scanner scenarios, the hidden field, CSRF on POSTs, the 20-choice limit, unknown places, and a line break in an address.
+
+## 6. Preferences, unsubscribe and privacy
+
+- [x] 6.1 Add the preferences view (change choices, pause and resume, delete account with confirmation), the unsubscribe page and one-click post endpoint, the footer menu item, the `noindex` and `no-store` headers, and the privacy page text (including the sentence saying nothing is stored about visitors).
+- [x] 6.2 Add `core/tests/test_digest_preferences.py` covering every scenario of "Managing a subscription", "One-click unsubscribe" and "Privacy page and admin", including the "Area no longer listed" and "Area partly gone" marks on the preferences page, the sessions-and-pages-guarded requirement, that opening the unsubscribe link alone changes nothing, the one-click post without a CSRF token, an altered link, sign-out, a deleted subscriber's session, and resume.
+
+## 7. The weekly email and its command
+
+- [x] 7.1 Add the email templates (text and HTML) and the builder in `core/digest.py`: grouping by date, the 50-show limit with the see-all link, cancelled shows left out, the unsubscribe and sign-in links.
+- [x] 7.2 Add `send_weekly_digests` based on `RecordedCommand`, with `--dry-run` and `--limit`, the once-per-week rule, per-subscriber failure handling, and the clean-up of old unconfirmed subscribers and codes. Set `self.job_summary`.
+- [x] 7.3 Add `bin/digest.sh`, the `newenglandmusic-digest` cron job in `render.yaml`, with `bin/digest.sh` sourcing `steps.sh`, the settings it needs (database, site address, sender, secret key, mail credentials, and `ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION`, which settings read without a default), with the AWS keys and sender declared on the web service entry as `sync: false` so the job can copy them, and notes in `PRODUCTION.md` and `.env.example`: verified sender, leaving the SES sandbox, SPF, DKIM and DMARC, and checking the bounce rate; `SITE_URL` set on the web service before the job is enabled; and a deploy check that signs up from two networks and compares the stored client hashes. (Done: shipped in PR #106 and the follow-ups; ticked 2026-11-15.)
+- [x] 7.4 Add `core/tests/test_weekly_digest_email.py` and `core/tests/test_send_weekly_digests.py` covering every scenario of "What the weekly email holds", "Sending once a week" and "Mail carries the headers readers expect": the window, cancelled shows, the 50-show limit (60 shows selected), text and HTML parts, one email per week on a rerun, paused and unconfirmed subscribers, a failed send, the dry run, the claim against overlapping runs, the unsubscribe headers, the missing mail service, sender and site address (blank or localhost `SITE_URL`), the client-address helper with single and multiple `X-Forwarded-For` entries, a throttling reply, `--limit`, event text escaped in the HTML part with a fixed subject ("Markup in a title"), the confirmation and code emails' raw path, a manual Sunday rerun, a deleted venue, and the cleanup of old unconfirmed sign-ups.
+- [x] 7.5 Extend `core/tests/test_scheduled_jobs.py` for the digest job: its schedule, start command, exact key set, no migrate step, and `bin/digest.sh` in the executable-scripts list and in the hard-coded `daily.sh`/`weekly.sh` loops of the unbuffered-output and real-commands tests.
+
+## 8. Check the whole
+
+- [x] 8.1 Run `venv/bin/python manage.py test` with the network blocked and confirm every spec scenario has a passing test.
+- [x] 8.2 Run `openspec validate add-weekly-email-digest --strict`.
+
+## 9. Launch
+
+- [x] 9.1 Create the SES domain identity `stagehopper.app` in us-east-2 with Easy DKIM, and add its three DKIM CNAMEs and a DMARC record in Cloudflare; verify SES reports the domain verified and DKIM successful. (Done 2026-11-15: verified, DKIM successful; DMARC at p=none.)
+- [x] 9.2 Give `hello@stagehopper.app` a way to receive replies: a Cloudflare Email Routing rule forwards it to the owner's inbox. (Done 2026-11-15; an SES test sent as hello@ arrived.)
+- [x] 9.3 Create the send-only IAM user `stagehopper-ses-sender` (SendRawEmail and SendEmail on the `stagehopper.app` identity, from `hello@stagehopper.app` only) and its access key, kept out of the repository.
+- [ ] 9.4 Request SES production access with an approved description of the site's mail; record AWS's answer here. (Submitted 2026-11-15 as transactional mail; denied the same day. A configuration set with bounce, complaint and reject notifications was then added (see PRODUCTION.md), and a fuller reply asking for a second review was sent on 2026-11-15; answer pending.)
+- [ ] 9.5 Set `DEFAULT_FROM_EMAIL`, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (and `SITE_URL`, if missing) on the web service, then run a blueprint sync and verify it creates `newenglandmusic-digest`. (Variables set on the web service 2026-11-15; the blueprint sync that creates the job is waiting for its approval in Render.)
+- [ ] 9.6 With the job suspended, sign up from two networks and check the confirmation and sign-in code emails arrive and the CSRF check passes (PR #115), run `send_weekly_digests --dry-run` from the job's shell, then enable the job and check the first Thursday run's summary at `/admin/core/jobrun/`.

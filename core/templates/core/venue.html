@@ -1,0 +1,59 @@
+{% extends 'core/base.html' %}
+{% load sass_tags %}
+
+{% block head %}
+  <link href="{% sass_src 'scss/venue.scss' %}" rel="stylesheet" type="text/css" />
+  <link rel="canonical" href="{{ canonical }}">
+{% endblock head %}
+
+{% block content %}
+{% comment %}
+  a venue's own page (add-venue-pages, core/views/venue_page.py): the room's show bill, the
+  gig-poster column chosen in the design round (.impeccable/mocks/decision/poster-column.html)
+{% endcomment %}
+<article class="act venue-page" aria-labelledby="venue-name">
+  <h1 class="act-tab" id="venue-name">{{ venue.name }}</h1>
+  {% include 'core/venue_tabs.html' %}
+  <div class="act-card">
+    <p class="venue-facts">
+      <span>{% if room %}<b>{{ room }}</b>{% if place %} · {% endif %}{% endif %}{{ place }}{% if area %} · <a href="/?metro={{ area.slug }}">{{ area_label }}</a>{% endif %}{% if venue.google_maps_link %} · <a href="{{ venue.google_maps_link }}" target="_blank" rel="noopener">Map<span aria-hidden="true"> ↗</span><span class="visually-hidden"> (Google Maps, opens another site)</span></a>{% endif %}</span>
+      {% if venue.genre_notes %}<span class="venue-books">{{ venue.genre_notes|truncatechars:80 }}</span>{% endif %}
+      {% if booking_link %}<a class="venue-book" href="{{ booking_link }}">Open booking ›</a>{% endif %}
+    </p>
+
+    {% if bill %}
+      <div class="venue-bill-head">
+        <h2>The bill</h2>
+        <span>{{ bill|length }} show{{ bill|length|pluralize }}{% with last=bill|last %} through {{ last.event.starttime|date:"F" }}{% endwith %}</span>
+      </div>
+      <ol class="venue-bill">
+        {% for night in bill %}
+          <li class="venue-night{% if night.tonight %} is-tonight{% endif %}{% if night.event.is_cancelled %} is-cancelled{% endif %}">
+            <a href="/event/{{ night.event.pk }}">
+              <span class="venue-date"><b>{{ night.event.starttime|date:"j" }}</b><span>{{ night.event.starttime|date:"D M"|lower }}</span>{% if night.tonight %}<span class="venue-today">today</span>{% endif %}</span>
+              <span class="venue-acts"><b>{{ night.headliner }}</b>{% if night.openers %}<span class="venue-with">with {{ night.openers|join:", " }}</span>{% endif %}{% if night.event.is_cancelled %}<span class="venue-with">cancelled</span>{% endif %}</span>
+              <span class="venue-time">{% if night.event.starttime_override %}{{ night.event.starttime_override }}{% else %}{{ night.event.starttime|time:"g:i a" }}{% endif %}</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p class="venue-none">No upcoming shows listed.</p>
+    {% endif %}
+
+    {% if playing_here %}
+      <h2 id="playing-here">Playing here</h2>
+      <dl class="act-fields venue-fields">
+        {% for label, value, url in playing_here %}<dt>{{ label }}</dt><dd>{% if url %}<a href="{{ url }}" target="_blank" rel="noopener">{{ value }}</a>{% else %}{{ value|linebreaksbr }}{% endif %}</dd>{% endfor %}
+      </dl>
+    {% endif %}
+
+    {% if getting_here %}
+      <h2 id="getting-here">Getting here</h2>
+      <dl class="act-fields venue-fields">
+        {% for label, value, url in getting_here %}<dt>{{ label }}</dt><dd>{% if url %}<a href="{{ url }}" target="_blank" rel="noopener">{{ value }}</a>{% else %}{{ value|linebreaksbr }}{% endif %}</dd>{% endfor %}
+      </dl>
+    {% endif %}
+  </div>
+</article>
+{% endblock content %}

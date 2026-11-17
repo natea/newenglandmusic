@@ -2,13 +2,15 @@
 the a–z index of bands and artists at /bands (add-act-index-and-search): every live act,
 bands and artists together, grouped by first letter ("#" for digits and symbols, a leading
 "The" ignored), each with its kind, home town and next upcoming show. acts held for review
-aren't listed; /artists redirects here.
+aren't listed, nor are acts marked inactive, which keep their pages; /artists redirects here.
 """
 
 import unicodedata
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Min, Q
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 
 from core.geo_filters import new_england_q
@@ -67,7 +69,7 @@ def live_acts():
     acts = []
     for model in (Band, Artist):
         acts.extend(
-            model.objects.filter(needs_review=False)
+            model.objects.filter(needs_review=False, is_inactive=False)
             .annotate(next_show=Min("performances__event__starttime", filter=upcoming))
             .only("name", "slug", "city_town", "state", "area")
         )
@@ -76,6 +78,23 @@ def live_acts():
 
 
 def act_index(request):
+    """
+    the index, cached for ACT_INDEX_CACHE_SECONDS: its 3,750 entries took about a second to
+    render on render.com (2026-11-16), and it holds nothing particular to a visitor. the key
+    carries the new york date, so the next shows' dates roll over at midnight; an editor's
+    change shows within the cache's lifetime
+    """
+    seconds = settings.ACT_INDEX_CACHE_SECONDS
+    key = f"act-index:{get_current_new_york_datetime():%Y-%m-%d}"
+    html = cache.get(key) if seconds else None
+    if html is None:
+        html = render_act_index(request).content
+        if seconds:
+            cache.set(key, html, seconds)
+    return HttpResponse(html)
+
+
+def render_act_index(request):
     groups = {letter: [] for letter in LETTERS}
     for act in live_acts():
         act.index_name = index_name(act.name)
@@ -112,5 +131,5 @@ def without_trailing_slash(request):
 
 
 def plural_address(request, kind, slug=None):
-    # /band and /artist/pixies are natural guesses at /bands and /artists/pixies
+    # /band, /artist/pixies and /venue/obriens are natural guesses at the plural addresses
     return redirect(f"/{kind}s/{slug}" if slug else f"/{kind}s", permanent=True)

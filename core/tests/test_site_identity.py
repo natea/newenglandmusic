@@ -118,7 +118,8 @@ class TheSitesAddressTestCase(SimpleTestCase):
 
         services = yaml.safe_load((PROJECT_ROOT / "render.yaml").read_text())["services"]
         jobs = [s for s in services if s["type"] == "cron"]
-        self.assertEqual(len(jobs), 2)
+        # the daily, weekly and weekly-email jobs
+        self.assertEqual(len(jobs), 3)
         for job in jobs:
             site_url = next(v for v in job["envVars"] if v["key"] == "SITE_URL")
             self.assertEqual(site_url["fromService"], {"type": "web", "name": "newenglandmusic", "envVarKey": "SITE_URL"})

@@ -23,7 +23,7 @@ class TownChipsBrowserTestCase(BrowserTestCase):
         self.metro = GeoArea.objects.get(label="MA: North of the Charles").slug
 
     def titles(self, page):
-        return sorted(page.locator("div.event .title-only").all_inner_texts())
+        return sorted(page.locator("div.event .event-headliner").all_inner_texts())
 
     def chips(self, page):
         # the chips sit in the closed section after a reload
