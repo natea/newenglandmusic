@@ -6,7 +6,6 @@ from django.http import HttpResponseNotFound, HttpResponseRedirect
 from django.shortcuts import render
 
 from ..calendar_feeds import subscribe_links
-from ..location import location_from_request
 from ..geo_filters import (
     CookieAction,
     apply_cookie_action,
@@ -14,6 +13,7 @@ from ..geo_filters import (
     geo_filter_for_request,
     new_england_q,
 )
+from ..location import location_from_request
 from ..models import CensusPlace, DateMessage, Event, IndexPageMessages, StaticPage
 from ..opengraph import get_meta
 from ..utils_datemath import (
