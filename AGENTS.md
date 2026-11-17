@@ -6,9 +6,8 @@ Guidance for coding agents working in this repository. `CLAUDE.md` is a symlink 
 
 This checkout started as [nyc noise](https://nyc-noise.com/), a Django NYC music calendar. On `main` (which grew out of the `venue-db` branch) it is being turned into a **Northeast US music venue database and event calendar**. Venues are kept in the admin (they first came from a Google Sheet); their events are fetched from venue websites, ticketing platforms and APIs.
 
-- **Two remotes, and only one to push to:**
-  - **`origin`:** the upstream `nycnoise/nycnoise` repo. Never push or open pull requests there.
-  - **`github`:** this site's own public repo, [natea/newenglandmusic](https://github.com/natea/newenglandmusic). Render deploys its `main` branch, so push `main` only when asked. `change/<name>` branches may be pushed here without asking, so their proposals get a Spek page (see below).
+- **One remote, `github`:** this site's own public repo, [natea/newenglandmusic](https://github.com/natea/newenglandmusic). Render deploys its `main` branch, so push `main` only when asked. `change/<name>` branches may be pushed here without asking, so their proposals get a Spek page (see below).
+- **The upstream `nycnoise/nycnoise` remote was removed** (November 2026); nothing is pulled from or pushed to it. Don't add it back, and start every branch and worktree from `github/main`, never from nycnoise's `dev`.
 - Commit locally, on a branch, when asked. `main` is what deploys; see `PRODUCTION.md`.
 - The schema has diverged from nycnoise on purpose. Don't keep NYC-specific fields or behavior for compatibility.
 
