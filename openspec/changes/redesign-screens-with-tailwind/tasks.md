@@ -4,7 +4,8 @@ Each screen is built from its Paper artboard's code export (exact values, never 
 
 ## 1. Before starting
 
-- [ ] 1.1 Confirm with the owner that every page takes the home page's header, including the five screens drawn with the other one (design.md, decision 5 and Open Questions). Done when the answer is recorded in design.md.
+- [ ] 1.1 Confirm with the owner that the header uses the home page's plain search box, with the location in the rail (design.md, decision 5 and Open Questions). Done when the answer is recorded in design.md.
+- [ ] 1.4 Bring the Paper artboards up to this proposal: the icon links on the six home-style artboards, the saved count on the bookmark icon, and the "Missing a venue?" call-out on "Venues — listing". Done when each artboard's top bar shows the four icon links and the venues rail ends with the call-out.
 - [ ] 1.2 Archive the finished changes whose specs this redesign touches (`add-venue-pages`, `add-venue-list`, `add-event-pages`), or record why one can't be yet. Done when `openspec list` no longer shows the archived ones and their specs are in `openspec/specs/`.
 - [ ] 1.3 For each spec that 1.2 brought in, add a delta here for any requirement that fixes the old look (tabs, strips, the venue page's fact line, the event page's date tab, the listing's "SHOW MAP" wording). Done when `openspec validate redesign-screens-with-tailwind` passes with them.
 
@@ -21,11 +22,11 @@ Each screen is built from its Paper artboard's code export (exact values, never 
 
 ## 3. The page shell
 
-- [ ] 3.1 Rebuild `core/templates/core/base.html` on the new stylesheet, from the home artboard's top bar: the name, the search box, "Bands & artists", "Venues", "Submit a show", "Saved"; the messages block, the content block and the footer (footer links, Privacy, Terms, the OpenStreetMap credit, the name and tagline). Remove the burger menu and its script. Done when tests for the `site-layout` header and footer scenarios and the `site-identity` tagline scenarios pass.
+- [ ] 3.1 Rebuild `core/templates/core/base.html` on the new stylesheet, the name, the home artboard's search box, and the four icon-over-label links ("Submit a show", "Saved", "Venues", "Bands") with their icons in `core/icons.html`; the messages block, the content block and the footer (footer links, Privacy, Terms, the OpenStreetMap credit, the name and tagline). Remove the burger menu and its script. Done when tests for the `site-layout` header and footer scenarios and the `site-identity` tagline scenarios pass.
 - [ ] 3.2 Move the search box into the header and restyle its suggestions from "Search — suggestions as you type" (group labels, the kind in small caps, the marked part, place or date, the chosen row on the accent, "See all results"), keeping `search-suggest.js`'s behaviour and what screen readers hear. Done when the `act-index` search-box and suggestion scenarios and the existing suggestion browser tests pass.
-- [ ] 3.3 Change the header's saved link to "Saved" with the count badge in `saved_shows.js`, named "Saved, 3 shows" for screen readers. Done when the `saved-shows` header scenarios pass in the existing browser test, updated.
+- [ ] 3.3 Change the header's saved link to "Saved" with the count badge at its icon's corner in `saved_shows.js`, named "Saved, 3 shows" for screen readers. Done when the `saved-shows` header scenarios pass in the existing browser test, updated.
 - [ ] 3.4 Add the breadcrumbs part and a small helper each view uses to say its path. Done when tests for the show, band and home breadcrumb scenarios pass.
-- [ ] 3.5 Fold the header below 640px (the links behind "Menu", the search box on its own row). Done when a browser test at 390px finds no sideways scroll on the home page and reaches each link through "Menu".
+- [ ] 3.5 Fold the header below 640px (icons alone with their labels kept for screen readers, the search box on its own row). Done when a browser test at 390px finds no sideways scroll on the home page and each link's accessible name.
 - [ ] 3.6 Keyboard and contrast: a visible focus mark on every header control, and a test computing the contrast of each text role on its ground from the token file. Done when the `site-layout` keyboard and contrast scenarios pass.
 
 ## 4. Shared parts
@@ -50,7 +51,7 @@ Each screen is built from its Paper artboard's code export (exact values, never 
 
 ## 7. Venues and bands
 
-- [ ] 7.1 Rebuild `core/templates/core/venue_list.html` from "Venues — listing" under the shared header: heading with the count line, the rail (place, genre, "Takes open bookings"), rows with the upcoming-show link and the "Open booking" tag, and no always-open map panel. Done when the existing venue list tests and browser test pass, updated for markup only.
+- [ ] 7.1 Rebuild `core/templates/core/venue_list.html` from "Venues — listing" under the shared header: heading with the count line, the rail (place, genre, "Takes open bookings"), rows with the upcoming-show link and the "Open booking" tag, no always-open map panel, and the "Missing a venue?" call-out at the foot of the rail, shown only when the `suggest_venue` URL resolves. Done when the existing venue list tests and browser test pass, updated for markup only, and tests cover the call-out with and without the suggestion page.
 - [ ] 7.2 Rebuild `core/templates/core/venue.html` and `venue_tabs.html` from "Venue — page": name, fact line, genre pills, "Website" and "Directions", the "Shows" and "For artists" tabs, "The bill" with date blocks and the "Tonight" tag, the fact table (rows only when known), "Want to play here?" when the venue takes bookings. No map. Done when the existing venue page tests pass and a test confirms no map element is drawn.
 - [ ] 7.3 Restyle `core/templates/core/venue_booking.html` with the same header, tabs and fact table. Done when the booking view's tests pass.
 - [ ] 7.4 Rebuild `core/templates/core/act_index.html` and `index_entry.html` from "Bands — listing": the letter rail across the page, each letter's initial with its count and guide line, two columns of entries with kind, town and the next show's date (on the accent when it's within a week), and the "Not sure who to see?" box linking to Discover. Done when the `act-index` delta's scenarios and the existing index tests pass, including the 390px one.

@@ -87,11 +87,13 @@ Repeated things are template includes with their utility classes inside: `core/p
 
 - *Instead of `@apply` component classes:* Tailwind's own advice is against it, and it rebuilds the stylesheet-per-component sprawl this change removes.
 
-### 5. One header and one row, from the home page
+### 5. One header and one row
 
-The five earlier artboards draw a different header (the location inside a rounded search bar, icons over the links) and, on the venues listing, an always-open map panel. Building two headers would make the site read as two sites, so every page takes the home page's header, the location moves to the rail on pages that have one, and the venues listing gets the same "Show on map" link as the home page. Nothing draws a poster tile: the Eventbrite-style rows that needed one are set aside.
+Every page takes one header: the name, the home page's plain search box, and four links drawn as an icon over a label ("Submit a show", "Saved", "Venues", "Bands"), which is the link style of the five earlier artboards and the owner's choice for all of them. The saved count sits on a small accent badge at the bookmark icon's corner. Those earlier artboards also put the location inside a rounded search bar and, on the venues listing, keep a map panel always open; here the location lives in the rail on pages that have one, and the venues listing gets the same "Show on map" link as the home page. Nothing draws a poster tile: the Eventbrite-style rows that needed one are set aside.
 
-- *Instead of the earlier header everywhere:* the home page was chosen after those screens were drawn, and its header is the simpler one (no icons, no second field).
+Icons are inline SVG in `core/icons.html`, stroked in `currentColor`, so they take the token colours.
+
+The "Missing a venue?" call-out reuses the bands listing's call-out part. Its link is resolved by URL name (`suggest_venue`, which `add-venue-suggestions` will add); while that name doesn't resolve, the part renders nothing. A test covers both states by adding the URL in a test URLconf.
 
 ### 6. The listing row is rebuilt once, and events are re-rendered at deploy
 
@@ -156,5 +158,6 @@ Controls the artboards draw that the site can't do today, left out of this chang
 
 ## Open Questions
 
-- **One header.** This plan puts the home page's header on every page, including the five screens drawn with the other one (decision 5). To confirm at G2.
+- **The search box and location.** The header's links are settled (icons over labels). This plan uses the home page's plain search box on every page and keeps the location in the rail, not inside the search bar as the five earlier artboards draw it (decision 5). To confirm at G2.
+- **Artboards to catch up.** The icon links and the "Missing a venue?" call-out are specified here but not yet drawn in Paper (its weekly limit for automated edits was reached). They can be drawn when the limit resets, before the header and venues listing are built.
 - **The venue page's map.** Left out here. If the owner settles the Places map term, it's a small follow-up.

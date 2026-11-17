@@ -6,15 +6,30 @@ Describes what every public page shares: the header with the site's name, the se
 ## ADDED Requirements
 
 ### Requirement: Every page has the same header
-Every public page SHALL open with a header holding, in this order: the site's name linking to the home page; the search box; and links reading "Bands & artists", "Venues", "Submit a show" and "Saved". The header SHALL have no menu that must be opened to reach those links at 640px wide and up.
+Every public page SHALL open with a header holding, in this order: the site's name linking to the home page; the search box; and four links, each an icon above its label, reading "Submit a show", "Saved", "Venues" and "Bands". The header SHALL have no menu that must be opened to reach those links, at any width.
 
 #### Scenario: The header's parts
 - **WHEN** a visitor opens the home page, a venue's page or the privacy page 1440px wide
-- **THEN** each shows the name, the search box and the four links, in that order
+- **THEN** each shows the name, the search box and the four links in that order, each link an icon above its label
 
 #### Scenario: The links go where they say
-- **WHEN** the visitor follows "Bands & artists", "Venues", "Submit a show" and "Saved"
-- **THEN** they open `/bands`, `/venues`, `/submit-event` and `/saved`
+- **WHEN** the visitor follows "Submit a show", "Saved", "Venues" and "Bands"
+- **THEN** they open `/submit-event`, `/saved`, `/venues` and `/bands`
+
+### Requirement: A rail can end with a call-out
+The bands listing's rail SHALL end with a call-out headed "Not sure who to see?" linking to Discover bands. The venues listing's rail SHALL end with a call-out headed "Missing a venue?" linking to the page where a visitor suggests a venue. While the site has no such page, the "Missing a venue?" call-out SHALL NOT be shown.
+
+#### Scenario: The bands listing
+- **WHEN** a visitor opens `/bands`
+- **THEN** its rail ends with "Not sure who to see?" and a link to `/discover`
+
+#### Scenario: The venues listing, with a suggestion page
+- **WHEN** the site has a page for suggesting a venue and a visitor opens `/venues`
+- **THEN** its rail ends with "Missing a venue?" and a link to that page
+
+#### Scenario: The venues listing, without one
+- **WHEN** the site has no page for suggesting a venue
+- **THEN** `/venues` shows no "Missing a venue?" call-out
 
 ### Requirement: Pages below the home page have breadcrumbs
 Every public page other than the home page SHALL show, under the header, the path from the home page to itself: each step before the last as a link, the page itself last and not a link. A venue's page SHALL pass through "Venues"; a band's or artist's page through "Bands & artists"; a show's page through "Venues" and its venue when the venue has a page, ending with the headliner and the show's date.
@@ -115,11 +130,11 @@ When a map tiles key is set and a day has at least one listed show at a located 
 - **THEN** no "Show on map" link is shown
 
 ### Requirement: The layout folds on smaller screens
-Below 1024px wide the rail SHALL be closed behind a "Filters" button that opens it in place. Below 640px the header's four links SHALL be behind a "Menu" button, the search box SHALL take a row of its own, and a show's row SHALL stack: time and name, then venue, then price and save control. No public page SHALL scroll sideways at 390px wide.
+Below 1024px wide the rail SHALL be closed behind a "Filters" button that opens it in place. Below 640px the header's four links SHALL show their icons alone, with their labels kept for screen readers, the search box SHALL take a row of its own, and a show's row SHALL stack: time and name, then venue, then price and save control. No public page SHALL scroll sideways at 390px wide.
 
 #### Scenario: A phone
 - **WHEN** the home page is opened 390px wide
-- **THEN** the list is shown, "Filters" and "Menu" are buttons, the week strip scrolls within itself, and the page doesn't scroll sideways
+- **THEN** the list is shown, "Filters" is a button, the four header links show as icons that a screen reader still names, the week strip scrolls within itself, and the page doesn't scroll sideways
 
 #### Scenario: Opening the filters
 - **WHEN** the visitor chooses "Filters" on a phone
