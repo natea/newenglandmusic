@@ -59,7 +59,7 @@ urlpatterns = [
     path("discover", discover, name="discover"),
     path("discover/", without_trailing_slash),
     re_path(r"^(?:bands|artists)(?:/[-\w]+)?/$", without_trailing_slash),
-    re_path(r"^(?P<kind>band|artist)(?:/(?P<slug>[-\w]+))?/?$", plural_address),
+    re_path(r"^(?P<kind>band|artist|venue)(?:/(?P<slug>[-\w]+))?/?$", plural_address),
     path("search/suggest", suggest, name="search_suggest"),
     path("artists", artists_index, name="artists_index"),
     path("bands/<slug:slug>", band_page, name="band_page"),
