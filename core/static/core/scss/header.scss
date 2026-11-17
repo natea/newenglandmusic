@@ -16,19 +16,6 @@ div.header {
     flex: 10;
   }
 
-  .burgerColumn {
-    display: flex;
-    flex-direction: column;
-    flex-basis: 100%;
-    flex: 1;
-    font-size: 2rem;
-
-    a {
-      color: black;
-      text-decoration: none;
-    }
-  }
-
   .leftColumn a {
     color: black;
     text-decoration: none;
@@ -41,19 +28,83 @@ div.header {
     color: #555;
   }
 
-  .rightColumn {
-    text-align: right;
+  // the links take the room the name leaves; the column is narrow (42em), so they wrap rather than squeeze
+  .leftColumn {
+    flex: 1 0 auto;
+  }
 
-    :first-child {
-      margin-top: 6px;
+  .rightColumn {
+    flex: 3 1 0;
+    text-align: right;
+    margin-top: 6px;
+  }
+
+  // one list of links: a row on a wide screen, a ☰ button and a stacked column on a phone
+  nav#siteMenu {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px 18px;
+
+    a {
+      font-weight: bold;
     }
+  }
+
+  .menu-toggle {
+    display: none;
+    margin-left: auto;
+    padding: 2px 10px;
+    font-size: 2rem;
+    line-height: 1.2;
+    color: black;
+    background: none;
+    border: none;
+    cursor: pointer;
   }
 }
 
-#burgerMenuContents {
-  margin-bottom: 50px;
+// without javascript (no `js` class) every link stays shown at every width
+@media (max-width: 600px) {
+  html.js div.header {
+    // the button sits beside the name; the list wraps onto its own full-width line below
+    .leftColumn {
+      flex: 1;
+    }
 
-  a {
-    font-weight: bold;
+    .rightColumn {
+      display: contents;
+    }
+
+    .menu-toggle {
+      display: block;
+      margin-left: 0;
+    }
+
+    nav#siteMenu {
+      display: none;
+      flex-direction: column;
+      text-align: left;
+      gap: 0;
+      flex-basis: 100%;
+      background: #f6f4ee;
+      margin-top: 4px;
+
+      &.open {
+        display: flex;
+      }
+
+      a {
+        padding: 12px 8px;
+        border-top: 1px solid #b9b4a8;
+      }
+    }
+  }
+
+  div.header nav#siteMenu {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 6px;
+    text-align: left;
   }
 }

@@ -42,6 +42,6 @@ No outside service is called, and tests never touch the network. Server markup i
 - **What is "the calendar picker"?** Taken here as the "Subscribe to this calendar" box only. The month-link row is not folded; if the picker means that row or the month grid, folding it needs a decision.
 - **What is "advanced search"?** Taken here as the state, metro and town filter and the "near" form. The search box in the masthead is left as it is.
 - **Should the section open by itself** when a filter is active? Proposed: no, it is always closed on load and the summary line shows what applies.
-- **Which sketch?** None is chosen yet (A, B or C); the markup tasks name the option once the owner picks. B and C need panels and script, and would need further scenarios.
+- **Which sketch?** Option A (Quiet bars) is chosen; B and C are rejected.
 - **Discover and saved shows** keep their open forms: this is the proposal's reading of "on the listing page"; say if they should fold too.
 - **Saved shows** is in the header today; kept in the menu unless told otherwise.

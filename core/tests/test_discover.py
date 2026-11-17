@@ -393,7 +393,7 @@ class MenuTestCase(TestCase):
 class SiteHeaderTestCase(TestCase):
     def parts(self, path):
         html = self.client.get(path).content.decode()
-        header = re.search(r"<div class='header'>.*?id='burgerMenuContents'>.*?</div>", html, re.S).group(0)
+        header = re.search(r"<div class='header'>.*?</nav>.*?</form>", html, re.S).group(0)
         footer = re.search(r"<div id='footer'>.*?</div>", html, re.S).group(0)
         return [re.sub(r"\s+", " ", part) for part in (header, footer)]
 
