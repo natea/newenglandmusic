@@ -101,8 +101,11 @@ services:
       # inherited from nyc noise and unused by this site, but the settings require them
       - key: PROD_INTERNAL_API_SERVER
         value: https://nyc-noise.com/
+      # the token of the inherited data-export endpoint (/internal-api/db), which issue 151
+      # removes. set in the dashboard to a long random value, never kept here: a blueprint
+      # sync leaves a sync: false variable as the dashboard has it
       - key: RC_DEVELOPER_INTERNAL_TOKEN
-        value: unused
+        sync: false
       - key: PYINSTRUMENT_ENABLE
         value: "false"
       - key: DEBUG_TOOLBAR_ENABLE
