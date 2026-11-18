@@ -1,45 +1,46 @@
-## 1. Accounts (with Nate)
+## 1. Before building (with Nate)
 
-- [ ] 1.1 Nate creates the Google Cloud project for previews, with billing and a budget alert, and turns on Cloud Run and Artifact Registry. Set up Workload Identity Federation for this repository and the deploy service account. Record the steps in `PRODUCTION.md`.
-- [ ] 1.2 Nate creates the Neon project (Postgres 17, `aws-us-east-1`) and an API key.
-- [ ] 1.3 Write in `PRODUCTION.md` how to make the read-only role on Render's database. Nate makes it and adds `PREVIEW_SOURCE_DATABASE_URL`, `NEON_API_KEY` and `PREVIEW_ADMIN_PASSWORD` as GitHub secrets.
+- [ ] 1.1 On the vendors' current pages and the new accounts, check and record in `PRODUCTION.md`, with the date:
+  - Cloud Run's prices and its free allowance in `us-east1`;
+  - Neon's free plan: branches, compute hours, storage;
+  - that a branch can be made from `base`, and that `pg_restore --clean --single-transaction` into `base` works while a child branch exists;
+  - Artifact Registry's storage price.
 
-## 2. The scrub
+  If a figure changes the proposal's cost or the 9-preview limit, tell Nate before going on.
+- [ ] 1.2 Find which settings event pages and the discovery deck need to show players at request time, and which of them are secrets. Give Nate the list for open question 5.
+- [ ] 1.3 Nate creates the Google Cloud project for previews, in `us-east1`, with billing and a budget alert, and turns on Cloud Run and Artifact Registry. Set up keyless sign-in for this repository, a deploy service account, and a runtime service account with no roles. Record the steps in `PRODUCTION.md`.
+- [ ] 1.4 Write in `PRODUCTION.md` how to make the read-only role on Render's database: `CONNECT`, `USAGE` on the schema, `SELECT` on all tables and sequences, and default privileges for future ones. Nate makes it.
+- [ ] 1.5 Nate creates the Neon account and project (Postgres 17, `aws-us-east-1`), and adds the secrets: `PREVIEW_SOURCE_DATABASE_URL` in the GitHub environment `preview-base` (deployment branch `main` only); `NEON_API_KEY` and `PREVIEW_ADMIN_PASSWORD` for the repository.
 
-- [ ] 2.1 Add `scrub_preview_data`:
-  - it refuses unless `DJANGO_SETTINGS_MODULE` is `nycnoise.settings.preview`;
-  - it replaces users' emails and passwords, and empties `Event.user_submission_email`;
-  - it deletes any rows in the people-only tables;
-  - it sets `preview-admin` from `PREVIEW_ADMIN_PASSWORD`;
-  - `--admin-only` does only the last step.
+## 2. The data
 
-  Verify with tests for "People-only tables", "Personal fields" and "Nate checks an admin change", and a test that it refuses under other settings.
-- [ ] 2.2 Keep the people-only tables in one list, used by the copy and the scrub. Add a test that fails when a model with an `EmailField` is neither listed nor scrubbed.
+- [ ] 2.1 Add `core/preview_data.py`: every table as copied, left out or cleaned. Verify with a test for "A new table".
+- [ ] 2.2 Add `scrub_preview_data`, built from those lists, refusing under other settings or a database host that isn't local or Neon's. Verify with tests for "People-only tables" and "Personal fields", and for both refusals.
+- [ ] 2.3 Add `set_preview_admin`. Verify with tests for "Signing in as the preview admin" and "A live account".
 
 ## 3. Preview settings and the image
 
-- [ ] 3.1 Add `nycnoise/settings/preview.py` and the noindex middleware. Verify with tests for "Not indexed" and "Signing up for the weekly email", and a test that no API, analytics or mail setting is set.
-- [ ] 3.2 Bring the `Dockerfile` in line with Render (Python 3.11.14, no build secret, gunicorn on `$PORT`), and add a CI job that builds it. Verify by running the image locally against a scratch database and loading the listing.
+- [ ] 3.1 Add `nycnoise/settings/preview.py` and the noindex middleware above WhiteNoise. Verify with tests for "Not indexed" (a page and a static file), "The data export", "Signing up for the weekly email" and "A stored play button".
+- [ ] 3.2 Bring the `Dockerfile` in line with Render (Python 3.11.14, placeholders at build, gunicorn on `$PORT`) and add `.dockerignore`. Verify by running the image locally against a scratch database with the listed variables and loading the listing. `django.yml` is unchanged.
 
-## 4. The workflows
+## 4. The decisions and scripts
 
-- [ ] 4.1 Add `.github/workflows/preview-base.yml`: the nightly copy into `base-next`, the scrub and the swap; then the sweep. It can also be run by hand. Verify a run against a scratch Neon project for "The nightly copy" and "The copy fails".
-- [ ] 4.2 Add `.github/workflows/preview.yml`:
-  - on open, push and reopen: build, branch, migrate, set the admin, deploy, and record the deployment;
-  - on close: delete and mark the deployment inactive;
-  - `paths-ignore` for `openspec/**` and `docs/**`;
-  - skip pull requests from forks and Dependabot.
+- [ ] 4.1 Add `core/preview_plan.py`: which pull requests get a preview, the variable list, the deployment payload, and what the sweep removes. Verify with tests for "Changes to specs only", "A pull request from a fork", "Dependabot", "What a preview is given", "No jobs", "Closed without merging" and "Idle".
+- [ ] 4.2 Add the `bin/preview-*` scripts over a small Neon and GitHub client and one `gcloud` function, with fakes for the tests. Verify with tests for "A build's pull request", "Reopened", "A tenth preview", "A pull request with a migration", "A new push", "A migration rewritten", "Merged" and "Rebuilt by hand", each checking the calls made.
 
-  Verify on a throwaway pull request for "A build's pull request", "A pull request with a migration", "A new push" and "Merged".
-- [ ] 4.3 Describe previews in `PRODUCTION.md`: what they cost, how long they live, the accounts and secrets, the admin password, and how to turn them off.
+## 5. The workflows
 
-## 5. Live check
+- [ ] 5.1 Add `.github/workflows/preview-base.yml`: the nightly copy on the runner (the role check, dump, migrate, scrub, load into `base`), then the sweep; runnable by hand. Verify with tests that read the file (schedule, the `preview-base` environment, the repository guard), and tests of the copy's script, against a local Postgres, for "The nightly copy", "The copy fails", "A role that can write" and "Cleaned before it is stored".
+- [ ] 5.2 Add `.github/workflows/preview.yml`. Verify with tests that read the file: its triggers, the fork and Dependabot conditions, concurrency per pull request, permissions, the repository guard, and that it names no `preview-base` environment.
+- [ ] 5.3 Describe previews in `PRODUCTION.md`: what they cost, how long they live, the accounts and secrets, the admin password, rebuilding by hand, and how to turn them off.
 
-- [ ] 5.1 With Nate's G4 and go-ahead: merge, run the nightly copy once by hand, and on the next code pull request check that:
-  - a preview deploys and GitHub shows its `preview-pr-<n>` deployment;
-  - its listing matches the live site's;
-  - it has no subscribers and no live admin email;
-  - `preview-admin` signs in;
-  - asking for the weekly email sends nothing;
-  - a spec-only pull request gets no preview;
-  - merging deletes the service and the branch.
+## 6. Live check
+
+- [ ] 6.1 With Nate's G4 and go-ahead: merge, and run the nightly copy once by hand. Check "The nightly copy" on the real base: the listing's data is there, and the people-only tables are empty.
+- [ ] 6.2 On the next code pull request, check on the real services:
+  - "A build's pull request": the preview deploys, GitHub shows `preview-pr-<n>` as successful, and the bridge moves the issue to `preview-ready` with the address;
+  - "Something saved on a preview": a venue saved there doesn't appear on the live site;
+  - "Signing in as the preview admin";
+  - "Not indexed" and "The data export";
+  - "Changes to specs only": a spec-only pull request gets no preview;
+  - "Merged": merging deletes the service and the branch, and the deployments show inactive.

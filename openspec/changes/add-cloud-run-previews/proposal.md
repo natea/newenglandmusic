@@ -1,64 +1,85 @@
 ## Why
 
-Sooz, Mark and Nate need to see a change working before it merges. Today it can be judged only by its diff, or by merging it, which puts it on the live site. Nate asked for previews on a copy of the live data, not demo data (9 November 2026), and chose a preview step before the merge (`building → preview-ready → awaiting-merge`, 12 November).
+Sooz, Mark and Nate need to see a change working before it merges. Today it can be judged only by its diff, or by merging it, which puts it on the live site. Nate's decisions so far:
+- **9 November 2026:** previews run on a copy of the live data, not demo data.
+- **18 November 2026:** "the preview environment should be generated when a PR is submitted, so that the feature can be reviewed *before* being merged. once it has merged, it can be assumed that it's been reviewed". An issue goes `building` → `awaiting-merge` → `preview-ready` → `merged` → `deployed`, and merging is the approval.
 
-`add-preview-environments` proposed Render's preview environments. They cost about $30–40 a month: Render's $25 Pro plan, plus a web service and a database billed for each preview. On 17 November Nate asked for a proposal with **Cloud Run and Neon** as the foundation. A Cloud Run service scales to zero, and Google's free monthly allowance covers review traffic. A Neon branch is an instant copy of a database, free for up to 10 branches. So the same previews cost about $0–3 a month. The two proposals are alternatives for the same capability: Nate picks one at G2, and the other is closed unbuilt.
+Intentable's bridge already does its half (`add-delivery-board`, deployed 18 November). When a pull request's preview reports a successful GitHub deployment of the environment `preview-pr-<number>`, the bridge moves the issue to `preview-ready` and posts the preview's address.
+
+`add-preview-environments` proposed Render's preview environments for the preview itself. On 17 November Nate asked for a proposal with **Cloud Run and Neon** as the foundation, expecting it to be much cheaper. The two proposals are alternatives for the same capability: Nate picks one at G2, and the other is closed unbuilt.
+
+**Cost, not yet verified.** These figures come from the vendors' pricing pages as read on 17 November 2026, and task 1.1 checks them before anything is built:
+- Render: about $30–40 a month. That is the $25 Pro plan, plus a web service and a database billed for each preview.
+- Cloud Run and Neon: about $0–3 a month. A Cloud Run service scales to zero, and Google's free monthly allowance should cover review traffic. Neon's free plan allows 10 branches in a project, with limits on compute hours and storage that all previews share.
+- Worst case: a preview kept busy all month, by a crawler for instance, could cost tens of dollars. A budget alert only emails; it doesn't stop anything.
 
 ## What Changes
 
-- **A cleaned copy of the live data waits in Neon.** Each night a GitHub Actions job copies the live database through a read-only role into a Neon project's base branch, leaving out the tables that hold only people's data. It then replaces the remaining personal fields: admin emails and passwords, and the submitter's email on events.
-- **Each pull request gets its own preview.** For each pull request against `main` from a branch of this repository that changes code, a GitHub Actions workflow:
+- **A cleaned copy of the live data waits in Neon.** Each night a GitHub Actions job:
+  1. copies the live database through a read-only role into a throwaway Postgres on the job's own runner;
+  2. removes people's data there;
+  3. loads the cleaned result into the Neon project's `base` branch.
+
+  So data that hasn't been cleaned never reaches Neon. What is removed:
+  - subscribers, sign-in codes, weekly-email choices and mail requests;
+  - sessions, the admin's change log, and every admin account;
+  - the submitter's email on events;
+  - the output and errors stored with job runs.
+
+  Every table is listed as copied, cleaned or left out, and a test fails when a new table isn't listed.
+- **Each pull request gets its own preview, as soon as it opens.** For each pull request against `main` from a branch of this repository that changes code, a GitHub Actions workflow:
   1. builds the site's container image;
   2. branches the Neon base as `pr-<number>` and applies the pull request's migrations to the branch;
-  3. deploys a Cloud Run service, `preview-pr-<number>`, at its own `run.app` address;
-  4. reports the address to GitHub as a deployment of the environment `preview-pr-<number>`.
+  3. deploys a Cloud Run service, `preview-pr-<number>`;
+  4. reports its address to GitHub as a successful deployment of the environment `preview-pr-<number>`, which the bridge reads.
 
-  This starts as soon as the pull request opens, so the change is reviewed on its preview before it merges; merging is the approval (Nate, 18 November 2026). Intentable's bridge moves the issue to `preview-ready` on that deployment's success and posts the address, linking the pages the build named (`add-preview-paths`).
+  A push redeploys the service on the same branch, so data saved on the preview stays. Pull requests from forks, Dependabot's, and ones that change only `openspec/` or `docs/` get no preview.
+- **A preview ends when its pull request is merged, or after 7 idle days.** On merge, the workflow deletes the service and the Neon branch and marks the deployments inactive. A pull request closed *without* merging keeps its preview (open question 1). A daily sweep removes previews with no push for 7 days and anything left behind, and marks their deployments inactive. A swept preview can be rebuilt by hand from the Actions tab.
+- **A preview never reaches the outside world.** It has no mail sender and no keys for outside APIs, analytics or the sheet sync, and no scheduled jobs. The inherited data-export endpoint (`/internal-api/db`) is switched off on previews. Every response asks search engines not to index it.
+- **A preview admin can sign in,** as `preview-admin`, the only account on a preview, with a password kept for previews.
+- **The container image matches production.** The fork's `Dockerfile` came from upstream nycnoise and has drifted: Python 3.12 where production uses 3.11.14, and a `.env` secret at build time. It is brought in line with Render's build and start commands. It is built only by the preview workflow, on pull requests. Nothing is added to the checks that production's deploys wait on.
 
-  This starts as soon as the pull request opens, so the change is reviewed on its preview before it merges; merging is the approval (Nate, 18 November 2026). Intentable's bridge moves the issue to `preview-ready` on that deployment's success and posts the address, linking the pages the build named (`add-preview-paths`).
-
-  A push redeploys the service on the same branch, so data saved on the preview stays.
-- **A preview ends with its pull request.** When the pull request is merged or closed, the workflow deletes the service and the Neon branch, and marks the deployment inactive. A daily sweep deletes any preview whose pull request has had no push for 7 days, and any preview left behind.
-- **A preview never reaches the outside world.** It has no mail sender and no keys for outside APIs, analytics or the sheet sync. It has no scheduled jobs. It asks search engines not to index it. The play buttons stored in event pages still show.
-- **A preview admin can sign in,** as `preview-admin`, with a password kept for previews only.
-- **The container image matches production.** The fork's `Dockerfile` came from upstream nycnoise and has drifted: Python 3.12 instead of 3.11.14, and a `.env` secret at build time. It is brought in line with Render's build and start commands, so a preview runs the same code the same way.
+**What a preview can't show.** The listing's play buttons are stored in each event's saved page, so they show as on the live site. Pages that build their players at request time, such as event pages and the discovery deck, need the Spotify, Apple Music and YouTube settings. Without them those pages show no players (open question 5).
 
 Out of scope:
-- **The issue side, in intentable:** posting the preview's address, moving the issue to `preview-ready` and asking "looks right?". The bridge will read the `preview-pr-<n>` deployments, as `add-delivery-board` reads production's.
-- **Previews of pull requests from forks of the repository, and Dependabot's.** GitHub withholds secrets from them, and they shouldn't run with this repository's cloud credentials anyway.
-- **Keeping a preview after its pull request closes unmerged.** The pull request stays open to keep it; the board shows it in `awaiting-merge`.
+- **The issue side.** Intentable's bridge has it: `preview-ready`, the comment with the address, and the links to the pages to check, which the build names (`add-preview-paths`).
+- **Previews of pull requests from forks of the repository, and Dependabot's.** GitHub withholds secrets from them.
 
 ## Open questions for G2
 
-1. **A Google Cloud project and billing account.** The change needs a new project with billing on Nate's account (or Jazkarta's?) and a budget alert. Which account pays?
-2. **A Neon account.** The free plan allows 10 branches in a project: the base plus 9 open previews. Is that enough, or should the workflow refuse a tenth preview with a note on the pull request?
-3. **How long an idle preview lives:** 7 days without a push is proposed.
-4. **Who can open a preview.** Anyone with the address, so Sooz and Mark need no Google sign-in. The data holds nothing personal, and the address isn't published beyond the issue. A password gate is the alternative.
-5. **Where the copy runs.** A GitHub Actions runner connects to Render's database from outside. Render allows outside connections today. If Nate later limits them to listed addresses, the nightly copy moves to a Render cron job that writes to Neon.
+1. **A pull request closed without merging.** On 12 November Nate said: "we may close a PR but not yet merge it back to main … it may still be sitting on a preview branch and preview URL, but not yet deployed to prod." Proposed, to honour that: closing without merging **keeps** the preview until it has been idle 7 days. The alternative is to delete it on any close, as Render does, and keep the pull request open to keep the preview.
+2. **A Google Cloud project and billing account,** with a budget alert. Which account pays: Nate's or Jazkarta's? An organisation's policy may forbid public Cloud Run services, which previews need.
+3. **A Neon account** used for nothing else, since the pull request workflow holds its API key. The free plan's 10 branches mean the base plus 9 open previews. Proposed: a tenth pull request gets a failed check saying so.
+4. **How long an idle preview lives:** 7 days without a push is proposed. A finished build waiting on Nate's merge gets no pushes, so its preview dies after 7 days and the issue's link goes dead until someone rebuilds it. Longer, such as 14 days, costs little.
+5. **Players on previews.** Should previews get the Spotify, Apple Music and YouTube settings, so changes to players can be reviewed? Several recent issues were about exactly those (#63, #74). The cost is that those keys become readable by pull request code. Proposed: yes for the switches that need no key, and task 1.2 finds out which keys request-time rendering needs, for Nate to decide.
+6. **Who can open a preview, and who has the admin password.** Proposed: anyone with the address can open a preview, so Sooz and Mark need no Google sign-in. The data holds nothing personal, and the address appears only on the issue. The `preview-admin` password is Nate's, shared with Sooz and Mark if he chooses. A password gate on the whole preview is the alternative.
+7. **Nightly copy.** The plan left the refresh open (nightly, or once per preview). Nightly is proposed, so cleaning happens once, away from any preview.
+8. **The read-only role on the live database** is the one change to production. Nate makes it himself (task 1.4); G2 is the yes for it.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `preview-environments`: a preview of the site for each pull request, on its own copy of a cleaned nightly snapshot of the live data, cut off from email, outside APIs, analytics and scheduled jobs, and removed with its pull request.
+- `preview-environments`: a preview of the site for each pull request, on its own copy of a cleaned nightly snapshot of the live data, cut off from email, outside APIs, analytics and scheduled jobs.
 
 ### Modified Capabilities
 
-None. Production's build, jobs and data are unchanged; the `Dockerfile` isn't used by Render.
+None. Production's build, checks, jobs and data are unchanged; Render doesn't use the `Dockerfile`.
 
 ## Impact
 
 - **Code:**
-  - `.github/workflows/preview.yml` (deploy and remove a pull request's preview);
-  - `.github/workflows/preview-base.yml` (the nightly copy, and the daily sweep);
-  - `Dockerfile` (Python 3.11.14, no build-time secret, gunicorn as Render starts it);
+  - `.github/workflows/preview.yml` (deploy, rebuild and remove a pull request's preview);
+  - `.github/workflows/preview-base.yml` (the nightly copy and the daily sweep);
+  - `bin/preview-*` scripts and `core/preview_plan.py`, which hold the workflows' decisions so they can be tested;
+  - `Dockerfile` and a new `.dockerignore`;
   - a management command, `scrub_preview_data`;
   - `nycnoise/settings/preview.py`;
   - `PRODUCTION.md`.
 - **Accounts:**
-  - a Google Cloud project with Cloud Run and Artifact Registry, and keyless sign-in from GitHub Actions (Workload Identity Federation);
-  - a Neon project;
-  - GitHub secrets for the read-only database role, Neon's API key and the preview admin's password.
+  - a Google Cloud project with Cloud Run and Artifact Registry, and keyless sign-in from GitHub Actions;
+  - a Neon project in an account of its own;
+  - GitHub secrets: the read-only database role, in an environment only `main`'s nightly job can use; and Neon's API key and the preview admin's password, for the pull request workflow.
 - **Render:** one read-only Postgres role on the live database. Nothing else changes.
-- **Cost:** about $0–3 a month: image storage, plus compute above Cloud Run's free allowance. A budget alert on the Google Cloud project catches surprises.
 - **Alternative to:** `add-preview-environments` (Render). Only one of the two is built.
+- **Works with:** `add-preview-paths`, which has the build name the pages to check.
