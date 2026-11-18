@@ -44,7 +44,7 @@ Vendor behaviour this design relies on is from the vendors' documentation, not y
 ## Decisions
 
 **Clean on the runner, load only clean data.** `preview-base.yml` runs nightly on `main`, with a Postgres 17 service container, as `django.yml` has. It:
-1. checks the source role can't write (`has_table_privilege(..., 'INSERT')` on a core table), and refuses if it can;
+1. checks the source role can't write, and refuses if it can: it must not be a superuser, and must lack `INSERT`, `UPDATE` and `DELETE` on a core table;
 2. runs `pg_dump` 17, from the `postgres:17` image since the runner's client is older, from `PREVIEW_SOURCE_DATABASE_URL` into the service container, with `--exclude-table-data` for the left-out tables;
 3. runs `migrate` and `scrub_preview_data` against the container;
 4. dumps the cleaned container and restores it into Neon's one long-lived `base` branch with `pg_restore --clean --if-exists --single-transaction`.
@@ -56,7 +56,7 @@ The alternative was restoring into Neon and scrubbing there. That would put uncl
 **Every table is classified.** `core/preview_data.py` lists each table as one of:
 - `COPIED`;
 - `LEFT_OUT`, whose data is never dumped: the five people-only tables, `django_session`, `django_admin_log`, `auth_user` and its group and permission link tables;
-- `CLEANED`, with what is done: `core_event.user_submission_email` emptied, and `core_jobrun.output` and `error` emptied.
+- `CLEANED`, with what is done: `core_event.user_submission_email` emptied, unapproved visitor submissions deleted (open question 8), and `core_jobrun.output` and `error` emptied.
 
 A test compares the lists with the database's tables and fails on one that is missing. That is broader than looking for `EmailField`, which would miss `MailRequest.address` and the admin log. The dump's exclusions and the scrub are both built from these lists.
 
@@ -74,7 +74,7 @@ A separate command, `set_preview_admin`, creates or updates `preview-admin` from
 
 **The pull request workflow.** `preview.yml` runs on:
 - `pull_request` (`opened`, `synchronize`, `reopened`, `closed`), for pull requests whose head is in this repository and whose author isn't Dependabot;
-- `workflow_dispatch` with a pull request number, to rebuild by hand.
+- `workflow_dispatch` with a pull request number, to rebuild by hand. `core/preview_plan.py` applies the same rules to it, so a fork's or Dependabot's pull request is refused there too.
 
 One `concurrency` group per pull request stops two runs racing. `bin/preview-plan` decides from the changed files whether the pull request gets a preview, so a spec-only pull request that later gains code gets one on that push.
 
@@ -84,7 +84,7 @@ To deploy, it:
 3. runs `migrate` from the image against the branch. On failure it deletes the branch, makes it again from `base` and migrates once more;
 4. runs `set_preview_admin`;
 5. deploys `preview-pr-<n>` with `--min-instances 0 --max-instances 1 --allow-unauthenticated` and the variables below;
-6. reads the service's address (`status.url`), and sets it as the service's `SITE_URL`;
+6. reads the service's address (`status.url`), and sets it as the service's `SITE_URL`, with the same secret key as step 5, so sessions survive the second revision;
 7. creates a GitHub deployment of `preview-pr-<n>` and sets its status to `success` with `environment_url`.
 
 For the deployment in step 7:
@@ -128,6 +128,7 @@ The `bin/preview-*` scripts are thin. They call Neon's and GitHub's APIs through
 
 ## Risks / Trade-offs
 
+- [`pg_restore --clean` drops only what the dump holds] → a table production dropped stays in `base`, unused. Harmless.
 - [Vendor limits differ from the documentation] → task 1.1 checks pricing, the free allowances, Neon's branch, compute-hour and storage limits, and that `pg_restore --clean` into a branch with children works, before building.
 - [A crawler keeps a preview busy] → `--max-instances 1` caps one preview at a single instance, the noindex header keeps well-behaved crawlers away, and the address is on the issue only. A budget alert emails Nate; it doesn't stop anything.
 - [Cold starts] → the first request after an idle spell waits a few seconds for Cloud Run and Neon to wake.

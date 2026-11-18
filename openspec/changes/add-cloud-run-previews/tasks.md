@@ -25,7 +25,7 @@
 
 ## 4. The decisions and scripts
 
-- [ ] 4.1 Add `core/preview_plan.py`: which pull requests get a preview, the variable list, the deployment payload, and what the sweep removes. Verify with tests for "Changes to specs only", "A pull request from a fork", "Dependabot", "What a preview is given", "No jobs", "Closed without merging" and "Idle".
+- [ ] 4.1 Add `core/preview_plan.py`: which pull requests get a preview, the variable list, the deployment payload, and what the sweep removes. Verify with tests for "Changes to specs only", "A pull request from a fork", "Dependabot", "What a preview is given", "No jobs", "Closed without merging" and "Idle"; that a rebuild by hand refuses a fork's or Dependabot's pull request; and, for "Something saved on a preview", that the database a preview is given is its own branch's and never the source.
 - [ ] 4.2 Add the `bin/preview-*` scripts over a small Neon and GitHub client and one `gcloud` function, with fakes for the tests. Verify with tests for "A build's pull request", "Reopened", "A tenth preview", "A pull request with a migration", "A new push", "A migration rewritten", "Merged" and "Rebuilt by hand", each checking the calls made.
 
 ## 5. The workflows

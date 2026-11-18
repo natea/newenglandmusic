@@ -33,9 +33,9 @@ Intentable's bridge already does its half (`add-delivery-board`, deployed 18 Nov
   3. deploys a Cloud Run service, `preview-pr-<number>`;
   4. reports its address to GitHub as a successful deployment of the environment `preview-pr-<number>`, which the bridge reads.
 
-  A push redeploys the service on the same branch, so data saved on the preview stays. Pull requests from forks, Dependabot's, and ones that change only `openspec/` or `docs/` get no preview.
+  A push redeploys the service on the same branch, so data saved on the preview stays. Pull requests from forks, Dependabot's, and ones that change only `openspec/` or `docs/` get no preview: those last have no code to look at, and each preview uses one of Neon's branches.
 - **A preview ends when its pull request is merged, or after 7 idle days.** On merge, the workflow deletes the service and the Neon branch and marks the deployments inactive. A pull request closed *without* merging keeps its preview (open question 1). A daily sweep removes previews with no push for 7 days and anything left behind, and marks their deployments inactive. A swept preview can be rebuilt by hand from the Actions tab.
-- **A preview never reaches the outside world.** It has no mail sender and no keys for outside APIs, analytics or the sheet sync, and no scheduled jobs. The inherited data-export endpoint (`/internal-api/db`) is switched off on previews. Every response asks search engines not to index it.
+- **A preview never reaches the outside world.** It has no mail sender, no scheduled jobs, and no keys for outside APIs, analytics or the sheet sync, apart from any player settings Nate allows (open question 5). The inherited data-export endpoint (`/internal-api/db`) is switched off on previews. Every response asks search engines not to index it.
 - **A preview admin can sign in,** as `preview-admin`, the only account on a preview, with a password kept for previews.
 - **The container image matches production.** The fork's `Dockerfile` came from upstream nycnoise and has drifted: Python 3.12 where production uses 3.11.14, and a `.env` secret at build time. It is brought in line with Render's build and start commands. It is built only by the preview workflow, on pull requests. Nothing is added to the checks that production's deploys wait on.
 
@@ -47,14 +47,15 @@ Out of scope:
 
 ## Open questions for G2
 
-1. **A pull request closed without merging.** On 12 November Nate said: "we may close a PR but not yet merge it back to main … it may still be sitting on a preview branch and preview URL, but not yet deployed to prod." Proposed, to honour that: closing without merging **keeps** the preview until it has been idle 7 days. The alternative is to delete it on any close, as Render does, and keep the pull request open to keep the preview.
+1. **A pull request closed without merging.** On 12 November Nate said: "we may close a PR but not yet merge it back to main … it may still be sitting on a preview branch and preview URL, but not yet deployed to prod." Proposed, to honour that: closing without merging **keeps** the preview until it has been idle 7 days. Idle counts from the last push, not from the close, so a pull request closed more than 7 days after its last push loses its preview that night. The alternative is to delete it on any close, as Render does, and keep the pull request open to keep the preview.
 2. **A Google Cloud project and billing account,** with a budget alert. Which account pays: Nate's or Jazkarta's? An organisation's policy may forbid public Cloud Run services, which previews need.
 3. **A Neon account** used for nothing else, since the pull request workflow holds its API key. The free plan's 10 branches mean the base plus 9 open previews. Proposed: a tenth pull request gets a failed check saying so.
 4. **How long an idle preview lives:** 7 days without a push is proposed. A finished build waiting on Nate's merge gets no pushes, so its preview dies after 7 days and the issue's link goes dead until someone rebuilds it. Longer, such as 14 days, costs little.
 5. **Players on previews.** Should previews get the Spotify, Apple Music and YouTube settings, so changes to players can be reviewed? Several recent issues were about exactly those (#63, #74). The cost is that those keys become readable by pull request code. Proposed: yes for the switches that need no key, and task 1.2 finds out which keys request-time rendering needs, for Nate to decide.
 6. **Who can open a preview, and who has the admin password.** Proposed: anyone with the address can open a preview, so Sooz and Mark need no Google sign-in. The data holds nothing personal, and the address appears only on the issue. The `preview-admin` password is Nate's, shared with Sooz and Mark if he chooses. A password gate on the whole preview is the alternative.
 7. **Nightly copy.** The plan left the refresh open (nightly, or once per preview). Nightly is proposed, so cleaning happens once, away from any preview.
-8. **The read-only role on the live database** is the one change to production. Nate makes it himself (task 1.4); G2 is the yes for it.
+8. **Unapproved submissions.** The copy keeps events that visitors submitted and nobody approved yet, with the submitter's own description, though not their email. They show only in a preview's admin. Proposed: leave them out of the copy. The alternative is to keep them, so the approval screens can be previewed with real examples.
+9. **The read-only role on the live database** is the one change to production. Nate makes it himself (task 1.4); G2 is the yes for it.
 
 ## Capabilities
 
@@ -64,7 +65,7 @@ Out of scope:
 
 ### Modified Capabilities
 
-None. Production's build, checks, jobs and data are unchanged; Render doesn't use the `Dockerfile`.
+None. Production's build, checks, jobs and data are unchanged, apart from the read-only role of open question 9; Render doesn't use the `Dockerfile`.
 
 ## Impact
 
@@ -73,7 +74,7 @@ None. Production's build, checks, jobs and data are unchanged; Render doesn't us
   - `.github/workflows/preview-base.yml` (the nightly copy and the daily sweep);
   - `bin/preview-*` scripts and `core/preview_plan.py`, which hold the workflows' decisions so they can be tested;
   - `Dockerfile` and a new `.dockerignore`;
-  - a management command, `scrub_preview_data`;
+  - `core/preview_data.py`, and two management commands, `scrub_preview_data` and `set_preview_admin`;
   - `nycnoise/settings/preview.py`;
   - `PRODUCTION.md`.
 - **Accounts:**

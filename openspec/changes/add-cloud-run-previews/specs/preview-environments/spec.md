@@ -21,7 +21,7 @@ Once a night, the live data SHALL be copied into the previews' base database, re
 
 ### Requirement: People's data never reaches the copy
 
-The data SHALL be cleaned before it is loaded into the base database, so nothing uncleaned is ever stored where previews are. The cleaned copy SHALL have no subscriber of either kind, sign-in code, weekly-email choice, mail request, session, admin change log entry or account from the live site, no submitter email on any event, and no stored output or error of a job run.
+The data SHALL be cleaned before it is loaded into the base database, so nothing uncleaned is ever stored where previews are. The cleaned copy SHALL have no subscriber of either kind, sign-in code, weekly-email choice, mail request, session, admin change log entry or account from the live site, no submitter email on any event, no unapproved visitor submission, and no stored output or error of a job run.
 
 #### Scenario: People-only tables
 
@@ -31,7 +31,7 @@ The data SHALL be cleaned before it is loaded into the base database, so nothing
 #### Scenario: Personal fields
 
 - **WHEN** the nightly copy finishes
-- **THEN** the base database has no account from the live site, no event with a submitter email, and no job run with stored output or an error
+- **THEN** the base database has no account from the live site, no event with a submitter email, no unapproved visitor submission, and no job run with stored output or an error
 
 #### Scenario: Cleaned before it is stored
 
