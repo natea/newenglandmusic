@@ -56,7 +56,7 @@ The alternative was restoring into Neon and scrubbing there. That would put uncl
 **Every table is classified.** `core/preview_data.py` lists each table as one of:
 - `COPIED`;
 - `LEFT_OUT`, whose data is never dumped: the five people-only tables, `django_session`, `django_admin_log`, `auth_user` and its group and permission link tables;
-- `CLEANED`, with what is done: `core_event.user_submission_email` emptied, unapproved visitor submissions deleted (open question 8), and `core_jobrun.output` and `error` emptied.
+- `CLEANED`, with what is done: `core_event.user_submission_email` emptied, and `core_jobrun.output` and `error` emptied.
 
 A test compares the lists with the database's tables and fails on one that is missing. That is broader than looking for `EmailField`, which would miss `MailRequest.address` and the admin log. The dump's exclusions and the scrub are both built from these lists.
 
@@ -64,11 +64,11 @@ A test compares the lists with the database's tables and fails on one that is mi
 - refuses unless the settings module is `nycnoise.settings.preview` and the database's host is local or Neon's (`*.neon.tech`), so it can't run against Render;
 - empties the `CLEANED` fields, and deletes any row left in a `LEFT_OUT` table.
 
-A separate command, `set_preview_admin`, creates or updates `preview-admin` from `PREVIEW_ADMIN_PASSWORD`. It runs per pull request, on the preview's branch, so the base holds no account at all.
+A separate command, `set_preview_admin`, creates or updates `preview-admin` from `PREVIEW_ADMIN_PASSWORD_HASH`, a Django password hash Nate makes once on his own machine. Only the hash is a GitHub secret, so the workflow, and pull request code, never hold the password. It runs per pull request, on the preview's branch, so the base holds no account at all.
 
 **Secrets by reach.**
 - `PREVIEW_SOURCE_DATABASE_URL` is a secret of a GitHub environment, `preview-base`, whose deployment branch is `main` only. Only `preview-base.yml` names that environment. A pull request's workflow can't read it, even if the pull request rewrites the workflow file.
-- The pull request workflow gets `NEON_API_KEY` and `PREVIEW_ADMIN_PASSWORD`, and signs in to Google without a key (Workload Identity Federation, limited to this repository). Pull request code can therefore reach the Neon project and the previews' Google project. Both hold only cleaned data and previews, so the Neon account is used for nothing else.
+- The pull request workflow gets `NEON_API_KEY`, `PREVIEW_ADMIN_PASSWORD_HASH` and the player settings, and signs in to Google without a key (Workload Identity Federation, limited to this repository). Pull request code can therefore reach the Neon project and the previews' Google project. Both hold only cleaned data and previews, so the Neon account is used for nothing else.
 - The Cloud Run services run as a service account with no roles, not the project's default one.
 - The workflows carry `if: github.repository == 'natea/newenglandmusic'`, as `spek.yml` does.
 
@@ -80,7 +80,7 @@ One `concurrency` group per pull request stops two runs racing. `bin/preview-pla
 
 To deploy, it:
 1. builds the image and pushes it to Artifact Registry, tagged `pr-<n>`, so each pull request keeps one image;
-2. creates the Neon branch `pr-<n>` from `base` if it doesn't exist, failing with "the limit of 9 previews is reached" when Neon refuses;
+2. creates the Neon branch `pr-<n>` from `base` if it doesn't exist, or, when every slot is taken, first removes the preview of the closed, unmerged pull request pushed to longest ago; with none to remove, it fails with "the limit of previews is reached";
 3. runs `migrate` from the image against the branch. On failure it deletes the branch, makes it again from `base` and migrates once more;
 4. runs `set_preview_admin`;
 5. deploys `preview-pr-<n>` with `--min-instances 0 --max-instances 1 --allow-unauthenticated` and the variables below;
@@ -93,7 +93,7 @@ For the deployment in step 7:
 - `transient_environment: true`;
 - the workflow has `deployments: write` and `id-token: write`.
 
-On `closed` with `merged`, it deletes the service, the branch and the image, and sets every deployment of the environment to `inactive`. On `closed` without a merge it does nothing (open question 1).
+On `closed` with `merged`, it deletes the service, the branch and the image, and sets every deployment of the environment to `inactive`. On `closed` without a merge it does nothing: that preview stays until its slot is needed (answer 1).
 
 **What a preview is given.** `bin/preview-plan env` prints the exact list, which a test pins:
 - `DATABASE_URL`, the branch's;
@@ -101,7 +101,7 @@ On `closed` with `merged`, it deletes the service, the branch and the image, and
 - `DJANGO_SECRET_KEY` and `RC_DEVELOPER_INTERNAL_TOKEN`, each random per deploy;
 - `PROD_INTERNAL_API_SERVER=https://preview.invalid/`, `PYINSTRUMENT_ENABLE=false`, `DEBUG_TOOLBAR_ENABLE=false` and `ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION=False`, which `base.py` requires;
 - `WEB_CONCURRENCY=2`;
-- the player settings Nate allows (open question 5).
+- the player settings, the list task 1.2 produces (answer 5).
 
 The image's build step passes placeholders for the five required variables, with no secret.
 
@@ -114,7 +114,7 @@ The image's build step passes placeholders for the five required variables, with
 
 **The image.** The `Dockerfile` becomes `python:3.11.14-slim`, installs `requirements.txt`, runs `compilescss` and `collectstatic`, and starts gunicorn as `render.yaml`'s `startCommand` does. Gunicorn binds `$PORT` itself. A `.dockerignore` keeps `.env` and `.git` out. The image is built only in `preview.yml`, so nothing is added to `django.yml` and `main`'s checks are as before. `bin/serve.sh` stays for local use.
 
-**Sweep.** After the nightly copy, `bin/preview-sweep` lists the `preview-pr-*` services and `pr-*` branches. It deletes each whose pull request is merged, is gone, or has had no push for 7 days, with its image, and sets the environment's deployments to `inactive`, so the bridge never reads a dead address as live.
+**Sweep.** After the nightly copy, `bin/preview-sweep` lists the `preview-pr-*` services and `pr-*` branches. It deletes each whose pull request is merged or gone, and each open pull request's with no push for 7 days, with its image, and sets the environment's deployments to `inactive`, so the bridge never reads a dead address as live.
 
 **Testing, and how the outside services are stood in for.** The decisions live in `core/preview_plan.py`, as plain functions with unit tests:
 - which pull requests get a preview;
@@ -133,9 +133,10 @@ The `bin/preview-*` scripts are thin. They call Neon's and GitHub's APIs through
 - [A crawler keeps a preview busy] → `--max-instances 1` caps one preview at a single instance, the noindex header keeps well-behaved crawlers away, and the address is on the issue only. A budget alert emails Nate; it doesn't stop anything.
 - [Cold starts] → the first request after an idle spell waits a few seconds for Cloud Run and Neon to wake.
 - [A preview runs in a container, production on Render's Python runtime] → same requirements, Python version and commands, but a platform difference can still hide in either direction.
-- [Pages with players show none] → without the player settings, event pages and the discovery deck show no players, and re-rendering saved event pages (`resave_all_events`) would strip their buttons, so previews never run it. A change to the listing row itself shows only for events saved after the change (open question 5).
+- [Player settings are readable by pull request code] → previews need them to show players (answer 5). Task 1.2 lists which are secrets, and those keys should be limited to what the players need.
+- [Saved event pages] → the listing's rows are stored HTML, so a change to the row itself shows only for events saved after the change. Previews don't re-render every event.
 - [A preview restarts from the base when its migrations fail] → what reviewers saved on it is lost. The workflow's log says so.
-- [An idle preview's link goes dead] → after 7 days the bridge still shows the issue in `preview-ready`, with its deployment inactive. Rebuilding by hand restores it (open question 4).
+- [An idle preview's link goes dead] → after 7 days the bridge still shows the issue in `preview-ready`, with its deployment inactive. Rebuilding by hand restores it.
 - [The read-only role can read people's data] → `pg_dump` needs `SELECT` on every table it dumps the structure of. The credential stays in the `main`-only environment.
 
 ## Migration Plan

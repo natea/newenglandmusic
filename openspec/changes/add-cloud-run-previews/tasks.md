@@ -7,10 +7,10 @@
   - Artifact Registry's storage price.
 
   If a figure changes the proposal's cost or the 9-preview limit, tell Nate before going on.
-- [ ] 1.2 Find which settings event pages and the discovery deck need to show players at request time, and which of them are secrets. Give Nate the list for open question 5.
-- [ ] 1.3 Nate creates the Google Cloud project for previews, in `us-east1`, with billing and a budget alert, and turns on Cloud Run and Artifact Registry. Set up keyless sign-in for this repository, a deploy service account, and a runtime service account with no roles. Record the steps in `PRODUCTION.md`.
+- [ ] 1.2 Find which settings event pages and the discovery deck need to show players at request time, and which of them are secrets. Add them to what a preview is given, and tell Nate which are secrets.
+- [ ] 1.3 Nate creates the Google Cloud project for previews in his own account, in `us-east1`, with billing and a budget alert, and turns on Cloud Run and Artifact Registry. Set up keyless sign-in for this repository, a deploy service account, and a runtime service account with no roles. Record the steps in `PRODUCTION.md`.
 - [ ] 1.4 Write in `PRODUCTION.md` how to make the read-only role on Render's database: `CONNECT`, `USAGE` on the schema, `SELECT` on all tables and sequences, and default privileges for future ones. Nate makes it.
-- [ ] 1.5 Nate creates the Neon account and project (Postgres 17, `aws-us-east-1`), and adds the secrets: `PREVIEW_SOURCE_DATABASE_URL` in the GitHub environment `preview-base` (deployment branch `main` only); `NEON_API_KEY` and `PREVIEW_ADMIN_PASSWORD` for the repository.
+- [ ] 1.5 Nate creates the Neon account and project (Postgres 17, `aws-us-east-1`), and adds the secrets: `PREVIEW_SOURCE_DATABASE_URL` in the GitHub environment `preview-base` (deployment branch `main` only); `NEON_API_KEY`, `PREVIEW_ADMIN_PASSWORD_HASH` (made with Django's `make_password` on his own machine) and the player settings for the repository.
 
 ## 2. The data
 
@@ -20,13 +20,13 @@
 
 ## 3. Preview settings and the image
 
-- [ ] 3.1 Add `nycnoise/settings/preview.py` and the noindex middleware above WhiteNoise. Verify with tests for "Not indexed" (a page and a static file), "The data export", "Signing up for the weekly email" and "A stored play button".
+- [ ] 3.1 Add `nycnoise/settings/preview.py` and the noindex middleware above WhiteNoise. Verify with tests for "Not indexed" (a page and a static file), "The data export", "Signing up for the weekly email", "Players on a preview" and "A stored play button".
 - [ ] 3.2 Bring the `Dockerfile` in line with Render (Python 3.11.14, placeholders at build, gunicorn on `$PORT`) and add `.dockerignore`. Verify by running the image locally against a scratch database with the listed variables and loading the listing. `django.yml` is unchanged.
 
 ## 4. The decisions and scripts
 
 - [ ] 4.1 Add `core/preview_plan.py`: which pull requests get a preview, the variable list, the deployment payload, and what the sweep removes. Verify with tests for "Changes to specs only", "A pull request from a fork", "Dependabot", "What a preview is given", "No jobs", "Closed without merging" and "Idle"; that a rebuild by hand refuses a fork's or Dependabot's pull request; and, for "Something saved on a preview", that the database a preview is given is its own branch's and never the source.
-- [ ] 4.2 Add the `bin/preview-*` scripts over a small Neon and GitHub client and one `gcloud` function, with fakes for the tests. Verify with tests for "A build's pull request", "Reopened", "A tenth preview", "A pull request with a migration", "A new push", "A migration rewritten", "Merged" and "Rebuilt by hand", each checking the calls made.
+- [ ] 4.2 Add the `bin/preview-*` scripts over a small Neon and GitHub client and one `gcloud` function, with fakes for the tests. Verify with tests for "A build's pull request", "Reopened", "Every slot in use", "A slot held by a closed pull request", "A pull request with a migration", "A new push", "A migration rewritten", "Merged" and "Rebuilt by hand", each checking the calls made.
 
 ## 5. The workflows
 

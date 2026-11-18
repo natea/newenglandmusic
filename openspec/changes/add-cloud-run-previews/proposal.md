@@ -34,28 +34,32 @@ Intentable's bridge already does its half (`add-delivery-board`, deployed 18 Nov
   4. reports its address to GitHub as a successful deployment of the environment `preview-pr-<number>`, which the bridge reads.
 
   A push redeploys the service on the same branch, so data saved on the preview stays. Pull requests from forks, Dependabot's, and ones that change only `openspec/` or `docs/` get no preview: those last have no code to look at, and each preview uses one of Neon's branches.
-- **A preview ends when its pull request is merged, or after 7 idle days.** On merge, the workflow deletes the service and the Neon branch and marks the deployments inactive. A pull request closed *without* merging keeps its preview (open question 1). A daily sweep removes previews with no push for 7 days and anything left behind, and marks their deployments inactive. A swept preview can be rebuilt by hand from the Actions tab.
-- **A preview never reaches the outside world.** It has no mail sender, no scheduled jobs, and no keys for outside APIs, analytics or the sheet sync, apart from any player settings Nate allows (open question 5). The inherited data-export endpoint (`/internal-api/db`) is switched off on previews. Every response asks search engines not to index it.
+- **A preview ends when its pull request is merged, or, for an open pull request, after 7 idle days.** On merge, the workflow deletes the service and the Neon branch and marks the deployments inactive. A pull request closed *without* merging keeps its preview until its slot is needed for an open pull request. A daily sweep removes open pull requests' previews with no push for 7 days and anything left behind, and marks their deployments inactive. A swept preview can be rebuilt by hand from the Actions tab.
+- **A preview never reaches the outside world.** It has no mail sender, no scheduled jobs, and no keys for outside APIs, analytics or the sheet sync, apart from the player settings (answer 5). The inherited data-export endpoint (`/internal-api/db`) is switched off on previews. Every response asks search engines not to index it.
 - **A preview admin can sign in,** as `preview-admin`, the only account on a preview, with a password kept for previews.
 - **The container image matches production.** The fork's `Dockerfile` came from upstream nycnoise and has drifted: Python 3.12 where production uses 3.11.14, and a `.env` secret at build time. It is brought in line with Render's build and start commands. It is built only by the preview workflow, on pull requests. Nothing is added to the checks that production's deploys wait on.
 
-**What a preview can't show.** The listing's play buttons are stored in each event's saved page, so they show as on the live site. Pages that build their players at request time, such as event pages and the discovery deck, need the Spotify, Apple Music and YouTube settings. Without them those pages show no players (open question 5).
+**What a preview can't show.** The listing's play buttons are stored in each event's saved page, so they show as on the live site. Pages that build their players at request time, such as event pages and the discovery deck, need the Spotify, Apple Music and YouTube settings. So previews get those settings (answer 5).
 
 Out of scope:
 - **The issue side.** Intentable's bridge has it: `preview-ready`, the comment with the address, and the links to the pages to check, which the build names (`add-preview-paths`).
 - **Previews of pull requests from forks of the repository, and Dependabot's.** GitHub withholds secrets from them.
 
+## Nate's answers (18 November 2026)
+
+1. **A pull request closed without merging keeps its preview,** as long as it costs nothing and its slot isn't needed: "i'm fine keeping it running as long as it's not consuming one of the 10 slots that's needed for other active PR previews." So such a preview has no time limit. When a new pull request needs a slot and none is free, the closed pull request's preview that was pushed to longest ago is removed to make room.
+2. **Google Cloud:** Nate's own account.
+3. **A full house is refused:** "yes, refuse a 10th preview. only 10 at a time." On Neon's free plan the base copy takes one of the 10 branches, so the limit is 9 previews unless task 1.1 finds otherwise. A new pull request is refused only when every slot holds an open pull request's preview.
+4. **Idle previews:** "let's start with 7 days and if we need more than that we'll adjust." This applies to open pull requests.
+5. **Players:** "yes, all pages on the site should show the players." Previews get the player settings. Task 1.2 lists exactly which, and which of them are secrets, since pull request code can then read them.
+6. **The admin password** "should be closely guarded". Only Nate holds it. GitHub stores only its hash, so the pull request workflow, and the code a build agent writes, never see the password itself.
+7. **Nightly copy:** "i think a nightly copy is fine, and if we need one fresher, we can adapt."
+8. **Unapproved submissions stay in the copy:** "we may need those to be there for testing purposes." Their submitter emails are still emptied.
+
 ## Open questions for G2
 
-1. **A pull request closed without merging.** On 12 November Nate said: "we may close a PR but not yet merge it back to main … it may still be sitting on a preview branch and preview URL, but not yet deployed to prod." Proposed, to honour that: closing without merging **keeps** the preview until it has been idle 7 days. Idle counts from the last push, not from the close, so a pull request closed more than 7 days after its last push loses its preview that night. The alternative is to delete it on any close, as Render does, and keep the pull request open to keep the preview.
-2. **A Google Cloud project and billing account,** with a budget alert. Which account pays: Nate's or Jazkarta's? An organisation's policy may forbid public Cloud Run services, which previews need.
-3. **A Neon account** used for nothing else, since the pull request workflow holds its API key. The free plan's 10 branches mean the base plus 9 open previews. Proposed: a tenth pull request gets a failed check saying so.
-4. **How long an idle preview lives:** 7 days without a push is proposed. A finished build waiting on Nate's merge gets no pushes, so its preview dies after 7 days and the issue's link goes dead until someone rebuilds it. Longer, such as 14 days, costs little.
-5. **Players on previews.** Should previews get the Spotify, Apple Music and YouTube settings, so changes to players can be reviewed? Several recent issues were about exactly those (#63, #74). The cost is that those keys become readable by pull request code. Proposed: yes for the switches that need no key, and task 1.2 finds out which keys request-time rendering needs, for Nate to decide.
-6. **Who can open a preview, and who has the admin password.** Proposed: anyone with the address can open a preview, so Sooz and Mark need no Google sign-in. The data holds nothing personal, and the address appears only on the issue. The `preview-admin` password is Nate's, shared with Sooz and Mark if he chooses. A password gate on the whole preview is the alternative.
-7. **Nightly copy.** The plan left the refresh open (nightly, or once per preview). Nightly is proposed, so cleaning happens once, away from any preview.
-8. **Unapproved submissions.** The copy keeps events that visitors submitted and nobody approved yet, with the submitter's own description, though not their email. They show only in a preview's admin. Proposed: leave them out of the copy. The alternative is to keep them, so the approval screens can be previewed with real examples.
-9. **The read-only role on the live database** is the one change to production. Nate makes it himself (task 1.4); G2 is the yes for it.
+1. **The read-only role on the production database.** The nightly copy reads the *production* database on Render, the live site's. It never writes to it: Nate creates a role there that can only read (task 1.4), and the job refuses a role that can write. A preview's own database is a separate copy in Neon. Creating that role is this proposal's one change to production, and G2 is the yes for it.
+2. **Who can open a preview.** Proposed: anyone with the address, so Sooz and Mark need no sign-in. A preview holds no personal data, asks not to be indexed, and its address appears only on the issue. The alternative is a password in front of every preview page.
 
 ## Capabilities
 
@@ -65,7 +69,7 @@ Out of scope:
 
 ### Modified Capabilities
 
-None. Production's build, checks, jobs and data are unchanged, apart from the read-only role of open question 9; Render doesn't use the `Dockerfile`.
+None. Production's build, checks, jobs and data are unchanged, apart from the read-only role of open question 1; Render doesn't use the `Dockerfile`.
 
 ## Impact
 
@@ -80,7 +84,7 @@ None. Production's build, checks, jobs and data are unchanged, apart from the re
 - **Accounts:**
   - a Google Cloud project with Cloud Run and Artifact Registry, and keyless sign-in from GitHub Actions;
   - a Neon project in an account of its own;
-  - GitHub secrets: the read-only database role, in an environment only `main`'s nightly job can use; and Neon's API key and the preview admin's password, for the pull request workflow.
+  - GitHub secrets: the read-only database role, in an environment only `main`'s nightly job can use; and Neon's API key, the preview admin's password hash and the player settings, for the pull request workflow.
 - **Render:** one read-only Postgres role on the live database. Nothing else changes.
 - **Alternative to:** `add-preview-environments` (Render). Only one of the two is built.
 - **Works with:** `add-preview-paths`, which has the build name the pages to check.

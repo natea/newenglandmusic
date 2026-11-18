@@ -21,7 +21,7 @@ Once a night, the live data SHALL be copied into the previews' base database, re
 
 ### Requirement: People's data never reaches the copy
 
-The data SHALL be cleaned before it is loaded into the base database, so nothing uncleaned is ever stored where previews are. The cleaned copy SHALL have no subscriber of either kind, sign-in code, weekly-email choice, mail request, session, admin change log entry or account from the live site, no submitter email on any event, no unapproved visitor submission, and no stored output or error of a job run.
+The data SHALL be cleaned before it is loaded into the base database, so nothing uncleaned is ever stored where previews are. The cleaned copy SHALL have no subscriber of either kind, sign-in code, weekly-email choice, mail request, session, admin change log entry or account from the live site, no submitter email on any event, and no stored output or error of a job run.
 
 #### Scenario: People-only tables
 
@@ -31,7 +31,7 @@ The data SHALL be cleaned before it is loaded into the base database, so nothing
 #### Scenario: Personal fields
 
 - **WHEN** the nightly copy finishes
-- **THEN** the base database has no account from the live site, no event with a submitter email, no unapproved visitor submission, and no job run with stored output or an error
+- **THEN** the base database has no account from the live site, no event with a submitter email, and no job run with stored output or an error
 
 #### Scenario: Cleaned before it is stored
 
@@ -76,10 +76,15 @@ When a pull request against `main` from a branch of this repository, changing a 
 - **WHEN** Dependabot opens a pull request
 - **THEN** no preview is made
 
-#### Scenario: A tenth preview
+#### Scenario: Every slot in use
 
-- **WHEN** a pull request opens while nine previews exist
+- **WHEN** a pull request opens while every preview slot holds an open pull request's preview
 - **THEN** no preview is made, and the pull request's check fails saying the limit is reached
+
+#### Scenario: A slot held by a closed pull request
+
+- **WHEN** a pull request opens while every slot is taken and one holds the preview of a pull request closed without merging
+- **THEN** that preview is removed, the one pushed to longest ago if there are several, and the new pull request gets its preview
 
 ### Requirement: A preview runs the pull request's code on its own data
 
@@ -107,7 +112,7 @@ A preview's database SHALL start as a copy of the base, with the pull request's 
 
 ### Requirement: A preview ends on merge or when idle
 
-When a pull request is merged, its preview and database SHALL be deleted and its deployments marked inactive. A pull request closed without merging SHALL keep its preview. Once a day, any preview whose pull request has had no push for 7 days SHALL be deleted and its deployments marked inactive, as SHALL any whose pull request no longer exists. A swept preview SHALL be made again by a later push, or by hand.
+When a pull request is merged, its preview and database SHALL be deleted and its deployments marked inactive. Once a day, the preview of an open pull request with no push for 7 days SHALL be deleted and its deployments marked inactive, as SHALL any whose pull request no longer exists. A pull request closed without merging SHALL keep its preview until its slot is needed. A removed preview SHALL be made again by a later push, or by hand.
 
 #### Scenario: Merged
 
@@ -116,12 +121,12 @@ When a pull request is merged, its preview and database SHALL be deleted and its
 
 #### Scenario: Closed without merging
 
-- **WHEN** a pull request with a preview is closed without merging
-- **THEN** its preview stays, until it has been idle for 7 days
+- **WHEN** a pull request with a preview is closed without merging, and 30 days pass with slots free
+- **THEN** its preview is still there
 
 #### Scenario: Idle
 
-- **WHEN** nothing is pushed to a pull request for 7 days
+- **WHEN** nothing is pushed to an open pull request for 7 days
 - **THEN** the daily sweep deletes its preview and database and marks its deployments inactive
 
 #### Scenario: Rebuilt by hand
@@ -145,7 +150,7 @@ Each preview SHALL have one account, `preview-admin`, an admin with the password
 
 ### Requirement: A preview never reaches the outside world
 
-A preview SHALL send no email, and SHALL hold no key for an outside API, the analytics or the sheet sync beyond those Nate allows for showing players. No scheduled job SHALL run for a preview. The site's data-export endpoint SHALL answer 404 on a preview. Every response of a preview SHALL ask search engines not to index it. The play buttons stored in event pages SHALL still show.
+A preview SHALL send no email, and SHALL hold no key for an outside API, the analytics or the sheet sync beyond the player settings, which every preview has so its pages show players as the live site does. No scheduled job SHALL run for a preview. The site's data-export endpoint SHALL answer 404 on a preview. Every response of a preview SHALL ask search engines not to index it. The play buttons stored in event pages SHALL still show.
 
 #### Scenario: Signing up for the weekly email
 
@@ -155,7 +160,7 @@ A preview SHALL send no email, and SHALL hold no key for an outside API, the ana
 #### Scenario: What a preview is given
 
 - **WHEN** a preview is deployed
-- **THEN** its settings are exactly the listed ones: its database, its own secret key, the preview settings, and the player settings Nate allowed
+- **THEN** its settings are exactly the listed ones: its database, its own secret key, the preview settings, and the player settings
 
 #### Scenario: No jobs
 
@@ -171,6 +176,11 @@ A preview SHALL send no email, and SHALL hold no key for an outside API, the ana
 
 - **WHEN** any page or static file of a preview is requested
 - **THEN** the response carries `X-Robots-Tag: noindex, nofollow`
+
+#### Scenario: Players on a preview
+
+- **WHEN** a reviewer opens the discovery deck or an event page on a preview
+- **THEN** the players show as on the live site
 
 #### Scenario: A stored play button
 
