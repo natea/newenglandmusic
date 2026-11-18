@@ -13,6 +13,10 @@ Sooz, Mark and Nate need to see a change working before it merges. Today it can 
   3. deploys a Cloud Run service, `preview-pr-<number>`, at its own `run.app` address;
   4. reports the address to GitHub as a deployment of the environment `preview-pr-<number>`.
 
+  This starts as soon as the pull request opens, so the change is reviewed on its preview before it merges; merging is the approval (Nate, 18 November 2026). Intentable's bridge moves the issue to `preview-ready` on that deployment's success and posts the address, linking the pages the build named (`add-preview-paths`).
+
+  This starts as soon as the pull request opens, so the change is reviewed on its preview before it merges; merging is the approval (Nate, 18 November 2026). Intentable's bridge moves the issue to `preview-ready` on that deployment's success and posts the address, linking the pages the build named (`add-preview-paths`).
+
   A push redeploys the service on the same branch, so data saved on the preview stays.
 - **A preview ends with its pull request.** When the pull request is merged or closed, the workflow deletes the service and the Neon branch, and marks the deployment inactive. A daily sweep deletes any preview whose pull request has had no push for 7 days, and any preview left behind.
 - **A preview never reaches the outside world.** It has no mail sender and no keys for outside APIs, analytics or the sheet sync. It has no scheduled jobs. It asks search engines not to index it. The play buttons stored in event pages still show.

@@ -30,7 +30,7 @@ The copy SHALL leave out every subscriber, sign-in code, weekly-email choice, ma
 
 ### Requirement: Each pull request that changes code gets a preview
 
-For each open pull request against `main` from a branch of this repository that changes a file outside `openspec/` and `docs/`, a preview of the site SHALL be deployed, with a database copied from the base, at an address of its own. The address SHALL be reported to GitHub as a deployment of the environment `preview-pr-<number>`. A pull request from a fork of the repository, or one that changes only files under `openspec/` or `docs/`, SHALL get no preview.
+When a pull request against `main` from a branch of this repository, changing a file outside `openspec/` and `docs/`, is opened or reopened, a preview of the site SHALL be deployed right away, before any merge, on a copy of the base, and reported to GitHub as a deployment of `preview-pr-<number>`. A pull request from a fork, or one changing only `openspec/` or `docs/`, SHALL get no preview.
 
 #### Scenario: A build's pull request
 
