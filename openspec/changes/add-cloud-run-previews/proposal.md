@@ -56,10 +56,10 @@ Out of scope:
 7. **Nightly copy:** "i think a nightly copy is fine, and if we need one fresher, we can adapt."
 8. **Unapproved submissions stay in the copy:** "we may need those to be there for testing purposes." Their submitter emails are still emptied.
 
-## Open questions for G2
+9. **The read-only role on the production database:** "yes, i approve making a read-only role to read the production DB." The nightly copy reads the live site's database on Render through that role and never writes to it; Nate creates the role (task 1.4), and the job refuses a role that can write. This is the proposal's one change to production.
+10. **Who can open a preview:** "yes, anyone can open a preview link." A preview holds no personal data, asks not to be indexed, and its address appears only on the issue.
 
-1. **The read-only role on the production database.** The nightly copy reads the *production* database on Render, the live site's. It never writes to it: Nate creates a role there that can only read (task 1.4), and the job refuses a role that can write. A preview's own database is a separate copy in Neon. Creating that role is this proposal's one change to production, and G2 is the yes for it.
-2. **Who can open a preview.** Proposed: anyone with the address, so Sooz and Mark need no sign-in. A preview holds no personal data, asks not to be indexed, and its address appears only on the issue. The alternative is a password in front of every preview page.
+No question is left open. The proposal awaits Nate's G2.
 
 ## Capabilities
 
@@ -69,7 +69,7 @@ Out of scope:
 
 ### Modified Capabilities
 
-None. Production's build, checks, jobs and data are unchanged, apart from the read-only role of open question 1; Render doesn't use the `Dockerfile`.
+None. Production's build, checks, jobs and data are unchanged, apart from the read-only role of answer 9; Render doesn't use the `Dockerfile`.
 
 ## Impact
 
