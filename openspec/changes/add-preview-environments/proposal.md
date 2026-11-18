@@ -14,6 +14,7 @@ Render offers two kinds of preview. Only one is safe here. A **pull request prev
   4. replaces the remaining personal fields: admin emails and passwords, and the submitter's email on events.
 
   Venues, acts, events and pages stay as they are.
+- **The preview is made when the pull request opens,** so the change is reviewed before it merges; merging is the approval (Nate, 18 November 2026). Render reports each preview's deploy to GitHub as a deployment. Intentable's bridge moves the issue to `preview-ready` on its success and posts the address with the pages the build named (`add-preview-paths`). Render names the deployment's environment itself, so the bridge's `PREVIEW_ENVIRONMENT` setting is set to match (task 1.1 records the name).
 - **A preview never reaches the outside world.** Settings in previews:
   - send no email;
   - carry no API keys for Spotify, Apple Music, YouTube, Google, Ticketmaster, Eventbrite, SeatGeek, Last.fm, Anthropic or PostHog;

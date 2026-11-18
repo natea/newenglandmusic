@@ -1,6 +1,6 @@
 ## 1. Before building
 
-- [ ] 1.1 With Nate, on Render: confirm the workspace is on Pro or higher. On a throwaway pull request with previews on, check that a `sync: false` value of an environment group set in the dashboard reaches the preview. If it doesn't, stop and revise the design to the bucket fallback.
+- [ ] 1.1 With Nate, on Render: confirm the workspace is on Pro or higher. On a throwaway pull request with previews on, check that a `sync: false` value of an environment group set in the dashboard reaches the preview. If it doesn't, stop and revise the design to the bucket fallback. Note the GitHub deployment environment Render reports for the preview, for the bridge's `PREVIEW_ENVIRONMENT`.
 - [ ] 1.2 Write in `PRODUCTION.md` how to make the read-only role (`CREATE ROLE … LOGIN PASSWORD …; GRANT CONNECT …; GRANT USAGE ON SCHEMA public …; GRANT SELECT ON ALL TABLES IN SCHEMA public …; ALTER DEFAULT PRIVILEGES … GRANT SELECT …`). Nate makes it in the database's shell and fills the `preview-seed` group.
 
 ## 2. The scrub

@@ -2,7 +2,7 @@
 
 ### Requirement: Each pull request that changes code gets a preview
 
-For each open pull request against `main` that changes a file outside `openspec/` and `docs/`, Render SHALL deploy a preview of the site: the web service and a database of its own, at an address of their own. A push to the pull request SHALL redeploy the preview. A pull request that changes only files under `openspec/` or `docs/` SHALL get no preview. A pull request whose title holds `[skip preview]` SHALL get none either.
+When a pull request against `main` that changes a file outside `openspec/` and `docs/` is opened, Render SHALL deploy a preview of the site right away, before any merge: the web service and a database of its own, at an address of their own. A push to the pull request SHALL redeploy the preview. A pull request that changes only files under `openspec/` or `docs/` SHALL get no preview. A pull request whose title holds `[skip preview]` SHALL get none either.
 
 #### Scenario: A build's pull request
 
