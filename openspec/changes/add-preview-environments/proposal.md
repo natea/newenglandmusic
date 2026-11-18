@@ -54,4 +54,5 @@ None. The scheduled jobs' requirements are unchanged for production. Leaving the
   - `PRODUCTION.md`: setting up previews, the read-only role and what previews cost.
 - **Render:** the Pro workspace plan; a read-only Postgres role on the live database; one web service and one database per open pull request while it lives.
 - **Data:** the live database is read, never written, by the seed. Personal data never reaches a preview: personal tables aren't copied, and the scrub replaces the rest before the preview is reachable by anyone else.
+- **Alternative to:** `add-cloud-run-previews` (Cloud Run and Neon, about $0–3 a month against Render's $30–40). Only one of the two is built.
 - **Depends on:** nothing in the fork. The loop's use of previews (`preview-ready`) waits for a follow-up change in intentable.
