@@ -6,7 +6,7 @@ Sooz, Mark and Nate need to see a change working before it merges. Today it can 
 
 Intentable's bridge already does its half (`add-delivery-board`, deployed 18 November). When a pull request's preview reports a successful GitHub deployment of the environment `preview-pr-<number>`, the bridge moves the issue to `preview-ready` and posts the preview's address.
 
-`add-preview-environments` proposed Render's preview environments for the preview itself. On 17 November Nate asked for a proposal with **Cloud Run and Neon** as the foundation, expecting it to be much cheaper. The two proposals are alternatives for the same capability: Nate picks one at G2, and the other is closed unbuilt.
+`add-preview-environments` proposed Render's preview environments for the preview itself. On 17 November Nate asked for a proposal with **Cloud Run and Neon** as the foundation, expecting it to be much cheaper. The two proposals were alternatives for the same capability. Nate picked this one at G2, and the other was closed unbuilt.
 
 **Cost, not yet verified.** These figures come from the vendors' pricing pages as read on 17 November 2026, and task 1.1 checks them before anything is built:
 - Render: about $30–40 a month. That is the $25 Pro plan, plus a web service and a database billed for each preview.
@@ -59,7 +59,7 @@ Out of scope:
 9. **The read-only role on the production database:** "yes, i approve making a read-only role to read the production DB." The nightly copy reads the live site's database on Render through that role and never writes to it; Nate creates the role (task 1.4), and the job refuses a role that can write. This is the proposal's one change to production.
 10. **Who can open a preview:** "yes, anyone can open a preview link." A preview holds no personal data, asks not to be indexed, and its address appears only on the issue.
 
-No question is left open. The proposal awaits Nate's G2.
+**G2:** Nate confirmed the proposal on 18 November 2026 ("g2 on add-cloud-run-previews"), and had the Render alternative, `add-preview-environments`, closed unbuilt.
 
 ## Capabilities
 
@@ -86,5 +86,5 @@ None. Production's build, checks, jobs and data are unchanged, apart from the re
   - a Neon project in an account of its own;
   - GitHub secrets: the read-only database role, in an environment only `main`'s nightly job can use; and Neon's API key, the preview admin's password hash and the player settings, for the pull request workflow.
 - **Render:** one read-only Postgres role on the live database. Nothing else changes.
-- **Alternative to:** `add-preview-environments` (Render). Only one of the two is built.
+- **Chosen over:** `add-preview-environments` (Render), closed unbuilt.
 - **Works with:** `add-preview-paths`, which has the build name the pages to check.
