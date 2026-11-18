@@ -567,6 +567,51 @@ class BuildFinishTestCase(SimpleTestCase):
         )
         self.assertEqual((self.repo.dir / ".intentable" / "pull-request.md").read_text(), "Adds an Export to CSV button.\n")
 
+    def test_pages_to_check(self):
+        self.repo.built(left=False)
+        self.repo.record(preview=[{"path": "/discover/", "check": "the Start button over the thumbnail"}])
+        result = self.repo.run("finish")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_a_page_that_isnt_on_the_site(self):
+        self.repo.built(left=False)
+        bad = (
+            [{"path": "https://example.com/", "check": "elsewhere"}],
+            [{"path": "//example.com/", "check": "elsewhere"}],
+            [{"path": "/with space", "check": "a space"}],
+            [{"path": "/discover/", "check": ""}],
+            [{"path": "/discover/", "check": "x" * 121}],
+            [{"path": "/discover/"}],
+            "/discover/",
+            [{"path": f"/page/{n}/", "check": "too many"} for n in range(9)],
+        )
+        for preview in bad:
+            with self.subTest(preview=preview):
+                self.repo.record(preview=preview)
+                self.assert_fails("preview")
+
+    def test_pages_in_the_result(self):
+        self.repo.built(left=False)
+        pages = [
+            {"path": "/discover/", "check": "the Start button over the thumbnail"},
+            {"path": "/discover/?region=boston", "check": "only Boston bands in the deck"},
+        ]
+        self.repo.record(preview=pages)
+        self.assertEqual(self.repo.run("finish").returncode, 0)
+        self.assertEqual(self.repo.result()["preview"], pages)
+
+    def test_no_pages_named(self):
+        self.repo.built(left=False)
+        self.repo.record()
+        self.assertEqual(self.repo.run("finish").returncode, 0)
+        self.assertNotIn("preview", self.repo.result())
+
+    def test_the_prompts_name_the_pages_to_check(self):
+        apply = prompt("apply")
+        self.assertIn('"preview": [{"path": "/venues/"', apply)
+        self.assertIn("never a full address", apply)
+        self.assertIn("under `preview`", prompt("refactor"))
+
     def test_no_summary(self):
         self.repo.built(left=False)
         self.repo.record()

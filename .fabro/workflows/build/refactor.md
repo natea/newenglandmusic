@@ -41,4 +41,4 @@ Make at most one commit, "Refactor {{ inputs.change_name }}", and only when the 
 
 Never ask and wait for an answer: nobody is waiting on this run. If you're unsure whether a change is behaviour-preserving, leave it out, and note it under "For Nate".
 
-Add your findings to the end of `.intentable/summary.md`, and change nothing else under `.intentable/`. Stop only once the working tree is clean.
+Add your findings to the end of `.intentable/summary.md`. If your refactoring moved a page that `.intentable/build.json` lists under `preview`, correct its `path` there. Change nothing else under `.intentable/`. Stop only once the working tree is clean.
