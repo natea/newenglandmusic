@@ -24,4 +24,6 @@ None.
 - the tests that read the build workflow (`core/tests/test_issue_builds.py`);
 - `.fabro/workflows/build/README.md`, if it describes the record.
 
-It works with either preview proposal (`add-cloud-run-previews`, `add-preview-environments`), and does nothing until one is built and intentable's `add-delivery-board` is deployed. An older bridge ignores the extra field.
+It works with `add-cloud-run-previews`, and shows nothing until that is built: intentable's bridge (`add-delivery-board`, deployed 18 November 2026) already reads the field.
+
+**G2:** Nate confirmed the proposal on 18 November 2026 ("g2 on the add-preview-paths").
