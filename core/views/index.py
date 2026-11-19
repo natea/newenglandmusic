@@ -13,7 +13,8 @@ from ..geo_filters import (
     geo_filter_for_request,
     new_england_q,
 )
-from ..models import DateMessage, Event, IndexPageMessages, StaticPage
+from ..location import location_from_request
+from ..models import CensusPlace, DateMessage, Event, IndexPageMessages, StaticPage
 from ..opengraph import get_meta
 from ..utils_datemath import (
     NYCTZ,
@@ -188,6 +189,9 @@ def _get_events_page_for_month(
         {
             "is_index": is_index,
             **geo_filter_context(geo_filter),
+            # for the folded section's summary: the same place the location form shows
+            "near_location": location_from_request(request),
+            "location_form_shown": CensusPlace.objects.exists(),
             "geo_query": geo_query,
             "calendar_links": subscribe_links(geo_filter),
             "no_matching_events": bool(geo_filter)

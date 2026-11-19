@@ -67,8 +67,8 @@ class SearchResultsTestCase(TestCase):
         self.assertEqual(html.count("name='s'") + html.count('name="s"'), 1)
         self.assertIn("name='s' value='belly'", html)
         # and none in the menu
-        menu = html[html.index("id='burgerMenuContents'"):]
-        self.assertNotIn("name='s'", menu[:menu.index("</div>")])
+        menu = html[html.index("<nav id='siteMenu'"):]
+        self.assertNotIn("name='s'", menu[:menu.index("</nav>")])
 
     def test_what_was_searched_is_marked(self):
         response = self.search("bel")

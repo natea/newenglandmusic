@@ -67,7 +67,7 @@
     {% endcomment %}
     {% for name, value in form_extras %}<input type="hidden" name="{{ name }}" value="{{ value }}" data-extra>{% endfor %}
     <button type="submit">filter</button>
-    {% if geo_filter %}
+    {% if geo_filter and not clear_in_summary %}
       <a href="{{ request.path }}?clear=1{% for name, value in form_extras %}&amp;{{ name }}={{ value|urlencode }}{% endfor %}">show all</a>
     {% endif %}
   </form>

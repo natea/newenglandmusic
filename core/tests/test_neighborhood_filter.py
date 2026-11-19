@@ -90,11 +90,14 @@ class NeighborhoodChipsBrowserTestCase(BrowserTestCase):
 
     def test_neighborhood_chips(self):
         _, page = self.open_page(f"/?metro={self.metro}")
+        page.click(".controlsFold > summary")
         with page.expect_navigation():
             page.select_option("select.neighborhood-add", "West End, Boston, MA")
+        page.click(".controlsFold > summary")
         self.assertEqual([t.rstrip("×").strip() for t in page.locator(".neighborhood-chip").all_inner_texts()], ["West End, Boston, MA"])
         self.assertEqual(sorted(page.locator("div.event .event-headliner").all_inner_texts()), ["west end show"])
         with page.expect_navigation():
             page.click(".neighborhood-chip .town-remove")
+        page.click(".controlsFold > summary")
         self.assertEqual(page.locator(".neighborhood-chip").count(), 0)
         self.assertEqual(len(page.locator("div.event .event-headliner").all_inner_texts()), 3)

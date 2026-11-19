@@ -25,19 +25,28 @@ class LocationBrowserTestCase(BrowserTestCase):
         context.route("**/*", self.only_the_test_server)
         return context
 
+    def open_controls(self, page):
+        # the form sits in the listing's closed "Filters and location" section
+        page.click(".controlsFold > summary")
+
     def test_typed_location_shows_labels(self):
         _, page = self.open_page("/", context=self.context())
+        self.open_controls(page)
         page.fill('form.locationForm input[name="q"]', "02144")
         page.click('form.locationForm button[type="submit"]')
         page.wait_for_selector(".event-distance")
         self.assertEqual(page.locator(".event-distance").first.inner_text(), "(0.5 mi away)")
+        self.assertIn("02144", page.locator(".controlsSummary").inner_text())
+        self.open_controls(page)
         self.assertIn("02144", page.locator(".location-current").inner_text())
 
     def test_device_location(self):
         context = self.context(geolocation={"latitude": 42.39613, "longitude": -71.12212}, permissions=["geolocation"])
         _, page = self.open_page("/", context=context)
+        self.open_controls(page)
         page.click("form.locationForm .use-my-location")
         page.wait_for_selector(".event-distance")
+        self.open_controls(page)
         self.assertIn("your location", page.locator(".location-current").inner_text())
         cookie = next(c for c in context.cookies() if c["name"] == "near")
         self.assertIn("42.396", cookie["value"])
@@ -45,12 +54,14 @@ class LocationBrowserTestCase(BrowserTestCase):
 
     def test_position_refused(self):
         _, page = self.open_page("/", context=self.context(permissions=[]))
+        self.open_controls(page)
         page.click("form.locationForm .use-my-location")
         page.wait_for_selector("text=didn't give a location")
         self.assertEqual(page.locator(".event-distance").count(), 0)
 
     def test_suggestions_fill_as_you_type(self):
         _, page = self.open_page("/", context=self.context())
+        self.open_controls(page)
         page.type('form.locationForm input[name="q"]', "som", delay=30)
         page.wait_for_function("() => document.querySelectorAll('#location-suggestions option').length > 0")
         options = page.eval_on_selector_all("#location-suggestions option", "els => els.map(e => e.value)")

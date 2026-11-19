@@ -30,8 +30,21 @@
     </div>
   {% endif %}
 
-  {% include "core/geo_filter_form.html" %}
-  {% location_form %}
+  {% if state_options or location_form_shown %}
+    {% comment %}
+      one closed fold for both controls, never opened by itself: the summary says what applies,
+      with "show all" beside it. the filter's script finds its form by previousElementSibling,
+      so it stays right after it
+    {% endcomment %}
+    <div class="listingControls">
+      <details class="controlsFold">
+        <summary>{% if state_options and location_form_shown %}Filters and location{% elif state_options %}Filters{% else %}Location{% endif %}{% if geo_filter or near_location %}: <span class="controlsSummary">{% for area in geo_filter.areas %}{{ area.label }}{% if not forloop.last %} / {% endif %}{% endfor %}{% for town in geo_filter.town_labels %}{% if forloop.first %} · {% else %}, {% endif %}{{ town }}{% endfor %}{% for neighborhood in geo_filter.neighborhood_labels %}{% if forloop.first %} · {% else %}, {% endif %}{{ neighborhood }}{% endfor %}{% if near_location %}{% if geo_filter %} · {% endif %}near {{ near_location.label }}{% endif %}</span>{% endif %}</summary>
+        {% include "core/geo_filter_form.html" with clear_in_summary=True %}
+        {% location_form %}
+      </details>
+      {% if geo_filter %}<a class="controlsClear" href="{{ request.path }}?clear=1">show all</a>{% endif %}
+    </div>
+  {% endif %}
   {% include "core/calendar_subscribe.html" %}
 
   {% include "calendar/calendar.html" with calendar_dates=calendar_dates all_event_dates=all_event_dates geo_query=geo_query only %}
