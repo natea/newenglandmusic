@@ -34,7 +34,7 @@ def workflow(name):
 class BaseCopyTestCase(SimpleTestCase):
     """A cleaned copy of the live data is kept for previews"""
 
-    def run_copy(self, role_answer="preview_reader f", fail_step=""):
+    def run_copy(self, role_answer="preview_reader reads", fail_step=""):
         with tempfile.TemporaryDirectory() as tmp:
             for name in ("psql", "pg_dump", "pg_restore", "python"):
                 stub = Path(tmp) / name
@@ -81,10 +81,21 @@ class BaseCopyTestCase(SimpleTestCase):
         self.assertFalse(any("postgres://base" in c for c in calls))
 
     def test_a_role_that_can_write(self):
-        result, calls = self.run_copy(role_answer="newenglandmusic_user t")
+        result, calls = self.run_copy(role_answer="newenglandmusic_user writes")
         self.assertEqual(result.returncode, 1)
         self.assertIn("newenglandmusic_user may write to the live database", result.stdout)
         self.assertEqual(len(calls), 1)
+
+    def test_an_answer_that_isnt_clear(self):
+        # postgres writes a boolean as "false" in text, which an earlier check took for "may write"
+        for answer in ("", "preview_reader", "preview_reader false", "preview_reader f"):
+            result, calls = self.run_copy(role_answer=answer)
+            self.assertEqual(result.returncode, 1, answer)
+            self.assertEqual(len(calls), 1)
+
+    def test_the_role_check_asks_for_a_plain_word(self):
+        script = (ROOT / "bin" / "preview-base").read_text()
+        self.assertIn("THEN 'writes' ELSE 'reads' END", script)
 
     def test_cleaned_before_it_is_stored(self):
         result, calls = self.run_copy(fail_step="scrub_preview_data")
