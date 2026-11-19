@@ -51,9 +51,19 @@ jobs:
       # the pull request as it would be once merged: its changes on today's main. so a branch
       # cut before previews existed still has the image, the settings and bin/preview, and
       # the preview shows what merging would put on the site
+      # GitHub keeps such a merge at refs/pull/<number>/merge, but only refreshes it now and
+      # then: after main moves it can be days stale. so the merge is made here
       - uses: actions/checkout@v7
         with:
-          ref: refs/pull/${{ env.NUMBER }}/merge
+          ref: main
+          fetch-depth: 0
+      - name: Merge the pull request into main, as merging it would
+        run: |
+          git fetch --quiet origin "refs/pull/$NUMBER/head"
+          if ! git -c user.name=preview -c user.email=preview@users.noreply.github.com merge --no-edit --quiet FETCH_HEAD; then
+            echo "::error::pull request #$NUMBER conflicts with main; bring it up to date to get a preview"
+            exit 1
+          fi
       - uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: projects/192986973320/locations/global/workloadIdentityPools/github/providers/newenglandmusic
