@@ -190,7 +190,9 @@ class Neon:
 
     def connection_url(self, name):
         branch = self._branches()[name]
-        query = f"branch_id={branch}&database_name={self.database}&role_name={self.role}"
+        # a direct connection, never neon's pooler: the pooler hands one session's settings to
+        # the next, and a restore leaves an empty search_path behind, which hides every table
+        query = f"branch_id={branch}&database_name={self.database}&role_name={self.role}&pooled=false"
         return self.api.call("GET", f"/projects/{self.project}/connection_uri?{query}")["uri"]
 
 

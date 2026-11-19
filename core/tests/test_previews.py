@@ -382,3 +382,22 @@ class RemoveTestCase(SimpleTestCase):
         p = previews(neon=FakeNeon(["base", "pr-71"]), shell=FakeShell({"preview-pr-72": "https://x.a.run.app"}))
         self.assertEqual(p.sweep(everything=True), [71, 72])
         self.assertEqual(p.neon.branches(), ["base"])
+
+
+class NeonTestCase(SimpleTestCase):
+    def test_a_direct_connection_never_the_pooler(self):
+        from core.preview_ops import Neon
+
+        neon = Neon("key", "project-1", "stagehopper-previews", "owner")
+        calls = []
+
+        def call(method, path, body=None, missing_ok=False):
+            calls.append(path)
+            if path.endswith("/branches"):
+                return {"branches": [{"name": "base", "id": "br-base"}, {"name": "pr-73", "id": "br-73"}]}
+            return {"uri": "postgres://direct"}
+
+        neon.api.call = call
+        self.assertEqual(neon.connection_url("pr-73"), "postgres://direct")
+        self.assertIn("branch_id=br-73", calls[-1])
+        self.assertIn("pooled=false", calls[-1])

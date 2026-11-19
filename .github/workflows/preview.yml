@@ -48,14 +48,12 @@ jobs:
               && github.event.pull_request.user.login != 'dependabot[bot]'))
     runs-on: ubuntu-24.04
     steps:
-      - name: Find the pull request's head
-        id: head
-        run: echo "sha=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$NUMBER" --jq .head.sha)" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # the pull request as it would be once merged: its changes on today's main. so a branch
+      # cut before previews existed still has the image, the settings and bin/preview, and
+      # the preview shows what merging would put on the site
       - uses: actions/checkout@v7
         with:
-          ref: ${{ steps.head.outputs.sha }}
+          ref: refs/pull/${{ env.NUMBER }}/merge
       - uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: projects/192986973320/locations/global/workloadIdentityPools/github/providers/newenglandmusic

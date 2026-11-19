@@ -177,6 +177,10 @@ class PreviewWorkflowTestCase(SimpleTestCase):
         for job in self.workflow["jobs"].values():
             self.assertNotIn("environment", job)
 
+    def test_a_preview_is_built_from_the_pull_request_merged_with_main(self):
+        checkout = self.workflow["jobs"]["deploy"]["steps"][0]
+        self.assertEqual(checkout["with"]["ref"], "refs/pull/${{ env.NUMBER }}/merge")
+
     def test_a_closed_pull_request_runs_mains_script(self):
         checkout = self.workflow["jobs"]["closed"]["steps"][0]
         self.assertEqual(checkout["with"]["ref"], "main")
