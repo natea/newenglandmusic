@@ -68,7 +68,7 @@ A separate command, `set_preview_admin`, creates or updates `preview-admin` from
 
 **Secrets by reach.**
 - `PREVIEW_SOURCE_DATABASE_URL` is a secret of a GitHub environment, `preview-base`, whose deployment branch is `main` only. Only `preview-base.yml` names that environment. A pull request's workflow can't read it, even if the pull request rewrites the workflow file.
-- The pull request workflow gets `NEON_API_KEY`, `PREVIEW_ADMIN_PASSWORD_HASH` and the player settings, and signs in to Google without a key (Workload Identity Federation, limited to this repository). Pull request code can therefore reach the Neon project and the previews' Google project. Both hold only cleaned data and previews, so the Neon account is used for nothing else.
+- The pull request workflow gets `NEON_API_KEY` and `PREVIEW_ADMIN_PASSWORD_HASH`, and signs in to Google without a key (Workload Identity Federation, limited to this repository). Pull request code can therefore reach the Neon project and the previews' Google project. Both hold only cleaned data and previews, so the Neon account is used for nothing else.
 - The Cloud Run services run as a service account with no roles, not the project's default one.
 - The workflows carry `if: github.repository == 'natea/newenglandmusic'`, as `spek.yml` does.
 
@@ -101,7 +101,7 @@ On `closed` with `merged`, it deletes the service, the branch and the image, and
 - `DJANGO_SECRET_KEY` and `RC_DEVELOPER_INTERNAL_TOKEN`, each random per deploy;
 - `PROD_INTERNAL_API_SERVER=https://preview.invalid/`, `PYINSTRUMENT_ENABLE=false`, `DEBUG_TOOLBAR_ENABLE=false` and `ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION=False`, which `base.py` requires;
 - `WEB_CONCURRENCY=2`;
-- the player settings, the list task 1.2 produces (answer 5).
+- the player settings (answer 5; found by task 1.2 on 18 November 2026). Pages build their players from links stored in the database, and the settings only switch them on. So previews get `YOUTUBE_PREVIEWS=true` and `APPLE_MUSIC_PREVIEWS=true`, and placeholder values, not real keys, for `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `APPLE_MUSIC_TEAM_ID`, `APPLE_MUSIC_KEY_ID` and `APPLE_MUSIC_PRIVATE_KEY`, whose presence is all the pages check. No real key reaches a preview.
 
 The image's build step passes placeholders for the five required variables, with no secret.
 
@@ -133,7 +133,7 @@ The `bin/preview-*` scripts are thin. They call Neon's and GitHub's APIs through
 - [A crawler keeps a preview busy] → `--max-instances 1` caps one preview at a single instance, the noindex header keeps well-behaved crawlers away, and the address is on the issue only. A budget alert emails Nate; it doesn't stop anything.
 - [Cold starts] → the first request after an idle spell waits a few seconds for Cloud Run and Neon to wake.
 - [A preview runs in a container, production on Render's Python runtime] → same requirements, Python version and commands, but a platform difference can still hide in either direction.
-- [Player settings are readable by pull request code] → previews need them to show players (answer 5). Task 1.2 lists which are secrets, and those keys should be limited to what the players need.
+- [Placeholder player keys] → a preview shows players but can't call Spotify, Apple Music or YouTube. In a preview's admin, saving an Apple Music or YouTube link can't look up its song or video. Matching new artists doesn't run on previews anyway.
 - [Saved event pages] → the listing's rows are stored HTML, so a change to the row itself shows only for events saved after the change. Previews don't re-render every event.
 - [A preview restarts from the base when its migrations fail] → what reviewers saved on it is lost. The workflow's log says so.
 - [An idle preview's link goes dead] → after 7 days the bridge still shows the issue in `preview-ready`, with its deployment inactive. Rebuilding by hand restores it.

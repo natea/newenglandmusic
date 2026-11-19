@@ -7,10 +7,13 @@
   - Artifact Registry's storage price.
 
   If a figure changes the proposal's cost or the 9-preview limit, tell Nate before going on.
-- [ ] 1.2 Find which settings event pages and the discovery deck need to show players at request time, and which of them are secrets. Add them to what a preview is given, and tell Nate which are secrets.
-- [ ] 1.3 Nate creates the Google Cloud project for previews in his own account, in `us-east1`, with billing and a budget alert, and turns on Cloud Run and Artifact Registry. Set up keyless sign-in for this repository, a deploy service account, and a runtime service account with no roles. Record the steps in `PRODUCTION.md`.
+- [x] 1.2 Find which settings event pages and the discovery deck need to show players at request time, and which of them are secrets. Add them to what a preview is given, and tell Nate which are secrets.
+  - Done 18 November 2026: the two switches plus placeholders for the five credentials; none is a real secret (see the design).
+- [x] 1.3 Nate creates the Google Cloud project for previews in his own account, in `us-east1`, with billing and a budget alert, and turns on Cloud Run and Artifact Registry. Set up keyless sign-in for this repository, a deploy service account, and a runtime service account with no roles. Record the steps in `PRODUCTION.md`.
+  - Done 18 November 2026, except the budget alert and the `PRODUCTION.md` notes: project `stagehopper-previews`, registry `previews` in `us-east1`, service accounts `preview-deployer` and `preview-runtime`, and the sign-in pool `github` with provider `newenglandmusic`.
 - [ ] 1.4 Write in `PRODUCTION.md` how to make the read-only role on Render's database: `CONNECT`, `USAGE` on the schema, `SELECT` on all tables and sequences, and default privileges for future ones. Nate makes it.
-- [ ] 1.5 Nate creates the Neon account and project (Postgres 17, `aws-us-east-1`), and adds the secrets: `PREVIEW_SOURCE_DATABASE_URL` in the GitHub environment `preview-base` (deployment branch `main` only); `NEON_API_KEY`, `PREVIEW_ADMIN_PASSWORD_HASH` (made with Django's `make_password` on his own machine) and the player settings for the repository.
+- [x] 1.5 Nate creates the Neon account and project (Postgres 17, `aws-us-east-1`), and adds the secrets: `PREVIEW_SOURCE_DATABASE_URL` in the GitHub environment `preview-base` (deployment branch `main` only); `NEON_API_KEY`, `PREVIEW_ADMIN_PASSWORD_HASH` (made with Django's `make_password` on his own machine) for the repository.
+  - Done 18 November 2026. The role `preview_reader` exists on the production database (task 1.4's SQL, run by Nate; its notes for `PRODUCTION.md` are still to write), and all three secrets are set.
 
 ## 2. The data
 

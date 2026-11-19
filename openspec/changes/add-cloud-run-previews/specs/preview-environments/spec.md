@@ -150,7 +150,7 @@ Each preview SHALL have one account, `preview-admin`, an admin with the password
 
 ### Requirement: A preview never reaches the outside world
 
-A preview SHALL send no email, and SHALL hold no key for an outside API, the analytics or the sheet sync beyond the player settings, which every preview has so its pages show players as the live site does. No scheduled job SHALL run for a preview. The site's data-export endpoint SHALL answer 404 on a preview. Every response of a preview SHALL ask search engines not to index it. The play buttons stored in event pages SHALL still show.
+A preview SHALL send no email, and SHALL hold no key for an outside API, the analytics or the sheet sync that works: its player settings are placeholders that only switch the players on, so its pages show players as the live site does. No scheduled job SHALL run for a preview. The site's data-export endpoint SHALL answer 404 on a preview. Every response of a preview SHALL ask search engines not to index it. The play buttons stored in event pages SHALL still show.
 
 #### Scenario: Signing up for the weekly email
 

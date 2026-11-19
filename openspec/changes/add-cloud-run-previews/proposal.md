@@ -35,7 +35,7 @@ Intentable's bridge already does its half (`add-delivery-board`, deployed 18 Nov
 
   A push redeploys the service on the same branch, so data saved on the preview stays. Pull requests from forks, Dependabot's, and ones that change only `openspec/` or `docs/` get no preview: those last have no code to look at, and each preview uses one of Neon's branches.
 - **A preview ends when its pull request is merged, or, for an open pull request, after 7 idle days.** On merge, the workflow deletes the service and the Neon branch and marks the deployments inactive. A pull request closed *without* merging keeps its preview until its slot is needed for an open pull request. A daily sweep removes open pull requests' previews with no push for 7 days and anything left behind, and marks their deployments inactive. A swept preview can be rebuilt by hand from the Actions tab.
-- **A preview never reaches the outside world.** It has no mail sender, no scheduled jobs, and no keys for outside APIs, analytics or the sheet sync, apart from the player settings (answer 5). The inherited data-export endpoint (`/internal-api/db`) is switched off on previews. Every response asks search engines not to index it.
+- **A preview never reaches the outside world.** It has no mail sender, no scheduled jobs, and no working keys for outside APIs, analytics or the sheet sync. Its player settings are placeholders that only switch the players on (answer 5). The inherited data-export endpoint (`/internal-api/db`) is switched off on previews. Every response asks search engines not to index it.
 - **A preview admin can sign in,** as `preview-admin`, the only account on a preview, with a password kept for previews.
 - **The container image matches production.** The fork's `Dockerfile` came from upstream nycnoise and has drifted: Python 3.12 where production uses 3.11.14, and a `.env` secret at build time. It is brought in line with Render's build and start commands. It is built only by the preview workflow, on pull requests. Nothing is added to the checks that production's deploys wait on.
 
@@ -51,7 +51,7 @@ Out of scope:
 2. **Google Cloud:** Nate's own account.
 3. **A full house is refused:** "yes, refuse a 10th preview. only 10 at a time." On Neon's free plan the base copy takes one of the 10 branches, so the limit is 9 previews unless task 1.1 finds otherwise. A new pull request is refused only when every slot holds an open pull request's preview.
 4. **Idle previews:** "let's start with 7 days and if we need more than that we'll adjust." This applies to open pull requests.
-5. **Players:** "yes, all pages on the site should show the players." Previews get the player settings. Task 1.2 lists exactly which, and which of them are secrets, since pull request code can then read them.
+5. **Players:** "yes, all pages on the site should show the players." Previews get the player settings. Task 1.2 found that pages only check that those settings are present and build the players from links stored in the database, so previews get the two switches and placeholder values. No real Spotify, Apple Music or YouTube key reaches a preview.
 6. **The admin password** "should be closely guarded". Only Nate holds it. GitHub stores only its hash, so the pull request workflow, and the code a build agent writes, never see the password itself.
 7. **Nightly copy:** "i think a nightly copy is fine, and if we need one fresher, we can adapt."
 8. **Unapproved submissions stay in the copy:** "we may need those to be there for testing purposes." Their submitter emails are still emptied.
@@ -84,7 +84,7 @@ None. Production's build, checks, jobs and data are unchanged, apart from the re
 - **Accounts:**
   - a Google Cloud project with Cloud Run and Artifact Registry, and keyless sign-in from GitHub Actions;
   - a Neon project in an account of its own;
-  - GitHub secrets: the read-only database role, in an environment only `main`'s nightly job can use; and Neon's API key, the preview admin's password hash and the player settings, for the pull request workflow.
+  - GitHub secrets: the read-only database role, in an environment only `main`'s nightly job can use; and Neon's API key and the preview admin's password hash, for the pull request workflow.
 - **Render:** one read-only Postgres role on the live database. Nothing else changes.
 - **Chosen over:** `add-preview-environments` (Render), closed unbuilt.
 - **Works with:** `add-preview-paths`, which has the build name the pages to check.
