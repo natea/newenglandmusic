@@ -576,7 +576,7 @@ Visitors sign up at `/digest` for one email a week of the next eight days' shows
 
 ## Pull request previews
 
-Each pull request that changes code gets its own copy of the site, so a change can be looked at before it merges (openspec `preview-environments`). A preview runs the pull request's code on Google Cloud Run, on its own Neon branch of a cleaned copy of the live data. GitHub shows it as a deployment of the environment `preview-pr-<number>`, and intentable's bridge posts its address on the issue.
+Each pull request that changes code gets its own copy of the site, so a change can be looked at before it merges (openspec `preview-environments`). A preview runs the pull request's code, merged into `main` as it is that moment, on Google Cloud Run, on its own Neon branch of a cleaned copy of the live data. GitHub shows it as a deployment of the environment `preview-pr-<number>`, and intentable's bridge posts its address on the issue.
 
 - **What makes them:** `.github/workflows/preview.yml`, on every pull request against `main` from a branch of this repository. `bin/preview` decides (`core/preview_plan.py`): pull requests from forks, Dependabot's, and ones that change only `openspec/` or `docs/` get none.
 - **What a preview holds:** the live site's venues, acts, events and pages, as of last night. It has no subscribers, sign-in codes, mail requests, sessions, admin change log or live accounts, no submitter emails, and no job output. `core/preview_data.py` lists every table as copied, left out or cleaned, and the tests fail when a new table is on no list: add it there, with the migration.

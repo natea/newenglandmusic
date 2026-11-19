@@ -44,12 +44,12 @@ Vendor behaviour this design relies on is from the vendors' documentation, not y
 ## Decisions
 
 **Clean on the runner, load only clean data.** `preview-base.yml` runs nightly on `main`, with a Postgres 17 service container, as `django.yml` has. It:
-1. checks the source role can't write, and refuses if it can: it must not be a superuser, and must lack `INSERT`, `UPDATE` and `DELETE` on a core table;
+1. checks the source role can't write, and refuses if it can: it must not be a superuser, and must lack `INSERT`, `UPDATE` and `DELETE` on a core table. The query answers the word `reads` or `writes`, and anything but `reads` refuses;
 2. runs `pg_dump` 17, from the `postgres:17` image since the runner's client is older, from `PREVIEW_SOURCE_DATABASE_URL` into the service container, with `--exclude-table-data` for the left-out tables;
 3. runs `migrate` and `scrub_preview_data` against the container;
 4. dumps the cleaned container and restores it into Neon's one long-lived `base` branch with `pg_restore --clean --if-exists --single-transaction`.
 
-A failure at any step leaves `base` as it was. There is no second base branch and no swap. A swap would need deleting the old base, which Neon refuses while previews branch from it, and it would use up branches. Existing preview branches keep the data they branched with.
+A failure at any step leaves `base` as it was. Every connection to Neon, the copy's and the previews', is direct (`pooled=false`): Neon's pooler passes one session's settings on to the next, and a restore leaves an empty `search_path` behind, which hid every table from the next connection on the first real run. There is no second base branch and no swap. A swap would need deleting the old base, which Neon refuses while previews branch from it, and it would use up branches. Existing preview branches keep the data they branched with.
 
 The alternative was restoring into Neon and scrubbing there. That would put uncleaned data where pull request code holds an API key.
 
@@ -77,6 +77,8 @@ A separate command, `set_preview_admin`, creates or updates `preview-admin` from
 - `workflow_dispatch` with a pull request number, to rebuild by hand. `core/preview_plan.py` applies the same rules to it, so a fork's or Dependabot's pull request is refused there too.
 
 One `concurrency` group per pull request stops two runs racing. `bin/preview-plan` decides from the changed files whether the pull request gets a preview, so a spec-only pull request that later gains code gets one on that push.
+
+It builds from the pull request merged into today's `main`: it checks out `main` and merges the pull request's head itself, failing with a message when they conflict. So a branch cut before previews existed still has the image, the settings and `bin/preview`, and the preview shows what merging would put on the site. GitHub's own `refs/pull/<n>/merge` isn't used, since it can be days stale.
 
 To deploy, it:
 1. builds the image and pushes it to Artifact Registry, tagged `pr-<n>`, so each pull request keeps one image;

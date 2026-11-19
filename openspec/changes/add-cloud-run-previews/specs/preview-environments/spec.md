@@ -88,7 +88,17 @@ When a pull request against `main` from a branch of this repository, changing a 
 
 ### Requirement: A preview runs the pull request's code on its own data
 
-A preview's database SHALL start as a copy of the base, with the pull request's migrations applied. A push to the pull request SHALL redeploy its code and apply any new migrations on the same database, keeping what was saved on the preview. When the migrations can't be applied to the kept database, the preview SHALL start again from the base. Nothing a preview does SHALL change the live database.
+A preview SHALL run the pull request's changes merged into `main` as it is when the preview is built. Its database SHALL start as a copy of the base, with the pull request's migrations applied. A push to the pull request SHALL redeploy its code and apply any new migrations on the same database, keeping what was saved on the preview. When the migrations can't be applied to the kept database, the preview SHALL start again from the base. Nothing a preview does SHALL change the live database.
+
+#### Scenario: A branch from before a change to main
+
+- **WHEN** a pull request's branch was cut before `main` gained a fix, and its preview is built
+- **THEN** the preview has both the pull request's changes and that fix
+
+#### Scenario: A pull request that conflicts with main
+
+- **WHEN** a pull request can't be merged into `main` without a conflict
+- **THEN** no preview is built, and its check fails saying to bring it up to date
 
 #### Scenario: A pull request with a migration
 
