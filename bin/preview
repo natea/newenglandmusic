@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""
+pull request previews on cloud run and neon (preview-environments; see PRODUCTION.md). the
+preview workflows run it:
+
+    bin/preview deploy <pull request>     build, branch, migrate, deploy, and tell GitHub
+    bin/preview rebuild <pull request>    the same by hand, for a preview that was swept
+    bin/preview closed <pull request>     a merged pull request's preview goes; a closed one's stays
+    bin/preview sweep [--all]             remove merged, gone and idle previews (--all: every one)
+    bin/preview base-url                  print the base branch's address, for the nightly copy
+
+it reads NEON_API_KEY, NEON_PROJECT, NEON_DATABASE, NEON_ROLE, GITHUB_TOKEN, GCP_PROJECT and
+IMAGE_REPOSITORY from the environment, and prints no secret.
+"""
+
+import argparse
+import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from core.preview_ops import GitHub, LimitReached, Neon, Previews, Shell  # noqa: E402
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    commands = parser.add_subparsers(dest="command", required=True)
+    for name in ("deploy", "rebuild", "closed"):
+        commands.add_parser(name).add_argument("number", type=int)
+    commands.add_parser("sweep").add_argument("--all", action="store_true")
+    commands.add_parser("base-url")
+    args = parser.parse_args(argv)
+
+    env = os.environ
+    neon = Neon(env["NEON_API_KEY"], env["NEON_PROJECT"], env["NEON_DATABASE"], env["NEON_ROLE"])
+    if args.command == "base-url":
+        print(neon.connection_url(Neon.BASE))
+        return 0
+    previews = Previews(neon, GitHub(env["GITHUB_TOKEN"]), Shell(env["GCP_PROJECT"]), env["IMAGE_REPOSITORY"])
+    try:
+        if args.command == "deploy":
+            previews.deploy(args.number)
+        elif args.command == "rebuild":
+            previews.deploy(args.number, by_hand=True)
+        elif args.command == "closed":
+            previews.closed(args.number)
+        elif args.command == "sweep":
+            previews.sweep(everything=args.all)
+    except LimitReached as error:
+        print(f"::error::{error}")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
