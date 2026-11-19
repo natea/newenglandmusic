@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# the nightly copy for pull request previews (preview-environments; see PRODUCTION.md):
+#
+#   1. reads the live database through a role that can only read, into a scratch postgres
+#      on this runner;
+#   2. removes people's data there (core/preview_data.py);
+#   3. loads the cleaned copy into neon's `base` branch, which previews branch from.
+#
+# data that hasn't been cleaned exists only on this runner, for the length of the run, and a
+# failure at any step leaves `base` as it was. it prints no address and no secret.
+#
+#   PREVIEW_SOURCE_DATABASE_URL   the live database, as the read-only role
+#   SCRATCH_DATABASE_URL          an empty postgres on this runner
+#   NEON_BASE_URL                 neon's base branch (bin/preview base-url)
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+: "${PREVIEW_SOURCE_DATABASE_URL:?is not set}" "${SCRATCH_DATABASE_URL:?is not set}" "${NEON_BASE_URL:?is not set}"
+
+work=$(mktemp -d)
+# the first dump holds people's data: it never outlives the run
+trap 'rm -rf "$work"' EXIT
+
+step() { echo "=== $(date -u '+%H:%M:%S') UTC: $*"; }
+
+# what the site's settings need to load; the scrub runs under the preview's settings
+export DJANGO_SETTINGS_MODULE=nycnoise.settings.preview DJANGO_SECRET_KEY=preview-base-only
+export RC_DEVELOPER_INTERNAL_TOKEN=preview-base-only PROD_INTERNAL_API_SERVER=https://preview.invalid/
+export PYINSTRUMENT_ENABLE=false DEBUG_TOOLBAR_ENABLE=false ENABLE_EMAILING_JESSICA_ON_EVENT_SUBMISSION=False
+
+step "checking that the source role can only read"
+role=$(psql "$PREVIEW_SOURCE_DATABASE_URL" -qAt -v ON_ERROR_STOP=1 -c "
+  SELECT current_user || ' ' || (
+    (SELECT rolsuper FROM pg_roles WHERE rolname = current_user)
+    OR has_table_privilege(current_user, 'core_event', 'INSERT')
+    OR has_table_privilege(current_user, 'core_event', 'UPDATE')
+    OR has_table_privilege(current_user, 'core_event', 'DELETE'))")
+if [ "${role##* }" != "f" ]; then
+  echo "the role ${role% *} may write to the live database; the copy only runs as a role that can only read"
+  exit 1
+fi
+
+step "copying the live data, without people's tables, to this runner"
+# shellcheck disable=SC2046
+pg_dump --format=custom --no-owner --no-privileges \
+  $(python -c "from core import preview_data; print(' '.join(preview_data.dump_exclusions()))") \
+  --file "$work/live.dump" "$PREVIEW_SOURCE_DATABASE_URL"
+pg_restore --no-owner --no-privileges --clean --if-exists --dbname "$SCRATCH_DATABASE_URL" "$work/live.dump"
+rm -f "$work/live.dump"
+
+step "cleaning the copy"
+DATABASE_URL="$SCRATCH_DATABASE_URL" python manage.py migrate --no-input
+DATABASE_URL="$SCRATCH_DATABASE_URL" python manage.py scrub_preview_data
+
+step "loading the cleaned copy into the base"
+pg_dump --format=custom --no-owner --no-privileges --file "$work/clean.dump" "$SCRATCH_DATABASE_URL"
+# one transaction: the base is replaced whole, or stays as it was
+pg_restore --no-owner --no-privileges --clean --if-exists --single-transaction --dbname "$NEON_BASE_URL" "$work/clean.dump"
+
+step "the base is refreshed"

@@ -1,0 +1,94 @@
+name: Preview
+
+# a preview of the site for each pull request (openspec preview-environments; see
+# PRODUCTION.md): its code on cloud run, on its own neon branch of a cleaned copy of the live
+# data, reported to GitHub as a deployment of `preview-pr-<number>`, which intentable's
+# bridge reads. bin/preview decides which pull requests get one (core/preview_plan.py).
+#
+# a pull request's code runs here, so this workflow holds nothing that reaches the live
+# site: the live database's address is in the environment `preview-base`, never named here.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: "The pull request whose preview to rebuild"
+        type: number
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+  deployments: write
+  pull-requests: read
+
+concurrency:
+  # one run at a time for each pull request, so a deploy and a close never race
+  group: preview-pr-${{ github.event.pull_request.number || inputs.pull_request }}
+  cancel-in-progress: false
+
+env:
+  NUMBER: ${{ github.event.pull_request.number || inputs.pull_request }}
+  NEON_PROJECT: divine-unit-78259088
+  NEON_DATABASE: stagehopper-previews
+  NEON_ROLE: stagehopper-previews_owner
+  GCP_PROJECT: stagehopper-previews
+  IMAGE_REPOSITORY: us-east1-docker.pkg.dev/stagehopper-previews/previews/site
+
+jobs:
+  deploy:
+    # not for forks or dependabot, which get no secrets; bin/preview checks again
+    if: >-
+      github.repository == 'natea/newenglandmusic'
+      && github.event.action != 'closed'
+      && (github.event_name == 'workflow_dispatch'
+          || (github.event.pull_request.head.repo.full_name == github.repository
+              && github.event.pull_request.user.login != 'dependabot[bot]'))
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Find the pull request's head
+        id: head
+        run: echo "sha=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$NUMBER" --jq .head.sha)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.head.outputs.sha }}
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/192986973320/locations/global/workloadIdentityPools/github/providers/newenglandmusic
+          service_account: preview-deployer@stagehopper-previews.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Let docker push to the image registry
+        run: gcloud auth configure-docker us-east1-docker.pkg.dev --quiet
+      - name: Build and deploy the preview
+        run: python3 bin/preview ${{ github.event_name == 'workflow_dispatch' && 'rebuild' || 'deploy' }} "$NUMBER"
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          PREVIEW_ADMIN_PASSWORD_HASH: ${{ secrets.PREVIEW_ADMIN_PASSWORD_HASH }}
+          GITHUB_TOKEN: ${{ github.token }}
+
+  closed:
+    # merged: the preview goes. closed without merging: it stays until its slot is needed
+    if: >-
+      github.repository == 'natea/newenglandmusic'
+      && github.event.action == 'closed'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    steps:
+      # main's own bin/preview, not the closed pull request's
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/192986973320/locations/global/workloadIdentityPools/github/providers/newenglandmusic
+          service_account: preview-deployer@stagehopper-previews.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Remove or keep the preview
+        run: python3 bin/preview closed "$NUMBER"
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}

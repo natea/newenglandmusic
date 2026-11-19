@@ -8,7 +8,14 @@ WORKDIR /code
 
 # docker will not re-pip install if requirements.txt doesn't change
 COPY requirements.txt /code/requirements.txt
-RUN pip install -r requirements.txt
+# libsass ships no wheel for every platform (arm64 has none), so a compiler is there for the
+# install and gone after it
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && pip install -r requirements.txt \
+    && apt-get purge -y build-essential \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY . /code
 
