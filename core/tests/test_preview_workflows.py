@@ -178,8 +178,12 @@ class PreviewWorkflowTestCase(SimpleTestCase):
             self.assertNotIn("environment", job)
 
     def test_a_preview_is_built_from_the_pull_request_merged_with_main(self):
-        checkout = self.workflow["jobs"]["deploy"]["steps"][0]
-        self.assertEqual(checkout["with"]["ref"], "refs/pull/${{ env.NUMBER }}/merge")
+        # merged here, on today's main: GitHub's own refs/pull/<n>/merge can be days stale
+        checkout, merge = self.workflow["jobs"]["deploy"]["steps"][:2]
+        self.assertEqual(checkout["with"], {"ref": "main", "fetch-depth": 0})
+        self.assertIn('git fetch --quiet origin "refs/pull/$NUMBER/head"', merge["run"])
+        self.assertIn("merge --no-edit --quiet FETCH_HEAD", merge["run"])
+        self.assertIn("conflicts with main", merge["run"])
 
     def test_a_closed_pull_request_runs_mains_script(self):
         checkout = self.workflow["jobs"]["closed"]["steps"][0]
