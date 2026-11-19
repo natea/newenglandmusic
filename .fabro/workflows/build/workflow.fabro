@@ -188,6 +188,18 @@ if MENTION.search(re.sub('`[^`]*`', '', message)):
 left = record.get('left_for_people', [])
 if not isinstance(left, list) or not all(isinstance(t, dict) and isinstance(t.get('task'), str) and isinstance(t.get('reason'), str) for t in left):
     fail('left_for_people must be a list of tasks, each with a reason')
+# the pages a reviewer opens on the preview: a path on the site and what to look at there;
+# keep in step with previewPaths in intentable's bridge/src/builds.ts
+PAGE = re.compile('/(?!/)[A-Za-z0-9._~!$&()*+,;=:@%/?#' + chr(39) + '-]{0,199}')
+preview = record.get('preview', [])
+if not isinstance(preview, list) or len(preview) > 8:
+    fail('preview must be a list of at most 8 pages')
+for page in preview:
+    if not isinstance(page, dict) or not isinstance(page.get('path'), str) or not PAGE.fullmatch(page['path']):
+        fail('each preview page needs a path on the site, from its root: ' + repr(page))
+    check = page.get('check')
+    if not isinstance(check, str) or not check.strip() or len(check) > 120:
+        fail('each preview page needs a check of 1 to 120 characters: ' + repr(page))
 
 # the change's tasks
 tasks_text = Path('openspec/changes', change, 'tasks.md').read_text() if Path('openspec/changes', change, 'tasks.md').exists() else ''
@@ -242,7 +254,10 @@ if subprocess.run(command, shell=True, env=env).returncode != 0:
     fail('the suite fails')
 
 # the result, for the bridge
-Path('.intentable/result.json').write_text(json.dumps({'labels': [], 'state': None, 'message': message, 'outcome': outcome, 'change': change}) + NL)
+result = {'labels': [], 'state': None, 'message': message, 'outcome': outcome, 'change': change}
+if preview:
+    result['preview'] = [{'path': page['path'], 'check': page['check'].strip()} for page in preview]
+Path('.intentable/result.json').write_text(json.dumps(result) + NL)
 summary_path = Path('.intentable/summary.md')
 summary = summary_path.read_text().strip() if summary_path.exists() else ''
 if left:

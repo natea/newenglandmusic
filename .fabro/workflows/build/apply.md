@@ -47,12 +47,13 @@ If the proposal leaves a decision open that you can't build without, don't guess
 When you stop or finish, write `.intentable/build.json`, creating the folder if needed:
 
 ```json
-{"change": "{{ inputs.change_name }}", "outcome": "complete", "message": "The venue list now has an Export to CSV button for editors. One check is left for Nate: task 3.2, opening the file in Excel.", "left_for_people": [{"task": "3.2", "reason": "opening the downloaded file in Excel needs a person"}]}
+{"change": "{{ inputs.change_name }}", "outcome": "complete", "message": "The venue list now has an Export to CSV button for editors. One check is left for Nate: task 3.2, opening the file in Excel.", "left_for_people": [{"task": "3.2", "reason": "opening the downloaded file in Excel needs a person"}], "preview": [{"path": "/venues/", "check": "the Export to CSV button above the list"}]}
 ```
 
 - `outcome` is `complete` when every group is committed, or `stopped`.
 - `message` is for the person who asked, who is not a developer: two to four plain sentences on what was built, or where and why you stopped, at most 2000 characters.
 - `left_for_people` lists the tasks only a person can do, or is empty.
+- `preview` lists the pages a reviewer should open on the change's preview to see or test it, at most 8. Each has a `path` on the site from its root, such as `/venues/` or `/discover/?region=boston`, never a full address, and a `check`: what to look at there, for someone who is not a developer, at most 120 characters. Leave `preview` out when nothing the change does shows on a page.
 
 Then write `.intentable/summary.md`, for the pull request Nate reviews: what changed and where, the tests added, and anything surprising. Leave out the tasks left for a person: a later step adds them from your record.
 
