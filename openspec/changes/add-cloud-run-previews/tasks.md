@@ -40,11 +40,20 @@
 
 ## 6. Live check
 
-- [ ] 6.1 With Nate's G4 and go-ahead: merge, and run the nightly copy once by hand. Check "The nightly copy" on the real base: the listing's data is there, and the people-only tables are empty.
+- [x] 6.1 With Nate's G4 and go-ahead: merge, and run the nightly copy once by hand. Check "The nightly copy" on the real base: the listing's data is there, and the people-only tables are empty.
+  - Done 19 November 2026 (UTC), run 44445419057, after fix 7.1. Read over a direct connection, `base` held 5,396 events, 729 venues, 2,813 acts and 3,664 Spotify links; no subscribers, sign-in codes, weekly-email choices, mail requests, sessions, admin log entries or accounts; no submitter email; and no job run with output or an error.
 - [ ] 6.2 On the next code pull request, check on the real services:
-  - "A build's pull request": the preview deploys, GitHub shows `preview-pr-<n>` as successful, and the bridge moves the issue to `preview-ready` with the address;
-  - "Something saved on a preview": a venue saved there doesn't appear on the live site;
-  - "Signing in as the preview admin";
-  - "Not indexed" and "The data export";
-  - "Changes to specs only": a spec-only pull request gets no preview;
-  - "Merged": merging deletes the service and the branch, and the deployments show inactive.
+  - [x] "A build's pull request": the preview deploys, GitHub shows `preview-pr-<n>` as successful, and the bridge moves the issue to `preview-ready` with the address.
+    - Done 19 November 2026: rebuilt by hand for #147 (issue 36) after fixes 7.2 and 7.3; issue 36 moved to `preview-ready` with its preview's address. "Rebuilt by hand" held too.
+  - [ ] "Something saved on a preview": a venue saved there doesn't appear on the live site;
+  - [ ] "Signing in as the preview admin" (Nate, with his password);
+  - [x] "Not indexed" and "The data export": checked on #154's and #156's previews, every response carried the header and `/internal-api/db` answered 404;
+  - [ ] "Changes to specs only": a spec-only pull request gets no preview;
+  - [x] "Merged": merging #154, #155, #156 and #157 deleted each one's service and branch.
+  - [ ] An ordinary pull request opened by a build gets its preview with no hand step.
+
+## 7. Fixes from the first real runs
+
+- [x] 7.1 The copy refused the read-only role: Postgres writes a boolean joined to text as `false`, and the check compared it with `f`. The query now answers `reads` or `writes`, and anything but `reads` refuses (#155).
+- [x] 7.2 Previews and the copy connect to Neon directly, never through its pooler, which hands one session's settings to the next: the restore left an empty `search_path` that hid every table (#156).
+- [x] 7.3 A preview is built from the pull request merged into today's `main`, and the workflow makes that merge itself: a branch from before previews existed has no image or `bin/preview`, and GitHub's `refs/pull/<n>/merge` can be days stale (#156, #157). Verified by the workflow test for "A branch from before a change to main" and "A pull request that conflicts with main", and live on #147.
