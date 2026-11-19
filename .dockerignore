@@ -1,0 +1,16 @@
+# kept out of the preview image: local secrets, git history, and what a checkout builds
+.env
+.env.*
+!.env.example
+.git
+.intentable
+.playwright-mcp
+.impeccable
+venv
+.venv
+node_modules
+__pycache__
+*.pyc
+staticfiles
+*.dump
+*.sqlite3

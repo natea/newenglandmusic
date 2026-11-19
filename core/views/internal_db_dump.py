@@ -2,7 +2,7 @@ import re
 
 from django.conf import settings
 from django.db.migrations.recorder import MigrationRecorder
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 
 from ..models import Event, StaticPage, Venue
 
@@ -12,6 +12,9 @@ def internal_db_dump(request):
 
     This is used by the populate_data_from_prod management command.
     """
+    # a pull request's preview is open to anyone with its address, so it has no export
+    if getattr(settings, "PREVIEW", False):
+        raise Http404
     # validate that we were given a developer token
     if not request.headers.get("Authorization"):
         return HttpResponse("Authorization header required", status=401)

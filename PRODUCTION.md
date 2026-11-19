@@ -574,6 +574,57 @@ Visitors sign up at `/digest` for one email a week of the next eight days' shows
   5. **Check the client address from two networks:** sign up once from each of two networks (a phone off wifi, and a computer) with different addresses, then in the shell compare `MailRequest.objects.filter(kind="request").values_list("client_hash", flat=True)`. The two hashes must differ. If they match, Render's proxy isn't adding the visitor's address as the last `X-Forwarded-For` entry, and the per-client limit would count everyone as one client; fix `client_address()` in `core/digest_tokens.py` before launch.
 - **Privacy:** the privacy page says what is kept (the address, the choices, a "near a place" choice's rounded coordinates), that SES sends the email and that opens and clicks aren't tracked. Delete-account removes it all. The old `EmailSubscriber` addresses are never emailed.
 
+## Pull request previews
+
+Each pull request that changes code gets its own copy of the site, so a change can be looked at before it merges (openspec `preview-environments`). A preview runs the pull request's code on Google Cloud Run, on its own Neon branch of a cleaned copy of the live data. GitHub shows it as a deployment of the environment `preview-pr-<number>`, and intentable's bridge posts its address on the issue.
+
+- **What makes them:** `.github/workflows/preview.yml`, on every pull request against `main` from a branch of this repository. `bin/preview` decides (`core/preview_plan.py`): pull requests from forks, Dependabot's, and ones that change only `openspec/` or `docs/` get none.
+- **What a preview holds:** the live site's venues, acts, events and pages, as of last night. It has no subscribers, sign-in codes, mail requests, sessions, admin change log or live accounts, no submitter emails, and no job output. `core/preview_data.py` lists every table as copied, left out or cleaned, and the tests fail when a new table is on no list: add it there, with the migration.
+- **What a preview can't do:** send email, call an outside API, count analytics, or run a scheduled job. Its player settings are placeholders that only switch the play buttons on. `/internal-api/db` answers 404, and every response asks search engines not to index it.
+- **Signing in to a preview's admin:** as `preview-admin`, with the password Nate keeps. GitHub holds only its hash (`PREVIEW_ADMIN_PASSWORD_HASH`). To change it, make a new hash with Django's `make_password` and set the secret again; previews pick it up on their next deploy.
+- **How long a preview lives:**
+  - merging the pull request removes it;
+  - an open pull request's preview is removed after 7 days without a push;
+  - a pull request closed without merging keeps its preview until its slot is needed for an open one.
+
+  At most 9 previews exist at once, since Neon's free plan allows 10 branches and the cleaned copy is one. With every slot held by an open pull request, a new one's check fails saying so.
+- **Rebuilding one by hand:** Actions → Preview → Run workflow, with the pull request's number.
+- **The nightly copy:** `.github/workflows/preview-base.yml`, at 08:30 UTC, runs `bin/preview-base`. It reads the live database as the role `preview_reader`, which can only read, into a Postgres on the job's own runner, cleans it there (`scrub_preview_data`), and loads the result into Neon's `base` branch in one transaction. Data that hasn't been cleaned never reaches Neon, and a failure leaves `base` as it was. The same workflow then sweeps old previews. Run it by hand from the Actions tab to refresh the data sooner.
+- **Turning previews off:** disable the two workflows, then run "Preview base" by hand with "Remove every preview" ticked.
+
+### The accounts
+
+- **Google Cloud:** the project `stagehopper-previews` (Nate's account, checked 18 November 2026), holding nothing but previews.
+  - Cloud Run and Artifact Registry are on, in `us-east1`. Images go to the registry `previews`, one tag for each pull request.
+  - `preview-deployer` is the service account GitHub Actions acts as: `roles/run.admin` and `roles/artifactregistry.repoAdmin` on the project, and `roles/iam.serviceAccountUser` on `preview-runtime`.
+  - `preview-runtime` is what each preview runs as. It has no roles.
+  - GitHub Actions signs in without a key, through the workload identity pool `github` and its provider `newenglandmusic`, which accepts only this repository.
+  - A budget of $10 a month on the project emails Nate. It doesn't stop anything.
+- **Neon:** the project `stagehopper-previews` in an account used for nothing else, Postgres 17 in `aws-us-east-1`. `base` holds the cleaned copy, and each preview is a branch `pr-<number>` of it, on the smallest compute, which sleeps after 5 idle minutes.
+- **The production database:** the role `preview_reader`, made on 18 November 2026:
+
+  ```sql
+  CREATE ROLE preview_reader LOGIN PASSWORD '<a long random password>';
+  GRANT CONNECT ON DATABASE newenglandmusic TO preview_reader;
+  GRANT USAGE ON SCHEMA public TO preview_reader;
+  GRANT SELECT ON ALL TABLES IN SCHEMA public TO preview_reader;
+  GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO preview_reader;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO preview_reader;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON SEQUENCES TO preview_reader;
+  ```
+
+  The copy refuses to run as a role that may write. To retire the role: `DROP OWNED BY preview_reader; DROP ROLE preview_reader;`.
+- **GitHub secrets:**
+  - `PREVIEW_SOURCE_DATABASE_URL`, the live database as `preview_reader`. It is a secret of the environment `preview-base`, whose only deployment branch is `main`, so a pull request's workflow can't read it.
+  - `NEON_API_KEY` and `PREVIEW_ADMIN_PASSWORD_HASH`, repository secrets, which the pull request workflow uses. A pull request's code can read these two: they reach the Neon project and a preview's admin, never the live site.
+
+### What it costs
+
+Checked on the vendors' pages on 18 November 2026:
+- **Cloud Run** bills a preview only while it serves a request, and its free monthly allowance (180,000 vCPU-seconds, 360,000 GiB-seconds, 2 million requests) covers ordinary reviewing. Each preview is capped at one instance. A preview kept busy all month, by a crawler for instance, could cost tens of dollars.
+- **Neon's free plan:** 10 branches, 100 compute-hours a month shared by all previews, and 1 GB of storage. When the hours run out, previews' databases stop until the month ends.
+- **Artifact Registry** bills stored images by the gigabyte, a few cents a month for a handful of previews. A preview's image is deleted with it.
+
 ## Launch checklist
 
 - [ ] Postgres created, and `DATABASE_URL` set

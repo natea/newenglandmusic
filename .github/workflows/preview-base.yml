@@ -1,0 +1,107 @@
+name: Preview base
+
+# the nightly copy and sweep for pull request previews (openspec preview-environments; see
+# PRODUCTION.md). `copy` reads the live database through a read-only role, cleans the copy on
+# this runner and loads it into neon's base branch. `sweep` removes previews whose pull
+# request is merged or gone, and open ones idle for 7 days.
+#
+# the live database's address is a secret of the environment `preview-base`, which only
+# `main` may use, and only the `copy` job names it: a pull request's workflow can't read it.
+on:
+  schedule:
+    # 08:30 utc, before the site's daily job (10:00), so previews start the day on last night's data
+    - cron: "30 8 * * *"
+  workflow_dispatch:
+    inputs:
+      copy:
+        description: "Refresh the base from the live data"
+        type: boolean
+        default: true
+      sweep_all:
+        description: "Remove every preview (to turn previews off)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-base
+  cancel-in-progress: false
+
+env:
+  NEON_PROJECT: divine-unit-78259088
+  NEON_DATABASE: stagehopper-previews
+  NEON_ROLE: stagehopper-previews_owner
+  GCP_PROJECT: stagehopper-previews
+  IMAGE_REPOSITORY: us-east1-docker.pkg.dev/stagehopper-previews/previews/site
+
+jobs:
+  copy:
+    if: github.repository == 'natea/newenglandmusic' && (github.event_name == 'schedule' || inputs.copy)
+    runs-on: ubuntu-24.04
+    environment: preview-base
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: scratch
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          # same as PYTHON_VERSION in render.yaml
+          python-version: "3.11.14"
+          cache: pip
+      - name: Install the site and postgres 17's tools
+        run: |
+          pip install -r requirements.txt
+          # the live database is postgres 17, and an older pg_dump refuses it
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsS -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
+      - name: Copy, clean and load
+        run: |
+          NEON_BASE_URL=$(python bin/preview base-url)
+          echo "::add-mask::$NEON_BASE_URL"
+          export NEON_BASE_URL
+          bin/preview-base
+        env:
+          PREVIEW_SOURCE_DATABASE_URL: ${{ secrets.PREVIEW_SOURCE_DATABASE_URL }}
+          SCRATCH_DATABASE_URL: postgres://postgres:postgres@localhost:5432/scratch
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+
+  sweep:
+    # after the copy, whether or not it ran or worked
+    needs: copy
+    if: always() && github.repository == 'natea/newenglandmusic'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      deployments: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/192986973320/locations/global/workloadIdentityPools/github/providers/newenglandmusic
+          service_account: preview-deployer@stagehopper-previews.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Sweep
+        run: python3 bin/preview sweep ${{ inputs.sweep_all && '--all' || '' }}
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
