@@ -30,12 +30,14 @@ export PYINSTRUMENT_ENABLE=false DEBUG_TOOLBAR_ENABLE=false ENABLE_EMAILING_JESS
 
 step "checking that the source role can only read"
 role=$(psql "$PREVIEW_SOURCE_DATABASE_URL" -qAt -v ON_ERROR_STOP=1 -c "
-  SELECT current_user || ' ' || (
+  SELECT current_user || ' ' || CASE WHEN
     (SELECT rolsuper FROM pg_roles WHERE rolname = current_user)
     OR has_table_privilege(current_user, 'core_event', 'INSERT')
     OR has_table_privilege(current_user, 'core_event', 'UPDATE')
-    OR has_table_privilege(current_user, 'core_event', 'DELETE'))")
-if [ "${role##* }" != "f" ]; then
+    OR has_table_privilege(current_user, 'core_event', 'DELETE')
+    THEN 'writes' ELSE 'reads' END")
+# anything but a clear 'reads' refuses, an empty or odd answer included
+if [ "${role##* }" != "reads" ]; then
   echo "the role ${role% *} may write to the live database; the copy only runs as a role that can only read"
   exit 1
 fi
